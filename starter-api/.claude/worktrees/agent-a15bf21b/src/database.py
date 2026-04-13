@@ -1,0 +1,45 @@
+from collections.abc import AsyncGenerator
+
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
+from sqlalchemy.orm import DeclarativeBase
+
+from src.config import get_settings
+
+settings = get_settings()
+
+engine = create_async_engine(
+    settings.database_url,
+    echo=settings.is_development,
+    pool_pre_ping=True,
+    # Production tuning: with 2 workers per replica and up to 3 replicas,
+    # max connections = (5 + 5) * 2 * 3 = 60, within Supabase Pro limits.
+    pool_size=5,
+    max_overflow=5,
+    connect_args={"server_settings": {"search_path": settings.db_schema}},
+)
+
+AsyncSessionLocal = async_sessionmaker(
+    engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+)
+
+
+class Base(DeclarativeBase):
+    pass
+
+
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            await session.close()

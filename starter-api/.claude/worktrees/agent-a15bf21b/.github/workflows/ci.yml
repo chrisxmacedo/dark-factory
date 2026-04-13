@@ -1,0 +1,105 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: starter_api_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Lint (ruff)
+        run: uv run ruff check .
+
+      - name: Format check (ruff)
+        run: uv run ruff format --check .
+
+      - name: Type check (mypy)
+        run: uv run mypy src/
+
+      - name: Test (pytest)
+        run: uv run pytest
+        env:
+          SUPABASE_TEST_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/starter_api_test
+          TEST_SUPABASE_JWT_SECRET: test-jwt-secret-for-ci-only-not-production
+          TEST_SCHEMA: starter_api_test
+          SUPABASE_URL: http://localhost:54321
+          SUPABASE_ANON_KEY: test-anon-key
+          SUPABASE_SERVICE_ROLE_KEY: test-service-role-key
+          SUPABASE_JWT_SECRET: test-jwt-secret-for-ci-only-not-production
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/starter_api_test
+          DB_SCHEMA: starter_api_test
+          CORS_ORIGINS: http://localhost:3000
+
+      - name: Contract test (OpenAPI diff)
+        if: github.event_name == 'pull_request'
+        run: |
+          uv run python scripts/export_openapi.py --output openapi-current.json
+          git show origin/main:openapi.json > openapi-main.json 2>/dev/null || cp openapi-current.json openapi-main.json
+          docker run --rm -v "$(pwd):/work:ro" tufin/oasdiff breaking /work/openapi-main.json /work/openapi-current.json
+        env:
+          SUPABASE_URL: http://localhost:54321
+          SUPABASE_ANON_KEY: test-anon-key
+          SUPABASE_SERVICE_ROLE_KEY: test-service-role-key
+          SUPABASE_JWT_SECRET: test-jwt-secret-for-ci-only-not-production
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/starter_api_test
+          DB_SCHEMA: starter_api_test
+
+  # Uncomment and configure when ready to deploy:
+  # deploy:
+  #   needs: ci
+  #   if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+  #   runs-on: ubuntu-latest
+  #   concurrency:
+  #     group: deploy-production
+  #     cancel-in-progress: false
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: superfly/flyctl-actions/setup-flyctl@master
+  #     - run: flyctl deploy --remote-only --strategy rolling
+  #       env:
+  #         FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+  #     - name: Post-deploy health check
+  #       run: |
+  #         sleep 10
+  #         for i in 1 2 3 4 5; do
+  #           STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://YOUR-APP.fly.dev/health)
+  #           if [ "$STATUS" = "200" ]; then echo "OK"; exit 0; fi
+  #           echo "Attempt $i: $STATUS"; sleep 5
+  #         done
+  #         flyctl releases rollback; exit 1
+  #       env:
+  #         FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

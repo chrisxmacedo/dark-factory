@@ -1,0 +1,27 @@
+{
+  "name": "@clausehub/starter-client",
+  "version": "0.1.0",
+  "description": "Auto-generated TypeScript client",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "generate": "openapi-typescript openapi.json -o src/schema.d.ts"
+  },
+  "dependencies": {
+    "openapi-fetch": "^0.13.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0",
+    "@types/node": "^20.0.0",
+    "openapi-typescript": "^7.0.0"
+  }
+}

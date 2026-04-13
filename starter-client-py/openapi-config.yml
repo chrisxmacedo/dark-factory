@@ -1,0 +1,6 @@
+# After cloning from the template, update these to match the API name.
+# For example, for energy-api:
+#   project_name_override: energy_api_client
+#   package_name_override: energy_api_client
+project_name_override: client
+package_name_override: client

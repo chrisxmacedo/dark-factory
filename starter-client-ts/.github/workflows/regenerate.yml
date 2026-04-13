@@ -1,0 +1,49 @@
+name: Regenerate client
+
+on:
+  workflow_dispatch:
+    inputs:
+      spec_url:
+        description: "URL to the OpenAPI spec JSON"
+        required: true
+      api_version:
+        description: "API commit SHA (short)"
+        required: true
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Download OpenAPI spec
+        run: |
+          curl -sSfL "${{ github.event.inputs.spec_url }}" -o openapi.json
+          echo "Spec downloaded ($(wc -c < openapi.json) bytes)"
+
+      - name: Generate types
+        run: npx openapi-typescript openapi.json -o src/schema.d.ts
+
+      - name: Verify compilation
+        run: npx tsc --noEmit
+
+      - name: Create PR
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: regenerate from API ${{ github.event.inputs.api_version }}"
+          title: "chore: regenerate from API ${{ github.event.inputs.api_version }}"
+          body: |
+            Auto-generated from API commit `${{ github.event.inputs.api_version }}`.
+
+            Spec: ${{ github.event.inputs.spec_url }}
+          branch: chore/regenerate-${{ github.event.inputs.api_version }}
+          base: main

@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Lint (ruff)
+        run: uv run ruff check .
+
+      - name: Format check (ruff)
+        run: uv run ruff format --check .
+
+      - name: Type check (mypy)
+        run: uv run mypy src/
+
+      - name: Test (pytest)
+        run: uv run pytest
+        env:
+          # Shared org-level secrets — set once in GitHub org settings
+          SUPABASE_TEST_URL: ${{ secrets.SUPABASE_TEST_URL }}
+          TEST_SUPABASE_JWT_SECRET: ${{ secrets.TEST_SUPABASE_JWT_SECRET }}
+          # Repo-level secret — unique schema name for this API
+          TEST_SCHEMA: ${{ secrets.TEST_SCHEMA }}
+          # App-level env vars (use test project values)
+          SUPABASE_URL: ${{ secrets.TEST_SUPABASE_APP_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.TEST_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.TEST_SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_JWT_SECRET: ${{ secrets.TEST_SUPABASE_JWT_SECRET }}
+          DB_SCHEMA: ${{ secrets.TEST_SCHEMA }}
+          CORS_ORIGINS: http://localhost:3000

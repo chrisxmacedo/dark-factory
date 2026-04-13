@@ -1,0 +1,64 @@
+name: Regenerate client
+
+on:
+  workflow_dispatch:
+    inputs:
+      spec_url:
+        description: "URL to the OpenAPI spec JSON"
+        required: true
+      api_version:
+        description: "API commit SHA (short)"
+        required: true
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install openapi-python-client
+        run: pip install openapi-python-client
+
+      - name: Download OpenAPI spec
+        run: |
+          curl -sSfL "${{ github.event.inputs.spec_url }}" -o openapi.json
+          echo "Spec downloaded ($(wc -c < openapi.json) bytes)"
+
+      - name: Read package name from config
+        id: config
+        run: |
+          PKG=$(grep package_name_override openapi-config.yml | cut -d: -f2 | tr -d ' ')
+          echo "package=$PKG" >> "$GITHUB_OUTPUT"
+          echo "Package name: $PKG"
+
+      - name: Generate client
+        run: |
+          rm -rf "src/${{ steps.config.outputs.package }}" /tmp/gen
+          openapi-python-client generate \
+            --path openapi.json \
+            --output-path /tmp/gen \
+            --config openapi-config.yml
+          mv "/tmp/gen/${{ steps.config.outputs.package }}" "src/${{ steps.config.outputs.package }}"
+
+      - name: Verify import
+        run: |
+          pip install -e .
+          python -c "from ${{ steps.config.outputs.package }} import Client; print('✓ Import OK')"
+
+      - name: Create PR
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: regenerate from API ${{ github.event.inputs.api_version }}"
+          title: "chore: regenerate from API ${{ github.event.inputs.api_version }}"
+          body: |
+            Auto-generated from API commit `${{ github.event.inputs.api_version }}`.
+
+            Spec: ${{ github.event.inputs.spec_url }}
+          branch: chore/regenerate-${{ github.event.inputs.api_version }}
+          base: main
