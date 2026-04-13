@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Code Setup &mdash; Pipeline Config</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav>
+  <div class="nav-inner">
+    <span class="nav-title">Pipeline Config</span>
+    <a href="index.html">Overview</a>
+    <a href="prerequisites.html">Prerequisites</a>
+    <a href="jira-setup.html">Jira Setup</a>
+    <a href="claude-setup.html" class="active">Claude Setup</a>
+    <a href="pipeline.html">Pipeline</a>
+    <a href="agent-teams.html">Agent Teams</a>
+    <a href="branching.html">Branching</a>
+    <a href="rationale.html">Rationale</a>
+    <a href="lessons.html">Lessons Learned</a>
+  </div>
+</nav>
+<div class="container">
+
+<h1>Claude Code Setup
+  <span class="subtitle">Installing starter templates and configuring the Team Lead</span>
+</h1>
+
+<hr>
+
+<h2>Step 1 &mdash; Copy Starter Templates</h2>
+
+<div class="card">
+  <div class="card-title">File Structure</div>
+  <p>Copy the contents of <code>starter/starter-team/</code> into your project's workspace directory. The key files are:</p>
+  <div class="file-tree">
+    <span class="folder">your-project/</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="folder">.claude/</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="file">CLAUDE.md</span> &mdash; copied from PIPELINE.md, with placeholders replaced<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="folder">agents/</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="file">development-team.md</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="file">local-test-team.md</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="file">integration-test-team.md</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="file">e2e-impact-team.md</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="file">regression-team.md</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="file">release-team.md</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="file">platform.md</span> &mdash; external service inventory<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="file">workflow-improvements.md</span> &mdash; retrospective log<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="folder">your-service-api/</span> &mdash; standalone git repo<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="folder">your-service-web/</span> &mdash; standalone git repo<br>
+  </div>
+</div>
+
+<h2>Step 2 &mdash; Replace Placeholders</h2>
+
+<div class="card">
+  <div class="card-title">Configuration Values</div>
+  <p>Open <code>PIPELINE.md</code> and replace all placeholder values. The template uses the following placeholders:</p>
+  <table>
+    <tr><th>Placeholder</th><th>Replace With</th><th>Example</th></tr>
+    <tr><td><code>{PROJECT_NAME}</code></td><td>Your project's full name</td><td>Acme Platform</td></tr>
+    <tr><td><code>{PROJECT_KEY}</code></td><td>Your Jira project key</td><td>ACM</td></tr>
+    <tr><td><code>{CLOUD_ID}</code></td><td>Your Atlassian Cloud ID (UUID)</td><td>4c185920-0898-...</td></tr>
+    <tr><td><code>{JIRA_URL}</code></td><td>Your Jira instance URL</td><td>https://yourname.atlassian.net</td></tr>
+  </table>
+  <p>After replacement, rename <code>PIPELINE.md</code> to <code>.claude/CLAUDE.md</code>. This is the file Claude Code reads as its system instructions when launched from this directory.</p>
+</div>
+
+<h2>Step 3 &mdash; Update Transition IDs</h2>
+
+<div class="card">
+  <div class="card-title">Transition Table</div>
+  <p>In CLAUDE.md, find the transition table section (all values marked <code>TBC</code>) and replace each with the actual transition ID you retrieved from Jira in the previous step.</p>
+  <p>This table is critical &mdash; if the IDs are wrong, the Team Lead cannot transition tickets between statuses.</p>
+</div>
+
+<h2>Step 4 &mdash; Update Polling Queries</h2>
+
+<div class="card">
+  <div class="card-title">Status Name Alignment</div>
+  <p>The polling queries in CLAUDE.md use status names like <code>"Ready for Dev"</code>. If your Jira uses different names (e.g. <code>"Selected for Development"</code>), update the JQL queries to match exactly.</p>
+  <p>Run a test query in Jira to verify:</p>
+<pre><code>project = PRJ AND status = "Ready for Dev" ORDER BY priority ASC</code></pre>
+  <p>If this returns no results but tickets exist in that status, the name doesn't match.</p>
+</div>
+
+<h2>Step 5 &mdash; Create Supporting Files</h2>
+
+<div class="card">
+  <div class="card-title">Platform File</div>
+  <p>Create a <code>platform.md</code> in your project workspace documenting all external services, their purpose, environment variables, and configuration. Update this file whenever a service is added or changed.</p>
+</div>
+
+<div class="card">
+  <div class="card-title">Workflow Improvements Log</div>
+  <p>Create an empty <code>workflow-improvements.md</code> in your project workspace. The Team Lead appends retrospective entries here after each pipeline stage completes. Over time this becomes a living record of how the pipeline evolved.</p>
+</div>
+
+<h2>Step 6 &mdash; Initialise Git Branches</h2>
+
+<div class="card">
+  <div class="card-title">Branch Setup</div>
+  <p>For each service repo, create the two permanent branches:</p>
+<pre><code># In each service repo
+git checkout -b main
+git push -u origin main
+
+git checkout -b ci
+git push -u origin ci</code></pre>
+  <p>The <code>main</code> branch is production. The <code>ci</code> branch is the integration branch where feature branches are merged. Feature branches and release branches are created by the Team Lead as needed.</p>
+</div>
+
+<h2>Step 7 &mdash; Launch</h2>
+
+<div class="card">
+  <div class="card-title">Starting the Team Lead</div>
+  <p>Navigate to your project workspace directory and launch Claude Code:</p>
+<pre><code>cd /path/to/your-project
+claude</code></pre>
+  <p>Claude Code reads <code>.claude/CLAUDE.md</code> and becomes the Team Lead. It will begin polling Jira for tickets in the pipeline statuses. Move a Deliverable to "Ready for Dev" in Jira to trigger the first run.</p>
+</div>
+
+<h2>Checklist</h2>
+
+<div class="card">
+  <div class="card-title">Claude Configuration Complete</div>
+  <ul class="checklist">
+    <li>Starter templates copied to project directory</li>
+    <li>All placeholders replaced in PIPELINE.md</li>
+    <li>PIPELINE.md renamed to .claude/CLAUDE.md</li>
+    <li>All 6 agent files in .claude/agents/</li>
+    <li>Transition IDs populated (no TBC values remaining)</li>
+    <li>Polling query status names verified against Jira</li>
+    <li>platform.md created</li>
+    <li>workflow-improvements.md created</li>
+    <li>main and ci branches initialised in each service repo</li>
+    <li>Claude Code launched and Team Lead active</li>
+  </ul>
+</div>
+
+<div class="page-nav">
+  <a href="jira-setup.html">&larr; Previous: Jira Setup</a>
+  <a href="pipeline.html">Next: Pipeline &rarr;</a>
+</div>
+
+</div>
+</body>
+</html>

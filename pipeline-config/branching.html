@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Branching Model &mdash; Pipeline Config</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav>
+  <div class="nav-inner">
+    <span class="nav-title">Pipeline Config</span>
+    <a href="index.html">Overview</a>
+    <a href="prerequisites.html">Prerequisites</a>
+    <a href="jira-setup.html">Jira Setup</a>
+    <a href="claude-setup.html">Claude Setup</a>
+    <a href="pipeline.html">Pipeline</a>
+    <a href="agent-teams.html">Agent Teams</a>
+    <a href="branching.html" class="active">Branching</a>
+    <a href="rationale.html">Rationale</a>
+    <a href="lessons.html">Lessons Learned</a>
+  </div>
+</nav>
+<div class="container">
+
+<h1>Branching Model
+  <span class="subtitle">Four branch types, merge rules, and the permanent audit trail</span>
+</h1>
+
+<hr>
+
+<h2>Branch Structure</h2>
+
+<div class="card">
+  <div class="card-title">Overview</div>
+<pre><code>main        &larr; receives only: RC merge (Team Lead, after human approval)
+  |
+  └──&gt; ci    &larr; receives only: feature branch merges (after local tests pass)
+                              RC back-merge (immediately after RC &rarr; main)
+        |
+        |──&gt; feature/{PROJECT_KEY}-{key}/{slug}
+        |     Development + Local Test teams commit here
+        |     Implementer opens PR as signal &mdash; Team Lead merges
+        |     Branch NEVER deleted after merge
+        |
+        └──&gt; release-rc-{n}
+              Single-use: cut from ci, merged to main, back-merged to ci
+              Each RC is independent and unrelated to previous ones
+              Fix Agent may commit bug fixes for genuine regressions
+              Branch NEVER deleted after merge</code></pre>
+</div>
+
+<h2>Branch Types</h2>
+
+<div class="card">
+  <div class="card-title">main</div>
+  <p>Production branch. Receives only merges from release branches. No direct commits ever. Tagged with semver after each release merge.</p>
+</div>
+
+<div class="card">
+  <div class="card-title">ci</div>
+  <p>Integration branch. Receives feature branch merges (after local tests pass) and back-merges from main (after RC promotion). The first point where changes interact with each other.</p>
+</div>
+
+<div class="card">
+  <div class="card-title">feature/{PROJECT_KEY}-{key}/{slug}</div>
+  <p>Created by Team Lead when a Deliverable enters In Development. Development and Local Test teams commit here. The Implementer opens a PR targeting ci as a signal &mdash; the Team Lead merges it. Never deleted after merge.</p>
+</div>
+
+<div class="card">
+  <div class="card-title">release-rc-{n}</div>
+  <p>Cut from HEAD of ci by the Team Lead after E2E impact tests pass. Each release branch is single-use and independent. The Regression team validates here; Fix Agent may commit bug fixes for genuine regressions. Merged to main after human approval, then back-merged to ci. Never deleted.</p>
+</div>
+
+<h2>Who Does What</h2>
+
+<div class="card">
+  <div class="card-title">Branch Responsibilities</div>
+  <p>The Team Lead is the <strong>only agent</strong> that creates branches or performs merges. Specialist teams commit only to their designated branch.</p>
+  <table>
+    <tr><th>Action</th><th>When</th><th>Command</th></tr>
+    <tr>
+      <td>Create feature branch</td>
+      <td>Ticket enters In Development</td>
+      <td><code>git checkout -b feature/{KEY}-{n}/{slug} ci</code></td>
+    </tr>
+    <tr>
+      <td>Merge feature to ci</td>
+      <td>Local tests pass</td>
+      <td>Rebase feature onto ci, then <code>git merge --no-ff</code></td>
+    </tr>
+    <tr>
+      <td>Cut release branch</td>
+      <td>E2E impact tests pass</td>
+      <td><code>git checkout -b release-rc-{n} ci</code></td>
+    </tr>
+    <tr>
+      <td>Merge RC to main</td>
+      <td>Human approves</td>
+      <td><code>git checkout main && git merge --no-ff release-rc-{n}</code></td>
+    </tr>
+    <tr>
+      <td>Tag main</td>
+      <td>After RC merge</td>
+      <td><code>git tag v{x}.{y}.0 -m "..."</code></td>
+    </tr>
+    <tr>
+      <td>Back-merge to ci</td>
+      <td>After tagging</td>
+      <td><code>git checkout ci && git merge --no-ff main</code></td>
+    </tr>
+  </table>
+</div>
+
+<h2>Rebase Rules</h2>
+
+<div class="card">
+  <div class="card-title">When to Rebase vs When Not To</div>
+  <table>
+    <tr><th>Merge</th><th>Rebase?</th><th>Why</th></tr>
+    <tr><td>Feature &rarr; ci</td><td><strong>Yes</strong></td><td>Linearises dev work before integration</td></tr>
+    <tr><td>RC &rarr; main</td><td><strong>No</strong></td><td>Preserves the integration point</td></tr>
+    <tr><td>main &rarr; ci (back-merge)</td><td><strong>No</strong></td><td>ci absorbs main's state</td></tr>
+  </table>
+  <div class="alert"><strong>Critical:</strong> Never rebase ci, release, or main branches. Rebasing shared branches flattens merge topology and loses the audit trail of where integrations happened.</div>
+</div>
+
+<h2>Merge Strategy</h2>
+
+<div class="card">
+  <div class="card-title">Rules</div>
+  <ul>
+    <li>All merges use <code>--no-ff</code> to create explicit merge commits</li>
+    <li>Never squash &mdash; preserves full commit history</li>
+    <li>Never fast-forward &mdash; integration points must be visible in the graph</li>
+    <li>Never delete any branch &mdash; permanent audit trail</li>
+    <li>Never commit directly to main &mdash; main only receives merges from release branches</li>
+  </ul>
+</div>
+
+<h2>Branch Deletion Policy</h2>
+
+<div class="card">
+  <div class="card-title">Permanent Audit Trail</div>
+  <p><strong>No branch is ever deleted.</strong> Feature branches, release branches, and all others are retained permanently after their merges complete. This provides a full audit trail of every change, every release candidate, and every merge point.</p>
+</div>
+
+<h2>Versioning</h2>
+
+<div class="card">
+  <div class="card-title">Tagging</div>
+  <p>Immediately after merging an RC into main, tag the merge commit with a semver tag (e.g. <code>v0.1.0</code>) and push the tag. Back-merge happens after tagging. Increment the minor version per Deliverable.</p>
+</div>
+
+<div class="page-nav">
+  <a href="agent-teams.html">&larr; Previous: Agent Teams</a>
+  <a href="rationale.html">Next: Rationale &rarr;</a>
+</div>
+
+</div>
+</body>
+</html>

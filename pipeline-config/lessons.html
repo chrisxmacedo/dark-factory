@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lessons Learned &mdash; Pipeline Config</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav>
+  <div class="nav-inner">
+    <span class="nav-title">Pipeline Config</span>
+    <a href="index.html">Overview</a>
+    <a href="prerequisites.html">Prerequisites</a>
+    <a href="jira-setup.html">Jira Setup</a>
+    <a href="claude-setup.html">Claude Setup</a>
+    <a href="pipeline.html">Pipeline</a>
+    <a href="agent-teams.html">Agent Teams</a>
+    <a href="branching.html">Branching</a>
+    <a href="rationale.html">Rationale</a>
+    <a href="lessons.html" class="active">Lessons Learned</a>
+  </div>
+</nav>
+<div class="container">
+
+<h1>Lessons Learned
+  <span class="subtitle">24 improvements discovered during real-world pipeline usage</span>
+</h1>
+
+<hr>
+
+<p>These improvements were discovered during the first real-world usage of the pipeline. All have been applied to the starter templates. They are documented here so that new implementations can avoid the same issues.</p>
+
+<h2>Repository &amp; Git</h2>
+
+<div class="card">
+  <div class="card-title">Separate repos per service</div>
+  <p>Do not use a monorepo. Each service must be its own standalone git repo. Tools and IDEs cannot find <code>.git</code> when the service is a subdirectory of a larger repo.</p>
+</div>
+
+<div class="card">
+  <div class="card-title">GitHub org correction</div>
+  <p>Agents may push to a personal account instead of the organisation. The development team agent file must specify the correct GitHub org explicitly. All repos must be created under the project org.</p>
+</div>
+
+<div class="card">
+  <div class="card-title">Repo scope</div>
+  <p>Only code directories should be tracked in git. Documentation, config (<code>.claude/</code>), and local reference files stay local and untracked via <code>.gitignore</code>.</p>
+</div>
+
+<div class="card">
+  <div class="card-title">Rebase only feature branches</div>
+  <p>Rebasing a release branch onto main flattens merge commits and loses integration topology. Only feature branches should be rebased (onto ci). RC &rarr; main and back-merge &rarr; ci use <code>--no-ff</code> only, no rebase.</p>
+</div>
+
+<div class="card">
+  <div class="card-title">No direct commits on main</div>
+  <p>A direct commit to main caused a merge conflict when the RC was promoted. Main only receives merges from release branches. Even hotfixes must follow the branch flow.</p>
+</div>
+
+<h2>Commit Discipline</h2>
+
+<div class="card">
+  <div class="card-title">One commit per file change</div>
+  <p>Agents were batching 11 files into one commit. Each file change should be its own commit with an explanation of what changed and why.</p>
+</div>
+
+<div class="card">
+  <div class="card-title">Jira ID in all commits</div>
+  <p>Commits without ticket IDs break traceability. Every commit must be prefixed with the Deliverable Jira ID (e.g. <code>PRJ-208: T3: Implement parser</code>).</p>
+</div>
+
+<div class="card">
+  <div class="card-title">Push after every commit</div>
+  <p>Local-only commits risk being lost if the session is interrupted. Every <code>git commit</code> must be immediately followed by <code>git push origin &lt;branch&gt;</code>.</p>
+</div>
+
+<div class="card">
+  <div class="card-title">Tag main on every release</div>
+  <p>Every RC &rarr; main merge gets a semver tag. Increment minor version per Deliverable. Tags are pushed immediately.</p>
+</div>
+
+<h2>Jira Configuration</h2>
+
+<div class="card">
+  <div class="card-title">Create statuses before referencing them</div>
+  <p>The pipeline referenced 9 statuses that didn't exist in Jira. All statuses must be created and transition IDs retrieved before the pipeline can operate.</p>
+</div>
+
+<div class="card">
+  <div class="card-title">Status name mismatch</div>
+  <p>Jira may use "Selected for Development" instead of "Ready for Dev". The polling queries must match the exact Jira status names. Consider adding a status-name mapping table to CLAUDE.md.</p>
+</div>
+
+<div class="card">
+  <div class="card-title">Jira transitions must not be batched</div>
+  <p>A Jira transition batched with a rejectable Bash command caused the transition to be silently discarded when the user rejected the Bash call. Jira state changes must be sent as their own message, confirmed before proceeding.</p>
+</div>
+
+<div class="card">
+  <div class="card-title">Task vs Deliverable separation</div>
+  <p>Tasks use a simple 3-status workflow (Backlog &rarr; In Progress &rarr; Done). Only Deliverables flow through the full pipeline. The dev team owns Task transitions, not the Team Lead.</p>
+</div>
+
+<h2>Testing</h2>
+
+<div class="card">
+  <div class="card-title">Startup smoke test required</div>
+  <p>All 249 tests passed but the app returned 500 on every endpoint. Root cause: tables weren't created on startup &mdash; test fixtures masked the issue. Always verify the app boots from a clean state (empty DB, default config) without errors.</p>
+</div>
+
+<div class="card">
+  <div class="card-title">Lint and format gates</div>
+  <p>The development team must run <code>ruff check</code> and <code>ruff format --check</code> before signalling completion. Without this, the integration team discovers lint failures that should have been caught earlier.</p>
+</div>
+
+<div class="card">
+  <div class="card-title">Bug analysis must trace the full path</div>
+  <p>Three bugs were diagnosed one at a time because investigation stopped at the first plausible cause. Always trace the full request path: browser &rarr; frontend &rarr; API &rarr; service &rarr; external dependency. Check CORS, headers, request/response bodies at each hop.</p>
+</div>
+
+<h2>Pipeline Operations</h2>
+
+<div class="card">
+  <div class="card-title">CLAUDE.md changes go direct to ci/main</div>
+  <p>Pipeline configuration changes are infrastructure, not features. Commit directly to ci and merge to main &mdash; do not route through feature branches.</p>
+</div>
+
+<div class="card">
+  <div class="card-title">One ticket at a time</div>
+  <p>Concurrent tickets increase merge conflict risk, make state tracking harder, and reduce focus. Complete the full pipeline before polling for the next ticket.</p>
+</div>
+
+<div class="card">
+  <div class="card-title">Team retrospectives after every stage</div>
+  <p>Every team reports workflow issues and improvement suggestions at completion. The pipeline is self-improving &mdash; issues discovered by one team inform the next deliverable's run.</p>
+</div>
+
+<div class="card">
+  <div class="card-title">Platform file for external services</div>
+  <p>External service details were scattered across config files and env vars. A central <code>platform.md</code> documenting all services, their purpose, and env vars prevents this.</p>
+</div>
+
+<h2>Key Insight</h2>
+
+<div class="card">
+  <div class="card-title">The Pipeline Self-Improves</div>
+  <p>Every team reports a retrospective at completion. The Team Lead logs all retrospectives and applies concrete improvements to both the project agents and the starter templates. Over 24 improvements were discovered and applied during the first day of real usage. The improvements flow both ways &mdash; project-specific fixes are applied back to the templates so future projects benefit.</p>
+</div>
+
+<div class="page-nav">
+  <a href="rationale.html">&larr; Previous: Rationale</a>
+  <span></span>
+</div>
+
+</div>
+</body>
+</html>

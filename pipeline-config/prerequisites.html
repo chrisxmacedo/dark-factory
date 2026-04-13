@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prerequisites &mdash; Pipeline Config</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav>
+  <div class="nav-inner">
+    <span class="nav-title">Pipeline Config</span>
+    <a href="index.html">Overview</a>
+    <a href="prerequisites.html" class="active">Prerequisites</a>
+    <a href="jira-setup.html">Jira Setup</a>
+    <a href="claude-setup.html">Claude Setup</a>
+    <a href="pipeline.html">Pipeline</a>
+    <a href="agent-teams.html">Agent Teams</a>
+    <a href="branching.html">Branching</a>
+    <a href="rationale.html">Rationale</a>
+    <a href="lessons.html">Lessons Learned</a>
+  </div>
+</nav>
+<div class="container">
+
+<h1>Prerequisites
+  <span class="subtitle">What you need before setting up the pipeline</span>
+</h1>
+
+<hr>
+
+<h2>Accounts &amp; Services</h2>
+
+<div class="card">
+  <div class="card-title">Required Accounts</div>
+  <table>
+    <tr><th>Service</th><th>Purpose</th><th>Plan Required</th></tr>
+    <tr><td>Jira Cloud</td><td>Ticket management &amp; pipeline statuses</td><td>Free tier works</td></tr>
+    <tr><td>GitHub</td><td>Source control &amp; PRs</td><td>Free tier works</td></tr>
+    <tr><td>Claude Code</td><td>AI agent teams</td><td>Claude Pro or Max subscription</td></tr>
+    <tr><td>Atlassian MCP</td><td>Claude &harr; Jira integration</td><td>Included with Claude</td></tr>
+  </table>
+</div>
+
+<h2>Local Tooling</h2>
+
+<div class="card">
+  <div class="card-title">Required Software</div>
+  <ul>
+    <li><strong>Claude Code CLI</strong> &mdash; installed via <code>npm install -g @anthropic-ai/claude-code</code></li>
+    <li><strong>Git</strong> &mdash; version 2.x or later</li>
+    <li><strong>GitHub CLI</strong> (<code>gh</code>) &mdash; for PR creation and management</li>
+    <li><strong>Node.js</strong> (if building JavaScript/TypeScript projects)</li>
+    <li><strong>Python + uv</strong> (if building Python projects) &mdash; <code>pip install uv</code></li>
+  </ul>
+</div>
+
+<h2>GitHub Organisation</h2>
+
+<div class="card">
+  <div class="card-title">Repository Setup</div>
+  <p>Create a GitHub organisation for your project. All repos must be created under this org, never under personal accounts. This prevents agents from accidentally pushing to the wrong location.</p>
+  <p>Each service in your project gets its own standalone git repo under the org. Do not use a monorepo &mdash; each service directory must be its own git repository with its own branches, PRs, and CI configuration.</p>
+  <p>Example structure:</p>
+  <div class="file-tree">
+    <span class="folder">your-org/</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="file">your-project-api</span> &mdash; standalone git repo<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="file">your-project-web</span> &mdash; standalone git repo<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="file">your-project-scraper</span> &mdash; standalone git repo<br>
+  </div>
+</div>
+
+<h2>Claude Code Permissions</h2>
+
+<div class="card">
+  <div class="card-title">Settings Configuration</div>
+  <p>Your <code>~/.claude/settings.json</code> should allow bash commands and compound git operations. The pipeline's agent teams need to run git, test runners, and linters without being blocked by permission prompts.</p>
+  <p>Recommended permissions configuration:</p>
+<pre><code>{
+  "permissions": {
+    "allow": [
+      "Bash(*)",
+      "Bash(cd:*)"
+    ],
+    "deny": [
+      "Bash(*git reset --hard*)",
+      "Bash(*git push --force*)",
+      "Bash(*rm -rf*)"
+    ]
+  }
+}</code></pre>
+  <p>The deny rules prevent destructive operations while allowing all standard development commands.</p>
+</div>
+
+<h2>Atlassian MCP Connection</h2>
+
+<div class="card">
+  <div class="card-title">Connecting Claude to Jira</div>
+  <p>The Atlassian MCP (Model Context Protocol) server allows Claude Code to read and write Jira tickets directly. This is what enables the Team Lead to poll for tickets, transition statuses, and add comments.</p>
+  <ol>
+    <li>In Claude Code, connect the Atlassian MCP server</li>
+    <li>Authenticate with your Atlassian account</li>
+    <li>Grant <code>read:jira-work</code> and <code>write:jira-work</code> permissions</li>
+    <li>Run <code>getAccessibleAtlassianResources</code> to find your Cloud ID</li>
+    <li>Note the Cloud ID &mdash; you will need it when configuring the pipeline</li>
+  </ol>
+</div>
+
+<h2>Checklist</h2>
+
+<div class="card">
+  <div class="card-title">Before Proceeding</div>
+  <ul class="checklist">
+    <li>Jira Cloud account created</li>
+    <li>GitHub organisation created</li>
+    <li>Claude Code CLI installed and authenticated</li>
+    <li>GitHub CLI installed and authenticated</li>
+    <li>Atlassian MCP connected and Cloud ID noted</li>
+    <li>Claude Code permissions configured</li>
+    <li>Starter templates downloaded to local machine</li>
+  </ul>
+</div>
+
+<div class="page-nav">
+  <a href="index.html">&larr; Previous: Overview</a>
+  <a href="jira-setup.html">Next: Jira Setup &rarr;</a>
+</div>
+
+</div>
+</body>
+</html>

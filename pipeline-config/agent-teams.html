@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Teams &mdash; Pipeline Config</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav>
+  <div class="nav-inner">
+    <span class="nav-title">Pipeline Config</span>
+    <a href="index.html">Overview</a>
+    <a href="prerequisites.html">Prerequisites</a>
+    <a href="jira-setup.html">Jira Setup</a>
+    <a href="claude-setup.html">Claude Setup</a>
+    <a href="pipeline.html">Pipeline</a>
+    <a href="agent-teams.html" class="active">Agent Teams</a>
+    <a href="branching.html">Branching</a>
+    <a href="rationale.html">Rationale</a>
+    <a href="lessons.html">Lessons Learned</a>
+  </div>
+</nav>
+<div class="container">
+
+<h1>Agent Teams
+  <span class="subtitle">Seven specialist teams, their roles, signals, and completion gates</span>
+</h1>
+
+<hr>
+
+<!-- REFINEMENT TEAM -->
+<h2>1. Refinement Team</h2>
+
+<div class="card">
+  <div class="card-title">Overview</div>
+  <table>
+    <tr><td><strong>Trigger</strong></td><td>Ticket status: In Refinement (auto-picked from Backlog)</td></tr>
+    <tr><td><strong>Branch</strong></td><td>None &mdash; pre-code analysis only</td></tr>
+    <tr><td><strong>Confidence Goal</strong></td><td>"The implementation approach is sound and the tasks are concrete"</td></tr>
+    <tr><td><strong>Shuts Down When</strong></td><td>Ticket transitions to In Development</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <div class="card-title">Team Composition</div>
+
+  <h3>Solution Designer</h3>
+  <ul>
+    <li>Reads the full Deliverable: business rules, Gherkin AC, data model, API surface, dependencies</li>
+    <li>Reads ARCHITECTURE.md for target architecture</li>
+    <li>Reads REPO_MAP.md for each affected repo (current structure, modules, patterns)</li>
+    <li>Proposes implementation approach: which repos, files to modify/create, patterns to follow, data flow, integration points</li>
+    <li>Sends SOLUTION DESIGN to Team Lead</li>
+  </ul>
+
+  <h3>Task Planner</h3>
+  <ul>
+    <li>Receives the Solution Design</li>
+    <li>Breaks approach into concrete Jira Tasks under the Deliverable</li>
+    <li>Each Task includes: specific file paths, pattern to follow, acceptance criteria, dependencies, complexity (S/M/L)</li>
+    <li>Tasks ordered by dependency &mdash; Development Team works through them in sequence</li>
+    <li>Creates Tasks via <code>jiractl create Task</code></li>
+    <li>Sends TASKS CREATED to Team Lead</li>
+  </ul>
+
+  <h3>Risk Assessor</h3>
+  <ul>
+    <li>Runs in parallel with Task Planner</li>
+    <li>Checks for: architectural violations, existing code conflicts, missing dependencies, schema migration risks, security concerns, test coverage gaps</li>
+    <li>Sends RISK ASSESSMENT to Team Lead</li>
+  </ul>
+</div>
+
+<div class="card">
+  <div class="card-title">Completion Gate</div>
+  <ul>
+    <li>Solution Design received and reviewed</li>
+    <li>All Tasks created in Jira with file paths, patterns, and acceptance criteria</li>
+    <li>Tasks ordered by dependency</li>
+    <li>Risk Assessment received with no blocking concerns</li>
+    <li>Deliverable description updated with "Solution Design" section</li>
+  </ul>
+  <p>If insufficient detail in the Deliverable &rarr; return to Backlog with comment listing what's missing.</p>
+  <p>If blocking risks found &rarr; add <code>needs-human</code> label, do not proceed.</p>
+</div>
+
+<hr>
+
+<!-- DEVELOPMENT TEAM -->
+<h2>2. Development Team</h2>
+
+<div class="card">
+  <div class="card-title">Overview</div>
+  <table>
+    <tr><td><strong>Trigger</strong></td><td>Ticket status: In Development</td></tr>
+    <tr><td><strong>Branch</strong></td><td><code>feature/{PROJECT_KEY}-{key}/{slug}</code></td></tr>
+    <tr><td><strong>Confidence Goal</strong></td><td>"This change works in isolation"</td></tr>
+    <tr><td><strong>Shuts Down When</strong></td><td>Ticket transitions to In Local Test</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <div class="card-title">Team Composition</div>
+
+  <h3>Implementer (Software Engineer)</h3>
+  <ul>
+    <li>Reads full ticket, explores codebase before writing code</li>
+    <li>Commits after every file change &mdash; never batches unrelated changes</li>
+    <li>Every commit pushed immediately to origin</li>
+    <li>Every commit message includes the Deliverable Jira ID</li>
+    <li>Writes unit tests, component tests, and startup smoke test</li>
+    <li>Opens PR targeting ci on completion (does not merge)</li>
+    <li>Adds Jira comment summarising what was built and tested</li>
+    <li>Transitions child Task tickets (In Progress / Done) as work proceeds</li>
+  </ul>
+
+  <h3>Devil's Advocate (Quality Oversight)</h3>
+  <ul>
+    <li>Runs alongside the Implementer &mdash; never commits</li>
+    <li>Reviews each commit against acceptance criteria, patterns, edge cases, security, testability</li>
+    <li>Sends critiques: <code>CRITIQUE [low|medium|high]: [issue] &mdash; [suggestion]</code></li>
+    <li>Sends FINAL REVIEW when development signals complete</li>
+  </ul>
+
+  <h3>Test Writer (Test Developer)</h3>
+  <ul>
+    <li>Runs alongside the Implementer &mdash; writes tests as implementation progresses</li>
+    <li>Writes behaviour tests (one per acceptance criterion minimum), edge case tests, local integration tests</li>
+    <li>All tests include data-level assertions for state-mutating flows</li>
+    <li>Signals: <code>TESTS WRITTEN. [N] tests ([breakdown]). All passing.</code></li>
+  </ul>
+</div>
+
+<div class="card">
+  <div class="card-title">Completion Gate</div>
+  <p>Team Lead verifies after receiving all three signals (DEVELOPMENT COMPLETE, TESTS WRITTEN, FINAL REVIEW):</p>
+  <ul class="checklist">
+    <li>Feature branch exists and pushed</li>
+    <li>PR open targeting ci with ticket key</li>
+    <li>All test layers passing: unit, component, behaviour, edge case, integration</li>
+    <li>Lint and format checks pass (<code>ruff check</code>, <code>ruff format --check</code>)</li>
+    <li>Data-level assertions present for state-mutating flows</li>
+    <li>All high-severity critiques addressed</li>
+    <li>No uncommitted changes</li>
+  </ul>
+</div>
+
+<hr>
+
+<!-- LOCAL TEST TEAM -->
+<h2>3. Local Test Team</h2>
+
+<div class="card">
+  <div class="card-title">Overview</div>
+  <table>
+    <tr><td><strong>Trigger</strong></td><td>Ticket status: In Local Test</td></tr>
+    <tr><td><strong>Branch</strong></td><td><code>feature/{PROJECT_KEY}-{key}/{slug}</code> (same as dev)</td></tr>
+    <tr><td><strong>Confidence Goal</strong></td><td>"This change works in isolation"</td></tr>
+    <tr><td><strong>Shuts Down When</strong></td><td>Team Lead merges PR to ci</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <div class="card-title">Team Composition</div>
+
+  <h3>Test Runner</h3>
+  <ul>
+    <li><strong>Startup smoke test first</strong> &mdash; app must boot from clean state</li>
+    <li><strong>Page render check</strong> (web projects) &mdash; all pages render with expected data</li>
+    <li>Runs full local test suite (unit + component + integration + behaviour)</li>
+    <li>Never commits &mdash; reports results only</li>
+  </ul>
+
+  <h3>Fix Agent (conditional)</h3>
+  <ul>
+    <li>Only spawned if Test Runner reports failures</li>
+    <li>Commits fixes to feature branch only</li>
+    <li>Maximum 2 fix attempts, then escalates</li>
+  </ul>
+</div>
+
+<div class="card">
+  <div class="card-title">Completion Gate</div>
+  <ul class="checklist">
+    <li>All test layers pass with zero failures</li>
+    <li>Data-level assertions present</li>
+    <li>No uncommitted changes</li>
+    <li>Coverage delta acceptable</li>
+  </ul>
+  <p>Team adds Jira comment summarising results. Team Lead then rebases feature onto ci, merges with <code>--no-ff</code>, and transitions to In Integration Test.</p>
+</div>
+
+<hr>
+
+<!-- INTEGRATION TEST TEAM -->
+<h2>4. Integration Test Team</h2>
+
+<div class="card">
+  <div class="card-title">Overview</div>
+  <table>
+    <tr><td><strong>Trigger</strong></td><td>Ticket status: In Integration Test</td></tr>
+    <tr><td><strong>Branch</strong></td><td><code>ci</code></td></tr>
+    <tr><td><strong>Confidence Goal</strong></td><td>"This change works with other components"</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <div class="card-title">Team Composition (3 members in parallel)</div>
+
+  <h3>CI Monitor</h3>
+  <p>Watches CI pipeline, verifies pytest + ruff check + ruff format all pass.</p>
+
+  <h3>Integration Analyst</h3>
+  <p>Contract validation, downstream impact, data consistency, migration safety, recent merge conflicts.</p>
+
+  <h3>Observability Checker</h3>
+  <p>Structured logs, correlation IDs, new signals confirmed present.</p>
+
+  <h3>Fix Agent (conditional)</h3>
+  <p>Commits to ci only if CI gates fail. Max 2 fix attempts.</p>
+</div>
+
+<div class="card">
+  <div class="card-title">Completion Gate</div>
+  <ul class="checklist">
+    <li>CI pipeline fully green</li>
+    <li>Contract validation passed</li>
+    <li>Downstream impact assessed</li>
+    <li>Data consistency confirmed</li>
+    <li>Observability signals confirmed</li>
+  </ul>
+  <p>Team adds Jira comment. Transitions to Ready for E2E Impact Test.</p>
+</div>
+
+<hr>
+
+<!-- E2E IMPACT TEAM -->
+<h2>5. E2E Impact Team</h2>
+
+<div class="card">
+  <div class="card-title">Overview</div>
+  <table>
+    <tr><td><strong>Trigger</strong></td><td>Ticket status: In E2E Impact Test</td></tr>
+    <tr><td><strong>Branch</strong></td><td><code>ci</code></td></tr>
+    <tr><td><strong>Confidence Goal</strong></td><td>"This change works within real system flows"</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <div class="card-title">Team Composition</div>
+
+  <h3>Impact Analyst</h3>
+  <p>Produces structured impact map: affected user journeys, system flows, data paths, observability hooks.</p>
+
+  <h3>E2E Runner</h3>
+  <p>Executes E2E tests for affected journeys only. Validates API responses, database state, event processing, correlation ID tracing.</p>
+
+  <h3>Fix Agent (conditional)</h3>
+  <p>Only for genuine regressions. Max 2 fix attempts.</p>
+</div>
+
+<div class="card">
+  <div class="card-title">Completion Gate</div>
+  <ul class="checklist">
+    <li>All affected journeys pass E2E</li>
+    <li>Data-level assertions confirmed</li>
+    <li>Observability signals confirmed</li>
+    <li>ci branch clean and stable</li>
+  </ul>
+  <p>Team adds Jira comment. Team Lead cuts <code>release-rc-{n}</code> from ci and transitions to In Full E2E Regression.</p>
+</div>
+
+<hr>
+
+<!-- REGRESSION TEAM -->
+<h2>6. Regression Team</h2>
+
+<div class="card">
+  <div class="card-title">Overview</div>
+  <table>
+    <tr><td><strong>Trigger</strong></td><td>Ticket status: In Full E2E Regression</td></tr>
+    <tr><td><strong>Branch</strong></td><td><code>release-rc-{n}</code></td></tr>
+    <tr><td><strong>Confidence Goal</strong></td><td>"The system is stable and ready for release"</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <div class="card-title">Team Composition</div>
+
+  <h3>Regression Runner</h3>
+  <p>Executes the full E2E regression suite &mdash; every test, every journey, cross-system validation.</p>
+
+  <h3>Regression Analyst</h3>
+  <p>Assesses release readiness: environment parity, migration sequencing, feature flags, third-party integrations, observability, rollback plan.</p>
+
+  <h3>Flake Investigator (conditional)</h3>
+  <p>Re-runs failures to distinguish flaky from genuine. Max 2 re-run cycles.</p>
+
+  <h3>Fix Agent (conditional)</h3>
+  <p>Commits bug fixes to <code>release-rc-{n}</code> for confirmed regressions. Max 2 fix attempts.</p>
+</div>
+
+<div class="card">
+  <div class="card-title">Human Approval Gate</div>
+  <p>This team does NOT automatically promote. The Team Lead requests human approval and waits for explicit confirmation before proceeding.</p>
+</div>
+
+<hr>
+
+<!-- RELEASE TEAM -->
+<h2>7. Release Team</h2>
+
+<div class="card">
+  <div class="card-title">Overview</div>
+  <table>
+    <tr><td><strong>Trigger</strong></td><td>Explicit human approval</td></tr>
+    <tr><td><strong>Branch</strong></td><td>Team Lead merges <code>release-rc-{n}</code> &rarr; <code>main</code>, back-merges &rarr; <code>ci</code></td></tr>
+    <tr><td><strong>Confidence Goal</strong></td><td>"This version is production-ready and live"</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <div class="card-title">Team Composition</div>
+
+  <h3>Release Manager</h3>
+  <p>Confirms RC branch integrity and pre-release steps. Does not merge &mdash; signals Team Lead.</p>
+
+  <h3>Deploy Agent</h3>
+  <p>Triggers production deployment. On failure: STOP, do not rollback, report immediately.</p>
+
+  <h3>Production Smoke Tester</h3>
+  <p>Health endpoints, critical journeys, third-party integrations. On failure: STOP, report.</p>
+
+  <h3>Production Observer (15 minutes)</h3>
+  <p>Monitors error rates, latency, log patterns for 15-minute stabilisation window.</p>
+</div>
+
+<div class="card">
+  <div class="card-title">Hard Rules</div>
+  <ul>
+    <li>Never merge to main without explicit human approval</li>
+    <li>Never delete any branch</li>
+    <li>Never rebase or squash &mdash; always merge commits</li>
+    <li>Never rollback without human instruction</li>
+    <li>Never re-trigger a failed pipeline without human instruction</li>
+  </ul>
+</div>
+
+<h2>Common Rules Across All Teams</h2>
+
+<div class="card">
+  <div class="card-title">Universal Commit Rules</div>
+  <ul>
+    <li>Commit after every file change &mdash; never batch unrelated changes</li>
+    <li>Every commit pushed immediately to origin</li>
+    <li>Every commit message includes the Deliverable Jira ID</li>
+    <li>Each team adds a Jira comment on the ticket summarising their work on completion</li>
+    <li>Each team includes a RETROSPECTIVE in their completion signal</li>
+  </ul>
+</div>
+
+<div class="page-nav">
+  <a href="pipeline.html">&larr; Previous: Pipeline</a>
+  <a href="branching.html">Next: Branching &rarr;</a>
+</div>
+
+</div>
+</body>
+</html>

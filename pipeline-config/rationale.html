@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pipeline Rationale &mdash; Pipeline Config</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav>
+  <div class="nav-inner">
+    <span class="nav-title">Pipeline Config</span>
+    <a href="index.html">Overview</a>
+    <a href="prerequisites.html">Prerequisites</a>
+    <a href="jira-setup.html">Jira Setup</a>
+    <a href="claude-setup.html">Claude Setup</a>
+    <a href="pipeline.html">Pipeline</a>
+    <a href="agent-teams.html">Agent Teams</a>
+    <a href="branching.html">Branching</a>
+    <a href="rationale.html" class="active">Rationale</a>
+    <a href="lessons.html">Lessons Learned</a>
+  </div>
+</nav>
+<div class="container">
+
+<h1>Pipeline Rationale
+  <span class="subtitle">Why this pipeline exists, design decisions, roles, testing strategy, and the reasoning behind each stage</span>
+</h1>
+
+<hr>
+
+<!-- ============================================================ -->
+<!-- SECTION 1: THE CORE PROBLEM                                   -->
+<!-- ============================================================ -->
+
+<h2>The Core Problem</h2>
+
+<div class="card">
+  <div class="card-title">Why This Pipeline Exists</div>
+  <p>Software development failures rarely come from a single cause. They come from the accumulation of undetected problems across multiple layers: a function that works in isolation but breaks when integrated, an integration that passes tests but corrupts data silently, a release that passes all automated checks but degrades under real traffic.</p>
+  <p>Traditional pipelines often conflate these layers &mdash; running everything in one CI job, or doing a single round of testing before release. The result is that failures are discovered late, when they are expensive to fix, and the signals that would have caught them early were never designed in.</p>
+  <p>This pipeline is designed around a different principle: <strong>progressive confidence</strong>. Each stage is designed to answer one specific question, at the right level of fidelity, with the right kind of evidence.</p>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECTION 2: PROGRESSIVE CONFIDENCE                             -->
+<!-- ============================================================ -->
+
+<h2>Progressive Confidence</h2>
+
+<div class="card">
+  <div class="card-title">Each Stage Answers a Different Question</div>
+  <p>The questions are ordered so that simpler, faster, cheaper checks happen first &mdash; and more expensive, slower, system-wide checks happen only when earlier stages have passed.</p>
+  <table>
+    <tr><th>Stage</th><th>Environment</th><th>Question Answered</th></tr>
+    <tr><td>In Development</td><td>Feature Branch</td><td>Does the code work in isolation?</td></tr>
+    <tr><td>In Local Test</td><td>Feature Branch</td><td>Does the behaviour match the specification?</td></tr>
+    <tr><td>In Integration Test</td><td>CI</td><td>Do components work together?</td></tr>
+    <tr><td>In E2E Impact Test</td><td>CI</td><td>Does the change work within real system flows?</td></tr>
+    <tr><td>In Full E2E Regression</td><td>Release Candidate</td><td>Does the system still work overall?</td></tr>
+    <tr><td>Release / Production</td><td>Main</td><td>Is this version production-ready and live?</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <div class="card-title">Stage Rationale</div>
+  <p><strong>Early stages</strong> are fast and isolated. They give the developer rapid feedback on whether their implementation is correct. Running a full regression suite at the feature branch stage would be slow, noisy, and misleading &mdash; many tests would fail for reasons unrelated to the change.</p>
+  <p><strong>Middle stages</strong> introduce real system interaction progressively. Integration tests catch interface and contract failures that unit tests cannot detect. E2E impact tests confirm the change works in real flows without the noise of testing the entire system.</p>
+  <p><strong>Late stages</strong> provide system-wide confidence. The full regression suite only runs against a stable release candidate &mdash; not against every feature branch, where it would produce false negatives from in-flight changes by other developers.</p>
+  <blockquote>Failures are caught by the stage best positioned to diagnose them &mdash; not by whatever stage happens to run them first.</blockquote>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECTION 3: REPOSITORY STATES                                  -->
+<!-- ============================================================ -->
+
+<h2>Repository States</h2>
+
+<div class="card">
+  <div class="card-title">Branches as Stability Levels</div>
+  <p>The pipeline is not just a sequence of test runs &mdash; it is a sequence of <strong>repository states</strong>, each representing a different level of stability and integration.</p>
+
+  <h3>Feature Branch</h3>
+  <p>The developer's working environment. It is explicitly safe to break here &mdash; rapid iteration is the goal. The only concern is whether the implementation is correct in isolation and will integrate cleanly.</p>
+
+  <h3>CI / Integration Branch</h3>
+  <p>The first shared environment. Multiple feature branches merge here. Component interactions are tested for the first time against real dependencies. It is expected to be less stable than the RC, which is why fixes here are acceptable before promoting.</p>
+
+  <h3>Release Candidate</h3>
+  <p>A snapshot taken from CI. Once cut, it enters a stabilisation phase &mdash; no new features, only targeted fixes. Full regression runs here because it represents what would actually be released.</p>
+
+  <h3>Main</h3>
+  <p>Production-ready or deployed code. The system of record. Nothing reaches Main without passing every preceding gate and receiving explicit human approval. The further right a ticket moves, the higher the confidence &mdash; and the higher the cost of a failure discovered at that stage.</p>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECTION 4: EVIDENCE-BASED GATING                              -->
+<!-- ============================================================ -->
+
+<h2>Evidence-Based Gating</h2>
+
+<div class="card">
+  <div class="card-title">Evidence Types</div>
+  <p>Each stage gate requires concrete evidence, not a teammate's claim or a pipeline passing without inspection.</p>
+  <table>
+    <tr><th>Evidence Type</th><th>What It Verifies</th></tr>
+    <tr><td><strong>Test results</strong></td><td>Pass/fail counts, specific failure messages, coverage delta. Not just "tests passed" &mdash; which tests, how many, what changed.</td></tr>
+    <tr><td><strong>Data validation</strong></td><td>Where state is mutated, the database state, event payloads, and data structures are correct. Surface-level responses can pass while data is silently corrupted.</td></tr>
+    <tr><td><strong>Observability</strong></td><td>Structured logs, correlation IDs, traces, and metrics are confirmed present. Validates correct behaviour and ensures the system remains observable in production.</td></tr>
+  </table>
+  <blockquote>A pipeline that passes without evidence is not a pipeline &mdash; it is an optimism machine. Gates must be based on verifiable artefacts.</blockquote>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECTION 5: HUMAN GATES RATIONALE                              -->
+<!-- ============================================================ -->
+
+<h2>Human Gates</h2>
+
+<div class="card">
+  <div class="card-title">Why Exactly Two</div>
+  <p>The pipeline has exactly two points where a human must take explicit action. Every other transition is automated &mdash; because every other transition is based on objective, verifiable evidence that an agent team can assess.</p>
+  <table>
+    <tr><th>Gate</th><th>Action Required</th><th>Why Human Judgement Is Needed</th></tr>
+    <tr><td><strong>Ready for Dev</strong></td><td>Human moves ticket in Jira</td><td>Refinement requires product and engineering judgement &mdash; priority, scope clarity, dependency awareness &mdash; that no agent can assess.</td></tr>
+    <tr><td><strong>Promote to Main</strong></td><td>Human replies "Approve promote {KEY}-xxx"</td><td>Deploying to production is a business decision. Even with all tests passing, timing, risk tolerance, and business context require human decision-making.</td></tr>
+  </table>
+  <p>Adding more human gates would slow the pipeline without adding safety. Removing these two would eliminate the human judgement that cannot be automated.</p>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECTION 6: AGENT TEAM DESIGN DECISIONS                        -->
+<!-- ============================================================ -->
+
+<h2>Agent Team Design</h2>
+
+<div class="card">
+  <div class="card-title">Agent Primitives</div>
+  <p>Claude Code's agent team feature allows a session to spawn multiple sub-agents that collaborate through two shared primitives:</p>
+
+  <h3>Shared Task List</h3>
+  <p>A JSON file maintained locally that agents can read, claim tasks from, and mark complete. Tasks can have dependencies and blockers, so later tasks do not start until earlier ones resolve. Lives only for the duration of a session.</p>
+
+  <h3>Inbox System</h3>
+  <p>Each agent has a message inbox. Agents can send findings, critiques, and status updates to each other and to the team lead in real time during a session. Enables genuine parallel collaboration &mdash; agents work simultaneously while staying coordinated.</p>
+
+  <blockquote>Both primitives are local to the Claude Code session. They are not Jira &mdash; Jira is the persistent system of record.</blockquote>
+</div>
+
+<div class="card">
+  <div class="card-title">Spawning Patterns</div>
+  <p>Claude Code supports three distinct ways to use sub-agents. This pipeline uses Pattern 2.</p>
+  <table>
+    <tr><th>Pattern</th><th>Description</th><th>Used For</th></tr>
+    <tr><td><strong>1 &mdash; One-shot</strong></td><td>Single agent does a focused task and returns the result. No shared state.</td><td>Simple delegation, short-lived tasks</td></tr>
+    <tr><td><strong>2 &mdash; Persistent team</strong></td><td>Team lead spawns multiple teammates from a shared task list. Teammates persist, message each other, report back. Team lead is long-lived.</td><td>This pipeline &mdash; all six stages</td></tr>
+    <tr><td><strong>3 &mdash; Sequential agents</strong></td><td>Single agents handle one status each, work independently, shut down when done.</td><td>Simple single-agent workflows</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <div class="card-title">Why Pattern 2</div>
+
+  <h3>Each stage has a different skill and risk profile</h3>
+  <p>Implementation requires creativity, exploration, and iteration. Testing requires rigour and scepticism. Deployment requires caution above everything else. These capabilities are better served by teams configured differently rather than a monolithic team that tries to change its character mid-session.</p>
+
+  <h3>Jira is the reliable handoff mechanism</h3>
+  <p>By having each team read from Jira cold &mdash; fetching the ticket, the PR, and comments from the previous team &mdash; the system avoids depending on in-memory state from a previous session. Each team must ground itself in the artefacts. This forces explicit documentation of decisions at each stage via Jira comments, making the pipeline state auditable across sessions.</p>
+
+  <h3>Parallel agents provide real-time quality control</h3>
+  <p>Within each team, specialist agents work in parallel. In the Development Team, the Devil's Advocate reviews commits as they are made &mdash; not after implementation is complete. In the Integration Team, the Observability Checker runs in parallel with the CI Monitor. The inbox system allows a team to converge on a result from multiple angles simultaneously.</p>
+
+  <h3>Teams are long-lived within a session</h3>
+  <p>The Team Lead does not shut down between tickets. Move tickets to Ready for Dev in Jira, and the Team Lead picks them up and works them through progressively. Message the Team Lead at any point for a status report, to skip a ticket, or to adjust priority.</p>
+</div>
+
+<div class="card">
+  <div class="card-title">Internal Tasks vs Jira</div>
+  <p>This is the most important architectural distinction to understand.</p>
+<pre><code>// Jira — persistent, cross-session system of record
+PRJ-42: In Development
+    |
+// Team Lead reads ticket, creates short-lived internal task list
+[Task A] Explore codebase     -> claimed by Implementer
+[Task B] Review implementation -> claimed by Devil's Advocate
+    |
+// When complete, Team Lead writes the permanent record
+PRJ-42: Ready for Local Test
+Comment: "Development complete. Branch: feature/PRJ-42/..."</code></pre>
+  <p>The internal task list lives only for the duration of the team's work on that ticket. The Jira transition and comment are the permanent record. This design is resilient to session interruptions &mdash; if a session ends mid-ticket, the ticket remains in its "In..." status in Jira and the next session's Team Lead can restart from that stage.</p>
+  <blockquote>Jira is the system of record. The internal task list is a coordination scratch-pad. Never confuse the two.</blockquote>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECTION 7: ROLES AND RESPONSIBILITIES                         -->
+<!-- ============================================================ -->
+
+<h2>Roles &amp; Responsibilities</h2>
+
+<div class="card">
+  <div class="card-title">The Two-Role Model</div>
+  <p>The pipeline separates work into two distinct professional roles. This separation reflects a genuine difference in perspective, objective, and skill &mdash; not just a naming convention.</p>
+  <blockquote>The two roles exist because the question "did we build it correctly?" (engineer) is fundamentally different from "does it behave correctly?" (test developer). Conflating them produces blind spots.</blockquote>
+</div>
+
+<div class="card">
+  <div class="card-title">Software Engineer</div>
+  <p><strong>Primary concern:</strong> Is the implementation correct? Operates on the feature branch.</p>
+  <ul>
+    <li>Understands the acceptance criteria and translates them into code</li>
+    <li>Explores the existing codebase before writing anything new</li>
+    <li>Makes implementation decisions coherent with existing patterns in CLAUDE.md</li>
+    <li>Writes code that is correct, maintainable, and <strong>testable</strong></li>
+    <li>Writes unit tests and component tests as part of implementation &mdash; not as a separate activity</li>
+  </ul>
+  <h3>Why engineers write unit and component tests</h3>
+  <p>Unit and component tests are the engineer's primary mechanism for verifying their implementation is correct. They are written alongside the code because they are the fastest feedback loop (milliseconds, not minutes), they force thinking about testability during implementation, and they document expected behaviour at the level of detail only the engineer has while writing the code.</p>
+  <p>These tests are not the Test Developer's responsibility because they require intimate knowledge of implementation internals. The Test Developer verifies behaviour from the outside &mdash; they cannot write a meaningful unit test for code they did not write.</p>
+</div>
+
+<div class="card">
+  <div class="card-title">Test Developer</div>
+  <p><strong>Primary concern:</strong> Does the system behave correctly? Operates across Local Test, Integration, E2E, and Regression stages.</p>
+  <ul>
+    <li>Defines test scenarios covering acceptance criteria from a behavioural perspective</li>
+    <li>Designs tests that validate system-level interactions: integration, E2E flows, cross-service consistency</li>
+    <li>Ensures data is validated at the right points &mdash; not just surface responses, but underlying state</li>
+    <li>Ensures the system is observable: failures produce useful signals, correct behaviour is confirmed through those signals</li>
+  </ul>
+  <h3>Why test developers are separate from engineers</h3>
+  <p>The Test Developer brings a different kind of scepticism. Where the engineer is optimistic about their implementation (they wrote it to work), the Test Developer's role is to find the ways it does not. Additionally, the Test Developer is responsible for system-level validation the engineer is not positioned to perform: testing the feature against the real system, validating whether it does what the acceptance criteria requires, and validating the contracts between components.</p>
+</div>
+
+<div class="card">
+  <div class="card-title">Agent Role Mapping</div>
+  <h4>Software Engineer role</h4>
+  <table>
+    <tr><th>Agent</th><th>Stage</th><th>Responsibility</th></tr>
+    <tr><td>Implementer</td><td>Development</td><td>Implements feature, writes unit and component tests</td></tr>
+    <tr><td>Fix Agent (impl)</td><td>Local Test</td><td>Fixes implementation failures found by test suite</td></tr>
+  </table>
+  <h4>Test Developer role</h4>
+  <table>
+    <tr><th>Agent</th><th>Stage</th><th>Responsibility</th></tr>
+    <tr><td>Test Writer</td><td>Local Test</td><td>Writes behaviour, local integration, and edge case tests</td></tr>
+    <tr><td>Test Runner</td><td>Local Test</td><td>Executes test suite, captures evidence</td></tr>
+    <tr><td>Integration Analyst</td><td>Integration</td><td>Validates contracts, downstream impact, data consistency</td></tr>
+    <tr><td>Observability Checker</td><td>Integration</td><td>Confirms observability signals present and correct</td></tr>
+    <tr><td>Impact Analyst</td><td>E2E Impact</td><td>Maps affected journeys, data paths, observability hooks</td></tr>
+    <tr><td>E2E Runner</td><td>E2E Impact</td><td>Executes impact-scoped E2E tests with data assertions</td></tr>
+    <tr><td>Regression Runner</td><td>Regression</td><td>Full regression suite against RC</td></tr>
+    <tr><td>Regression Analyst</td><td>Regression</td><td>Assesses release readiness holistically</td></tr>
+    <tr><td>Flake Investigator</td><td>Regression</td><td>Distinguishes flaky tests from genuine regressions</td></tr>
+  </table>
+  <h4>Operations &amp; oversight roles</h4>
+  <table>
+    <tr><th>Agent</th><th>Stage</th><th>Responsibility</th></tr>
+    <tr><td>Devil's Advocate</td><td>Development</td><td>Critiques implementation in real time via inbox</td></tr>
+    <tr><td>CI Monitor</td><td>Integration</td><td>Monitors CI pipeline without re-triggering</td></tr>
+    <tr><td>Release Manager</td><td>Release</td><td>Verifies RC integrity, pre-release steps, merges to Main</td></tr>
+    <tr><td>Deploy Agent</td><td>Release</td><td>Triggers and monitors production deployment</td></tr>
+    <tr><td>Smoke Tester</td><td>Release</td><td>Validates production health post-deploy</td></tr>
+    <tr><td>Production Observer</td><td>Release</td><td>Monitors production observability for 15 minutes</td></tr>
+  </table>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECTION 8: KEY AGENT ROLES                                    -->
+<!-- ============================================================ -->
+
+<h2>Key Agent Roles</h2>
+
+<div class="card">
+  <div class="card-title">The Devil's Advocate</div>
+  <p>The Devil's Advocate runs in parallel with the Implementer during development, reviewing each commit as it is made and sending critiques via inbox. This is one of the most important agents in the pipeline.</p>
+
+  <h3>Real-time critique over post-implementation review</h3>
+  <p>When a critique arrives while the engineer is still implementing, it can be addressed in the next commit. When it arrives after implementation is complete, addressing it requires unpicking decisions that may have cascading effects. The earlier a problem is surfaced, the cheaper it is to fix.</p>
+
+  <h3>Complementary information</h3>
+  <p>The Implementer knows the implementation in detail. The Devil's Advocate knows the acceptance criteria and the existing codebase patterns. Running in parallel and communicating through the inbox combines both perspectives in real time &mdash; something impossible in a serial review model.</p>
+
+  <h3>Advisory by default, blocking only on high severity</h3>
+  <p>Low and medium findings are recorded but do not stop the Implementer. High-severity findings &mdash; security issues, data integrity risks, clear acceptance criteria violations &mdash; require acknowledgement before the completion gate passes. This design adds quality without becoming a bottleneck.</p>
+</div>
+
+<div class="card">
+  <div class="card-title">The Team Lead</div>
+  <p>The Team Lead does not write code, run tests, or deploy. Its role is coordination and gate-keeping. It is the single agent that reads from and writes to Jira.</p>
+
+  <h3>Why a dedicated Team Lead rather than self-coordinating agents?</h3>
+  <p>Self-coordination between agents is fragile. If the Implementer signals the Test Writer directly, the logic for what happens next is distributed across multiple agents &mdash; any of them could miss a message, misinterpret a state, or make a transition prematurely.</p>
+  <p>The Team Lead centralises these decisions. It reads the Jira ticket and passes full context to every agent it spawns. It receives structured inbox messages from all agents. It verifies completion gates before any Jira transition. This means Jira state is always consistent with what the Team Lead has explicitly verified &mdash; not with what any individual agent claims.</p>
+  <blockquote>One agent writes to Jira. One agent makes transition decisions. This is the invariant that keeps the pipeline state reliable and auditable.</blockquote>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECTION 9: TESTING STRATEGY                                   -->
+<!-- ============================================================ -->
+
+<h2>Testing Strategy</h2>
+
+<div class="card">
+  <div class="card-title">Test Layers</div>
+  <p>Testing in this pipeline is a series of distinct validation layers. The layers build on each other &mdash; tests written at an earlier stage continue to run at later stages. Each stage adds a new layer on top of the existing ones.</p>
+  <table>
+    <tr><th>Stage</th><th>Owner</th><th>Test Type</th><th>Question</th></tr>
+    <tr><td>In Development</td><td>Software Engineer</td><td>Unit tests</td><td>Does this function/class do what it is supposed to do?</td></tr>
+    <tr><td>In Development</td><td>Software Engineer</td><td>Component tests</td><td>Does this module/service boundary behave correctly?</td></tr>
+    <tr><td>In Local Test</td><td>Test Developer</td><td>Local integration tests</td><td>Do components within this feature interact correctly?</td></tr>
+    <tr><td>In Local Test</td><td>Test Developer</td><td>Behaviour tests</td><td>Does the implementation satisfy the acceptance criteria?</td></tr>
+    <tr><td>In Integration Test</td><td>Test Developer</td><td>Integration tests (real)</td><td>Do components work together in the shared environment?</td></tr>
+    <tr><td>In Integration Test</td><td>Test Developer</td><td>Contract tests</td><td>Are the interfaces between services compatible?</td></tr>
+    <tr><td>In E2E Impact Test</td><td>Test Developer</td><td>E2E impact tests</td><td>Does this change work within the real system flows it affects?</td></tr>
+    <tr><td>In Full E2E Regression</td><td>Test Developer</td><td>Full E2E regression</td><td>Does the entire system still work?</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <div class="card-title">Data Validation Strategy</div>
+  <p>Surface-level test assertions are not sufficient for critical flows. A test can pass &mdash; the API returns 200, the UI shows the right data &mdash; while the underlying data is silently incorrect.</p>
+  <table>
+    <tr><th>Stage</th><th>Data Validation Requirements</th></tr>
+    <tr><td>Local Test</td><td>Verify database row created/updated/deleted. Verify returned data structure matches expected schema. Confirm nothing silently dropped.</td></tr>
+    <tr><td>Integration Test</td><td>Trace data mutations across service boundaries using correlation IDs. Verify events published by one service are received and processed correctly by consumers.</td></tr>
+    <tr><td>E2E Impact Test</td><td>Verify end-to-end data integrity &mdash; data enters, transforms correctly at each stage, exits in expected state. Trace through every service hop.</td></tr>
+    <tr><td>Regression</td><td>Re-verify all above against RC. Confirm migrations applied correctly and have not corrupted existing data.</td></tr>
+  </table>
+  <blockquote>E2E tests that pass with incorrect data are worse than tests that fail. They create false confidence. Every state-mutating flow requires data-level assertions.</blockquote>
+</div>
+
+<div class="card">
+  <div class="card-title">Observability Requirements</div>
+  <p>Observability is a validation requirement at every stage from CI onwards. A change that cannot be observed cannot be validated in production.</p>
+  <table>
+    <tr><th>Signal</th><th>Requirement</th><th>Why</th></tr>
+    <tr><td>Structured logging</td><td>JSON logs at key decision points: request received (with correlation ID), key logic decisions, errors with full context, request completed with outcome.</td><td>Enables automated assertion &mdash; verify correct log lines emitted, not just that the API returned 200.</td></tr>
+    <tr><td>Correlation IDs</td><td>Every request crossing a service boundary must carry a correlation ID. Required from integration stage onwards.</td><td>Enables end-to-end tracing across multiple services in a single query.</td></tr>
+    <tr><td>Metrics &amp; traces</td><td>Request latency histograms (p50/p95/p99), error rate counters, distributed traces for multi-service flows.</td><td>Monitored by the Production Observer in the 15-minute post-deploy stabilisation window.</td></tr>
+  </table>
+  <div class="alert"><strong>Gate:</strong> Observability is a gate at the integration stage &mdash; not a post-release concern. If the change cannot be observed in the integration environment, it will not pass this stage.</div>
+</div>
+
+<div class="card">
+  <div class="card-title">Anti-Patterns to Avoid</div>
+  <table>
+    <tr><th>Anti-pattern</th><th>Problem</th><th>Mitigation</th></tr>
+    <tr><td>Over-reliance on E2E tests</td><td>E2E tests are slow, expensive, and brittle.</td><td>Invest in unit, component, and integration tests at earlier stages. E2E tests are scoped to what other layers cannot test.</td></tr>
+    <tr><td>CI instability</td><td>Unreliable CI produces noise that obscures real failures.</td><td>Strong pre-merge validation at local test ensures only clean code reaches CI.</td></tr>
+    <tr><td>False positives in E2E</td><td>Tests that pass with incorrect data create false confidence.</td><td>Data-level assertions mandatory for state-mutating flows.</td></tr>
+    <tr><td>Testing only the happy path</td><td>Edge cases left uncovered.</td><td>Test Writer explicitly covers edge cases surfaced during development review.</td></tr>
+    <tr><td>No observability gate</td><td>Unobservable changes cannot be debugged in production.</td><td>Observability Checker is required member of Integration Test Team.</td></tr>
+  </table>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECTION 10: JIRA AUDIT TRAIL AND STALLED TICKETS              -->
+<!-- ============================================================ -->
+
+<h2>Jira Audit Trail</h2>
+
+<div class="card">
+  <div class="card-title">Comment Formats</div>
+  <p>Every significant action the agent teams take is recorded as a Jira comment. A human can read the comment history of any ticket and reconstruct exactly what happened at each stage without being present during any agent session.</p>
+  <table>
+    <tr><th>Event</th><th>Comment Format</th></tr>
+    <tr><td>Team claims ticket</td><td>Team Lead: Claimed by [team]. Starting.</td></tr>
+    <tr><td>Development complete</td><td>Development complete. Branch: [...]. PR: [...]. Summary: [...].</td></tr>
+    <tr><td>Local tests passed</td><td>Local tests passed. [N] tests. Branch merged to integration.</td></tr>
+    <tr><td>Integration passed</td><td>Integration tests passed. CI green. Contract validation: [...].</td></tr>
+    <tr><td>E2E impact passed</td><td>E2E impact tests passed. Journeys: [...]. Promoted to RC.</td></tr>
+    <tr><td>Regression passed</td><td>Full E2E regression complete. [N] tests. Awaiting human approval.</td></tr>
+    <tr><td>Released</td><td>Released to production. [timestamp]. Stable after 15min.</td></tr>
+    <tr><td>Failure / blocked</td><td>[Stage] failed. [Detail]. Needs human review.</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <div class="card-title">Stalled Tickets</div>
+  <p>A ticket in an "In..." status with no active agent team is stalled. This can happen if a session ends mid-work, or if a team shuts down without transitioning properly.</p>
+
+  <h3>Detecting stalled tickets</h3>
+<pre><code>project = {PROJECT_KEY} AND status in (
+  "In Development",
+  "In Local Test",
+  "In Integration Test",
+  "In E2E Impact Test",
+  "In Full E2E Regression"
+) AND updated < -2h</code></pre>
+
+  <h3>Recovery</h3>
+  <p>Transition the ticket back to the previous "Ready for..." status manually in Jira. On the next Claude Code session, the Team Lead will pick it up and restart the relevant team from that stage. No state is lost &mdash; all previous work is preserved in the branch, PR, and Jira comments.</p>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECTION 11: SOLO AND SMALL TEAMS                              -->
+<!-- ============================================================ -->
+
+<h2>Why This Pipeline for Solo &amp; Small Teams</h2>
+
+<div class="card">
+  <div class="card-title">Disproportionate Risk</div>
+  <p>The progressive confidence model is sometimes associated with large engineering organisations. For a solo developer or small team, the rationale is different but equally strong.</p>
+  <p>The cost of a production incident is disproportionately high. There is no on-call rotation, no dedicated QA, no second pair of eyes. The pipeline compensates for the absence of those human checks by encoding them as automated gates at every stage.</p>
+  <p>The agent team system means the overhead of running this pipeline is low. Teams are spawned automatically, work in parallel, and report structured results. The developer interacts with the pipeline at the two human gates and is otherwise free to work on the next ticket while the current one progresses through the stages.</p>
+</div>
+
+<div class="page-nav">
+  <a href="branching.html">&larr; Previous: Branching</a>
+  <a href="lessons.html">Next: Lessons Learned &rarr;</a>
+</div>
+
+</div>
+</body>
+</html>

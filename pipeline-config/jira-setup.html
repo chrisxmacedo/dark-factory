@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jira Setup &mdash; Pipeline Config</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav>
+  <div class="nav-inner">
+    <span class="nav-title">Pipeline Config</span>
+    <a href="index.html">Overview</a>
+    <a href="prerequisites.html">Prerequisites</a>
+    <a href="jira-setup.html" class="active">Jira Setup</a>
+    <a href="claude-setup.html">Claude Setup</a>
+    <a href="pipeline.html">Pipeline</a>
+    <a href="agent-teams.html">Agent Teams</a>
+    <a href="branching.html">Branching</a>
+    <a href="rationale.html">Rationale</a>
+    <a href="lessons.html">Lessons Learned</a>
+  </div>
+</nav>
+<div class="container">
+
+<h1>Jira Setup
+  <span class="subtitle">Creating the project, statuses, issue types, and transition IDs</span>
+</h1>
+
+<hr>
+
+<h2>Step 1 &mdash; Create the Jira Project</h2>
+
+<div class="card">
+  <div class="card-title">Project Configuration</div>
+  <p>Create a new Jira project with a short, memorable project key (e.g. <code>PRJ</code>). This key appears in all ticket IDs and commit messages.</p>
+  <p>Use a <strong>Company-managed</strong> project type for full control over the workflow configuration. Team-managed projects have limited status customisation.</p>
+</div>
+
+<h2>Step 2 &mdash; Create Issue Types</h2>
+
+<div class="card">
+  <div class="card-title">Required Issue Types</div>
+  <table>
+    <tr><th>Issue Type</th><th>Purpose</th><th>Workflow</th></tr>
+    <tr><td><strong>Deliverable</strong></td><td>Features that flow through the full pipeline</td><td>13-status pipeline</td></tr>
+    <tr><td><strong>Task</strong></td><td>Work breakdown items within a Deliverable</td><td>Backlog &rarr; In Progress &rarr; Done</td></tr>
+    <tr><td><strong>Initiative</strong></td><td>High-level grouping of Deliverables</td><td>Simple workflow</td></tr>
+    <tr><td><strong>Issue</strong></td><td>Bugs and defects</td><td>Simple or pipeline workflow</td></tr>
+  </table>
+  <p>Only <strong>Deliverables</strong> flow through the full 13-status pipeline. Tasks use a simple 3-status workflow. This separation is critical &mdash; child Tasks are work breakdown items within each Deliverable and do not need independent testing stages.</p>
+</div>
+
+<h2>Step 3 &mdash; Create Pipeline Statuses</h2>
+
+<div class="card">
+  <div class="card-title">All 13 Statuses</div>
+  <p>Create these statuses in Jira in the order shown. Each "Ready for..." status is a queue; each "In..." status means an agent team is active.</p>
+  <table>
+    <tr><th>#</th><th>Status Name</th><th>Category</th><th>Purpose</th></tr>
+    <tr><td>1</td><td>Backlog</td><td>To Do</td><td>Not yet prioritised</td></tr>
+    <tr><td>2</td><td>Ready for Dev</td><td>To Do</td><td>Human gate &mdash; refined and ready</td></tr>
+    <tr><td>3</td><td>In Development</td><td>In Progress</td><td>Development team active</td></tr>
+    <tr><td>4</td><td>Ready for Local Test</td><td>To Do</td><td>Development complete, awaiting test</td></tr>
+    <tr><td>5</td><td>In Local Test</td><td>In Progress</td><td>Local test team active</td></tr>
+    <tr><td>6</td><td>Ready for Integration Test</td><td>To Do</td><td>Merged to ci, awaiting integration</td></tr>
+    <tr><td>7</td><td>In Integration Test</td><td>In Progress</td><td>Integration test team active</td></tr>
+    <tr><td>8</td><td>Ready for E2E Impact Test</td><td>To Do</td><td>Integration passed, awaiting E2E</td></tr>
+    <tr><td>9</td><td>In E2E Impact Test</td><td>In Progress</td><td>E2E impact team active</td></tr>
+    <tr><td>10</td><td>Ready for Full E2E Regression</td><td>To Do</td><td>RC cut, awaiting regression</td></tr>
+    <tr><td>11</td><td>In Full E2E Regression</td><td>In Progress</td><td>Regression team active</td></tr>
+    <tr><td>12</td><td>Release / Production</td><td>Done</td><td>Released to production</td></tr>
+    <tr><td>13</td><td>Done</td><td>Done</td><td>Complete</td></tr>
+  </table>
+</div>
+
+<div class="alert">
+  <strong>Important:</strong> The status names in Jira must match exactly what the pipeline configuration references. If Jira uses "Selected for Development" instead of "Ready for Dev", you must update the polling queries in CLAUDE.md to match. A mismatch will cause the Team Lead to find no tickets.
+</div>
+
+<h2>Step 4 &mdash; Configure the Workflow</h2>
+
+<div class="card">
+  <div class="card-title">Workflow Transitions</div>
+  <p>Configure the Deliverable workflow so that tickets can transition between all statuses. The Team Lead needs to be able to move tickets forward and backward through the pipeline.</p>
+  <p>Ensure transitions exist for:</p>
+  <ul>
+    <li>Forward: each status to the next in sequence</li>
+    <li>Backward: each "In..." status back to its corresponding "Ready for..." status (for failures)</li>
+    <li>Reset: any status back to Backlog (for human override)</li>
+  </ul>
+</div>
+
+<h2>Step 5 &mdash; Retrieve Transition IDs</h2>
+
+<div class="card">
+  <div class="card-title">Getting the IDs</div>
+  <p>After creating all statuses and configuring the workflow, you need to retrieve the transition IDs. These are the numeric IDs that the Atlassian MCP uses to transition tickets programmatically.</p>
+  <p>In a Claude Code session with the Atlassian MCP connected, run:</p>
+<pre><code>getTransitionsForJiraIssue(cloudId: "your-cloud-id", issueIdOrKey: "PRJ-1")</code></pre>
+  <p>This returns all available transitions for that ticket. Note the ID for each transition target and record them in the transition table in your CLAUDE.md file.</p>
+  <p>Example transition table:</p>
+  <table>
+    <tr><th>Transition Target</th><th>Transition ID</th></tr>
+    <tr><td>Backlog</td><td>11</td></tr>
+    <tr><td>Ready for Dev</td><td>21</td></tr>
+    <tr><td>In Development</td><td>31</td></tr>
+    <tr><td>Ready for Local Test</td><td>10</td></tr>
+    <tr><td>In Local Test</td><td>9</td></tr>
+    <tr><td>Ready for Integration Test</td><td>8</td></tr>
+    <tr><td>In Integration Test</td><td>7</td></tr>
+    <tr><td>Ready for E2E Impact Test</td><td>6</td></tr>
+    <tr><td>In E2E Impact Test</td><td>5</td></tr>
+    <tr><td>Ready for Full E2E Regression</td><td>4</td></tr>
+    <tr><td>In Full E2E Regression</td><td>3</td></tr>
+    <tr><td>Release / Production</td><td>2</td></tr>
+    <tr><td>Done</td><td>41</td></tr>
+  </table>
+  <p>Your IDs will differ. Replace all <code>TBC</code> values in the PIPELINE.md template with your actual IDs.</p>
+</div>
+
+<h2>Checklist</h2>
+
+<div class="card">
+  <div class="card-title">Jira Configuration Complete</div>
+  <ul class="checklist">
+    <li>Jira project created with project key</li>
+    <li>Deliverable issue type created</li>
+    <li>Task issue type created (3-status workflow)</li>
+    <li>All 13 pipeline statuses created</li>
+    <li>Workflow transitions configured (forward, backward, reset)</li>
+    <li>Transition IDs retrieved and recorded</li>
+    <li>Status names verified to match pipeline configuration</li>
+  </ul>
+</div>
+
+<div class="page-nav">
+  <a href="prerequisites.html">&larr; Previous: Prerequisites</a>
+  <a href="claude-setup.html">Next: Claude Setup &rarr;</a>
+</div>
+
+</div>
+</body>
+</html>

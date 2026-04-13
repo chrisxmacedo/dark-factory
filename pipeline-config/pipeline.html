@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pipeline Specification &mdash; Pipeline Config</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav>
+  <div class="nav-inner">
+    <span class="nav-title">Pipeline Config</span>
+    <a href="index.html">Overview</a>
+    <a href="prerequisites.html">Prerequisites</a>
+    <a href="jira-setup.html">Jira Setup</a>
+    <a href="claude-setup.html">Claude Setup</a>
+    <a href="pipeline.html" class="active">Pipeline</a>
+    <a href="agent-teams.html">Agent Teams</a>
+    <a href="branching.html">Branching</a>
+    <a href="rationale.html">Rationale</a>
+    <a href="lessons.html">Lessons Learned</a>
+  </div>
+</nav>
+<div class="container">
+
+<h1>Pipeline Specification
+  <span class="subtitle">The Team Lead orchestration logic, polling loop, and evidence-based gating</span>
+</h1>
+
+<hr>
+
+<h2>The Team Lead</h2>
+
+<div class="card">
+  <div class="card-title">Role</div>
+  <p>The Team Lead is a persistent Claude Code orchestrator that never shuts down between tickets. It polls Jira continuously, identifies which pipeline stage each ticket is in, and spawns the correct specialist team to advance it.</p>
+  <p>The Team Lead is the <strong>only agent</strong> that creates branches, performs merges, or transitions Jira tickets between pipeline statuses. All specialist teams report to the Team Lead via structured inbox messages.</p>
+</div>
+
+<h2>Core Principles</h2>
+
+<div class="card">
+  <div class="card-title">Evidence-Based Gating</div>
+  <p>The Team Lead never transitions a ticket based on what a teammate claims. It verifies gate criteria against actual artefacts: test results, data assertions, observability signals. If evidence is not present, the ticket does not advance.</p>
+</div>
+
+<div class="card">
+  <div class="card-title">One Ticket at a Time</div>
+  <p>Only process one ticket at a time. Do not start a second ticket until the current one reaches Done. This reduces merge conflict risk, makes state tracking simpler, and improves focus.</p>
+</div>
+
+<h2>Polling Loop</h2>
+
+<div class="card">
+  <div class="card-title">Step 1 &mdash; Poll</div>
+  <p>Run these JQL queries in priority order. Take the first result from the highest priority query:</p>
+<pre><code>project = {PROJECT_KEY} AND status = "Ready for Dev" ORDER BY priority ASC, created ASC
+project = {PROJECT_KEY} AND status = "Ready for Local Test" ORDER BY priority ASC, created ASC
+project = {PROJECT_KEY} AND status = "Ready for Integration Test" ORDER BY priority ASC, created ASC
+project = {PROJECT_KEY} AND status = "Ready for E2E Impact Test" ORDER BY priority ASC, created ASC
+project = {PROJECT_KEY} AND status = "Ready for Full E2E Regression" ORDER BY priority ASC, created ASC
+project = {PROJECT_KEY} AND status = "Release / Production" ORDER BY priority ASC, created ASC</code></pre>
+</div>
+
+<div class="card">
+  <div class="card-title">Step 2 &mdash; Claim</div>
+  <p>Transition the ticket into its "In..." status immediately to prevent double-claiming. Add a Jira comment.</p>
+  <div class="alert"><strong>Critical:</strong> The Jira transition must be sent as its own message, separate from any other tool calls. If batched with a rejectable tool call and the user rejects it, all calls are discarded &mdash; including the Jira transition.</div>
+</div>
+
+<div class="card">
+  <div class="card-title">Step 3 &mdash; Spawn</div>
+  <table>
+    <tr><th>Ticket Status</th><th>Transition To</th><th>Agent File</th></tr>
+    <tr><td>Ready for Dev</td><td>In Development</td><td>development-team.md</td></tr>
+    <tr><td>Ready for Local Test</td><td>In Local Test</td><td>local-test-team.md</td></tr>
+    <tr><td>Ready for Integration Test</td><td>In Integration Test</td><td>integration-test-team.md</td></tr>
+    <tr><td>Ready for E2E Impact Test</td><td>In E2E Impact Test</td><td>e2e-impact-team.md</td></tr>
+    <tr><td>Ready for Full E2E Regression</td><td>In Full E2E Regression</td><td>regression-team.md</td></tr>
+    <tr><td>Release / Production</td><td>(already final)</td><td>release-team.md</td></tr>
+  </table>
+  <p>Pass the full ticket context (summary, description, acceptance criteria, branch and PR info) to every spawned agent.</p>
+</div>
+
+<div class="card">
+  <div class="card-title">Step 4 &mdash; Supervise</div>
+  <p>Monitor inboxes from all active teammates. Relay critical messages between teams where needed.</p>
+</div>
+
+<div class="card">
+  <div class="card-title">Step 5 &mdash; Gate on Completion</div>
+  <p>Each team signals completion via inbox. Before making any status transition or branch operation, verify the gate criteria defined in the agent file. Evidence must be present.</p>
+  <p>After verifying the gate, capture the team's <strong>RETROSPECTIVE</strong> from their completion signal:</p>
+  <ol>
+    <li><strong>Log it</strong> &mdash; append to <code>workflow-improvements.md</code> with ticket key, team name, date, and full retrospective content</li>
+    <li><strong>Act on it</strong> &mdash; apply concrete improvements to both the project agent files and the canonical starter templates</li>
+    <li><strong>Skip noise</strong> &mdash; not every suggestion warrants a change. Log all suggestions regardless.</li>
+  </ol>
+</div>
+
+<div class="card">
+  <div class="card-title">Step 6 &mdash; Human Gates</div>
+  <p>Two points require explicit human action:</p>
+  <ol>
+    <li><strong>Ready for Dev</strong> &mdash; the human must move tickets here manually. The Team Lead never moves tickets into Ready for Dev.</li>
+    <li><strong>Promote to Main</strong> &mdash; after Full E2E Regression passes, the Team Lead requests human approval and waits for an explicit "Approve promote {PROJECT_KEY}-[key]" response before proceeding.</li>
+  </ol>
+</div>
+
+<div class="card">
+  <div class="card-title">Step 7 &mdash; Loop</div>
+  <p>After each team completes and the next status is set, return to Step 1. Continue until no actionable tickets remain.</p>
+</div>
+
+<h2>Work Item Types</h2>
+
+<div class="card">
+  <div class="card-title">Deliverables vs Tasks</div>
+  <table>
+    <tr><th>Type</th><th>Workflow</th><th>Pipeline</th></tr>
+    <tr><td><strong>Deliverable</strong></td><td>13-status pipeline</td><td>Triggers team spawning and gating</td></tr>
+    <tr><td><strong>Task</strong></td><td>Backlog &rarr; In Progress &rarr; Done</td><td>Work breakdown within a Deliverable; dev team transitions these</td></tr>
+  </table>
+  <p>The development team owns Task ticket transitions &mdash; before starting each task, transition it to In Progress; on completing, transition to Done. The Team Lead only transitions the Deliverable ticket.</p>
+</div>
+
+<h2>Infrastructure Changes</h2>
+
+<div class="card">
+  <div class="card-title">Pipeline Config Updates</div>
+  <p>Changes to CLAUDE.md or agent files that affect pipeline operations should be committed directly to ci and merged to main &mdash; not routed through feature branches. These are operational configuration changes, not feature work.</p>
+</div>
+
+<h2>Error Handling</h2>
+
+<div class="card">
+  <div class="card-title">When Teams Cannot Resolve a Blocker</div>
+  <ul>
+    <li>Transition the ticket back to the previous "Ready for..." status</li>
+    <li>Add a Jira comment stating exactly what failed and what is needed</li>
+    <li>Add label <code>needs-human</code></li>
+    <li>Shut the affected team down</li>
+    <li>Report to the human immediately</li>
+  </ul>
+  <p>Never leave a ticket stranded in an "In..." status with no active team.</p>
+</div>
+
+<h2>Mid-Session Commands</h2>
+
+<div class="card">
+  <div class="card-title">Human Instructions</div>
+  <table>
+    <tr><th>Command</th><th>Action</th></tr>
+    <tr><td>"Skip PRJ-xxx"</td><td>Transition back one status, move to next ticket</td></tr>
+    <tr><td>"Pause"</td><td>Finish current team task, then wait</td></tr>
+    <tr><td>"Prioritise PRJ-xxx"</td><td>Finish current ticket first, then jump to it</td></tr>
+    <tr><td>"Approve promote PRJ-xxx"</td><td>Merge RC &rarr; main, back-merge &rarr; ci, spawn release-team</td></tr>
+  </table>
+</div>
+
+<h2>Test Matrix by Branch</h2>
+
+<p>Every gate must pass before the pipeline advances. ~54 gates total across all stages.</p>
+
+<div class="card">
+  <div class="card-title">Feature Branch (7 gates)</div>
+  <p>Run by: <code>pipelinectl local-gate</code> (scripted)</p>
+  <table>
+    <tr><th>#</th><th>Gate</th><th>Tool</th></tr>
+    <tr><td>1</td><td>Unit tests</td><td><code>npm test</code> / <code>pytest</code></td></tr>
+    <tr><td>2</td><td>Component tests</td><td><code>npm test</code> / <code>pytest</code></td></tr>
+    <tr><td>3</td><td>Behaviour tests (1 per Gherkin AC)</td><td><code>npm test</code> / <code>pytest</code></td></tr>
+    <tr><td>4</td><td>Edge case tests</td><td><code>npm test</code> / <code>pytest</code></td></tr>
+    <tr><td>5</td><td>Build verification</td><td><code>next build</code> / <code>tsc</code></td></tr>
+    <tr><td>6</td><td>Lint</td><td><code>eslint</code> / <code>ruff check</code></td></tr>
+    <tr><td>7</td><td>Format</td><td><code>prettier --check</code> / <code>ruff format</code></td></tr>
+  </table>
+  <p>All state-mutating tests must include data-level assertions. Fails &rarr; return to In Development.</p>
+</div>
+
+<div class="card">
+  <div class="card-title">CI Branch (18 gates)</div>
+  <p>Run by: <code>pipelinectl ci-gate</code> (scripted) + Claude agents (reasoning)</p>
+  <table>
+    <tr><th>#</th><th>Gate</th><th>Type</th><th>Tool / Agent</th></tr>
+    <tr><td>1-3</td><td>Unit tests + Lint + Format in Docker</td><td>Scripted</td><td><code>docker compose exec</code></td></tr>
+    <tr><td>4-7</td><td>Integration tests (health, LLM stub, correlation IDs, MinIO)</td><td>Scripted</td><td>Playwright <code>tests/integration/</code></td></tr>
+    <tr><td>8-11</td><td>Contract validation, downstream impact, data consistency, migration safety</td><td>Reasoning</td><td>Integration Analyst (Claude)</td></tr>
+    <tr><td>12-15</td><td>Observability: logs, correlation IDs, new signals, unused infrastructure</td><td>Reasoning</td><td>Observability Checker (Claude)</td></tr>
+    <tr><td>16-17</td><td>E2E: affected journey tests + data assertions</td><td>Reasoning</td><td>E2E Runner (Claude)</td></tr>
+    <tr><td>18</td><td>Docker build gate before RC cut</td><td>Scripted</td><td><code>docker build</code> on ci</td></tr>
+  </table>
+  <p>Docker: CI environment (base + ci), images tagged <code>:ci</code>. Fails &rarr; Fix Agent on ci (2 attempts).</p>
+</div>
+
+<div class="card">
+  <div class="card-title">RC Branch (16 gates)</div>
+  <p>Run by: <code>envctl test rc</code> (scripted) + Regression Analyst (reasoning)</p>
+  <table>
+    <tr><th>#</th><th>Gate</th><th>Type</th><th>Tool / Agent</th></tr>
+    <tr><td>1</td><td>Data integrity: all fixture records intact</td><td>Scripted</td><td>Playwright <code>tests/e2e/data-integrity.spec.ts</code></td></tr>
+    <tr><td>2</td><td>Health: services healthy after seeding</td><td>Scripted</td><td>Playwright <code>tests/e2e/health-seeded.spec.ts</code></td></tr>
+    <tr><td>3-8</td><td>Journeys: inbox, tree view, annotations, links, groups, summaries</td><td>Scripted</td><td>Playwright <code>tests/e2e/journeys.spec.ts</code></td></tr>
+    <tr><td>9</td><td>Referential integrity across all tables</td><td>Scripted</td><td>Playwright <code>tests/e2e/data-integrity.spec.ts</code></td></tr>
+    <tr><td>10-15</td><td>Environment parity, migrations, flags, third-party, observability, rollback</td><td>Reasoning</td><td>Regression Analyst (Claude)</td></tr>
+    <tr><td>16</td><td>Docker build gate before merge to main</td><td>Scripted</td><td><code>docker build</code> on RC</td></tr>
+  </table>
+  <p>Docker: RC environment (base + ci + test), fixture-seeded, images tagged <code>:rc</code>.</p>
+  <p><strong>Human gate:</strong> "Approve promote" required before merge to main.</p>
+</div>
+
+<div class="card">
+  <div class="card-title">Main Branch (13 gates)</div>
+  <p>Run by: <code>envctl test prod</code> (scripted) + Production Observer (15 min)</p>
+  <table>
+    <tr><th>#</th><th>Gate</th><th>Type</th><th>Tool / Agent</th></tr>
+    <tr><td>1-7</td><td>All service health: web replicas, sync, MinIO, Grafana, Prometheus, exporters</td><td>Scripted</td><td>Playwright <code>tests/smoke/health-smoke.spec.ts</code></td></tr>
+    <tr><td>8-10</td><td>OTel: traces in Tempo, logs in Loki, metrics in Prometheus</td><td>Scripted</td><td>Playwright <code>tests/smoke/otel-validation.spec.ts</code></td></tr>
+    <tr><td>11-13</td><td>Error rate, latency, log anomalies (15 min observation)</td><td>Reasoning</td><td>Production Observer (Claude)</td></tr>
+  </table>
+  <p>Docker: Prod-parity (base + prod-parity), OTel stack, images tagged <code>:prod</code>.</p>
+  <p>Session reset: <code>/compact</code> after release.</p>
+</div>
+
+<div class="card">
+  <div class="card-title">Gate Count Summary</div>
+  <table>
+    <tr><th>Branch</th><th>Scripted</th><th>Reasoning</th><th>Total</th></tr>
+    <tr><td>Feature</td><td>7</td><td>Devil's Advocate (continuous)</td><td>~7 + review</td></tr>
+    <tr><td>CI</td><td>8</td><td>10</td><td>18</td></tr>
+    <tr><td>RC</td><td>10</td><td>6</td><td>16</td></tr>
+    <tr><td>Main</td><td>10</td><td>3</td><td>13</td></tr>
+    <tr><td><strong>Total</strong></td><td><strong>35</strong></td><td><strong>19 + review</strong></td><td><strong>~54</strong></td></tr>
+  </table>
+</div>
+
+<div class="page-nav">
+  <a href="claude-setup.html">&larr; Previous: Claude Setup</a>
+  <a href="agent-teams.html">Next: Agent Teams &rarr;</a>
+</div>
+
+</div>
+</body>
+</html>

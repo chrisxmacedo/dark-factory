@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pipeline Configuration Guide</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav>
+  <div class="nav-inner">
+    <span class="nav-title">Pipeline Config</span>
+    <a href="index.html" class="active">Overview</a>
+    <a href="prerequisites.html">Prerequisites</a>
+    <a href="jira-setup.html">Jira Setup</a>
+    <a href="claude-setup.html">Claude Setup</a>
+    <a href="pipeline.html">Pipeline</a>
+    <a href="agent-teams.html">Agent Teams</a>
+    <a href="branching.html">Branching</a>
+    <a href="rationale.html">Rationale</a>
+    <a href="lessons.html">Lessons Learned</a>
+  </div>
+</nav>
+<div class="container">
+
+<h1>Jira + Claude Code Pipeline
+  <span class="subtitle">Configuration guide for automated development, testing, and deployment</span>
+</h1>
+
+<hr>
+
+<div class="card">
+  <div class="card-title">What This Is</div>
+  <p>A complete, reproducible configuration for running an automated software development pipeline using Jira for ticket management and Claude Code agent teams for implementation, testing, and deployment. Every ticket flows through a progressive confidence pipeline where specialist agent teams handle each stage, gated by evidence-based criteria and two human checkpoints.</p>
+</div>
+
+<h2>Pipeline at a Glance</h2>
+
+<div class="stat-grid">
+  <div class="stat-card">
+    <div class="stat-value">6</div>
+    <div class="stat-label">pipeline stages</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">6</div>
+    <div class="stat-label">agent teams</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">2</div>
+    <div class="stat-label">human gates</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">Progressive Confidence Stages</div>
+  <table>
+    <tr><th>Stage</th><th>Question Answered</th><th>Branch</th></tr>
+    <tr><td>Development</td><td>Does the code work in isolation?</td><td>feature/*</td></tr>
+    <tr><td>Local Test</td><td>Do all tests pass locally?</td><td>feature/*</td></tr>
+    <tr><td>Integration Test</td><td>Do components work together?</td><td>ci</td></tr>
+    <tr><td>E2E Impact Test</td><td>Does the change work in real flows?</td><td>ci</td></tr>
+    <tr><td>Full E2E Regression</td><td>Does the system still work overall?</td><td>release-rc-*</td></tr>
+    <tr><td>Release / Production</td><td>Is this version production-ready?</td><td>main</td></tr>
+  </table>
+</div>
+
+<h2>How to Use This Guide</h2>
+
+<p>Follow the pages in order. Each page covers one aspect of the setup:</p>
+
+<ol>
+  <li><a href="prerequisites.html">Prerequisites</a> &mdash; what you need installed and configured before starting</li>
+  <li><a href="jira-setup.html">Jira Setup</a> &mdash; creating the project, statuses, issue types, and transition IDs</li>
+  <li><a href="claude-setup.html">Claude Code Setup</a> &mdash; installing the starter templates and configuring the Team Lead</li>
+  <li><a href="pipeline.html">Pipeline Specification</a> &mdash; the full Team Lead orchestration logic, polling loop, and gating</li>
+  <li><a href="agent-teams.html">Agent Teams</a> &mdash; all six specialist team specifications</li>
+  <li><a href="branching.html">Branching Model</a> &mdash; the four-branch git model with merge and rebase rules</li>
+  <li><a href="rationale.html">Pipeline Rationale</a> &mdash; design decisions, roles, testing strategy, and why each stage exists</li>
+  <li><a href="lessons.html">Lessons Learned</a> &mdash; 24 improvements discovered during real-world usage</li>
+</ol>
+
+<h2>Starter Templates</h2>
+
+<p>All configuration files live in the <code>starter/starter-team/</code> directory. When setting up a new project, copy these templates and replace the <code>{PLACEHOLDER}</code> values with your project-specific configuration.</p>
+
+<div class="file-tree">
+  <span class="folder">starter/starter-team/</span><br>
+  &nbsp;&nbsp;&nbsp;&nbsp;<span class="file">PIPELINE.md</span> &mdash; Team Lead orchestration (becomes CLAUDE.md)<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;<span class="file">ARCHITECTURE.md</span> &mdash; Technical architecture template<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;<span class="file">SOLUTION-ARCHITECT-INPUTS.md</span> &mdash; Inputs checklist<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;<span class="folder">.claude/agents/</span><br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="file">development-team.md</span><br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="file">local-test-team.md</span><br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="file">integration-test-team.md</span><br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="file">e2e-impact-team.md</span><br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="file">regression-team.md</span><br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="file">release-team.md</span><br>
+  &nbsp;&nbsp;&nbsp;&nbsp;<span class="folder">infra/</span> &mdash; Docker Compose environments<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="file">docker-compose.base.yml</span> &mdash; shared definitions (never run alone)<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="file">docker-compose.ci.yml</span> &mdash; ephemeral, LLM stub<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="file">docker-compose.test.yml</span> &mdash; fixture seeding<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="file">docker-compose.prod-parity.yml</span> &mdash; persisted, OTel stack<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="file">.env.ci / .env.test / .env.prod-parity.example</span><br>
+  &nbsp;&nbsp;&nbsp;&nbsp;<span class="folder">tests/</span> &mdash; Integration, E2E, and smoke tests<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="folder">integration/</span> &mdash; CI environment tests<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="folder">e2e/</span> &mdash; Regression tests against fixtures<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="folder">smoke/</span> &mdash; OTel + health validation<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="folder">fixtures/</span> &mdash; seed.py + Dockerfile<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="folder">mocks/llm_stub/</span> &mdash; Anthropic + OpenAI stub<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;<span class="folder">.github/workflows/</span><br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="file">ci.yml</span> &mdash; feature/* and ci branches<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="file">release.yml</span> &mdash; release-rc-* branches<br>
+</div>
+
+<div class="page-nav">
+  <span></span>
+  <a href="prerequisites.html">Next: Prerequisites &rarr;</a>
+</div>
+
+</div>
+</body>
+</html>
