@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+# envwatch — auto-rebuild Docker environments when branches get new commits
+#
+# Usage:
+#   ./envwatch              Watch all running environments (default: every 2 min)
+#   ./envwatch --interval 5 Watch with 5-minute interval
+#   ./envwatch --once       Check once and exit (good for cron)
+#
+# Only rebuilds environments that are currently running AND have new commits.
+# Replace {PLACEHOLDERS} with your project-specific values before use.
+
+set -euo pipefail
+cd "$(dirname "$0")"
+
+INTERVAL="${ENVWATCH_INTERVAL:-120}"
+STATE_DIR=".envwatch"
+PROJECT_ROOT="$(cd .. && pwd)"
+PRIMARY_REPO="$PROJECT_ROOT/{service-1}"  # Replace with your primary service repo
+
+mkdir -p "$STATE_DIR"
+
+ONCE=false
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --interval) INTERVAL="$(( $2 * 60 ))"; shift 2 ;;
+    --once)     ONCE=true; shift ;;
+    *)          shift ;;
+  esac
+done
+
+get_remote_sha() {
+  local repo="$1" branch="$2"
+  (cd "$repo" && git fetch origin "$branch" --quiet 2>/dev/null && git rev-parse "origin/$branch" 2>/dev/null) || echo ""
+}
+
+get_last_sha() { cat "$STATE_DIR/$1.sha" 2>/dev/null || echo ""; }
+save_sha() { echo "$2" > "$STATE_DIR/$1.sha"; }
+
+is_running() {
+  docker compose -p "{PROJECT_SLUG}-$1" ps --status running --quiet 2>/dev/null | head -1 | grep -q .
+}
+
+get_rc_branch() {
+  (cd "$PRIMARY_REPO" && git branch -r --sort=-committerdate | grep 'origin/release-rc-' | head -1 | tr -d ' ' | sed 's|origin/||') || echo ""
+}
+
+check_and_rebuild() {
+  local env="$1" branch="$2"
+  [ -z "$branch" ] && return
+  is_running "$env" || return
+  local remote_sha; remote_sha=$(get_remote_sha "$PRIMARY_REPO" "$branch")
+  local last_sha; last_sha=$(get_last_sha "$env")
+  [ -z "$remote_sha" ] && return
+  [ "$remote_sha" = "$last_sha" ] && return
+  echo "[$(date '+%H:%M:%S')] $env: new commits on $branch. Rebuilding..."
+  ./envctl rebuild "$env"
+  save_sha "$env" "$remote_sha"
+  echo "[$(date '+%H:%M:%S')] $env: rebuild complete."
+}
+
+run_check() {
+  check_and_rebuild "ci" "ci"
+  check_and_rebuild "rc" "$(get_rc_branch)"
+  check_and_rebuild "prod" "main"
+}
+
+echo "envwatch: checking every $((INTERVAL / 60)) minutes"
+
+if $ONCE; then
+  run_check
+else
+  while true; do run_check; sleep "$INTERVAL"; done
+fi

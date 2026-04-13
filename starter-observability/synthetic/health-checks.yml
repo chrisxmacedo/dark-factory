@@ -1,0 +1,90 @@
+# Synthetic health checks
+# Defines HTTP probes for each service type. Use with:
+# - Grafana Synthetic Monitoring (cloud)
+# - Prometheus Blackbox Exporter (self-hosted)
+# - Any monitoring tool that accepts YAML probe definitions
+
+defaults:
+  interval: 30s
+  timeout: 10s
+  method: GET
+  expected_status: 200
+
+checks:
+  # ── Web service (starter-web) ────────────────
+  - name: "{PROJECT_NAME}-web"
+    url: "{WEB_SERVICE_URL}/api/health"
+    interval: 30s
+    timeout: 10s
+    expected_status: 200
+    expected_body: '"status":"ok"'
+    labels:
+      service_type: web
+      environment: "{ENVIRONMENT}"
+
+  # ── API service (starter-api) ────────────────
+  - name: "{PROJECT_NAME}-api"
+    url: "{API_SERVICE_URL}/api/health"
+    interval: 30s
+    timeout: 10s
+    expected_status: 200
+    expected_body: '"status":"ok"'
+    labels:
+      service_type: api
+      environment: "{ENVIRONMENT}"
+
+  # ── Sync / Worker service (starter-worker) ───
+  - name: "{PROJECT_NAME}-sync"
+    url: "{SYNC_SERVICE_URL}/healthz"
+    interval: 30s
+    timeout: 10s
+    expected_status: 200
+    expected_body: '"status":"ok"'
+    labels:
+      service_type: worker
+      environment: "{ENVIRONMENT}"
+
+  # ── Gateway service (starter-gateway) ────────
+  - name: "{PROJECT_NAME}-gateway"
+    url: "{GATEWAY_SERVICE_URL}/v1/health"
+    interval: 30s
+    timeout: 10s
+    expected_status: 200
+    expected_body: '"status":"ok"'
+    labels:
+      service_type: gateway
+      environment: "{ENVIRONMENT}"
+
+# ── Blackbox Exporter module (for self-hosted) ─
+# Add this to your blackbox-exporter config if using Prometheus:
+#
+# modules:
+#   http_health:
+#     prober: http
+#     timeout: 10s
+#     http:
+#       method: GET
+#       valid_status_codes: [200]
+#       fail_if_body_not_matches_regexp:
+#         - '"status":"ok"'
+#
+# Then add scrape targets in Prometheus:
+#
+# scrape_configs:
+#   - job_name: synthetic_health
+#     metrics_path: /probe
+#     params:
+#       module: [http_health]
+#     static_configs:
+#       - targets:
+#           - {WEB_SERVICE_URL}/api/health
+#           - {API_SERVICE_URL}/api/health
+#           - {SYNC_SERVICE_URL}/healthz
+#           - {GATEWAY_SERVICE_URL}/v1/health
+#     relabel_configs:
+#       - source_labels: [__address__]
+#         target_label: __param_target
+#       - source_labels: [__param_target]
+#         target_label: instance
+#       - target_label: __address__
+#         replacement: blackbox-exporter:9115

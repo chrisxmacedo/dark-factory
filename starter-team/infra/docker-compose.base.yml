@@ -1,0 +1,107 @@
+# infra/docker-compose.base.yml
+# NEVER run directly. Always use with an override:
+#   docker compose -f docker-compose.base.yml -f docker-compose.ci.yml up
+#
+# {PROJECT_NAME} — Base service definitions
+# Replace all {PLACEHOLDER} values with your project-specific configuration.
+
+# Project name is overridden per environment so all three can run concurrently:
+#   CI:   {PROJECT_SLUG}-ci     (ports {WEB_PORT}, {SYNC_PORT}, 9000)
+#   RC:   {PROJECT_SLUG}-rc     (ports {WEB_PORT}+100, {SYNC_PORT}+100, 9100)
+#   Prod: {PROJECT_SLUG}-prod   (ports {WEB_PORT}+200, {SYNC_PORT}+200, 9200, 4000)
+name: {PROJECT_SLUG}
+
+services:
+
+  # ── Infrastructure ─────────────────────────────────────────────────────────
+  # Add your infrastructure services below. Common patterns:
+  #
+  # PostgreSQL (standard):
+  #   image: postgres:16-alpine
+  #
+  # PostgreSQL + pgvector (vector search):
+  #   image: ankane/pgvector:latest
+  #
+  # Redis:
+  #   image: redis:7-alpine
+  #
+  # MinIO (S3-compatible, replaces cloud object storage):
+  #   image: minio/minio:latest
+  #
+  # Redpanda (Kafka-compatible, replaces cloud message queues):
+  #   image: redpandadata/redpanda:latest
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: {PROJECT_SLUG}
+      POSTGRES_USER: {PROJECT_SLUG}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U {PROJECT_SLUG} -d {PROJECT_SLUG}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes: []  # overridden per environment
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-{PROJECT_SLUG}}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    # Host ports mapped per environment override — not here
+    volumes: []  # overridden per environment
+
+  # ── Application Services ───────────────────────────────────────────────────
+  # Add your application services below. Each service should have:
+  #   - build context pointing to ../{service-name}
+  #   - environment block with DATABASE_URL, REDIS_URL, S3 vars, LLM API vars
+  #   - depends_on with health check conditions
+  #   - healthcheck (GET /healthz or /api/health)
+  #   - ports (expose the primary service port)
+  #
+  # LLM API configuration (works with both Anthropic and OpenAI):
+  #   {LLM_API_ENV_VAR}: ${LLM_API_KEY:-}
+  #   {LLM_API_BASE_ENV_VAR}: ${LLM_API_BASE:-{LLM_DEFAULT_BASE_URL}}
+  #
+  # OTel configuration (add to every application service):
+  #   OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_ENDPOINT:-http://otel-collector:4317}
+  #   OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+  #   OTEL_SERVICE_NAME: {service-name}
+  #   OTEL_SERVICE_VERSION: ${SERVICE_VERSION:-dev}
+  #   OTEL_RESOURCE_ATTRIBUTES: deployment.environment=${ENVIRONMENT}
+
+  # {SERVICE_1}:
+  #   build:
+  #     context: ../{service-1}
+  #     dockerfile: Dockerfile
+  #   environment:
+  #     DATABASE_URL: postgresql://{PROJECT_SLUG}:${POSTGRES_PASSWORD}@postgres:5432/{PROJECT_SLUG}
+  #     REDIS_URL: redis://redis:6379
+  #     ...
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:{PORT}/healthz"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 10
+  #   ports:
+  #     - "{PORT}:{PORT}"

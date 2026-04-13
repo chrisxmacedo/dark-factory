@@ -1,0 +1,49 @@
+# infra/docker-compose.test.yml
+# Ephemeral. Adds synthetic fixture seeding on top of CI stack.
+# Usage: docker compose -f docker-compose.base.yml -f docker-compose.ci.yml -f docker-compose.test.yml up --wait
+
+name: {PROJECT_SLUG}-rc
+
+services:
+
+  # ── DB fixture seeder — runs after migrations ─────────────────────────────
+  # Loads frozen synthetic data so tests can rely on known records with
+  # deterministic IDs. The seeder script lives at tests/fixtures/seed.py.
+
+  db-seed:
+    build:
+      context: ../tests/fixtures
+      dockerfile: Dockerfile
+    command: ["python", "seed.py"]
+    environment:
+      DATABASE_URL: postgresql://{PROJECT_SLUG}:ci-password@postgres:5432/{PROJECT_SLUG}
+      S3_ENDPOINT_URL: http://minio:9000
+      S3_BUCKET: {S3_BUCKET_NAME}
+      S3_ACCESS_KEY: {PROJECT_SLUG}
+      S3_SECRET_KEY: ci-password
+    depends_on:
+      db-migrate:
+        condition: service_completed_successfully
+      minio:
+        condition: service_healthy
+    restart: "no"
+    volumes:
+      - ../tests/fixtures:/fixtures:ro
+
+  # ── Expose Postgres for data integrity assertions from test runner ────────
+
+  postgres:
+    ports:
+      - "5432:5432"
+
+  # ── Override application services to wait for seed ────────────────────────
+  # Every service that reads from the DB should depend on db-seed.
+  # If a service has a fixture mode (e.g. EXTRACTION_MODE=fixture),
+  # override its environment here.
+  #
+  # {SERVICE_1}:
+  #   environment:
+  #     ENVIRONMENT: test
+  #   depends_on:
+  #     db-seed:
+  #       condition: service_completed_successfully

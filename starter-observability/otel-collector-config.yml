@@ -1,0 +1,108 @@
+# OpenTelemetry Collector configuration
+# Receives OTLP from all services, processes, and exports to backends.
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  # ── Batching ──────────────────────────────────
+  # Reduces export overhead by grouping telemetry into batches.
+  batch:
+    send_batch_size: 1024
+    send_batch_max_size: 2048
+    timeout: 5s
+
+  # ── Attribute enrichment ──────────────────────
+  # Adds environment and version metadata to all telemetry.
+  attributes/environment:
+    actions:
+      - key: deployment.environment
+        value: "${DEPLOYMENT_ENVIRONMENT:-local}"
+        action: upsert
+      - key: service.version
+        value: "${SERVICE_VERSION:-0.0.0}"
+        action: upsert
+
+  # ── Tail sampling (traces only) ───────────────
+  # Keeps 100% of error traces, 10% of successful traces.
+  # Reduces storage cost while preserving all error context.
+  tail_sampling:
+    decision_wait: 10s
+    num_traces: 100000
+    policies:
+      - name: errors-always
+        type: status_code
+        status_code:
+          status_codes:
+            - ERROR
+      - name: sample-success
+        type: probabilistic
+        probabilistic:
+          sampling_percentage: 10
+
+exporters:
+  # ── Local exporters (grafana/otel-lgtm) ──────
+  # These work with the all-in-one image out of the box.
+  otlp/local_tempo:
+    endpoint: localhost:4317
+    tls:
+      insecure: true
+
+  loki/local:
+    endpoint: http://localhost:3100/loki/api/v1/push
+
+  prometheus/local:
+    endpoint: 0.0.0.0:8889
+    resource_to_telemetry_conversion:
+      enabled: true
+
+  # ── Grafana Cloud (uncomment to enable) ───────
+  # otlphttp/grafana_cloud:
+  #   endpoint: "${GRAFANA_CLOUD_OTLP_ENDPOINT}"
+  #   headers:
+  #     Authorization: "Basic ${GRAFANA_CLOUD_INSTANCE_ID}:${GRAFANA_CLOUD_API_KEY}"
+
+  # ── Datadog (uncomment to enable) ─────────────
+  # datadog:
+  #   api:
+  #     key: "${DATADOG_API_KEY}"
+  #     site: "${DATADOG_SITE:-datadoghq.com}"
+
+  # ── AWS CloudWatch / X-Ray (uncomment to enable)
+  # awsxray:
+  #   region: "${AWS_REGION}"
+  # awsemf:
+  #   region: "${AWS_REGION}"
+  #   namespace: "${AWS_CLOUDWATCH_NAMESPACE:-{PROJECT_NAME}}"
+  #   log_group_name: "${AWS_CLOUDWATCH_LOG_GROUP:-/otel/{PROJECT_NAME}}"
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [attributes/environment, tail_sampling, batch]
+      exporters: [otlp/local_tempo]
+      # For cloud: replace exporters with [otlphttp/grafana_cloud] or [awsxray] or [datadog]
+
+    metrics:
+      receivers: [otlp]
+      processors: [attributes/environment, batch]
+      exporters: [prometheus/local]
+      # For cloud: replace exporters with [otlphttp/grafana_cloud] or [awsemf] or [datadog]
+
+    logs:
+      receivers: [otlp]
+      processors: [attributes/environment, batch]
+      exporters: [loki/local]
+      # For cloud: replace exporters with [otlphttp/grafana_cloud] or [datadog]
+
+  telemetry:
+    logs:
+      level: info
+    metrics:
+      address: 0.0.0.0:8888
