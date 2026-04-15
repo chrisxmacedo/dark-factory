@@ -109,7 +109,7 @@ journeys require. Created once from the architecture artefacts:
 |-------------|--------|-------------|
 | Environment setup (CI) | `service-dependencies.json` + `service-catalogue.json` + `security-model.json` | docker-compose, CI pipeline, ephemeral databases, test secrets, OTel collector (minimal), external system stubs |
 | Environment setup (RC) | Same sources | Persistent databases, full OTel stack, rotated secrets |
-| Environment setup (prod-parity) | Same sources | Full OTel + audit pipeline, Vault-backed secrets, network zones |
+| Environment setup (prod-parity) | Same sources | Full OTel + audit pipeline, secrets-manager-backed secrets, network zones |
 | T0 platform service (per service) | `service-dependencies.json` tier 0 | IAM, API Gateway, Event Bus, OTel Collector, Secrets Management, Service Mesh |
 | T1 observability stores | `observability-model.json` | Log Store, Trace Store, Metrics Store, Audit Log Store (WORM) |
 
@@ -122,7 +122,7 @@ Environment differences:
 | External systems | Stubs | Stubs | Stubs or sandbox |
 | Databases | Ephemeral | Persistent | Persistent + seed data |
 | OTel pipeline | Collector only | Full stack | Full stack |
-| Secrets | Test values | Rotated | Rotated, Vault-backed |
+| Secrets | Test values | Rotated | Rotated, secrets-manager-backed |
 
 ### Journey Deliverables (repeating, per journey)
 

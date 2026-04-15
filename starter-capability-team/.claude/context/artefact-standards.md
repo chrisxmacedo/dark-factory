@@ -97,7 +97,7 @@ Every non-obvious design choice must be recorded in the artefact:
 | NFR | Non-functional requirement per journey — latency, throughput, availability, security classification. | Per journey |
 | Entity | A data model object derived from journeys. Aggregated into the central model. | Grows with each journey |
 | Service boundary | The ownership line around a group of entities — determines which service owns which data. | Per journey, architect decision |
-| API contract | OpenAPI specification for service-to-service or service-to-participant interaction. Design-time artefact — lives in the repo and CI pipeline. Runtime validation is handled by framework (e.g. Pydantic models in FastAPI), not by reading the spec file. | Per journey |
+| API contract | OpenAPI specification for service-to-service or service-to-participant interaction. Design-time artefact — lives in the repo and CI pipeline. Runtime validation is handled by the application framework's own validation layer, not by reading the spec file. | Per journey |
 | Event | A fact about what happened (past tense). Published by a service, consumed by others. | Per journey |
 | Portal | A user-facing application serving one or more participant types through a specific channel. | Project lifetime |
 | Screen | A single view within a portal showing data, actions, and states. | Per portal |

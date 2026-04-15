@@ -95,7 +95,7 @@ When a sub-capability appears in more than one capability:
 - Cross-capability communication is explicit: synchronous via REST API, asynchronous via domain events on the event backbone
 - High revision counts on a boundary signal it should be redrawn
 - The Architect makes boundary decisions — the agent provides options analysis
-- Each deployable capability has: own PostgreSQL schema, own application (e.g. FastAPI), own test suite, own service.yaml manifest
+- Each deployable capability has: own database schema, own application, own test suite, own service.yaml manifest
 
 ## Sequence principles
 
@@ -145,11 +145,11 @@ When a sub-capability appears in more than one capability:
 
 ## Security principles
 
-- Zero-trust model: service.yaml declares allowed calls, Istio enforces, diff between policy and observed calls is a security signal
-- mTLS between all services via service mesh with SPIFFE/SPIRE workload identity
+- Zero-trust model: service.yaml declares allowed calls, service mesh enforces, diff between policy and observed calls is a security signal
+- mTLS between all services via service mesh with workload identity
 - Data classification (public → regulated) determines encryption, audit logging, and additional controls
 - Audit log pipeline is physically separate from operational telemetry — incompatible retention/access requirements
-- S3 Object Lock in COMPLIANCE mode (not GOVERNANCE) for audit store — even admin cannot delete
+- Audit store must use immutable/WORM storage — admin cannot delete within retention period
 
 ## Event catalogue principles
 

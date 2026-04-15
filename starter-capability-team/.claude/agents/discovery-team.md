@@ -92,7 +92,7 @@ ingestion point. Key principles:
 
 Defines zero-trust security posture:
 - service.yaml as authoritative allowed-call policy source
-- mTLS via service mesh with SPIFFE/SPIRE workload identity
+- mTLS via service mesh with workload identity
 - Data classification levels (public → regulated) driving SIEM severity
 - Network segmentation zones (DMZ, Application, Data, Compliance, Management)
 - Security controls: zero-trust policy map, mTLS status, secret rotation,
