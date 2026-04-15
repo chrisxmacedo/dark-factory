@@ -111,13 +111,28 @@ For each portal (ordered by journey count):
 5. Handle model feedback tickets (prioritise in Phase C backlog)
 6. Verify completion gate
 
-### Handoff to DEV
+### Sprint 0 handoff (once, after Gate 1)
+
+Before the first journey Deliverable, hand off the foundation:
+1. Create Sprint 0 epic in DEV project
+2. Decompose into: environment setup (CI, RC, prod-parity), T0 platform
+   services, T1 observability stores
+3. Source: service-dependencies.json, service-catalogue.json,
+   observability-model.json, security-model.json
+4. DEV team builds platform while Phase C begins
+
+### Journey Deliverable handoff (repeating)
 
 When a journey model is Stable AND its screen specs are Approved:
 1. Create a Deliverable ticket in the DEV project
 2. Include: journey detail, data model, API contracts, sequence diagrams
-   (JSON + Mermaid), screen specs, task flows, relevant C4 component diagrams
-3. This is a buildable unit — the development pipeline takes over
+   (JSON + Mermaid), screen specs, task flows, relevant C4 component diagrams,
+   service.yaml manifests, observability and security requirements
+3. Decompose into tickets by artefact type (see phases.md ticket
+   decomposition strategy)
+4. Each capability is a deployable unit — own DB schema, own app,
+   own test suite
+5. This is a buildable vertical slice — the development pipeline takes over
 
 ## Gate enforcement
 

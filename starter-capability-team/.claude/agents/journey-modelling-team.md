@@ -49,6 +49,8 @@ moves between services owned by different capabilities.
 | Service map | `central-model/service-map.json` | Merged from journey boundaries |
 | Event catalogue | `central-model/event-catalogue.json` | Merged from journey events |
 | C4 workspace update | `architecture/c4-workspace.dsl` | Refine Container (L2) relationships, add Component (L3) diagrams per container |
+| Service dependencies update | `architecture/service-dependencies.json` | Refine dependency criticality based on actual API contracts and sequence diagrams |
+| Observability model update | `architecture/observability-model.json` | Add service-specific logging category if new pattern identified |
 
 ## Step sequence (sequential with feedback loops)
 

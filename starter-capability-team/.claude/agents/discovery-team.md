@@ -29,15 +29,21 @@ institutional reality that isn't written in any document.
 
 | Step | Artefact | Lead | Agent role |
 |------|----------|------|------------|
-| 2. Technical services | `foundation/technical-services.json` | Architect | Enumerates from capabilities; identifies shared services |
+| 2. Technical services | `foundation/technical-services/*.json` | Architect | Enumerates from capabilities; identifies shared services |
 | 5. Visual architecture | `architecture/visual-architecture.json` + `channel-model.json` | Architect | Produces structured representation; human defines layering |
 | 5. C4 workspace (L1 + L2) | `architecture/c4-workspace.dsl` | Architect | Generates Structurizr DSL from capabilities, services, personas, channels |
+| 5. Service dependencies | `architecture/service-dependencies.json` | Architect | Assigns tier (T0-T4), maps dependency criticality (hard/soft), defines build order |
+| 5. Service catalogue | `architecture/service-catalogue.json` | Architect | Consolidates all services with owner, API style, data store, SLA |
+| 5. Observability model | `architecture/observability-model.json` | Architect | Defines log routing, instrumentation checklist, logging schemas, data freshness |
+| 5. Security model | `architecture/security-model.json` | Architect | Defines zero-trust policy, mTLS, data classification, network segmentation |
+| 5. Environment specification | `architecture/environment-spec.json` | Architect | Derives CI, RC, prod-parity configs from service catalogue + dependencies + security model |
 
 These artefacts are **structural/technical**. The Architect makes
 the service classification and boundary decisions.
 
-The C4 workspace is created at step 5 as a **living artefact** in
-Structurizr DSL format:
+#### C4 workspace
+
+Created at step 5 as a **living artefact** in Structurizr DSL format:
 - **System Context (L1)**: the system boundary, all personas (as people
   or external software systems), external system integrations
 - **Container (L2)**: one container per technical service, relationships
@@ -47,6 +53,62 @@ Structurizr DSL format:
 The workspace grows in later phases — Journey Modelling refines L2
 and adds Component (L3) diagrams, UI Specification adds portal
 containers.
+
+#### Service dependency tiers
+
+Every service is assigned a build tier based on its upstream dependencies:
+
+| Tier | Name | Rule |
+|------|------|------|
+| T0 | Foundation | No upstream dependencies — build first |
+| T1 | Core Infrastructure | Depends only on T0 — compliance prerequisites |
+| T2 | Business Services | Depends on T0 + T1 — core money-movement and data |
+| T3 | Composite | Depends on T0 + T1 + T2 — multi-dependency capabilities |
+| T4 | Overlay | Depends on full stack — build last |
+
+Each dependency is classified by criticality:
+- **hard**: sync dependency — caller cannot function if this is down
+- **soft**: async/degradable — caller can function in degraded mode
+
+The build order defines phases where services within a phase can be
+built in parallel. The recommended build order is regulatory-driven:
+compliance prerequisites (KYC, sanctions, fraud) must be live before
+any payment or onboarding service.
+
+#### Observability model
+
+Defines the telemetry architecture following OTel Collector as sole
+ingestion point. Key principles:
+- All services emit via OTLP — never connect to stores directly
+- PII scrubbing in the collector pipeline before data reaches stores
+- Four stores with different retention/access: Log (90d), Trace (30d),
+  Metrics (13mo), Audit (7yr WORM, auditor-only)
+- Per-service instrumentation checklist (6 items, mandatory gate)
+- Logging schema by service category (7 categories)
+- `service.yaml` manifest per repo: id, tier, depends_on with
+  criticality, data_classification, secrets with rotation_days
+
+#### Security model
+
+Defines zero-trust security posture:
+- service.yaml as authoritative allowed-call policy source
+- mTLS via service mesh with SPIFFE/SPIRE workload identity
+- Data classification levels (public → regulated) driving SIEM severity
+- Network segmentation zones (DMZ, Application, Data, Compliance, Management)
+- Security controls: zero-trust policy map, mTLS status, secret rotation,
+  blast radius visualiser, CVE exposure, audit log separation
+
+#### Environment specification
+
+Derived from service catalogue, dependencies, and security model.
+Defines three environments (CI, RC, prod-parity) with what is real
+vs stubbed in each:
+- Service list and startup ordering (from dependency tiers)
+- Database provisioning (from service catalogue data_store)
+- External system stubs (from C4 external software systems)
+- Secrets and .env configuration (from security model)
+- OTel pipeline configuration (from observability model)
+- Network zones (from security model segmentation)
 
 ### Layer 3: Journey Inventory (Step 6)
 
@@ -105,6 +167,12 @@ transition.
   the entire system to stakeholders
 - Creates the initial C4 workspace (Structurizr DSL) with System Context
   and Container diagrams derived from capabilities, services, and personas
+- Assigns service dependency tiers (T0-T4) with criticality (hard/soft)
+  and defines the recommended build order
+- Produces the observability model: log routing architecture, instrumentation
+  checklist, logging schemas by category, data freshness contracts
+- Produces the security model: zero-trust policy, mTLS, data classification,
+  network segmentation zones
 
 ### Quality Reviewer
 - Reviews every artefact before it moves from Draft to In review
@@ -124,6 +192,10 @@ Artefacts:
   - Personas: [count] internal, [count] external
   - Visual architecture: [count] layers, [count] channels
   - C4 workspace: System Context (L1) + Container (L2) diagrams
+  - Service dependencies: [count] services across T0-T4, [count] build phases
+  - Service catalogue: [count] services with owner, SLA, API style
+  - Observability model: [count] instrumentation checklist items, [count] log categories
+  - Security model: [count] controls, [count] data classification levels, [count] network zones
   - Journey inventory: [count] journeys, prioritised
 Shared sub-capabilities: [count] with resolutions
 All artefacts baselined: [yes|no]
@@ -133,7 +205,7 @@ Recommended first journey for Phase C: [{journey-name}]
 
 ## Completion gate (Gate 1: Modelling readiness)
 
-- [ ] All foundation artefacts committed and baselined (including C4 workspace)
+- [ ] All foundation artefacts committed and baselined (including C4 workspace, service dependencies, observability model, security model)
 - [ ] All artefacts validate against their JSON schemas
 - [ ] Sub-capability promotion test applied and documented for every sub-capability
 - [ ] Shared sub-capabilities recorded with resolution patterns

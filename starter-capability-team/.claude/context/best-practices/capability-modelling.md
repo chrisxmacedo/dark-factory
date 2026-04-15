@@ -2,10 +2,40 @@
 
 Read by: Discovery Team, Journey Modelling Team
 
+## Architectural philosophy
+
+This pipeline produces a **capability-driven architecture** where each
+capability is the deployment boundary — a self-contained domain with its
+own data, logic, contracts, events, and test suite. This is a modular
+monolith, not microservices. Each capability is sized to fit within an
+AI agent's context window for development.
+
+**Three layers:**
+- **Runtime — Capability Layer**: domain modules owning data, exposing
+  REST APIs, publishing/consuming events. Data status within capabilities
+  implicitly represents journey progress.
+- **Runtime — Platform Layer**: shared infrastructure (Event Bus, Schema
+  Registry, Observability, Audit, Auth, Cache). Share the mechanism,
+  isolate the state.
+- **Design-time — Contract Layer**: API specs, event schemas, journey
+  specs. Live in the repo and CI pipeline, consumed by channel UIs and
+  AI development agents. Not runtime containers, not on C4 diagrams.
+  The Schema Registry is the sole runtime exception.
+
+**Key principles:**
+- Share contracts, not implementations — each capability owns its own
+  representation of shared concepts
+- Capabilities communicate through domain events, not shared databases
+- Journeys are design-time specifications, not runtime orchestration
+- Verification independence (can I test this in isolation?) is the
+  decomposition criterion, not deployment independence
+- C4 diagrams show runtime only — capabilities + platform layer
+
 ## Capability decomposition
 
 - Start from what the organisation **does**, not what systems it needs
 - Each capability is a distinct area of institutional responsibility
+- Each capability is also the **deployment boundary** — own database schema, own application, own test suite
 - Capabilities are stable over decades — they change only when the mandate changes
 - Technology choices are derived from capability requirements, never the reverse
 
@@ -20,16 +50,30 @@ Every sub-capability must be evaluated against four criteria:
 If 3+ criteria met → promote to standalone capability. Document the
 decision in the artefact.
 
+Promotion has a direct deployment consequence:
+- **Retained** sub-capabilities are part of the parent capability's
+  deployable unit (same database schema, same application)
+- **Promoted** sub-capabilities become independently deployable
+  capabilities (own schema, own application, own test suite)
+
 ## Shared sub-capabilities
 
 When a sub-capability appears in more than one capability:
 - Record in `foundation/shared-sub-capabilities.json`
-- Document the architectural resolution (shared service, library, or duplicated)
+- Document the architectural resolution: share contracts, not implementations
+- Each capability owns its own representation of shared concepts (e.g.
+  Billing has BillingCustomer, not a shared Customer model)
+- Reference data is published by whichever capability is authoritative
+  and consumed as read-only by others via domain events
 - This decision has downstream implications for service boundaries
 
 ## Journey modelling
 
 - Journeys are the unit of work in Phase C — one journey = one cycle through steps 7-13
+- **Journeys are design-time specifications, not runtime orchestration** — they define steps, data requirements, and valid transitions, but nothing reads them at runtime
+- The channel UI uses journey specs to build the interaction flow; AI agents use them to understand how capabilities compose
+- Data status within capabilities implicitly represents journey progress — a KYC record with status "pending" means the onboarding journey is in progress. No separate state machine needed.
+- Actual coordination happens through capabilities reacting to each other's published events
 - Every journey must have: happy path, at least one alternative path, at least one exception path
 - Phases within a journey are the natural breakpoints — each phase can have different actors, different governance rules, different NFRs
 - A journey crosses service boundaries — that's what makes it a journey, not a feature
@@ -47,10 +91,11 @@ When a sub-capability appears in more than one capability:
 ## Service boundary principles
 
 - Boundaries follow business capability lines, not technical convenience
-- A service owns its data — no shared databases
-- Cross-service communication is explicit (API or event)
+- A capability owns its data — no shared databases between capabilities
+- Cross-capability communication is explicit: synchronous via REST API, asynchronous via domain events on the event backbone
 - High revision counts on a boundary signal it should be redrawn
 - The Architect makes boundary decisions — the agent provides options analysis
+- Each deployable capability has: own PostgreSQL schema, own application (e.g. FastAPI), own test suite, own service.yaml manifest
 
 ## Sequence principles
 
@@ -66,9 +111,10 @@ When a sub-capability appears in more than one capability:
 
 - The C4 workspace (`architecture/c4-workspace.dsl`) is a single Structurizr DSL file that is the source of truth for all architecture diagrams
 - It is a **living artefact** — not baselined, continuously updated across all phases
-- **System Context (L1)**: produced by Discovery Team at step 5. Shows the system boundary, all personas, and external system integrations. Containers follow capability domain lines — one container per technical service, not per feature
-- **Container (L2)**: initial draft by Discovery Team at step 5 (one container per technical service). Refined by Journey Modelling Team after each journey (inter-container relationships from API contracts). Completed by UI Specification Team (portal containers added with frontend-to-backend relationships)
-- **Component (L3)**: produced by Journey Modelling Team after each journey. One component diagram per container, showing internal structure derived from service boundaries and data model entities
+- **C4 shows runtime only** — capabilities (deployment units) sitting on the platform layer. No contract layer on the diagrams. API specs, journey specs, and regulatory constraints are design-time artefacts that live in the repo, not runtime containers.
+- **System Context (L1)**: produced by Discovery Team at step 5. Shows the system boundary, system users (personas), and external systems. Does NOT show developers or AI agents — those are development concerns, not runtime.
+- **Container (L2)**: capabilities as deployment units on top of the platform layer, with dependency arrows flowing downward. One container per deployable capability (retained sub-caps are internal, promoted sub-caps are separate containers). Platform containers: Event Bus, Schema Registry, Observability, Audit Pipeline, Auth, Cache.
+- **Component (L3)**: produced by Journey Modelling Team after each journey. One component diagram per capability, showing internal structure derived from service boundaries and data model entities. Components connect to platform containers (Event Bus, Schema Registry, Audit Pipeline, Observability).
 - Every element in the C4 workspace must trace to a JSON artefact: personas to `personas/*.json`, containers to `service-map.json`, components to `service-boundaries.json`, relationships to `api-contracts/*.openapi.json`
 - The Review Team validates C4-to-JSON consistency at every review
 
@@ -78,6 +124,32 @@ When a sub-capability appears in more than one capability:
 - Both internal APIs (between services) and external APIs (for participants)
 - Contracts include: authentication model, rate limits, error responses
 - Sequence diagrams show the call flow for each journey phase
+
+## Service dependency principles
+
+- Every service is assigned a build tier (T0-T4) based on upstream dependencies
+- T0 Foundation (no deps) → T1 Core Infrastructure → T2 Business Services → T3 Composite → T4 Overlay
+- Each dependency is classified as **hard** (sync, immediate failure) or **soft** (async/degradable)
+- The build order is regulatory-driven: compliance prerequisites (KYC, sanctions, fraud) must be live before payment or onboarding services
+- `service.yaml` is the authoritative manifest per service: id, tier, depends_on (with protocol and criticality), topics_produced, topics_consumed, data_classification, secrets with rotation_days
+- The dependency graph + criticality drives the blast radius visualiser and zero-trust policy enforcement
+
+## Observability principles
+
+- OTel Collector is the sole telemetry ingestion point — services never connect to stores directly
+- PII scrubbing happens once, centrally, in the collector pipeline
+- Four stores with incompatible requirements: Log (90d, engineering), Trace (30d, engineering), Metrics (13mo, engineering), Audit (7yr WORM, auditor-only)
+- Per-service instrumentation checklist (6 items) is a mandatory gate before a service is marked Done
+- Logging schema extensions are mandatory per service category (API/edge, core domain, payment, identity/auth, async/event, admin/config, batch)
+- `service.yaml` data_classification drives SIEM alert severity — CVE on a pii/financial service triggers elevated alert
+
+## Security principles
+
+- Zero-trust model: service.yaml declares allowed calls, Istio enforces, diff between policy and observed calls is a security signal
+- mTLS between all services via service mesh with SPIFFE/SPIRE workload identity
+- Data classification (public → regulated) determines encryption, audit logging, and additional controls
+- Audit log pipeline is physically separate from operational telemetry — incompatible retention/access requirements
+- S3 Object Lock in COMPLIANCE mode (not GOVERNANCE) for audit store — even admin cannot delete
 
 ## Event catalogue principles
 

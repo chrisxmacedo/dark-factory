@@ -32,12 +32,16 @@ Sequential. Produces the system map and journey backlog.
 | Step | Artefact | Inputs | Owner |
 |------|----------|--------|-------|
 | 5. Visual architecture + C4 | `architecture/visual-architecture.json` + `channel-model.json` + `architecture/c4-workspace.dsl` | Capabilities, services, personas | Architect |
+| 5. Service dependencies | `architecture/service-dependencies.json` + `architecture/service-catalogue.json` | Technical services, capabilities | Architect |
+| 5. Observability model | `architecture/observability-model.json` | Technical services, governance | Architect |
+| 5. Security model | `architecture/security-model.json` | Technical services, governance, personas | Architect |
+| 5. Environment specification | `architecture/environment-spec.json` | Service catalogue, dependencies, security model | Architect |
 | 6. Journey inventory | `foundation/journey-inventory.json` | Sub-capabilities x personas | Domain Analyst |
 
 ## Gate 1: Modelling readiness
 
 Passed once. Conditions:
-- All foundation artefacts baselined (including C4 workspace with L1 + L2)
+- All foundation artefacts baselined (including C4, service dependencies, observability model, security model)
 - Journey inventory prioritised
 - First journey selected
 
@@ -96,17 +100,79 @@ Feedback loop:
 
 ## Handoff to DEV
 
+### Sprint 0: Foundation (after Gate 1, before first journey)
+
+The first handoff is not a journey — it is the foundation that all
+journeys require. Created once from the architecture artefacts:
+
+| Ticket type | Source | Description |
+|-------------|--------|-------------|
+| Environment setup (CI) | `service-dependencies.json` + `service-catalogue.json` + `security-model.json` | docker-compose, CI pipeline, ephemeral databases, test secrets, OTel collector (minimal), external system stubs |
+| Environment setup (RC) | Same sources | Persistent databases, full OTel stack, rotated secrets |
+| Environment setup (prod-parity) | Same sources | Full OTel + audit pipeline, Vault-backed secrets, network zones |
+| T0 platform service (per service) | `service-dependencies.json` tier 0 | IAM, API Gateway, Event Bus, OTel Collector, Secrets Management, Service Mesh |
+| T1 observability stores | `observability-model.json` | Log Store, Trace Store, Metrics Store, Audit Log Store (WORM) |
+
+Environment differences:
+
+| Component | CI | RC | Prod-parity |
+|-----------|----|----|-------------|
+| Domain capabilities | Real | Real | Real |
+| Platform (IAM, Event Bus) | Real | Real | Real |
+| External systems | Stubs | Stubs | Stubs or sandbox |
+| Databases | Ephemeral | Persistent | Persistent + seed data |
+| OTel pipeline | Collector only | Full stack | Full stack |
+| Secrets | Test values | Rotated | Rotated, Vault-backed |
+
+### Journey Deliverables (repeating, per journey)
+
 When stable journey model + approved screen specs exist:
 - Create Deliverable in DEV project
 - Include: journey detail, data model, API contracts, sequence diagrams
-  (JSON + Mermaid), screen specs, task flows, relevant C4 component diagrams
+  (JSON + Mermaid), screen specs, task flows, relevant C4 component diagrams,
+  service.yaml manifests for affected services, observability and security
+  requirements from the architecture models
 - This is one buildable unit of work
+
+### Ticket decomposition strategy
+
+**Vertical slices by journey, on a foundation base.**
+
+Sprint 0 builds the platform. Then each journey is a vertical slice
+through the capability stack — not "build all services then journeys."
+
+Each journey Deliverable is decomposed into tickets by artefact type:
+
+| Ticket type | Source artefact | Scope |
+|-------------|----------------|-------|
+| Capability scaffold | `service-boundaries.json` | One per new capability this journey introduces — own DB schema, own app, own test suite, service.yaml |
+| Entity implementation | `data-model.json` | One per entity — fields, types, validation, relationships |
+| API endpoint | `api-contracts/*.openapi.json` | One per endpoint — must include example request/response bodies |
+| Event producer/consumer | `events/*.json` | One per event — source, payload schema, consumers |
+| Screen | `screens/{screen}.json` | One per screen — all 6 states mandatory |
+| Task flow E2E test | `task-flows/*.json` | One per journey path (happy, alt, exception) |
+| Instrumentation | `observability-model.json` | One per new capability — per-category logging schema, health endpoints, service.yaml |
+| Security classification | `security-model.json` | One per new capability — data classification, network zone, mTLS config |
+
+Services grow incrementally: JRN-001 builds the Customer entity with
+10 fields. JRN-005 adds 5 more fields for Business Account. JRN-008
+adds lending fields. The central model aggregation tracks this growth.
+
+Journey dependencies: the journey inventory priority order respects
+capability dependencies — you cannot model JRN-003 (Mortgage) until
+JRN-001 (Account Opening) establishes the Customer and Account entities.
+
+**Capabilities are the deployment boundary.** Each promoted sub-capability
+and each retained parent capability is one deployable unit with its own
+database schema, application, and test suite. The promotion test
+determines the boundary.
 
 ## Timeline (typical)
 
 | Phase | Duration | Team |
 |-------|----------|------|
 | A + B | 2-3 weeks | Domain Analyst + Architect |
+| Sprint 0 (platform) | 1-2 weeks | DEV team (overlaps with Phase C start) |
 | C (all journeys) | 8-12 weeks | Domain Analyst + Architect + Designer (from week 3) |
 | D (all portals) | 6-8 weeks (overlaps C) | Designer + Architect |
-| Total design | 12-16 weeks | DEV receives buildable units from week 5 onwards |
+| Total design | 12-16 weeks | DEV receives Sprint 0 at week 3, buildable journey units from week 5 onwards |

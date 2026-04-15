@@ -21,7 +21,7 @@ artefacts consumed by a development pipeline (starter-development-team).
       ui-specification.md      — Phase D best practices
 artefacts/                 — All design outputs
   foundation/              — Phase A + B (JSON)
-  architecture/            — Phase B (JSON + Structurizr DSL)
+  architecture/            — Phase B (JSON + Structurizr DSL + observability + security)
   models/                  — Phase C per journey (JSON + Mermaid)
   central-model/           — Aggregated from all journeys (JSON)
   ui-specs/                — Phase D per portal (JSON)

@@ -82,14 +82,14 @@ Every non-obvious design choice must be recorded in the artefact:
 
 | Term | Definition | Stable over |
 |------|-----------|-------------|
-| Capability | A distinct area of institutional responsibility that could be delegated to a separate department. What the organisation **does**. | Decades — changes only when mandate changes |
-| Sub-capability | A subdivision of a capability. May be promoted to standalone if it meets 3+ of 4 promotion criteria (distinct participants, distinct legal framework, distinct lifecycle, distinct data domain). | Years |
+| Capability | A distinct area of institutional responsibility that could be delegated to a separate department. What the organisation **does**. Each capability is also the **deployment boundary** — a self-contained domain with its own data (database schema), logic (application), contracts (OpenAPI), events, and test suite. Retained sub-capabilities are part of the parent's deployable unit; promoted sub-capabilities become their own. | Decades — changes only when mandate changes |
+| Sub-capability | A subdivision of a capability. May be promoted to standalone if it meets 3+ of 4 promotion criteria (distinct participants, distinct legal framework, distinct lifecycle, distinct data domain). Promoted sub-capabilities become independently deployable capabilities. | Years |
 | Shared sub-capability | A sub-capability that appears in more than one capability, with a documented resolution pattern (single service, shared data, or duplicate by design). | Years |
-| Technical service | A software service supporting one or more capabilities. Classified as domain-specific, cross-cutting, or foundation infrastructure. | Project lifetime |
+| Technical service | A software service supporting one or more capabilities. Classified as domain-specific, cross-cutting, or foundation infrastructure. Domain-specific services map 1:1 to deployable capabilities. | Project lifetime |
 | Governance rule | A legislative, regulatory, or policy constraint that bounds a capability — who can do what, under what conditions, with what approvals. | Changes with legislation/policy |
 | Persona | A person or organisational role that interacts with capabilities. Internal (employees) or external (counterparties, regulators, public). | Years |
 | Channel | How a persona type accesses the system — each channel has its own auth model, rate limits, data projection, and audit requirements. | Project lifetime |
-| Journey | A complete end-to-end flow of work triggered by a persona interacting with a sub-capability. The unit of iterative modelling in Phase C. A journey may span multiple capabilities — this is expected and reveals integration points between capability domains. | Modelling cycle |
+| Journey | A complete end-to-end flow of work triggered by a persona interacting with a sub-capability. The unit of iterative modelling in Phase C. A journey may span multiple capabilities — this is expected and reveals integration points between capability domains. **Journeys are design-time specifications** — they define steps, data requirements, and valid transitions, but are not runtime orchestration. Data status within capabilities implicitly represents journey progress. Coordination happens through capabilities reacting to each other's published events. | Modelling cycle |
 | Journey phase | A distinct stage within a journey where different actors, rules, or NFRs apply. | Per journey |
 | Sequence | The flow of data and control between participants and services during a journey. Expressed as a Mermaid sequence diagram (`.mmd`) derived from structured JSON. A sequence makes cross-capability interactions visible — when a journey spans multiple capabilities, the sequence diagram shows exactly how data moves from one capability's services to another's. | Per journey |
 | C4 model | The Structurizr DSL workspace (`c4-workspace.dsl`) containing System Context, Container, and Component diagrams. A living artefact that grows across all phases — Discovery produces L1+L2, Journey Modelling refines L2 and adds L3, UI Specification adds portal containers. | Project lifetime (continuously updated) |
@@ -97,13 +97,21 @@ Every non-obvious design choice must be recorded in the artefact:
 | NFR | Non-functional requirement per journey — latency, throughput, availability, security classification. | Per journey |
 | Entity | A data model object derived from journeys. Aggregated into the central model. | Grows with each journey |
 | Service boundary | The ownership line around a group of entities — determines which service owns which data. | Per journey, architect decision |
-| API contract | OpenAPI specification for service-to-service or service-to-participant interaction. | Per journey |
+| API contract | OpenAPI specification for service-to-service or service-to-participant interaction. Design-time artefact — lives in the repo and CI pipeline. Runtime validation is handled by framework (e.g. Pydantic models in FastAPI), not by reading the spec file. | Per journey |
 | Event | A fact about what happened (past tense). Published by a service, consumed by others. | Per journey |
 | Portal | A user-facing application serving one or more participant types through a specific channel. | Project lifetime |
 | Screen | A single view within a portal showing data, actions, and states. | Per portal |
 | Task flow | User-level interaction sequence through screens for a specific journey. | Per journey per portal |
 | Form | An input specification with fields, validation, and conditional logic. | Per screen |
 | Design system | Reusable component and pattern library for a portal. | Per portal |
+| Service dependency tier | Build tier (T0 Foundation → T4 Overlay) assigned to each service based on upstream dependencies. Determines build order. | Project lifetime |
+| Dependency criticality | Classification of each service-to-service dependency as **hard** (sync, immediate failure if down) or **soft** (async/degradable). Drives blast radius analysis. | Per service pair |
+| Observability model | Architecture-level definition of log routing, instrumentation standards, logging schemas by category, and data freshness contracts. Produced at Discovery, consumed by all teams. | Project lifetime (updated as services added) |
+| Security model | Architecture-level definition of zero-trust policy, mTLS requirements, data classification levels, network segmentation, and security posture controls. | Project lifetime (updated as services added) |
+| service.yaml | Machine-readable manifest per service repo: id, tier, depends_on (with protocol and criticality), topics_produced, topics_consumed, data_classification, secrets with rotation_days. The authoritative source for the zero-trust policy engine. | Per service |
+| Environment specification | Defines CI, RC, and prod-parity environment configurations derived from the service catalogue, dependencies, and security model. Specifies what is real vs stubbed in each environment. | Project lifetime |
+| Platform layer | Shared runtime infrastructure that all capabilities depend on: Event Bus, Schema Registry (the one runtime contract element), Observability, Audit Pipeline, Auth, Cache. Principle: share the mechanism, isolate the state. | Project lifetime |
+| Contract layer | Design-time specification artefacts consumed by channel UIs and AI development agents: API contracts (OpenAPI), event contracts (schemas), journey contracts (process specs). Live in the repo and CI pipeline — not runtime containers, not on C4 diagrams. The Schema Registry is the sole exception (validates event payloads at runtime). | Per journey |
 
 ## Cross-references
 
