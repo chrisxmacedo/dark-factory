@@ -1,0 +1,652 @@
+{
+  "$schema": "../schemas/technical-service.schema.json",
+  "_meta": {
+    "generated": "2026-04-15",
+    "description": "Consolidated service catalogue aggregated from domain-services.json, cross-cutting-services.json, and foundation-services.json. All services are in 'planned' status — this is a greenfield architecture design.",
+    "source_files": [
+      "artefacts/foundation/technical-services/domain-services.json",
+      "artefacts/foundation/technical-services/cross-cutting-services.json",
+      "artefacts/foundation/technical-services/foundation-services.json"
+    ]
+  },
+  "summary": {
+    "total_services": 30,
+    "by_classification": {
+      "domain_specific": 17,
+      "cross_cutting": 6,
+      "foundation": 7
+    },
+    "by_api_style": {
+      "REST/OpenAPI": 26,
+      "gRPC": 3,
+      "AMQP": 1
+    },
+    "by_data_store": {
+      "PostgreSQL": 14,
+      "TimescaleDB": 3,
+      "MongoDB": 3,
+      "Redis": 2,
+      "Elasticsearch": 3,
+      "Kafka": 1,
+      "PostgreSQL + Redis": 2,
+      "PostgreSQL + Elasticsearch": 2
+    },
+    "by_sla": {
+      "99.99%": 5,
+      "99.999%": 7,
+      "99.95%": 18
+    },
+    "dependency_matrix": {
+      "description": "Services ranked by number of inbound dependencies (dependents). Higher count = more critical — a failure in this service would cascade to more consumers.",
+      "ranked": [
+        {
+          "service_id": "SVC-103",
+          "service_name": "Audit & Logging Service",
+          "classification": "foundation",
+          "inbound_dependent_count": 29,
+          "depended_on_by": [
+            "SVC-001", "SVC-002", "SVC-003", "SVC-004", "SVC-005", "SVC-006",
+            "SVC-007", "SVC-008", "SVC-009", "SVC-010", "SVC-011", "SVC-012",
+            "SVC-013", "SVC-014", "SVC-015", "SVC-016", "SVC-017",
+            "SVC-050", "SVC-051", "SVC-052", "SVC-053", "SVC-054", "SVC-055",
+            "SVC-100", "SVC-101", "SVC-102", "SVC-104", "SVC-105", "SVC-106"
+          ]
+        },
+        {
+          "service_id": "SVC-100",
+          "service_name": "Identity & Access Management",
+          "classification": "foundation",
+          "inbound_dependent_count": 27,
+          "depended_on_by": [
+            "SVC-001", "SVC-002", "SVC-003", "SVC-004", "SVC-005", "SVC-006",
+            "SVC-007", "SVC-008", "SVC-009", "SVC-010", "SVC-011", "SVC-012",
+            "SVC-013", "SVC-014", "SVC-015", "SVC-016", "SVC-017",
+            "SVC-050", "SVC-051", "SVC-052", "SVC-053", "SVC-054", "SVC-055",
+            "SVC-101", "SVC-102", "SVC-104", "SVC-106"
+          ]
+        },
+        {
+          "service_id": "SVC-101",
+          "service_name": "API Gateway",
+          "classification": "foundation",
+          "inbound_dependent_count": 23,
+          "depended_on_by": [
+            "SVC-001", "SVC-002", "SVC-003", "SVC-004", "SVC-005", "SVC-006",
+            "SVC-007", "SVC-008", "SVC-009", "SVC-010", "SVC-011", "SVC-012",
+            "SVC-013", "SVC-014", "SVC-015", "SVC-016", "SVC-017",
+            "SVC-050", "SVC-051", "SVC-052", "SVC-053", "SVC-054", "SVC-055"
+          ]
+        },
+        {
+          "service_id": "SVC-102",
+          "service_name": "Event Bus",
+          "classification": "foundation",
+          "inbound_dependent_count": 20,
+          "depended_on_by": [
+            "SVC-001", "SVC-002", "SVC-004", "SVC-005", "SVC-006", "SVC-007",
+            "SVC-008", "SVC-009", "SVC-010", "SVC-012", "SVC-013",
+            "SVC-014", "SVC-015", "SVC-016", "SVC-017",
+            "SVC-050", "SVC-051", "SVC-052", "SVC-053", "SVC-055"
+          ]
+        },
+        {
+          "service_id": "SVC-054",
+          "service_name": "Document Management Service",
+          "classification": "cross_cutting",
+          "inbound_dependent_count": 11,
+          "depended_on_by": [
+            "SVC-001", "SVC-003", "SVC-004", "SVC-007", "SVC-010", "SVC-012",
+            "SVC-013", "SVC-016", "SVC-017", "SVC-051", "SVC-052"
+          ]
+        },
+        {
+          "service_id": "SVC-050",
+          "service_name": "Customer Onboarding Service",
+          "classification": "cross_cutting",
+          "inbound_dependent_count": 9,
+          "depended_on_by": [
+            "SVC-001", "SVC-002", "SVC-003", "SVC-006", "SVC-010", "SVC-012",
+            "SVC-013", "SVC-017", "SVC-051"
+          ]
+        },
+        {
+          "service_id": "SVC-051",
+          "service_name": "Sanctions Screening Service",
+          "classification": "cross_cutting",
+          "inbound_dependent_count": 8,
+          "depended_on_by": [
+            "SVC-004", "SVC-006", "SVC-007", "SVC-008", "SVC-010", "SVC-014",
+            "SVC-016", "SVC-050"
+          ]
+        },
+        {
+          "service_id": "SVC-104",
+          "service_name": "Data Platform",
+          "classification": "foundation",
+          "inbound_dependent_count": 7,
+          "depended_on_by": [
+            "SVC-005", "SVC-009", "SVC-015", "SVC-016", "SVC-017", "SVC-052",
+            "SVC-105"
+          ]
+        },
+        {
+          "service_id": "SVC-052",
+          "service_name": "Credit Decision Service",
+          "classification": "cross_cutting",
+          "inbound_dependent_count": 5,
+          "depended_on_by": [
+            "SVC-001", "SVC-002", "SVC-004", "SVC-017", "SVC-050"
+          ]
+        },
+        {
+          "service_id": "SVC-105",
+          "service_name": "Secrets Management",
+          "classification": "foundation",
+          "inbound_dependent_count": 4,
+          "depended_on_by": [
+            "SVC-102", "SVC-103", "SVC-104", "SVC-106"
+          ]
+        },
+        {
+          "service_id": "SVC-009",
+          "service_name": "Fraud Detection Service",
+          "classification": "domain_specific",
+          "inbound_dependent_count": 4,
+          "depended_on_by": [
+            "SVC-002", "SVC-006", "SVC-008", "SVC-014"
+          ]
+        },
+        {
+          "service_id": "SVC-008",
+          "service_name": "Card Processing Service",
+          "classification": "domain_specific",
+          "inbound_dependent_count": 3,
+          "depended_on_by": [
+            "SVC-002", "SVC-006", "SVC-009"
+          ]
+        },
+        {
+          "service_id": "SVC-055",
+          "service_name": "Workflow Engine",
+          "classification": "cross_cutting",
+          "inbound_dependent_count": 3,
+          "depended_on_by": [
+            "SVC-010", "SVC-016", "SVC-050"
+          ]
+        },
+        {
+          "service_id": "SVC-053",
+          "service_name": "Notification Service",
+          "classification": "cross_cutting",
+          "inbound_dependent_count": 3,
+          "depended_on_by": [
+            "SVC-003", "SVC-012", "SVC-013"
+          ]
+        },
+        {
+          "service_id": "SVC-015",
+          "service_name": "Risk Engine Service",
+          "classification": "domain_specific",
+          "inbound_dependent_count": 3,
+          "depended_on_by": [
+            "SVC-005", "SVC-017", "SVC-052"
+          ]
+        },
+        {
+          "service_id": "SVC-014",
+          "service_name": "Domestic Payments Service",
+          "classification": "domain_specific",
+          "inbound_dependent_count": 2,
+          "depended_on_by": [
+            "SVC-007", "SVC-011"
+          ]
+        },
+        {
+          "service_id": "SVC-010",
+          "service_name": "KYC/AML Service",
+          "classification": "domain_specific",
+          "inbound_dependent_count": 2,
+          "depended_on_by": [
+            "SVC-013", "SVC-016"
+          ]
+        },
+        {
+          "service_id": "SVC-013",
+          "service_name": "Commercial Accounts Service",
+          "classification": "domain_specific",
+          "inbound_dependent_count": 2,
+          "depended_on_by": [
+            "SVC-005", "SVC-014"
+          ]
+        },
+        {
+          "service_id": "SVC-012",
+          "service_name": "Retail Accounts Service",
+          "classification": "domain_specific",
+          "inbound_dependent_count": 2,
+          "depended_on_by": [
+            "SVC-011", "SVC-014"
+          ]
+        },
+        {
+          "service_id": "SVC-007",
+          "service_name": "International Payments Service",
+          "classification": "domain_specific",
+          "inbound_dependent_count": 1,
+          "depended_on_by": ["SVC-004"]
+        },
+        {
+          "service_id": "SVC-106",
+          "service_name": "Service Mesh",
+          "classification": "foundation",
+          "inbound_dependent_count": 0,
+          "depended_on_by": []
+        },
+        {
+          "service_id": "SVC-001",
+          "service_name": "Mortgage Service",
+          "classification": "domain_specific",
+          "inbound_dependent_count": 0,
+          "depended_on_by": []
+        },
+        {
+          "service_id": "SVC-003",
+          "service_name": "Insurance Distribution Service",
+          "classification": "domain_specific",
+          "inbound_dependent_count": 0,
+          "depended_on_by": []
+        },
+        {
+          "service_id": "SVC-005",
+          "service_name": "Treasury Service",
+          "classification": "domain_specific",
+          "inbound_dependent_count": 0,
+          "depended_on_by": []
+        },
+        {
+          "service_id": "SVC-011",
+          "service_name": "Open Banking API Service",
+          "classification": "domain_specific",
+          "inbound_dependent_count": 0,
+          "depended_on_by": []
+        },
+        {
+          "service_id": "SVC-016",
+          "service_name": "Compliance Service",
+          "classification": "domain_specific",
+          "inbound_dependent_count": 0,
+          "depended_on_by": []
+        },
+        {
+          "service_id": "SVC-017",
+          "service_name": "Wealth Platform Service",
+          "classification": "domain_specific",
+          "inbound_dependent_count": 0,
+          "depended_on_by": []
+        }
+      ]
+    }
+  },
+  "services": [
+    {
+      "id": "SVC-001",
+      "name": "Mortgage Service",
+      "classification": "domain_specific",
+      "capability_mappings": ["CAP-001.04"],
+      "owner_team": "Retail Banking Engineering",
+      "status": "planned",
+      "dependencies": ["SVC-050", "SVC-052", "SVC-054", "SVC-100", "SVC-101", "SVC-102", "SVC-103"],
+      "api_style": "REST/OpenAPI",
+      "data_store": "PostgreSQL",
+      "sla": "99.95%"
+    },
+    {
+      "id": "SVC-002",
+      "name": "Credit Card Service",
+      "classification": "domain_specific",
+      "capability_mappings": ["CAP-001.05"],
+      "owner_team": "Retail Banking Engineering",
+      "status": "planned",
+      "dependencies": ["SVC-008", "SVC-050", "SVC-052", "SVC-009", "SVC-100", "SVC-101", "SVC-102", "SVC-103"],
+      "api_style": "REST/OpenAPI",
+      "data_store": "PostgreSQL + Redis",
+      "sla": "99.99%"
+    },
+    {
+      "id": "SVC-003",
+      "name": "Insurance Distribution Service",
+      "classification": "domain_specific",
+      "capability_mappings": ["CAP-001.06"],
+      "owner_team": "Retail Banking Engineering",
+      "status": "planned",
+      "dependencies": ["SVC-050", "SVC-054", "SVC-053", "SVC-100", "SVC-101", "SVC-103"],
+      "api_style": "REST/OpenAPI",
+      "data_store": "PostgreSQL",
+      "sla": "99.95%"
+    },
+    {
+      "id": "SVC-004",
+      "name": "Trade Finance Service",
+      "classification": "domain_specific",
+      "capability_mappings": ["CAP-002.03"],
+      "owner_team": "Commercial Banking Engineering",
+      "status": "planned",
+      "dependencies": ["SVC-013", "SVC-007", "SVC-051", "SVC-054", "SVC-052", "SVC-100", "SVC-101", "SVC-102", "SVC-103"],
+      "api_style": "REST/OpenAPI",
+      "data_store": "MongoDB",
+      "sla": "99.95%"
+    },
+    {
+      "id": "SVC-005",
+      "name": "Treasury Service",
+      "classification": "domain_specific",
+      "capability_mappings": ["CAP-002.04"],
+      "owner_team": "Commercial Banking Engineering",
+      "status": "planned",
+      "dependencies": ["SVC-013", "SVC-007", "SVC-015", "SVC-100", "SVC-101", "SVC-102", "SVC-103", "SVC-104"],
+      "api_style": "REST/OpenAPI",
+      "data_store": "TimescaleDB",
+      "sla": "99.95%"
+    },
+    {
+      "id": "SVC-006",
+      "name": "Merchant Acquiring Service",
+      "classification": "domain_specific",
+      "capability_mappings": ["CAP-002.05"],
+      "owner_team": "Payments Engineering",
+      "status": "planned",
+      "dependencies": ["SVC-008", "SVC-009", "SVC-050", "SVC-051", "SVC-100", "SVC-101", "SVC-102", "SVC-103"],
+      "api_style": "REST/OpenAPI",
+      "data_store": "PostgreSQL",
+      "sla": "99.99%"
+    },
+    {
+      "id": "SVC-007",
+      "name": "International Payments Service",
+      "classification": "domain_specific",
+      "capability_mappings": ["CAP-003.04"],
+      "owner_team": "Payments Engineering",
+      "status": "planned",
+      "dependencies": ["SVC-014", "SVC-051", "SVC-009", "SVC-054", "SVC-100", "SVC-101", "SVC-102", "SVC-103"],
+      "api_style": "REST/OpenAPI",
+      "data_store": "PostgreSQL",
+      "sla": "99.99%"
+    },
+    {
+      "id": "SVC-008",
+      "name": "Card Processing Service",
+      "classification": "domain_specific",
+      "capability_mappings": ["CAP-003.05"],
+      "owner_team": "Payments Engineering",
+      "status": "planned",
+      "dependencies": ["SVC-009", "SVC-051", "SVC-100", "SVC-101", "SVC-102", "SVC-103"],
+      "api_style": "gRPC",
+      "data_store": "PostgreSQL + Redis",
+      "sla": "99.99%"
+    },
+    {
+      "id": "SVC-009",
+      "name": "Fraud Detection Service",
+      "classification": "domain_specific",
+      "capability_mappings": ["CAP-004.04"],
+      "owner_team": "Risk Engineering",
+      "status": "planned",
+      "dependencies": ["SVC-100", "SVC-101", "SVC-102", "SVC-103", "SVC-104"],
+      "api_style": "gRPC",
+      "data_store": "Elasticsearch",
+      "sla": "99.95%"
+    },
+    {
+      "id": "SVC-010",
+      "name": "KYC/AML Service",
+      "classification": "domain_specific",
+      "capability_mappings": ["CAP-005.01"],
+      "owner_team": "Compliance Engineering",
+      "status": "planned",
+      "dependencies": ["SVC-050", "SVC-051", "SVC-054", "SVC-055", "SVC-100", "SVC-101", "SVC-102", "SVC-103"],
+      "api_style": "REST/OpenAPI",
+      "data_store": "PostgreSQL + Elasticsearch",
+      "sla": "99.95%"
+    },
+    {
+      "id": "SVC-011",
+      "name": "Open Banking API Service",
+      "classification": "domain_specific",
+      "capability_mappings": ["CAP-007.03"],
+      "owner_team": "Digital Platform Engineering",
+      "status": "planned",
+      "dependencies": ["SVC-012", "SVC-014", "SVC-100", "SVC-101", "SVC-103"],
+      "api_style": "REST/OpenAPI",
+      "data_store": "PostgreSQL",
+      "sla": "99.95%"
+    },
+    {
+      "id": "SVC-012",
+      "name": "Retail Accounts Service",
+      "classification": "domain_specific",
+      "capability_mappings": ["CAP-001.01", "CAP-001.02", "CAP-001.03"],
+      "owner_team": "Retail Banking Engineering",
+      "status": "planned",
+      "dependencies": ["SVC-050", "SVC-053", "SVC-054", "SVC-100", "SVC-101", "SVC-102", "SVC-103"],
+      "api_style": "REST/OpenAPI",
+      "data_store": "PostgreSQL",
+      "sla": "99.95%"
+    },
+    {
+      "id": "SVC-013",
+      "name": "Commercial Accounts Service",
+      "classification": "domain_specific",
+      "capability_mappings": ["CAP-002.01", "CAP-002.02"],
+      "owner_team": "Commercial Banking Engineering",
+      "status": "planned",
+      "dependencies": ["SVC-050", "SVC-010", "SVC-053", "SVC-054", "SVC-100", "SVC-101", "SVC-102", "SVC-103"],
+      "api_style": "REST/OpenAPI",
+      "data_store": "PostgreSQL",
+      "sla": "99.95%"
+    },
+    {
+      "id": "SVC-014",
+      "name": "Domestic Payments Service",
+      "classification": "domain_specific",
+      "capability_mappings": ["CAP-003.01", "CAP-003.02", "CAP-003.03"],
+      "owner_team": "Payments Engineering",
+      "status": "planned",
+      "dependencies": ["SVC-009", "SVC-051", "SVC-012", "SVC-013", "SVC-100", "SVC-101", "SVC-102", "SVC-103"],
+      "api_style": "REST/OpenAPI",
+      "data_store": "PostgreSQL",
+      "sla": "99.99%"
+    },
+    {
+      "id": "SVC-015",
+      "name": "Risk Engine Service",
+      "classification": "domain_specific",
+      "capability_mappings": ["CAP-004.01", "CAP-004.02", "CAP-004.03", "CAP-004.05"],
+      "owner_team": "Risk Engineering",
+      "status": "planned",
+      "dependencies": ["SVC-100", "SVC-101", "SVC-102", "SVC-103", "SVC-104"],
+      "api_style": "REST/OpenAPI",
+      "data_store": "TimescaleDB",
+      "sla": "99.95%"
+    },
+    {
+      "id": "SVC-016",
+      "name": "Compliance Service",
+      "classification": "domain_specific",
+      "capability_mappings": ["CAP-005.02", "CAP-005.03", "CAP-005.04", "CAP-005.05"],
+      "owner_team": "Compliance Engineering",
+      "status": "planned",
+      "dependencies": ["SVC-010", "SVC-051", "SVC-054", "SVC-055", "SVC-100", "SVC-101", "SVC-102", "SVC-103", "SVC-104"],
+      "api_style": "REST/OpenAPI",
+      "data_store": "PostgreSQL + Elasticsearch",
+      "sla": "99.95%"
+    },
+    {
+      "id": "SVC-017",
+      "name": "Wealth Platform Service",
+      "classification": "domain_specific",
+      "capability_mappings": ["CAP-006"],
+      "owner_team": "Wealth Engineering",
+      "status": "planned",
+      "dependencies": ["SVC-050", "SVC-052", "SVC-054", "SVC-055", "SVC-015", "SVC-100", "SVC-101", "SVC-102", "SVC-103", "SVC-104"],
+      "api_style": "REST/OpenAPI",
+      "data_store": "PostgreSQL",
+      "sla": "99.95%"
+    },
+    {
+      "id": "SVC-050",
+      "name": "Customer Onboarding Service",
+      "classification": "cross_cutting",
+      "capability_mappings": ["CAP-001", "CAP-002"],
+      "owner_team": "Digital Platform Engineering",
+      "status": "planned",
+      "dependencies": ["SVC-010", "SVC-051", "SVC-054", "SVC-055", "SVC-053", "SVC-100", "SVC-101", "SVC-102", "SVC-103"],
+      "api_style": "REST/OpenAPI",
+      "data_store": "PostgreSQL",
+      "sla": "99.95%"
+    },
+    {
+      "id": "SVC-051",
+      "name": "Sanctions Screening Service",
+      "classification": "cross_cutting",
+      "capability_mappings": ["CAP-005", "CAP-003"],
+      "owner_team": "Compliance Engineering",
+      "status": "planned",
+      "dependencies": ["SVC-054", "SVC-100", "SVC-101", "SVC-102", "SVC-103"],
+      "api_style": "gRPC",
+      "data_store": "Redis",
+      "sla": "99.95%"
+    },
+    {
+      "id": "SVC-052",
+      "name": "Credit Decision Service",
+      "classification": "cross_cutting",
+      "capability_mappings": ["CAP-004", "CAP-001", "CAP-002"],
+      "owner_team": "Risk Engineering",
+      "status": "planned",
+      "dependencies": ["SVC-015", "SVC-100", "SVC-101", "SVC-102", "SVC-103", "SVC-104"],
+      "api_style": "REST/OpenAPI",
+      "data_store": "PostgreSQL",
+      "sla": "99.95%"
+    },
+    {
+      "id": "SVC-053",
+      "name": "Notification Service",
+      "classification": "cross_cutting",
+      "capability_mappings": ["CAP-001", "CAP-002", "CAP-003", "CAP-004", "CAP-005", "CAP-006", "CAP-007"],
+      "owner_team": "Digital Platform Engineering",
+      "status": "planned",
+      "dependencies": ["SVC-100", "SVC-101", "SVC-102", "SVC-103"],
+      "api_style": "REST/OpenAPI",
+      "data_store": "PostgreSQL",
+      "sla": "99.95%"
+    },
+    {
+      "id": "SVC-054",
+      "name": "Document Management Service",
+      "classification": "cross_cutting",
+      "capability_mappings": ["CAP-001", "CAP-002", "CAP-003", "CAP-004", "CAP-005", "CAP-006", "CAP-007"],
+      "owner_team": "Platform Engineering",
+      "status": "planned",
+      "dependencies": ["SVC-100", "SVC-101", "SVC-103"],
+      "api_style": "REST/OpenAPI",
+      "data_store": "MongoDB",
+      "sla": "99.95%"
+    },
+    {
+      "id": "SVC-055",
+      "name": "Workflow Engine",
+      "classification": "cross_cutting",
+      "capability_mappings": ["CAP-001.04", "CAP-002.03", "CAP-005.01"],
+      "owner_team": "Platform Engineering",
+      "status": "planned",
+      "dependencies": ["SVC-100", "SVC-101", "SVC-102", "SVC-103"],
+      "api_style": "REST/OpenAPI",
+      "data_store": "PostgreSQL",
+      "sla": "99.95%"
+    },
+    {
+      "id": "SVC-100",
+      "name": "Identity & Access Management",
+      "classification": "foundation",
+      "capability_mappings": [],
+      "owner_team": "Security Engineering",
+      "status": "planned",
+      "dependencies": ["SVC-103"],
+      "api_style": "REST/OpenAPI",
+      "data_store": "PostgreSQL",
+      "sla": "99.999%"
+    },
+    {
+      "id": "SVC-101",
+      "name": "API Gateway",
+      "classification": "foundation",
+      "capability_mappings": [],
+      "owner_team": "Platform Engineering",
+      "status": "planned",
+      "dependencies": ["SVC-100", "SVC-103"],
+      "api_style": "REST/OpenAPI",
+      "data_store": "Redis",
+      "sla": "99.999%"
+    },
+    {
+      "id": "SVC-102",
+      "name": "Event Bus",
+      "classification": "foundation",
+      "capability_mappings": [],
+      "owner_team": "Platform Engineering",
+      "status": "planned",
+      "dependencies": ["SVC-100", "SVC-103"],
+      "api_style": "AMQP",
+      "data_store": "Kafka",
+      "sla": "99.999%"
+    },
+    {
+      "id": "SVC-103",
+      "name": "Audit & Logging Service",
+      "classification": "foundation",
+      "capability_mappings": [],
+      "owner_team": "Security Engineering",
+      "status": "planned",
+      "dependencies": ["SVC-105"],
+      "api_style": "REST/OpenAPI",
+      "data_store": "Elasticsearch",
+      "sla": "99.999%"
+    },
+    {
+      "id": "SVC-104",
+      "name": "Data Platform",
+      "classification": "foundation",
+      "capability_mappings": [],
+      "owner_team": "Platform Engineering",
+      "status": "planned",
+      "dependencies": ["SVC-100", "SVC-103", "SVC-105"],
+      "api_style": "REST/OpenAPI",
+      "data_store": "TimescaleDB",
+      "sla": "99.999%"
+    },
+    {
+      "id": "SVC-105",
+      "name": "Secrets Management",
+      "classification": "foundation",
+      "capability_mappings": [],
+      "owner_team": "Security Engineering",
+      "status": "planned",
+      "dependencies": ["SVC-103"],
+      "api_style": "REST/OpenAPI",
+      "data_store": "MongoDB",
+      "sla": "99.999%"
+    },
+    {
+      "id": "SVC-106",
+      "name": "Service Mesh",
+      "classification": "foundation",
+      "capability_mappings": [],
+      "owner_team": "Platform Engineering",
+      "status": "planned",
+      "dependencies": ["SVC-100", "SVC-103", "SVC-105"],
+      "api_style": "REST/OpenAPI",
+      "data_store": "Elasticsearch",
+      "sla": "99.999%"
+    }
+  ]
+}

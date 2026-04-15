@@ -1,0 +1,384 @@
+{
+  "schema_version": "1.0.0",
+  "document_id": "ARCH-CM-001",
+  "title": "Commercial Bank — Channel Model",
+  "description": "Defines all inbound channels through which customers, partners, staff, and regulators interact with the bank's digital platform. Each channel entry specifies the served personas, authentication model, rate limits, data projection rules, and audit requirements.",
+  "last_updated": "2026-04-15",
+  "related_documents": ["ARCH-VA-001", "ARCH-PM-001"],
+
+  "channels": [
+    {
+      "id": "CH-001",
+      "name": "Web Portal",
+      "description": "Browser-based self-service portal providing personal customers, business customers, and wealth clients with account management, payments, product origination, and reporting capabilities. Responsive design supports desktop and tablet form factors. Served under the bank's primary domain with Content Security Policy and strict transport security enforced.",
+      "type": "digital_self_service",
+      "persona_types": ["PER-001", "PER-002", "PER-003"],
+      "persona_notes": {
+        "PER-001": "Personal banking customers — access to current accounts, savings, cards, and personal lending",
+        "PER-002": "Business banking customers — access to business accounts, payments, trade finance, and reporting",
+        "PER-003": "Wealth clients — access to investment portfolios, advisory tools, and relationship manager messaging"
+      },
+      "auth_model": "OAuth 2.0 + OIDC (SVC-100) with mandatory MFA. MFA options: TOTP authenticator app (preferred), SMS OTP (fallback). Step-up authentication required for high-value payments (>£10,000) and profile changes. Session tokens are short-lived JWTs (15 min access token, 8 hr refresh token with sliding window). Re-authentication forced after 30 min inactivity.",
+      "auth_standards": ["OAuth 2.0 RFC 6749", "OIDC Core 1.0", "FAPI 1.0 Advanced", "NIST SP 800-63B AAL2"],
+      "rate_limits": {
+        "authenticated_session": "500 req/min per session",
+        "unauthenticated_browse": "60 req/min per IP",
+        "payment_initiation": "10 payment initiations/min per session",
+        "bulk_operations": "5 bulk operations/min per session",
+        "notes": "Burst allowance of 2x sustained rate for up to 10 seconds. Limits enforced at SVC-101 (API Gateway). 429 responses include Retry-After header."
+      },
+      "data_projection": "Role-based field visibility enforced by SVC-101 and domain services. Personal customers see only their own accounts and transactions. Business customers see accounts and users scoped to their legal entity. Wealth clients see investment portfolios with PII redaction for sub-advisors. Sensitive fields (full PAN, sort code + account number) masked by default; revealed on explicit user action with re-authentication. GDPR data minimisation applied — no fields returned beyond those required by the current view.",
+      "tls_requirements": "TLS 1.3 minimum. TLS 1.2 permitted for legacy OS compatibility with restricted cipher suites (ECDHE + AES-128-GCM or AES-256-GCM). Certificates from approved internal CA or DigiCert EV. HSTS max-age 31536000 with includeSubDomains and preload.",
+      "audit_requirements": {
+        "session_events": "Login, logout, step-up auth, failed auth attempts, session timeout captured with timestamp, IP, user agent, persona ID",
+        "data_access": "All account balance, transaction, and document views logged with resource ID and user context",
+        "mutations": "All payment initiations, account changes, and profile updates captured with before/after state delta, authorising user, and IP",
+        "retention": "7 years (FCA SYSC 9 / MiFID II for investment activity; 5 years for payment records per PSR)",
+        "destination": "SVC-103 (Audit & Logging Service)",
+        "pii_handling": "Audit records reference persona IDs and resource IDs; raw PII not stored in log fields — available via join to SVC-014"
+      },
+      "availability_target": "99.95%",
+      "failover_behaviour": "Static maintenance page served from CDN edge. Scheduled maintenance windows communicated 72 hours in advance."
+    },
+    {
+      "id": "CH-002",
+      "name": "Mobile App",
+      "description": "Native iOS and Android application providing on-the-go banking for personal and business customers. Supports biometric authentication, push notifications, card controls, and mobile cheque deposit. Subject to app store review requirements and mobile-specific security controls including certificate pinning and jailbreak/root detection.",
+      "type": "digital_self_service",
+      "persona_types": ["PER-001", "PER-002"],
+      "persona_notes": {
+        "PER-001": "Personal banking customers — full account access, card management, payments, and alerts",
+        "PER-002": "Business banking customers — account overview, payment authorisation, and cash management"
+      },
+      "auth_model": "OAuth 2.0 + OIDC (SVC-100). Primary authentication: device-bound biometric (Face ID / fingerprint) backed by FIDO2 platform authenticator stored in device secure enclave. Fallback: 6-digit PIN with brute-force lockout after 5 consecutive failures. Step-up via push notification approval or TOTP for high-value operations. Certificate pinning enforced to prevent MITM. Jailbreak / root detection triggers re-authentication and restricts high-risk actions.",
+      "auth_standards": ["OAuth 2.0 RFC 6749", "OIDC Core 1.0", "FIDO2 / WebAuthn", "NIST SP 800-63B AAL2", "OWASP MASVS L2"],
+      "rate_limits": {
+        "authenticated_session": "300 req/min per device session",
+        "payment_initiation": "5 payment initiations/min per session",
+        "biometric_retry": "3 biometric failures before PIN fallback; 5 PIN failures before account lock",
+        "push_notification_auth": "3 concurrent pending approval requests per user",
+        "notes": "More conservative limits than web portal given mobile network variability. Limits enforced at SVC-101. Device ID tracked alongside session token for anomaly detection."
+      },
+      "data_projection": "Same role-based field visibility model as CH-001 with additional mobile-specific constraints: full account numbers truncated to last 4 digits in list views; card PAN never displayed in full (masked with asterisks except last 4); location data collected only with explicit permission and used solely for fraud context — not stored beyond session. Dark mode and accessibility overrides do not bypass data masking.",
+      "tls_requirements": "TLS 1.3 minimum with certificate pinning (public key pinning via backup pins). Pin rotation managed via silent app update with 30-day overlap window.",
+      "audit_requirements": {
+        "session_events": "App launch, login method used (biometric/PIN/fallback), step-up triggers, background/foreground transitions, logout, and failed auth attempts with device ID and OS version",
+        "data_access": "Account views and document downloads logged with device ID, app version, and persona ID",
+        "mutations": "Payments, transfers, and settings changes captured with geo-location hash (not raw coordinates), device fingerprint, and authorisation method used",
+        "security_events": "Jailbreak/root detection, certificate pin failure, and suspicious velocity events reported to fraud monitoring in real time",
+        "retention": "7 years consistent with CH-001. Device fingerprint pseudonymised after 90 days if account closed.",
+        "destination": "SVC-103 (Audit & Logging Service)"
+      },
+      "availability_target": "99.95%",
+      "failover_behaviour": "Graceful degradation to read-only mode during downstream outages. Offline balance cache (last known balance) displayed with staleness indicator."
+    },
+    {
+      "id": "CH-003",
+      "name": "Open Banking API",
+      "description": "PSD2 and UK Open Banking Standard-compliant API surface exposing Account Information Services (AISP) and Payment Initiation Services (PISP) to FCA-authorised Third Party Providers (TPPs). Published via the Open Banking Directory. Implements the UK Open Banking Read/Write API Specification v3.1.x.",
+      "type": "third_party_api",
+      "persona_types": ["PER-005"],
+      "persona_notes": {
+        "PER-005": "FCA-authorised Third Party Providers (AISPs and PISPs) acting on behalf of consenting customers"
+      },
+      "auth_model": "OAuth 2.0 Authorisation Code Flow with PKCE and Pushed Authorisation Requests (PAR). TPP client certificates (eIDAS QWAC or UK Open Banking-issued) used for transport-layer mutual TLS. TPP signing certificates (eIDAS QSEAL) used to sign request objects. Customer consent captured via redirect to bank's authentication journey (OAuth hybrid flow). Consents are scoped, time-limited, and revocable. TPP registration validated against Open Banking Directory in real time.",
+      "auth_standards": ["OAuth 2.0 RFC 6749", "PKCE RFC 7636", "PAR RFC 9126", "FAPI 1.0 Advanced", "UK Open Banking Security Profile", "eIDAS Regulation (EU) 910/2014", "PSD2 RTS on SCA"],
+      "rate_limits": {
+        "account_information": "600 req/min per TPP client_id",
+        "payment_initiation": "60 payment initiations/min per TPP client_id",
+        "consent_management": "120 req/min per TPP client_id",
+        "global_tpp_cap": "10,000 req/min aggregated across all TPP calls",
+        "notes": "Rate limits published in developer portal. 429 responses include Retry-After and X-RateLimit-Reset headers. Persistent abuse triggers TPP suspension and notification to Open Banking Limited."
+      },
+      "data_projection": "Data shared strictly within scope of customer consent granted during authorisation. AISP: account details, balances, and transactions within consented accounts and date ranges only. PISP: payment initiation only — no account data returned beyond confirmation of funds check result (boolean). Fields conform to UK Open Banking data dictionary. No proprietary fields exposed. Customer PII not returned beyond that required by the specification.",
+      "consent_model": {
+        "granularity": "Per account, per permission cluster (ReadAccountsBasic, ReadTransactionsDetail, etc.)",
+        "max_duration_days": 90,
+        "revocation": "Customer can revoke consent via web portal or mobile app at any time; revocation propagated to TPP within 5 minutes",
+        "re_authentication": "Required every 90 days per RTS SCA exemption limits"
+      },
+      "tls_requirements": "TLS 1.2+ (TLS 1.3 preferred). Mutual TLS mandatory for all API calls using eIDAS QWAC or UK OB transport certificate. Certificate validation against Open Banking Directory trust anchor.",
+      "audit_requirements": {
+        "tpp_interactions": "All authorisation requests, token exchanges, consent creations, API calls, and revocations logged with TPP client_id, consent_id, customer persona_id, and request/response metadata (no response bodies containing PII)",
+        "consent_lifecycle": "Consent creation, modification, expiry, and revocation events stored with full audit trail for regulatory inspection",
+        "customer_journey": "Customer authentication steps during TPP-initiated flows captured in line with standard session audit (CH-001 rules apply to the authentication leg)",
+        "retention": "5 years (PSD2 Art. 95 / PSR record-keeping)",
+        "destination": "SVC-103 (Audit & Logging Service); consent events also stored in SVC-011 domain store for dispute resolution",
+        "regulatory_access": "Audit exports available to FCA within 48 hours of formal request"
+      },
+      "availability_target": "99.5% (FCA mandated — must not be less available than authenticated bank channel)",
+      "fallback": "Contingency interface (screen-scraping fallback) not offered; bank relies on primary AISP/PISP APIs with FCA-approved downtime notification process."
+    },
+    {
+      "id": "CH-004",
+      "name": "Branch Terminal",
+      "description": "In-branch workstation application used by branch staff to conduct assisted banking operations on behalf of customers. Includes teller operations, account servicing, product sales, and complex transaction processing. Integrated with customer identity verification hardware (document scanner, webcam for liveness check).",
+      "type": "assisted_service",
+      "persona_types": ["PER-056"],
+      "persona_notes": {
+        "PER-056": "Branch staff (tellers, relationship managers, branch managers). Access scoped by role within branch staff hierarchy."
+      },
+      "auth_model": "Smart card + PIN (PKI-based workstation authentication) combined with SVC-100 OIDC single sign-on. Branch staff authenticate to their workstation using a hardware smart card issued by the bank's PKI. SSO session then grants access to branch terminal application. Privileged operations (account overrides, fee waivers, credit limit exceptions) require dual authorisation from a branch manager (four-eyes principle). Inactivity timeout: 5 minutes with card re-insertion required.",
+      "auth_standards": ["ISO/IEC 7816 (Smart Card)", "NIST SP 800-73 PIV", "OAuth 2.0 RFC 6749", "NIST SP 800-63B AAL3"],
+      "rate_limits": {
+        "teller_session": "200 req/min per workstation session",
+        "customer_account_lookup": "Unlimited within session (staff operational need)",
+        "cash_transactions": "50 cash transaction postings/hour per teller (anomaly detection threshold, not hard block)",
+        "notes": "Rate limits less restrictive than customer channels given controlled physical environment and staff accountability. Velocity anomalies flagged to SVC-015 (AML & Financial Crime Service) in real time."
+      },
+      "data_projection": "Full account detail visible for customers being served. Tellers see transactional data and limited identity data required for the current operation. Relationship managers additionally see product holdings, credit exposure, and relationship notes. Branch managers have elevated access including fee structures and exception history. Wealth client portfolios visible only to wealth-authorised staff. Data scoped to customer present in branch (verified by identity check at session start); staff cannot browse arbitrary accounts without audit trigger.",
+      "tls_requirements": "TLS 1.3 on internal network segment. Branch terminals on dedicated VLAN isolated from public internet. All traffic exits branch via SD-WAN with encrypted tunnel to bank datacentre.",
+      "audit_requirements": {
+        "staff_actions": "All account views, transactions, product applications, and configuration changes logged with staff ID, workstation ID, branch code, customer persona ID, and timestamp",
+        "dual_auth_events": "Four-eyes authorisations recorded with both authorising staff IDs and explicit approval/rejection reason",
+        "customer_identity": "Identity document type and reference (not full document data) recorded at session start for customer identification audit trail",
+        "cash_events": "All cash-in and cash-out transactions captured with denomination counts for teller reconciliation",
+        "retention": "7 years. Physical workstation logs retained for 90 days locally then purged after central ingestion confirmed.",
+        "destination": "SVC-103 (Audit & Logging Service)"
+      },
+      "availability_target": "99.9% during branch opening hours (08:00–18:00 Mon–Sat). Planned maintenance permitted outside these windows.",
+      "failover_behaviour": "Offline mode supports read-only account balance and customer identity lookup from local cache (updated every 15 minutes). Payment posting queued locally and replayed on reconnection."
+    },
+    {
+      "id": "CH-005",
+      "name": "SWIFT Network",
+      "description": "Secure Financial Messaging Interface connecting the bank to the global interbank messaging network. Used for correspondent banking relationships, cross-border payment instructions, treasury operations, and trade finance messaging. Operates via SWIFT Alliance Access with Alliance Gateway for IP connectivity.",
+      "type": "interbank_messaging",
+      "persona_types": ["PER-007"],
+      "persona_notes": {
+        "PER-007": "Correspondent banks and financial institutions communicating via SWIFT BIC identifiers"
+      },
+      "auth_model": "SWIFT PKI — all messages signed with the sending institution's SWIFT certificate and validated against the SWIFT Public Key Infrastructure. Bilateral Relationship Management Application (RMA) authorisation controls which counterparties may send messages to the bank. Alliance Access operator authentication via RSA hardware token + passphrase. SWIFT Customer Security Programme (CSP) controls enforced: mandatory controls MAN-001 through MAN-006. Messages validated against SWIFT message schema (MT/MX) before inbound acceptance.",
+      "auth_standards": ["SWIFT CSP CSCF v2025", "ISO 20022 (MX messages)", "SWIFT MT Standards Release 2025", "NIST SP 800-57 (key management)"],
+      "rate_limits": {
+        "inbound_messages": "5,000 messages/hour (hard limit at SWIFT Alliance Access gateway)",
+        "outbound_messages": "5,000 messages/hour",
+        "large_value_payments": "No per-message rate limit but aggregate value monitored; >£50M single payment requires Payments Operations dual approval",
+        "notes": "Volume limits set by SWIFT hardware licence and monitored by the Payments Operations team. Unusual volume spikes trigger SVC-015 (AML) alert."
+      },
+      "data_projection": "Messages processed in their entirety — SWIFT message format is fixed and fields cannot be selectively withheld from counterparties (standard is bilateral). Internal enrichment (LEI, BIC resolution, sanctions hit flag) applied during processing and stored in SVC-008 domain store but not propagated back to the SWIFT message. Counterparties receive only the standard SWIFT field set.",
+      "tls_requirements": "SWIFT Alliance Gateway uses SWIFT-proprietary IP-over-SWIFT-Network (SWIFTNet Link). All sessions encrypted with SWIFT certificates. IP connectivity to SWIFT bureau via dedicated MPLS circuit with TLS 1.2+ fallback tunnel. No public internet path.",
+      "audit_requirements": {
+        "message_lifecycle": "All inbound and outbound SWIFT messages stored in full (body + headers) with processing status, timestamp, and operator ID",
+        "sanctions_screening": "Every message checked against SVC-051 (Sanctions Screening); screening result (pass/hit/review) recorded against message ID",
+        "operator_actions": "All Alliance Access operator logins, message releases, and repairs logged",
+        "reconciliation": "Daily reconciliation reports (MT950/MT940 statement messages) stored and matched against SVC-008 nostro positions",
+        "retention": "10 years (Bank of England RTGS settlement record requirements; 7 years for standard payment records)",
+        "destination": "SVC-103 (Audit & Logging Service); raw message archive held in SVC-054 (Document Management Service)"
+      },
+      "availability_target": "99.9% during SWIFT operating windows. Maintenance coordinated with SWIFT maintenance windows (typically Sunday 06:00–10:00 UTC).",
+      "failover_behaviour": "SWIFT Alliance Access deployed in active-passive HA pair. Failover RTO: <5 minutes. Contingency: manual telex/email procedures for critical payments during extended outage (tested annually)."
+    },
+    {
+      "id": "CH-006",
+      "name": "Internal Portal",
+      "description": "Web-based staff portal providing all internal bank employees with access to internal tools, operational dashboards, customer servicing applications, compliance workflows, and product management interfaces. Distinct from the branch terminal (CH-004) in that it covers head office, operations, risk, compliance, and technology staff who do not operate in branches.",
+      "type": "staff_tooling",
+      "persona_types": ["PER-050", "PER-051", "PER-052", "PER-053", "PER-054", "PER-055", "PER-056", "PER-057", "PER-058", "PER-059", "PER-060"],
+      "persona_notes": {
+        "PER-050": "Operations staff — payment exception handling, reconciliation, SWIFT message repairs",
+        "PER-051": "Compliance officers — AML case management, SAR preparation, sanctions investigations",
+        "PER-052": "Risk managers — credit risk, market risk, and liquidity dashboards",
+        "PER-053": "Finance staff — management accounts, regulatory capital reporting",
+        "PER-054": "Product managers — product configuration, pricing, and eligibility rule management",
+        "PER-055": "Technology and platform engineering staff — infrastructure dashboards, incident management",
+        "PER-056": "Branch staff (remote access to branch tools outside branch network)",
+        "PER-057": "Relationship managers (RM) — client coverage tools and CRM",
+        "PER-058": "Credit analysts — loan origination workflow and credit memorandum tooling",
+        "PER-059": "Treasury dealers — ALM dashboards, liquidity tools (view-only; trading via dedicated system)",
+        "PER-060": "HR and People team — workforce management (access to bank systems for staffing contexts only)"
+      },
+      "auth_model": "Corporate SSO via SVC-100 (OIDC + SAML 2.0 federation with Active Directory). Primary: hardware security key (FIDO2) or smart card. Fallback: corporate TOTP app. Device compliance check at login (managed device, up-to-date OS and EDR agent). Privileged access roles (compliance case management, credit decisioning override) require dedicated Privileged Access Management (PAM) session with additional justification captured. Session duration: 8 hours with 30-minute inactivity timeout. Concurrent session limit: 2 sessions per user.",
+      "auth_standards": ["OAuth 2.0 RFC 6749", "SAML 2.0", "FIDO2 / WebAuthn", "NIST SP 800-63B AAL2/AAL3 (role-dependent)", "NCSC Zero Trust Architecture Principles"],
+      "rate_limits": {
+        "standard_staff_session": "1,000 req/min per session",
+        "bulk_data_export": "5 export requests/hour per user (exports >10,000 records require manager approval workflow via SVC-055)",
+        "privileged_pam_session": "200 req/min (PAM sessions are time-boxed and recorded)",
+        "api_access_for_tooling": "2,000 req/min per service account (used by internal automation scripts)",
+        "notes": "Higher limits than customer channels reflecting internal operational need. Data exfiltration detection thresholds configured in SIEM fed from SVC-103."
+      },
+      "data_projection": "Attribute-based access control (ABAC) — each staff persona has a defined access profile specifying which products, customer segments, and data classifications they can view and mutate. Compliance officers have read access to full customer transaction history for investigation purposes but mutations require workflow approval. PII fields visible in plaintext only to roles with documented need-to-know; other roles see tokenised or redacted values. Data labelled RESTRICTED (e.g. board-level financial data, HR records) accessible only to explicitly authorised personas via time-limited access grant.",
+      "tls_requirements": "TLS 1.3 on all internal portal traffic. All staff devices must present a valid corporate client certificate issued by the bank's internal CA. Zero-trust network access (ZTNA) enforced — no implicit trust based on network location.",
+      "audit_requirements": {
+        "staff_access": "All logins, logouts, page views, and API calls logged with user ID, role, department, device ID, and IP",
+        "customer_data_access": "Any view of customer PII or financial data recorded with business justification where required by policy",
+        "privileged_actions": "PAM session recordings (screen capture + keylog) stored for 12 months; access to compliance cases and credit override decisions fully logged",
+        "data_exports": "All bulk export requests logged with approving manager, data scope, and destination (email/drive/print); exports to personal devices blocked",
+        "retention": "7 years for all staff audit records. PAM session recordings retained 12 months then archived to cold storage for 5 years.",
+        "destination": "SVC-103 (Audit & Logging Service); PAM recordings in SVC-054 (Document Management Service)"
+      },
+      "availability_target": "99.9% (business hours); 99% outside business hours. Planned maintenance 02:00–04:00 Sundays.",
+      "failover_behaviour": "Core functions (customer lookup, payment exception handling) available in degraded mode. Non-critical tools (reporting dashboards, product configuration) show cached data."
+    },
+    {
+      "id": "CH-007",
+      "name": "Regulatory Gateway",
+      "description": "Secure file transfer channel used for the submission of regulatory reports to the PRA, FCA, Bank of England, and HMRC. Supports scheduled automated submissions and ad-hoc regulator-initiated data requests. Operates on a push model for scheduled returns and a pull/challenge-response model for ad-hoc requests.",
+      "type": "regulatory_reporting",
+      "persona_types": ["PER-008"],
+      "persona_notes": {
+        "PER-008": "Regulators and supervisory authorities (PRA, FCA, Bank of England, HMRC) receiving regulatory submissions"
+      },
+      "auth_model": "Mutual TLS (mTLS) using regulator-issued or FCA-authorised certificates for each regulatory reporting counterparty. Submissions signed with the bank's qualified electronic signature (QES) per eIDAS for cross-border submissions. Regulator-specific authentication protocols where mandated (e.g. Bank of England BEEDS portal credentials for statistical reporting; HMRC MTD OAuth 2.0 for tax submissions). All outbound submissions require dual sign-off from a named Regulatory Reporting Manager before transmission (four-eyes). Ad-hoc requests authenticated via secure email with S/MIME signatures from known regulator domains.",
+      "auth_standards": ["eIDAS Qualified Electronic Signature", "OAuth 2.0 (HMRC MTD)", "mTLS RFC 8705", "NIST SP 800-63B AAL3"],
+      "rate_limits": {
+        "scheduled_submissions": "No rate limit — submissions driven by regulatory calendar (weekly, monthly, quarterly). Batch sizes can exceed 1 GB for statistical returns.",
+        "ad_hoc_requests": "10 ad-hoc submission packages/day (operational threshold; not a hard block)",
+        "inbound_data_requests": "Regulator requests queued and processed within SLA — no inbound rate limit at the gateway",
+        "notes": "This channel is primarily file_transfer based (SFTP, HTTPS multipart upload, regulator portal upload). Not a real-time API channel. File integrity verified via SHA-256 hash included in submission manifest."
+      },
+      "protocol": "file_transfer",
+      "file_formats": ["XML (XBRL for PRA/FCA COREP/FINREP)", "CSV (BoE statistical returns)", "JSON (HMRC MTD)", "ISO 20022 XML (payment scheme reporting)", "Regulator-specific flat file formats"],
+      "data_projection": "Regulatory submissions contain the specific data mandated by each return — no more, no less. Data extracted from SVC-016 (Regulatory Reporting Service) and SVC-104 (Data Platform) using pre-approved extraction queries. PII included only where the regulation explicitly requires it (e.g. CASS client money reconciliation). Data minimisation review conducted annually per GDPR Art. 5(1)(c). Submissions encrypted in transit and at rest before transmission to regulator portals.",
+      "tls_requirements": "TLS 1.2+ for SFTP sessions (underlying SSH transport). TLS 1.3 for HTTPS submission portals. File-level encryption (PGP or AES-256) applied to all submissions containing PII in addition to transport encryption.",
+      "audit_requirements": {
+        "submission_lifecycle": "Each regulatory submission logged with return type, period, file hash, submission timestamp, submitting user ID, approving manager ID, regulator portal reference, and acknowledgement receipt",
+        "failed_submissions": "Any failed or rejected submission triggers automated alert to Head of Regulatory Reporting and Compliance Director within 15 minutes",
+        "regulator_requests": "All inbound data requests logged with regulator identity, request reference, scope, response due date, and response confirmation",
+        "dual_sign_off": "Both approver identities and approval timestamps stored for every submission as evidence of governance",
+        "retention": "10 years (regulatory submission records retained in line with PRA SUP reporting requirements; some returns require permanent retention)",
+        "destination": "SVC-103 (Audit & Logging Service); submission files archived in SVC-054 (Document Management Service) with regulatory classification"
+      },
+      "availability_target": "99.5% for scheduled submission windows. Regulatory calendar maintained in SVC-055 (Workflow Service) with automated alerts 48 hours before submission deadlines.",
+      "failover_behaviour": "Manual submission process documented and tested annually. Regulatory reporting team trained on fallback procedures. Regulator notified proactively if automated submission cannot be completed on time."
+    },
+    {
+      "id": "CH-008",
+      "name": "Card Network Interface",
+      "description": "ISO 8583 and ISO 20022 messaging interface connecting the bank's card processing infrastructure to the Visa and Mastercard networks for authorisation, clearing, and settlement of debit and credit card transactions. Covers both domestic (UK) and international card activity.",
+      "type": "card_scheme",
+      "persona_types": ["PER-009"],
+      "persona_notes": {
+        "PER-009": "Card schemes (Visa Europe, Mastercard Europe) acting as the authorisation and settlement network counterparty"
+      },
+      "auth_model": "Bilateral network authentication using scheme-issued digital certificates and dedicated leased-line / IPSec VPN connectivity to Visa VisaNet and Mastercard Banknet. The bank operates as a Principal Member of both schemes; member credentials (Bank Identification Number — BIN, Member ID) authenticate the institution at the scheme level. Individual transaction messages are authenticated via message authentication codes (MAC) using Triple-DES or AES session keys established per ISO 9797. 3D Secure (EMV 3DS 2.x) used for e-commerce cardholder authentication, integrating with SVC-100 for step-up when risk score exceeds threshold.",
+      "auth_standards": ["ISO 8583", "ISO 20022 pain.001/camt.054", "EMV Chip & PIN", "EMV 3DS 2.2", "PCI DSS v4.0", "Visa Core Rules", "Mastercard Rules"],
+      "rate_limits": {
+        "authorisation_requests": "2,000 authorisation messages/second (peak capacity; dimensioned for 3x normal peak)",
+        "clearing_files": "Clearing file submission once per settlement cycle (typically 3 cycles/day for Visa; twice daily for Mastercard)",
+        "chargeback_disputes": "500 chargeback cases/day (operational threshold aligned with scheme dispute resolution SLA)",
+        "notes": "No scheme-imposed rate limit on authorisation traffic — the bank is responsible for its own capacity planning. Authorisation response time SLA: <150 ms p99 end-to-end."
+      },
+      "data_projection": "Transaction data exchanged in ISO 8583 message format. Only fields specified in scheme message specifications are transmitted. Cardholder PAN transmitted in scheme-required fields; PAN stored only in PCI DSS-compliant SVC-006 (Card Service) HSM-backed vault — never logged in plaintext. Tokenisation (network tokens via Visa Token Service / Mastercard Digital Enablement Service) used for card-on-file and digital wallet transactions to avoid PAN transmission where possible.",
+      "tls_requirements": "Dedicated leased-line circuits (not public internet) to scheme data centres. IPSec VPN with AES-256-GCM as backup path. Message-level integrity via MAC. PCI DSS Requirement 4 compliance maintained; annual penetration test of card network connectivity required.",
+      "audit_requirements": {
+        "transaction_records": "All authorisation requests and responses, clearing records, and settlement confirmations stored with full message content (PAN tokenised) in SVC-006 and replicated to SVC-103",
+        "fraud_events": "Decline decisions, fraud flags, and 3DS challenge outcomes logged with risk score, rule ID, and action taken",
+        "scheme_fees": "Interchange and scheme fee records retained for settlement reconciliation and dispute evidence",
+        "chargeback_lifecycle": "Full dispute case history including evidence submitted, scheme decisions, and financial adjustments",
+        "pci_audit_trail": "All access to cardholder data environments logged per PCI DSS Requirement 10; logs reviewed daily by Security Operations",
+        "retention": "5 years for payment records (PSR); PCI DSS audit logs minimum 12 months online + 12 months archived",
+        "destination": "SVC-103 (Audit & Logging Service); PAN-containing records in PCI DSS-scoped SVC-006 vault only"
+      },
+      "availability_target": "99.99% for authorisation path (24/7/365 — card networks do not have maintenance windows). Clearing and settlement: 99.95% during scheme settlement windows.",
+      "failover_behaviour": "Active-active connectivity to scheme host sites (primary and disaster recovery data centres per scheme rules). Stand-in processing (offline authorisation limits) available for up to 4 hours if network connectivity to scheme is lost. Fallback authorisation rules configured in SVC-006."
+    },
+    {
+      "id": "CH-009",
+      "name": "Telephony",
+      "description": "Inbound and outbound telephone channel serving personal customers via the automated IVR and live agent contact centre, and branch staff for internal bank telephony and inter-branch customer transfers. Handles account enquiries, payment authorisation, fraud alerts, and complaints. Integrated with SVC-100 (IAM) for voice-based authentication and SVC-014 (Customer Profile Service) for screen-pop delivery to agents.",
+      "type": "voice_ivr",
+      "persona_types": ["PER-001", "PER-056"],
+      "persona_notes": {
+        "PER-001": "Personal banking customers calling inbound for account servicing, payments, and dispute resolution",
+        "PER-056": "Branch staff using internal telephony for customer transfers and inter-branch operations"
+      },
+      "auth_model": "Tiered authentication. Tier 1 (IVR self-service): Customer authenticated by DNIS-matched account lookup + 4-of-7 knowledge-based authentication (KBA) questions (date of birth, postcode, memorable word, last 3 digits of card). Tier 2 (Agent-assisted, standard): Caller authenticated by KBA + one-time passcode (OTP) sent to registered mobile number, read back by caller. Tier 3 (Agent-assisted, high-value operations — payments >£1,000, address change): Tier 2 + voice biometric match against enrolled voiceprint (using SVC-100 voice biometric module); fallback to security question set B. Caller ID (CLI) checked but not relied upon as sole authentication factor (CLI spoofing risk). Vulnerable customer protocol: reduced authentication requirement with enhanced agent verification for customers on accessibility register.",
+      "auth_standards": ["NIST SP 800-63B (voice channel guidance)", "FCA Consumer Duty (vulnerable customer provisions)", "FCA PS19/1 (Payment Services Directive SCA exemptions for telephone)", "UK Finance Authorised Push Payment Fraud Voluntary Code"],
+      "rate_limits": {
+        "inbound_concurrent_calls": "500 concurrent inbound calls (telephony platform capacity; overflow to voicemail or callback queue)",
+        "ivr_sessions": "No per-caller rate limit in IVR; excessive call frequency flagged to fraud monitoring",
+        "outbound_fraud_alerts": "Unlimited — outbound fraud alert calls prioritised and exempt from rate management",
+        "agent_screen_pop_api": "50 req/min per agent workstation (SVC-014 API calls during call handling)",
+        "notes": "Call capacity dimensioned to P95 inbound volume. Burst handling via queue with estimated wait time announcement."
+      },
+      "data_projection": "IVR: account balances and last 3 transaction descriptions announced in full to authenticated callers only. Card numbers never read aloud; last 4 digits only. Agent screen-pop: agent sees customer profile, account summary, and recent alerts consistent with their branch staff access profile (PER-056 access model). Sensitive fields (full account numbers, credit limits) displayed on agent screen but not read aloud unless customer requests. Call recording does not capture DTMF digits during PIN/OTP entry (pause-record control active).",
+      "call_recording": {
+        "scope": "100% of agent-assisted calls recorded. IVR self-service interactions logged but not voice-recorded.",
+        "pci_dss": "Recording paused automatically during card number entry (DTMF suppression). PCI DSS Requirement 3.3 compliance maintained.",
+        "storage": "Recordings held in SVC-054 (Document Management Service) with 7-year retention.",
+        "access": "Recordings accessible to Quality Assurance, Compliance, and Fraud Investigation teams only. Customer may request copy under GDPR Art. 15."
+      },
+      "tls_requirements": "SIP trunks to PSTN gateway encrypted with SRTP (Secure Real-time Transport Protocol). Internal SIP traffic between contact centre components over TLS 1.2+. API calls from telephony platform to SVC-014 and SVC-100 over TLS 1.3 via SVC-101.",
+      "audit_requirements": {
+        "call_events": "Call start/end, IVR navigation path, authentication tier reached, authentication pass/fail, agent ID, queue name, and call outcome logged per call with ANI/DNIS",
+        "authentication_attempts": "Each KBA question attempt, OTP send/receive, and voice biometric match result logged with outcome and confidence score",
+        "agent_actions": "Payments initiated, account changes made, and complaints raised by agents during calls logged with call reference and agent ID",
+        "fraud_events": "Fraud-related call flags (impersonation suspicion, social engineering indicators) logged and escalated to SVC-015 in real time",
+        "retention": "Call records 7 years; call recordings 7 years (FCA SYSC 10A for regulated activities); DTMF logs purged after 24 hours (PCI DSS compliance)",
+        "destination": "SVC-103 (Audit & Logging Service) for call event logs; SVC-054 for call recordings"
+      },
+      "availability_target": "99.9% for inbound telephony routing. IVR self-service: 99.95%. Agent availability governed by workforce management scheduling, not infrastructure SLA.",
+      "failover_behaviour": "PSTN failover to backup SIP trunk provider within 60 seconds. If contact centre platform is unavailable: calls routed to voicemail with 4-hour callback SLA. Critical fraud lines (card lost/stolen) have dedicated hot standby circuit with manual agent fallback."
+    }
+  ],
+
+  "channel_security_matrix": {
+    "description": "Summary of authentication assurance levels and PCI/regulatory scope by channel.",
+    "entries": [
+      {
+        "channel_id": "CH-001",
+        "nist_aal": "AAL2",
+        "pci_scope": false,
+        "psd2_sca_compliant": true,
+        "fca_supervised": true
+      },
+      {
+        "channel_id": "CH-002",
+        "nist_aal": "AAL2",
+        "pci_scope": false,
+        "psd2_sca_compliant": true,
+        "fca_supervised": true
+      },
+      {
+        "channel_id": "CH-003",
+        "nist_aal": "AAL2",
+        "pci_scope": false,
+        "psd2_sca_compliant": true,
+        "fca_supervised": true
+      },
+      {
+        "channel_id": "CH-004",
+        "nist_aal": "AAL3",
+        "pci_scope": false,
+        "psd2_sca_compliant": true,
+        "fca_supervised": true
+      },
+      {
+        "channel_id": "CH-005",
+        "nist_aal": "AAL3",
+        "pci_scope": false,
+        "psd2_sca_compliant": false,
+        "fca_supervised": true
+      },
+      {
+        "channel_id": "CH-006",
+        "nist_aal": "AAL2 / AAL3 (role-dependent)",
+        "pci_scope": false,
+        "psd2_sca_compliant": false,
+        "fca_supervised": false
+      },
+      {
+        "channel_id": "CH-007",
+        "nist_aal": "AAL3",
+        "pci_scope": false,
+        "psd2_sca_compliant": false,
+        "fca_supervised": true
+      },
+      {
+        "channel_id": "CH-008",
+        "nist_aal": "AAL3",
+        "pci_scope": true,
+        "psd2_sca_compliant": true,
+        "fca_supervised": true
+      },
+      {
+        "channel_id": "CH-009",
+        "nist_aal": "AAL1 (IVR) / AAL2 (agent-assisted)",
+        "pci_scope": true,
+        "psd2_sca_compliant": false,
+        "fca_supervised": true
+      }
+    ]
+  }
+}

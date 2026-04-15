@@ -1,0 +1,103 @@
+{
+  "id": "CAP-005",
+  "name": "Compliance & Regulatory",
+  "description": "Ensuring the bank operates within all legal, regulatory, and policy frameworks across financial crime prevention, conduct, data protection, and prudential compliance",
+  "mandate_source": [
+    "Money Laundering Regulations 2017",
+    "FCA MAR",
+    "Sanctions & Anti-Money Laundering Act 2018",
+    "GDPR/Data Protection Act 2018",
+    "Senior Managers and Certification Regime (SM&CR)"
+  ],
+  "sub_capabilities": [
+    {
+      "id": "CAP-005.01",
+      "name": "KYC/AML",
+      "description": "Customer due diligence (CDD) and enhanced due diligence (EDD), ongoing customer monitoring, beneficial ownership verification, Suspicious Activity Report (SAR) submission to the National Crime Agency (NCA), and alignment with JMLSG guidance",
+      "promotion_test": {
+        "distinct_participants": true,
+        "distinct_regulatory_framework": true,
+        "distinct_lifecycle": true,
+        "independent_scalability": true,
+        "criteria_met": 4,
+        "decision": "PROMOTE",
+        "promotion_rationale": "Distinct external participants (NCA, JMLSG, FATF, Companies House, credit reference agencies); governed by a self-contained regulatory framework (Money Laundering Regulations 2017, Proceeds of Crime Act 2002, JMLSG Guidance) separate from conduct and prudential compliance; operates an onboard-monitor-escalate-report lifecycle tied to the customer relationship rather than to product or regulatory reporting cycles; must scale independently to handle onboarding volume surges, periodic review backlogs, and regulatory-driven customer remediation programmes without coupling to regulatory reporting cadences"
+      }
+    },
+    {
+      "id": "CAP-005.02",
+      "name": "Regulatory Reporting",
+      "description": "Production and submission of PRA prudential returns (COREP, FINREP, liquidity), FCA conduct returns, Bank of England statistical reporting (BEEDS), and management of regulatory change that affects reporting obligations",
+      "promotion_test": {
+        "distinct_participants": false,
+        "distinct_regulatory_framework": false,
+        "distinct_lifecycle": false,
+        "independent_scalability": false,
+        "criteria_met": 0,
+        "decision": "RETAIN"
+      }
+    },
+    {
+      "id": "CAP-005.03",
+      "name": "Conduct Monitoring",
+      "description": "Market abuse surveillance under MAR (insider dealing, market manipulation, front-running), conflicts of interest identification and management, treating customers fairly monitoring, and SM&CR accountability mapping",
+      "promotion_test": {
+        "distinct_participants": false,
+        "distinct_regulatory_framework": false,
+        "distinct_lifecycle": false,
+        "independent_scalability": false,
+        "criteria_met": 0,
+        "decision": "RETAIN"
+      }
+    },
+    {
+      "id": "CAP-005.04",
+      "name": "Data Protection",
+      "description": "GDPR and Data Protection Act 2018 compliance, subject access request (SAR) fulfilment, data protection impact assessments (DPIAs), data retention and erasure policy enforcement, and ICO breach notification",
+      "promotion_test": {
+        "distinct_participants": false,
+        "distinct_regulatory_framework": false,
+        "distinct_lifecycle": false,
+        "independent_scalability": false,
+        "criteria_met": 0,
+        "decision": "RETAIN"
+      }
+    },
+    {
+      "id": "CAP-005.05",
+      "name": "Sanctions Screening",
+      "description": "Real-time payment and counterparty screening against OFSI, OFAC, UN, and EU consolidated sanctions lists, batch screening of the customer book, alert management, and blocked funds reporting to HM Treasury",
+      "promotion_test": {
+        "distinct_participants": false,
+        "distinct_regulatory_framework": false,
+        "distinct_lifecycle": false,
+        "independent_scalability": false,
+        "criteria_met": 0,
+        "decision": "RETAIN"
+      },
+      "shared_with": [
+        {
+          "capability_id": "CAP-PAY",
+          "capability_name": "Payment Operations",
+          "shared_concern": "Real-time payment interception — the Sanctions Screening sub-capability provides a synchronous screening gate that sits within the payment processing pipeline. Payment Operations consumes screening decisions but does not own the sanctions list management or alert adjudication processes"
+        }
+      ]
+    }
+  ],
+  "design_decisions": [
+    {
+      "id": "DD-CAP-005-01",
+      "title": "KYC/AML promoted to standalone capability",
+      "decision": "CAP-005.01 KYC/AML is elevated to an independent capability rather than remaining a sub-capability of Compliance & Regulatory",
+      "rationale": "KYC/AML operates under a dedicated and self-contained legislative framework (MLR 2017, POCA 2002, JMLSG Guidance) with a mandated Money Laundering Reporting Officer (MLRO) accountability distinct from the broader Chief Compliance Officer remit. Its external participant network — NCA SAR portal, JMLSG, FATF, Companies House, sanctions list providers — is materially different from those relevant to conduct or prudential compliance. The onboard-monitor-escalate-report lifecycle is driven by customer relationship events rather than regulatory return calendars, and periodic remediation programmes (e.g. customer risk re-rating) must scale independently of regulatory reporting cycles",
+      "consequences": "A dedicated Financial Crime capability domain encompassing KYC/AML will be defined. The interface between KYC/AML and Sanctions Screening (CAP-005.05) must be treated as a formal integration contract; sanctions list hits may trigger AML escalation paths and both share customer risk scoring inputs"
+    },
+    {
+      "id": "DD-CAP-005-02",
+      "title": "Sanctions Screening retained in Compliance but interface-contracted with Payment Operations",
+      "decision": "Sanctions Screening (CAP-005.05) remains within CAP-005 Compliance & Regulatory for policy ownership and list management, but exposes a synchronous screening API to Payment Operations as a formally specified integration",
+      "rationale": "Sanctions policy authority, list subscription management, alert adjudication, and HM Treasury reporting sit unambiguously within the Compliance remit. However, real-time payment screening is a latency-sensitive gate in the payment execution path. Coupling the two at the capability boundary rather than via a defined API would create a runtime dependency that constrains payment throughput and compliance alert management independently. Treating the interface as a contract decouples deployment and scaling concerns while preserving clear policy ownership",
+      "consequences": "Payment Operations must implement a synchronous call to the Sanctions Screening service with a defined SLA (target sub-200ms p99). Compliance owns list refresh frequency and alert disposition SLAs. A shared schema for screening requests and responses must be agreed and versioned"
+    }
+  ]
+}

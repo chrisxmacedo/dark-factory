@@ -1,0 +1,131 @@
+{
+  "id": "CAP-006",
+  "name": "Wealth Management",
+  "description": "Advisory and discretionary investment services, financial planning, and private banking for high-net-worth individuals",
+  "mandate_source": [
+    "FCA COBS",
+    "MiFID II",
+    "FCA PROD",
+    "Financial Services & Markets Act 2000"
+  ],
+  "sub_capabilities": [
+    {
+      "id": "CAP-006.01",
+      "name": "Investment Advisory",
+      "description": "Regulated investment advice, suitability assessments, and product recommendations for wealth clients",
+      "status": "RETAIN",
+      "promotion_test": {
+        "distinct_participants": {
+          "result": false,
+          "rationale": "Participants are wealth clients and relationship managers — shared across all wealth sub-capabilities"
+        },
+        "distinct_regulatory_framework": {
+          "result": false,
+          "rationale": "Governed by MiFID II suitability rules (Article 25) and FCA COBS 9A, the same framework applicable to Portfolio Management and Financial Planning"
+        },
+        "distinct_lifecycle": {
+          "result": false,
+          "rationale": "Lifecycle is tightly coupled to the advisory relationship and feeds directly into Portfolio Management; not independently bounded"
+        },
+        "independent_scalability": {
+          "result": false,
+          "rationale": "Volume scales with the overall wealth client book, not independently of other wealth sub-capabilities"
+        },
+        "promote": false
+      }
+    },
+    {
+      "id": "CAP-006.02",
+      "name": "Portfolio Management",
+      "description": "Discretionary portfolio management, asset allocation, rebalancing, and performance reporting for wealth clients",
+      "status": "RETAIN",
+      "promotion_test": {
+        "distinct_participants": {
+          "result": false,
+          "rationale": "Participants are the same wealth clients and portfolio managers that interact across all wealth sub-capabilities"
+        },
+        "distinct_regulatory_framework": {
+          "result": false,
+          "rationale": "Governed by MiFID II Articles 24–25 and FCA COBS 6/9A, the same framework shared with Investment Advisory and Financial Planning"
+        },
+        "distinct_lifecycle": {
+          "result": false,
+          "rationale": "Lifecycle is bound to the client investment mandate, which originates in Investment Advisory and is closed in Financial Planning reviews; not independently bounded"
+        },
+        "independent_scalability": {
+          "result": false,
+          "rationale": "AUM growth is correlated with the wealth client book across all sub-capabilities; no independent scaling driver"
+        },
+        "promote": false
+      }
+    },
+    {
+      "id": "CAP-006.03",
+      "name": "Private Banking",
+      "description": "Dedicated relationship management, bespoke lending facilities, and concierge services for high-net-worth clients",
+      "status": "RETAIN",
+      "promotion_test": {
+        "distinct_participants": {
+          "result": false,
+          "rationale": "Private banking clients are a subset of wealth clients; relationship managers serve across private banking and advisory services"
+        },
+        "distinct_regulatory_framework": {
+          "result": false,
+          "rationale": "Lending components fall under FSMA 2000 and FCA MCOB; advisory components remain under MiFID II/FCA COBS — the blended framework is shared with other wealth sub-capabilities rather than being uniquely distinct"
+        },
+        "distinct_lifecycle": {
+          "result": false,
+          "rationale": "Client onboarding, relationship management, and offboarding are shared lifecycle stages with Investment Advisory and Portfolio Management"
+        },
+        "independent_scalability": {
+          "result": false,
+          "rationale": "Private banking capacity scales with the relationship manager headcount that is shared across the wealth management capability"
+        },
+        "promote": false
+      }
+    },
+    {
+      "id": "CAP-006.04",
+      "name": "Financial Planning",
+      "description": "Retirement planning, tax-efficient investment structuring, and estate planning for wealth clients",
+      "status": "RETAIN",
+      "promotion_test": {
+        "distinct_participants": {
+          "result": false,
+          "rationale": "Financial planning clients are the same wealth client population; planners operate within the same relationship model as advisers and portfolio managers"
+        },
+        "distinct_regulatory_framework": {
+          "result": false,
+          "rationale": "Governed by MiFID II, FCA COBS 9, and FCA PROD — the same framework covering the full wealth management capability"
+        },
+        "distinct_lifecycle": {
+          "result": false,
+          "rationale": "Planning engagements are typically initiated and reviewed as part of the broader investment advisory and portfolio management lifecycle"
+        },
+        "independent_scalability": {
+          "result": false,
+          "rationale": "Demand scales with the wealth client book; no distinct volume driver that would justify independent capability scaling"
+        },
+        "promote": false
+      }
+    }
+  ],
+  "design_decisions": [
+    {
+      "id": "DD-CAP-006-001",
+      "title": "All wealth sub-capabilities retained within CAP-006",
+      "decision": "Investment Advisory, Portfolio Management, Private Banking, and Financial Planning are retained as sub-capabilities of CAP-006 rather than promoted to standalone capabilities.",
+      "rationale": "All four sub-capabilities fail every promotion criterion: (1) Participants — they share the same high-net-worth client population and wealth relationship manager workforce; (2) Regulatory framework — all are governed by the same MiFID II / FCA COBS / FCA PROD regime with no sub-capability facing a materially separate regulatory body or rulebook; (3) Lifecycle — onboarding, ongoing relationship management, and offboarding are shared lifecycle stages with no cleanly independent boundaries; (4) Independent scalability — capacity and demand scale uniformly with the overall wealth client book. Promotion would introduce artificial domain boundaries, duplicate governance structures, and increase coordination overhead without architectural benefit.",
+      "date": "2026-04-15",
+      "status": "ACCEPTED"
+    },
+    {
+      "id": "DD-CAP-006-002",
+      "title": "MiFID II suitability obligation sits at capability level, not sub-capability level",
+      "decision": "MiFID II Article 25 suitability and appropriateness obligations are treated as a capability-level cross-cutting concern rather than being assigned to Investment Advisory alone.",
+      "rationale": "Suitability assessments inform product recommendations (Investment Advisory), asset allocation decisions (Portfolio Management), and planning recommendations (Financial Planning). Scoping the obligation to a single sub-capability would create compliance gaps and require duplication of assessment logic. A single capability-level suitability framework covers all sub-capabilities consistently and aligns with FCA COBS 9A expectations for integrated wealth services.",
+      "date": "2026-04-15",
+      "status": "ACCEPTED"
+    }
+  ]
+}

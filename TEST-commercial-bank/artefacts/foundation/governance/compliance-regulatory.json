@@ -1,0 +1,127 @@
+{
+  "id": "GOV-005",
+  "capability_id": "CAP-005",
+  "capability_name": "Compliance & Regulatory",
+  "rules": [
+    {
+      "rule_id": "RULE-CR-001",
+      "name": "SAR Filing Timescales",
+      "source_legislation": "Proceeds of Crime Act 2002 (POCA) — Sections 330, 331, 332; Money Laundering, Terrorist Financing and Transfer of Funds (Information on the Payer) Regulations 2017 (MLR 2017)",
+      "description": "The bank's Nominated Officer (MLRO) must submit a Suspicious Activity Report (SAR) to the National Crime Agency (NCA) as soon as practicable after knowledge or suspicion of money laundering is formed. There is no prescribed statutory deadline but unreasonable delay constitutes a criminal offence. Where a SAR is filed for a transaction not yet executed (a 'consent SAR'), the bank must wait for NCA consent or allow the seven-day moratorium period to elapse before proceeding. SAR-related information must be handled under strict tipping-off prohibitions.",
+      "authority_level": "senior_manager",
+      "approval_chain": [
+        "Reporting Officer",
+        "Money Laundering Reporting Officer (MLRO)",
+        "Deputy MLRO"
+      ],
+      "disclosure_obligations": [
+        "SAR filed with the NCA via the SAR Online portal as soon as practicable after suspicion formed",
+        "Consent SAR filed before executing a transaction where consent is required; moratorium period observed",
+        "Annual MLRO report submitted to the Board covering SAR volumes, trends, and AML programme adequacy",
+        "SAR records retained for a minimum of five years from the date of filing"
+      ],
+      "constraints": [
+        "Tipping off the subject of a SAR is a criminal offence under POCA s333A; no staff member may disclose a SAR exists to the subject",
+        "Transactions subject to a consent SAR must not be executed until NCA consent received or 7-day moratorium (plus 31-day extended moratorium if required) has lapsed",
+        "Internal suspicion reports from staff must be reviewed by the MLRO within a reasonable timeframe, not to exceed five business days",
+        "SAR decisions must be documented; decisions not to file must include written rationale retained for audit"
+      ]
+    },
+    {
+      "rule_id": "RULE-CR-002",
+      "name": "Customer Due Diligence Refresh Cycles",
+      "source_legislation": "Money Laundering, Terrorist Financing and Transfer of Funds (Information on the Payer) Regulations 2017 (MLR 2017) — Regulations 27–38",
+      "description": "The bank must apply Customer Due Diligence (CDD) measures at account opening and must keep CDD information up to date on an ongoing basis. Refresh cycles must be risk-based: Enhanced Due Diligence (EDD) customers (high risk, PEPs, high-risk third countries) must be refreshed at least every 12 months; standard risk customers every three years; lower risk customers every five years. CDD refresh must include re-verification of identity documents and beneficial ownership where material changes have occurred.",
+      "authority_level": "department_head",
+      "approval_chain": [
+        "CDD Analyst",
+        "KYC Team Lead",
+        "Head of Financial Crime Compliance"
+      ],
+      "disclosure_obligations": [
+        "CDD refresh completion rates reported to the MLRO quarterly",
+        "Overdue CDD refresh cases escalated to the Head of Financial Crime with remediation timeline",
+        "FCA supervisory visits may review CDD quality; files must be retrievable within 24 hours of request",
+        "CDD records retained for five years from account closure or end of business relationship"
+      ],
+      "constraints": [
+        "Accounts with overdue CDD refresh beyond 90 days of due date must be suspended for non-essential transactions pending completion",
+        "High-risk customers (EDD) must be refreshed annually without exception; relationship profitability is not a justification for delay",
+        "Politically Exposed Person (PEP) status must be screened at onboarding and at each annual refresh",
+        "Beneficial ownership must be verified to the natural person level; no bearer share structures may be accepted"
+      ]
+    },
+    {
+      "rule_id": "RULE-CR-003",
+      "name": "Regulatory Return Submission Deadlines",
+      "source_legislation": "PRA Rulebook — Regulatory Reporting; FCA SUP Chapter 16 — Reporting Requirements",
+      "description": "The bank must submit all mandatory regulatory returns to the PRA and FCA within the prescribed submission windows. Returns include capital, liquidity, conduct, and statistical data submissions. Late submission, material data errors, or failure to submit are reportable breaches under SUP 15. The Chief Financial Officer is accountable for the accuracy and timeliness of all PRA/FCA returns. A returns calendar maintained by the Regulatory Reporting team must be reviewed monthly by Finance and Risk.",
+      "authority_level": "senior_manager",
+      "approval_chain": [
+        "Regulatory Reporting Analyst",
+        "Head of Regulatory Reporting",
+        "Chief Financial Officer"
+      ],
+      "disclosure_obligations": [
+        "Late submission notifications to PRA/FCA via SUP 15 where a return cannot be filed on time",
+        "Material data quality corrections submitted as amended returns with explanatory note to regulator",
+        "Returns calendar reviewed and approved by CFO at the start of each financial year",
+        "Annual external audit of key prudential returns as part of statutory audit scope"
+      ],
+      "constraints": [
+        "No regulatory return may be submitted without sign-off from the designated senior manager responsible for that return",
+        "Draft returns must be completed at least five business days before the submission deadline to allow review",
+        "Material discrepancies identified post-submission must be corrected via amended return within 10 business days",
+        "System outages that threaten timely submission must be escalated to the CRO and CFO within four hours of identification"
+      ]
+    },
+    {
+      "rule_id": "RULE-CR-004",
+      "name": "GDPR Subject Access Request Timescales",
+      "source_legislation": "UK General Data Protection Regulation (UK GDPR) — Article 15; Data Protection Act 2018",
+      "description": "Individuals have the right to request access to personal data held about them. The bank must respond to Subject Access Requests (SARs) within one calendar month of receipt. The response deadline may be extended by a further two months where requests are complex or numerous, but the requester must be informed of the extension and reasons within the initial one-month period. Responses must include a copy of the personal data, the purposes of processing, recipients, retention periods, and information on other data subject rights.",
+      "authority_level": "department_head",
+      "approval_chain": [
+        "Data Subject Rights Analyst",
+        "Data Protection Officer (DPO)",
+        "Head of Legal and Compliance"
+      ],
+      "disclosure_obligations": [
+        "Response to data subject within one calendar month (or notification of extension within one month)",
+        "Refusal of SAR (e.g. manifestly unfounded) communicated in writing with right to complain to ICO",
+        "ICO notification of systemic SAR handling failures if applicable",
+        "DPO annual report to Board covering SAR volumes, timescales, and any ICO investigations"
+      ],
+      "constraints": [
+        "Response to SAR must be completed within 30 calendar days of receipt; extension to 90 days requires written notification to requester within day 30",
+        "SAR response must be provided free of charge unless the request is manifestly unfounded or excessive",
+        "Information about third parties in the SAR response must be redacted where disclosure would breach a third party's privacy rights",
+        "SARs received through any channel (branch, email, online, telephone) must be logged centrally and actioned equally"
+      ]
+    },
+    {
+      "rule_id": "RULE-CR-005",
+      "name": "Market Abuse Reporting",
+      "source_legislation": "UK Market Abuse Regulation (UK MAR — Regulation (EU) No 596/2014 as retained in UK law); FCA DTR Disclosure Guidance and Transparency Rules",
+      "description": "Where the bank suspects a transaction may constitute market abuse (insider dealing, market manipulation, unlawful disclosure of inside information), it must submit a Suspicious Transaction and Order Report (STOR) to the FCA as soon as possible and no later than the end of the business day on which the suspicion was formed. The bank must also maintain insider lists and apply information barriers to prevent the misuse of inside information held in the course of investment banking or advisory activities.",
+      "authority_level": "senior_manager",
+      "approval_chain": [
+        "Compliance Surveillance Analyst",
+        "Head of Compliance Surveillance",
+        "Chief Compliance Officer"
+      ],
+      "disclosure_obligations": [
+        "STOR submitted to FCA via Gabriel reporting system on day of suspicion forming",
+        "Insider lists maintained and provided to FCA on request within the deadline specified by FCA",
+        "Annual review of information barrier effectiveness and surveillance system coverage",
+        "STOR filing decisions documented; decisions not to file must be retained with written rationale"
+      ],
+      "constraints": [
+        "STOR must be filed by end of business on the day suspicion is formed; delay beyond same-day filing requires documented justification",
+        "Tipping off the subject of a STOR is prohibited under UK MAR Article 16",
+        "Information barriers (Chinese walls) must be maintained between corporate finance and trading activities; documented procedures required",
+        "Surveillance system alerts must be reviewed within two business days; unreviewed queues escalate to Head of Compliance Surveillance"
+      ]
+    }
+  ]
+}

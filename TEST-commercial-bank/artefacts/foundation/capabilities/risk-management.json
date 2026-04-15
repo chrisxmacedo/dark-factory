@@ -1,0 +1,95 @@
+{
+  "id": "CAP-004",
+  "name": "Risk Management",
+  "description": "Identification, measurement, monitoring, and mitigation of financial and non-financial risks across the bank",
+  "mandate_source": [
+    "PRA Rulebook - Risk Management",
+    "Basel III/CRD IV",
+    "FCA SYSC",
+    "Bank of England Stress Testing"
+  ],
+  "sub_capabilities": [
+    {
+      "id": "CAP-004.01",
+      "name": "Credit Risk",
+      "description": "Counterparty creditworthiness assessment, exposure monitoring across portfolios, expected credit loss provisioning, and limit management in line with IFRS 9 and Basel IRB requirements",
+      "promotion_test": {
+        "distinct_participants": false,
+        "distinct_regulatory_framework": false,
+        "distinct_lifecycle": false,
+        "independent_scalability": false,
+        "criteria_met": 0,
+        "decision": "RETAIN"
+      }
+    },
+    {
+      "id": "CAP-004.02",
+      "name": "Market Risk",
+      "description": "Measurement and management of trading book risk, interest rate risk in the banking book (IRRBB), FX exposure, and Value-at-Risk reporting under the Fundamental Review of the Trading Book (FRTB)",
+      "promotion_test": {
+        "distinct_participants": false,
+        "distinct_regulatory_framework": false,
+        "distinct_lifecycle": false,
+        "independent_scalability": false,
+        "criteria_met": 0,
+        "decision": "RETAIN"
+      }
+    },
+    {
+      "id": "CAP-004.03",
+      "name": "Operational Risk",
+      "description": "Incident identification and management, internal loss data collection, risk and control self-assessments (RCSAs), scenario analysis, and capital modelling under the Basel Standardised Measurement Approach",
+      "promotion_test": {
+        "distinct_participants": false,
+        "distinct_regulatory_framework": false,
+        "distinct_lifecycle": false,
+        "independent_scalability": false,
+        "criteria_met": 0,
+        "decision": "RETAIN"
+      }
+    },
+    {
+      "id": "CAP-004.04",
+      "name": "Fraud Detection",
+      "description": "Real-time and batch transaction monitoring for fraudulent activity, management of fraud rule engines, first-party and third-party fraud case management, and liaison with law enforcement and card scheme fraud networks",
+      "promotion_test": {
+        "distinct_participants": true,
+        "distinct_regulatory_framework": true,
+        "distinct_lifecycle": true,
+        "independent_scalability": true,
+        "criteria_met": 4,
+        "decision": "PROMOTE",
+        "promotion_rationale": "Distinct external participants (Action Fraud, NCA, card schemes, law enforcement); governed by a separate regulatory framework (Fraud Act 2006, PSR fraud reimbursement rules, PSR APP fraud mandatory reimbursement 2024); operates an independent investigate-detect-report-recover lifecycle not shared with prudential risk; requires independent scalability driven by transaction volume spikes and scheme rule changes orthogonal to risk capital cycles"
+      }
+    },
+    {
+      "id": "CAP-004.05",
+      "name": "Model Risk",
+      "description": "Independent validation of internal rating, pricing, and stress-testing models, backtesting of model outputs, model inventory governance, and PRA model risk management expectations compliance",
+      "promotion_test": {
+        "distinct_participants": false,
+        "distinct_regulatory_framework": false,
+        "distinct_lifecycle": false,
+        "independent_scalability": false,
+        "criteria_met": 0,
+        "decision": "RETAIN"
+      }
+    }
+  ],
+  "design_decisions": [
+    {
+      "id": "DD-CAP-004-01",
+      "title": "Fraud Detection promoted to standalone capability",
+      "decision": "CAP-004.04 Fraud Detection is elevated to an independent capability rather than remaining a sub-capability of Risk Management",
+      "rationale": "Fraud detection involves a materially different participant ecosystem (law enforcement, Action Fraud, card scheme networks), operates under the Fraud Act 2006 and PSR mandatory APP reimbursement framework rather than the PRA prudential rulebook, follows a detect-investigate-recover lifecycle distinct from the risk capital measurement lifecycle, and must scale independently to absorb transaction volume peaks and rapid rule-change cycles without coupling to prudential risk processes",
+      "consequences": "A dedicated Fraud capability domain will be defined. Interfaces between Fraud Detection and Operational Risk (loss data sharing) and Payments (transaction interception) must be formally specified as integration contracts"
+    },
+    {
+      "id": "DD-CAP-004-02",
+      "title": "Credit, Market, and Operational Risk co-located within Risk Management",
+      "decision": "The three core prudential risk sub-capabilities (Credit, Market, Operational) are retained within CAP-004 Risk Management rather than promoted",
+      "rationale": "All three share the PRA/Basel regulatory reporting spine, feed the same Internal Capital Adequacy Assessment Process (ICAAP), are governed by the same Chief Risk Officer accountability, and rely on overlapping data sets (exposure data, P&L attribution). Promoting them would fracture the ICAAP aggregation surface without a corresponding reduction in coupling",
+      "consequences": "A unified risk data platform serving all three sub-capabilities should be treated as shared infrastructure. Model Risk (CAP-004.05) acts as an independent second-line control over models used across all three sub-capabilities"
+    }
+  ]
+}

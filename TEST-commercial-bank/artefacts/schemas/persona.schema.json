@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "persona.schema.json",
+  "title": "Persona",
+  "description": "Describes an actor — internal or external — who interacts with one or more bank capabilities.",
+  "type": "object",
+  "required": [
+    "id",
+    "name",
+    "type",
+    "description",
+    "capability_touchpoints",
+    "access_classification",
+    "channels",
+    "frequency",
+    "volume_estimate"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^PER-[0-9]{3}$",
+      "description": "Unique persona identifier in the form PER-XXX."
+    },
+    "name": {
+      "type": "string",
+      "description": "Human-readable name for the persona."
+    },
+    "type": {
+      "enum": ["internal", "external"],
+      "description": "Whether the persona is an employee / system operator (internal) or a customer, partner, or third party (external)."
+    },
+    "description": {
+      "type": "string",
+      "description": "Concise narrative of who this persona is and what they need from the bank's capabilities."
+    },
+    "capability_touchpoints": {
+      "type": "array",
+      "description": "Ordered list of capability or sub-capability IDs (CAP-XXX or CAP-XXX.YY) that this persona interacts with.",
+      "items": {
+        "type": "string",
+        "pattern": "^CAP-[0-9]{3}(\\.[0-9]{2})?$"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "access_classification": {
+      "enum": ["public", "authenticated", "privileged", "administrative"],
+      "description": "Minimum access tier required: public (no auth), authenticated (identity verified), privileged (role-gated sensitive data), administrative (platform-level control)."
+    },
+    "channels": {
+      "type": "array",
+      "description": "Interaction channels available to this persona.",
+      "items": {
+        "type": "string",
+        "enum": [
+          "web_portal",
+          "mobile_app",
+          "api",
+          "branch",
+          "swift",
+          "telephone",
+          "email",
+          "file_transfer"
+        ]
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "frequency": {
+      "enum": ["daily", "weekly", "monthly", "quarterly", "annual", "event_driven"],
+      "description": "Typical interaction cadence for this persona."
+    },
+    "volume_estimate": {
+      "type": "string",
+      "description": "Qualitative or quantitative description of the population size or transaction volume for this persona."
+    }
+  },
+  "additionalProperties": false
+}

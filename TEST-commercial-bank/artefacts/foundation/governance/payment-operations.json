@@ -1,0 +1,126 @@
+{
+  "id": "GOV-003",
+  "capability_id": "CAP-003",
+  "capability_name": "Payment Operations",
+  "rules": [
+    {
+      "rule_id": "RULE-PO-001",
+      "name": "Payment Execution Time Limits",
+      "source_legislation": "Payment Services Regulations 2017 (PSR 2017) — Regulation 86 (implementing PSD2 Article 83)",
+      "description": "The bank must ensure that the amount of a payment transaction is credited to the payee's payment service provider's account by the end of the next business day (D+1) following receipt of the payment order. For paper-initiated transactions an additional business day is permitted. Intra-bank transfers between accounts at the same institution must be credited same-day. Faster Payments transactions must complete within two hours under the Faster Payments scheme rules.",
+      "authority_level": "automated",
+      "approval_chain": [
+        "Head of Payment Operations",
+        "Chief Operating Officer"
+      ],
+      "disclosure_obligations": [
+        "Maximum execution time disclosed in the Payment Services Framework Contract (Terms and Conditions)",
+        "PSR 2017 periodic statement of key fees and execution times provided annually",
+        "Payment service complaints reported in the FCA Product Sales Data return",
+        "Scheme breach reporting to Faster Payments, CHAPS, or BACS operator within prescribed timescales"
+      ],
+      "constraints": [
+        "Domestic credit transfers must reach the payee PSP by end of next business day (D+1) at the latest",
+        "EEA currency transfers (where still applicable) must meet D+1 for euro payments",
+        "Cut-off times for same-day processing must be clearly published and not changed without 60 days prior notice to customers",
+        "Paper-based payments may use D+2 but this must be disclosed in the framework contract"
+      ]
+    },
+    {
+      "rule_id": "RULE-PO-002",
+      "name": "Strong Customer Authentication",
+      "source_legislation": "Payment Services Regulations 2017 Schedule 6 (UK SCA-RTS); FCA Policy Statement PS19/26",
+      "description": "The bank must apply Strong Customer Authentication (SCA) whenever a customer initiates an electronic payment transaction or accesses their payment account online. SCA requires two independent authentication elements from: something the customer knows, something the customer has, and something the customer is. Exemptions (e.g. low-value transactions below £30, trusted beneficiaries, corporate payment processes) must be governed by documented exemption policies and subject to real-time transaction risk analysis (TRA) where applicable.",
+      "authority_level": "senior_manager",
+      "approval_chain": [
+        "Authentication Product Owner",
+        "Head of Digital Security",
+        "Chief Information Security Officer"
+      ],
+      "disclosure_obligations": [
+        "SCA exemption usage rates reported to FCA on request",
+        "Fraud rates under SCA exemptions monitored against FCA published reference fraud rate thresholds",
+        "Customer notification of SCA requirement changes with minimum 30 days notice",
+        "Annual attestation to FCA that SCA implementation remains compliant"
+      ],
+      "constraints": [
+        "SCA must use at least two independent factors from distinct categories (knowledge, possession, inherence)",
+        "Low-value contactless transaction exemption applies only to transactions below £100 cumulative per session (post-2023 UK limit)",
+        "Where TRA exemption is applied, fraud rate for the relevant transaction type must remain below FCA published reference rate",
+        "SCA authentication codes must be dynamically linked to the specific transaction amount and payee"
+      ]
+    },
+    {
+      "rule_id": "RULE-PO-003",
+      "name": "Confirmation of Payee",
+      "source_legislation": "Payment Systems Regulator (PSR) — Specific Direction 10 (CoP Phase 1 and Phase 2 mandates)",
+      "description": "The bank must implement Confirmation of Payee (CoP) for all Faster Payments and CHAPS transactions where the sending customer provides account name, sort code, and account number. The CoP check must return a match, close match, no match, or unavailable result before the payment is initiated. In the case of a no match or close match result, the customer must be explicitly warned before proceeding. The bank must also respond to CoP requests from other PSPs for accounts it holds.",
+      "authority_level": "department_head",
+      "approval_chain": [
+        "Payments Product Manager",
+        "Head of Payments",
+        "Chief Operating Officer"
+      ],
+      "disclosure_obligations": [
+        "CoP response volumes and match rates reported to Pay.UK as scheme operator",
+        "APP fraud incidents where CoP was bypassed or unavailable flagged in PSR mandatory reimbursement data",
+        "Customer-facing CoP result messages must follow Pay.UK approved wording",
+        "Annual review of CoP coverage gaps reported to the Head of Payments"
+      ],
+      "constraints": [
+        "CoP check is mandatory for all Faster Payments and CHAPS payments above the de minimis threshold",
+        "A no match result must generate a mandatory customer warning; the bank must not suppress or auto-proceed past this warning",
+        "CoP response to inbound requests from other PSPs must be provided within scheme-defined latency SLA (currently 10 seconds)",
+        "Business accounts using bulk payment files must implement CoP batch checking before file submission"
+      ]
+    },
+    {
+      "rule_id": "RULE-PO-004",
+      "name": "CHAPS Settlement Finality",
+      "source_legislation": "Financial Markets and Insolvency (Settlement Finality) Regulations 1999 (SFR 1999); Bank of England CHAPS Scheme Rules",
+      "description": "Payments settled through the CHAPS Real-Time Gross Settlement (RTGS) system are irrevocable and final from the moment of settlement in the Bank of England's books. The bank must treat CHAPS credits as final and unconditional upon receipt of the settlement confirmation. Funds credited to beneficiary accounts following CHAPS settlement must be made available no later than the business day end of the settlement day. Recall of a CHAPS payment post-settlement requires the beneficiary's voluntary agreement and cannot be compelled.",
+      "authority_level": "automated",
+      "approval_chain": [
+        "Head of Payment Operations",
+        "Head of Treasury Operations"
+      ],
+      "disclosure_obligations": [
+        "CHAPS transaction data reported to Bank of England RTGS operator as per scheme requirements",
+        "Liquidity usage in CHAPS reported to ALCO daily",
+        "Settlement fails or liquidity shortfalls reported to Bank of England within one business day",
+        "Annual self-assessment against CHAPS Indirect Access Policy requirements (for indirect participants)"
+      ],
+      "constraints": [
+        "CHAPS payments are final and irrevocable from the point of RTGS settlement; no unilateral reversal is permitted",
+        "Beneficiary funds must be made available no later than close of the settlement business day",
+        "The bank must maintain sufficient intraday liquidity to meet CHAPS settlement obligations without recourse to emergency facilities",
+        "CHAPS recall requests (SWIFT gpi RECALL or CoP recall) must be responded to within Bank of England stipulated timescales"
+      ]
+    },
+    {
+      "rule_id": "RULE-PO-005",
+      "name": "Sanctions Screening on Payments",
+      "source_legislation": "UK financial sanctions legislation administered by OFSI (Office of Financial Sanctions Implementation); HM Treasury Consolidated Sanctions List; UN Security Council Resolutions",
+      "description": "The bank must screen all payment instructions against the HM Treasury Consolidated Sanctions List and relevant regime-specific lists prior to execution. Matches or potential matches must be frozen and escalated to the Sanctions Compliance Team immediately. The bank must not process any payment that would constitute a dealing with a designated person or entity. OFSI must be notified of any frozen assets or suspected sanctions breaches. Sanctions screening records must be retained for a minimum of five years.",
+      "authority_level": "senior_manager",
+      "approval_chain": [
+        "Payments Sanctions Analyst",
+        "Sanctions Compliance Manager",
+        "Head of Financial Crime Compliance",
+        "Chief Compliance Officer"
+      ],
+      "disclosure_obligations": [
+        "OFSI notification required within a reasonable time of identifying a potential sanctions match or frozen asset",
+        "Annual OFSI reporting of frozen assets held by the bank",
+        "Suspicious Activity Reports (SARs) to NCA where sanctions evasion suspected",
+        "Internal escalation to Executive Committee of any material sanctions breach within 24 hours"
+      ],
+      "constraints": [
+        "No payment may be processed before sanctions screening is completed and cleared",
+        "A potential match must result in immediate payment hold pending analyst review; automated clearance is not permitted for true matches",
+        "Sanctions screening must cover both originator and beneficiary, and all intermediary parties in cross-border transactions",
+        "Screening systems must be updated within 24 hours of a new HM Treasury sanctions designation being published"
+      ]
+    }
+  ]
+}

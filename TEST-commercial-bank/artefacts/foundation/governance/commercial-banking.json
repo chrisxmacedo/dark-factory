@@ -1,0 +1,106 @@
+{
+  "id": "GOV-002",
+  "capability_id": "CAP-002",
+  "capability_name": "Commercial Banking",
+  "rules": [
+    {
+      "rule_id": "RULE-CB-001",
+      "name": "Large Exposure Limits",
+      "source_legislation": "PRA Rulebook — Large Exposures; CRD IV Article 395 (as retained in UK law)",
+      "description": "The bank must not incur an exposure to a single client or group of connected clients that exceeds 25% of its eligible capital (Tier 1 capital base). Exposures approaching this limit require pre-approval and must be monitored daily. Exemptions for intragroup exposures and sovereign exposures are subject to separate policy controls. All large exposures above 10% of Tier 1 capital must be reported to the PRA quarterly.",
+      "authority_level": "executive_committee",
+      "approval_chain": [
+        "Relationship Director",
+        "Credit Risk Manager",
+        "Head of Credit Risk",
+        "Chief Risk Officer",
+        "Executive Credit Committee"
+      ],
+      "disclosure_obligations": [
+        "PRA Large Exposure return (LE series) submitted quarterly",
+        "Internal large exposure breach escalation to Board Risk Committee within 24 hours",
+        "Pillar 3 disclosure of large exposures above 10% of eligible capital",
+        "Annual review of connected client groupings for material counterparties"
+      ],
+      "constraints": [
+        "Single client or connected group exposure must not exceed 25% of Tier 1 eligible capital",
+        "Exposures to G-SIIs and O-SIIs are subject to a lower limit of 15% of Tier 1 capital",
+        "Transactions that would breach the 25% limit may not be booked until Executive Credit Committee approval is obtained",
+        "Connected client relationships must be reviewed for accuracy at least annually"
+      ]
+    },
+    {
+      "rule_id": "RULE-CB-002",
+      "name": "Trade Finance Documentary Compliance",
+      "source_legislation": "ICC Uniform Customs and Practice for Documentary Credits (UCP 600); ICC Uniform Rules for Bank-to-Bank Reimbursements (URR 725)",
+      "description": "All documentary credits (letters of credit) issued or confirmed by the bank must be subject to UCP 600 unless explicitly stated otherwise in the credit. Examination of documents must be completed within five banking days following receipt. Non-compliant documents must be rejected with a single notice listing all discrepancies. The bank must also comply with applicable trade sanctions screening obligations before processing any trade finance transaction.",
+      "authority_level": "department_head",
+      "approval_chain": [
+        "Trade Finance Operations Analyst",
+        "Trade Finance Team Lead",
+        "Head of Trade Finance Operations"
+      ],
+      "disclosure_obligations": [
+        "Discrepancy notices issued to presenting banks within 5 banking days (UCP 600 Article 14)",
+        "OFSI and UN sanctions screening records retained per transaction for 5 years",
+        "Suspicious transaction reporting to NCIS/NCA where trade-based money laundering indicators identified",
+        "Annual attestation to Compliance that UCP 600 documentation procedures have been followed"
+      ],
+      "constraints": [
+        "Document examination window must not exceed 5 banking days from receipt (UCP 600 Article 14b)",
+        "All discrepancies must be listed in a single notice; subsequent notices for the same document set are prohibited",
+        "No payment may be made under a letter of credit where sanctions screening has not been completed and cleared",
+        "Maximum tenor for usance letters of credit without senior credit approval is 180 days"
+      ]
+    },
+    {
+      "rule_id": "RULE-CB-003",
+      "name": "Treasury Counterparty Limits",
+      "source_legislation": "EMIR (as retained in UK law — UK EMIR); PRA Internal Capital Adequacy Assessment Process (ICAAP) requirements",
+      "description": "All over-the-counter (OTC) derivative transactions must be executed within approved counterparty credit limits. For financial counterparties above the clearing threshold, standardised OTC derivatives must be cleared through a recognised central counterparty (CCP). Bilateral trades must be subject to approved ISDA Master Agreements with Credit Support Annexes (CSA). Counterparty limits are set by the Asset and Liability Committee (ALCO) and reviewed quarterly.",
+      "authority_level": "executive_committee",
+      "approval_chain": [
+        "Treasury Dealer",
+        "Head of Treasury",
+        "Chief Financial Officer",
+        "Asset and Liability Committee (ALCO)"
+      ],
+      "disclosure_obligations": [
+        "EMIR trade reporting to approved UK Trade Repository within one business day of execution",
+        "Portfolio reconciliation with counterparties as per EMIR RTS frequency requirements",
+        "Dispute resolution escalation records maintained for all mark-to-market disputes above £500k",
+        "ALCO counterparty limit utilisation report produced monthly"
+      ],
+      "constraints": [
+        "OTC derivatives with financial counterparties above the clearing threshold must be centrally cleared unless a valid exemption applies",
+        "No new derivative transaction may be booked where it would breach the approved counterparty credit limit",
+        "ISDA and CSA must be in place before the first transaction with any new derivative counterparty",
+        "Variation margin must be exchanged daily for all in-scope bilateral transactions under UK EMIR margin rules"
+      ]
+    },
+    {
+      "rule_id": "RULE-CB-004",
+      "name": "Business Lending Responsible Lending Obligations",
+      "source_legislation": "FCA Consumer Credit Act 1974 (for SME lending below £25,000 threshold); FCA CONC sourcebook; UK Finance Lending Standards Board Standards of Lending Practice for Business Customers",
+      "description": "When lending to small and micro businesses, the bank must conduct proportionate creditworthiness assessments and ensure the loan is suitable for the business's stated purpose and repayment capacity. For loans subject to the Consumer Credit Act threshold, standard CCA pre-contractual disclosures apply. For SME lending above the CCA threshold, the bank operates under the voluntary Lending Standards Board Standards, which require transparent pricing, fair treatment, and access to alternative dispute resolution.",
+      "authority_level": "senior_manager",
+      "approval_chain": [
+        "Business Banking Relationship Manager",
+        "Business Credit Underwriter",
+        "Head of Business Credit"
+      ],
+      "disclosure_obligations": [
+        "Pre-contractual explanation provided to SME borrowers covering key loan features and risks",
+        "Annual review statements issued for revolving credit facilities",
+        "SME complaints referred to Financial Ombudsman Service where eligible (turnover below £6.5m threshold)",
+        "Lending Standards Board self-assessment submitted annually"
+      ],
+      "constraints": [
+        "Creditworthiness assessment must be documented and retained for the life of the facility plus 6 years",
+        "Variable rate loans must include illustrative repayment scenarios at +2% and +4% rate increases in pre-contractual information",
+        "Personal guarantees from directors must be subject to independent legal advice recommendation and signed separately from the loan agreement",
+        "Early repayment charges on fixed-rate SME loans must not exceed the bank's reasonably incurred break cost"
+      ]
+    }
+  ]
+}

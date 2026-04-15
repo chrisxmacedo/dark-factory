@@ -1,0 +1,138 @@
+{
+  "id": "GOV-004",
+  "capability_id": "CAP-004",
+  "capability_name": "Risk Management",
+  "rules": [
+    {
+      "rule_id": "RULE-RM-001",
+      "name": "Capital Adequacy",
+      "source_legislation": "Basel III framework as implemented via CRD IV/CRR (as retained in UK law — UK CRR); PRA Rulebook — Capital Buffers",
+      "description": "The bank must maintain capital resources at or above the total capital requirement (TCR) at all times. The TCR comprises the minimum Pillar 1 requirement (8% of Risk Weighted Assets), the Pillar 2A add-on set by the PRA, the Capital Conservation Buffer (2.5%), and any countercyclical capital buffer (CCyB) rate set by the Financial Policy Committee. CET1 capital must comprise the predominant form of capital held. Intraday and daily capital ratio monitoring must be reported to the ALCO.",
+      "authority_level": "board",
+      "approval_chain": [
+        "Capital Management Team",
+        "Chief Financial Officer",
+        "Asset and Liability Committee (ALCO)",
+        "Board Risk Committee",
+        "Board"
+      ],
+      "disclosure_obligations": [
+        "Pillar 3 disclosures published annually (semi-annually for systemically important institutions)",
+        "PRA110 liquidity and capital return submitted monthly",
+        "Capital ratios disclosed in annual report and accounts",
+        "Immediate notification to PRA if capital ratio is expected to breach the overall capital requirement"
+      ],
+      "constraints": [
+        "CET1 capital ratio must not fall below 4.5% (Pillar 1 minimum) at any time",
+        "Distribution of earnings is restricted if the Combined Buffer (CCB + CCyB + G-SII buffer) is not fully met",
+        "Material acquisitions or significant capital distributions require PRA prior approval if they would reduce CET1 by more than 0.25%",
+        "Internal capital adequacy trigger ratios must sit above regulatory minimums by an approved management buffer"
+      ]
+    },
+    {
+      "rule_id": "RULE-RM-002",
+      "name": "Stress Testing",
+      "source_legislation": "Bank of England Annual Cyclical Scenario (ACS) and exploratory scenarios; PRA SS3/18 — Stress testing",
+      "description": "The bank must participate in the Bank of England's annual concurrent stress test where required, and must conduct its own internal stress tests at least annually. Stress test results must inform the ICAAP and recovery planning. The scenario assumptions, modelling methodology, and results must be reviewed by an independent internal validation function. Adverse stress test outcomes must be escalated to the Board Risk Committee and may require capital planning actions.",
+      "authority_level": "executive_committee",
+      "approval_chain": [
+        "Stress Testing Model Owners",
+        "Head of Capital Risk",
+        "Chief Risk Officer",
+        "Executive Risk Committee",
+        "Board Risk Committee"
+      ],
+      "disclosure_obligations": [
+        "Bank of England concurrent stress test results published by the Bank of England; bank must provide supporting narrative",
+        "Internal stress test results reported to Board Risk Committee at least annually",
+        "Stress test methodology documented and available to PRA supervisors on request",
+        "Material changes to stress test methodology require pre-notification to PRA"
+      ],
+      "constraints": [
+        "Stress test scenarios must include at a minimum: severe UK recession, global financial shock, and operational resilience stress",
+        "Model validation of stress test models must be conducted by a function independent of model development at least annually",
+        "Capital planning actions triggered by stress tests must be signed off by the Board before implementation",
+        "Internal stress test results may not be used to justify reducing capital below regulatory minimum requirements"
+      ]
+    },
+    {
+      "rule_id": "RULE-RM-003",
+      "name": "ICAAP Submission",
+      "source_legislation": "PRA Rulebook — Internal Capital Adequacy Assessment Process; PRA SS31/15 — The Internal Capital Adequacy Assessment Process (ICAAP) and the Supervisory Review and Evaluation Process (SREP)",
+      "description": "The bank must produce an Internal Capital Adequacy Assessment Process (ICAAP) document at least annually, assessing its risks, the adequacy of its capital against those risks, and the sufficiency of its capital planning and governance framework. The ICAAP must be reviewed and approved by the Board before submission to the PRA. The PRA uses the ICAAP in its Supervisory Review and Evaluation Process (SREP) to set the Pillar 2A capital add-on.",
+      "authority_level": "board",
+      "approval_chain": [
+        "Head of Capital Risk",
+        "Chief Risk Officer",
+        "Chief Financial Officer",
+        "Executive Committee",
+        "Board Risk Committee",
+        "Board"
+      ],
+      "disclosure_obligations": [
+        "ICAAP document submitted to PRA on an annual cycle and on-demand following material risk event",
+        "ICAAP summary disclosed to Board at formal approval meeting with board minutes retained",
+        "SREP outcome letter and Pillar 2A add-on communicated to ALCO and Board Risk Committee",
+        "Material changes to risk profile between ICAAP cycles notified to PRA supervisors promptly"
+      ],
+      "constraints": [
+        "ICAAP must be Board-approved before submission to the PRA",
+        "Capital planning horizon in the ICAAP must cover a minimum of three years",
+        "All material risks (credit, market, operational, liquidity, pension, concentration) must be assessed and quantified",
+        "ICAAP must be updated within 90 days of a material change in the bank's business model or risk profile"
+      ]
+    },
+    {
+      "rule_id": "RULE-RM-004",
+      "name": "Fraud Reporting Obligations",
+      "source_legislation": "Fraud Act 2006; Payment Systems Regulator (PSR) PS23/3 — APP Fraud Mandatory Reimbursement; Payments Service Regulations 2017 Regulation 75",
+      "description": "The bank must report Authorised Push Payment (APP) fraud data to the PSR under the mandatory reimbursement regime. APP fraud victims must be reimbursed within five business days of a claim unless an exception applies (e.g. gross negligence, first-party fraud). The bank must also maintain fraud management information systems capable of producing the PSR mandatory data for annual publication. Internal fraud must be reported to the FCA via the appropriate notification mechanism.",
+      "authority_level": "senior_manager",
+      "approval_chain": [
+        "Fraud Operations Team Lead",
+        "Head of Fraud Risk",
+        "Head of Financial Crime",
+        "Chief Risk Officer"
+      ],
+      "disclosure_obligations": [
+        "PSR mandatory APP fraud data return submitted annually (published by PSR)",
+        "APP fraud reimbursement decisions communicated to customers within 5 business days",
+        "Material fraud events reported to FCA via SUP 15 as a material change notification",
+        "Suspicious Activity Reports (SARs) to NCA for fraud-related money laundering activity"
+      ],
+      "constraints": [
+        "APP fraud reimbursement must be settled within five business days of claim receipt unless exception applies",
+        "Reimbursement denial requires documented evidence of gross negligence or first-party fraud; standard of proof lies with the bank",
+        "Excess charged to victim on APP fraud claims must not exceed £100 per claim",
+        "The bank must not apply the excess where the claimant is classified as vulnerable"
+      ]
+    },
+    {
+      "rule_id": "RULE-RM-005",
+      "name": "Operational Resilience",
+      "source_legislation": "PRA SS1/21 — Operational Resilience: Impact Tolerances for Important Business Services; FCA PS21/3; Bank of England Operational Resilience Policy",
+      "description": "The bank must identify its important business services, set impact tolerances for the maximum period of disruption those services could sustain before causing intolerable harm, and be able to demonstrate it can remain within those tolerances by March 2025. Self-assessments must be conducted against each important business service and submitted to the PRA. Scenario testing (including severe but plausible disruption scenarios) must be carried out annually to test resilience against the stated tolerances.",
+      "authority_level": "executive_committee",
+      "approval_chain": [
+        "Business Service Owners",
+        "Head of Operational Resilience",
+        "Chief Operating Officer",
+        "Chief Risk Officer",
+        "Executive Committee",
+        "Board"
+      ],
+      "disclosure_obligations": [
+        "Operational resilience self-assessment submitted to PRA annually",
+        "Impact tolerance breaches reported to PRA within prescribed timescales",
+        "Board-level annual review and approval of important business services and impact tolerances",
+        "Scenario testing results retained and available to supervisors on request"
+      ],
+      "constraints": [
+        "Impact tolerances must be set and approved by the Board; they cannot be delegated below Board level",
+        "The bank must be able to demonstrate it remains within all impact tolerances by no later than 31 March 2025",
+        "Scenario tests must include technology disruption, third-party failure, and cyber incidents",
+        "Important business services and their impact tolerances must be reviewed following any material operational disruption"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,129 @@
+{
+  "id": "GOV-001",
+  "capability_id": "CAP-001",
+  "capability_name": "Retail Banking",
+  "rules": [
+    {
+      "rule_id": "RULE-RB-001",
+      "name": "Consumer Duty Outcomes",
+      "source_legislation": "FCA Consumer Duty (PS22/9) — effective 31 July 2023",
+      "description": "The bank must deliver good outcomes across the four Consumer Duty outcome areas: products and services, price and value, consumer understanding, and consumer support. Product governance frameworks, fair value assessments, and communications must be reviewed at least annually. The board must receive an annual Consumer Duty report confirming outcomes are being met.",
+      "authority_level": "board",
+      "approval_chain": [
+        "Chief Customer Officer",
+        "Chief Risk Officer",
+        "Executive Committee",
+        "Board Risk Committee",
+        "Board"
+      ],
+      "disclosure_obligations": [
+        "Annual Consumer Duty board report attesting to outcome delivery",
+        "Fair value assessment results published or made available to distributors",
+        "Material customer harm events reported to FCA via SUP 15 within prescribed timescales",
+        "Product review outcomes documented and retained for regulatory inspection"
+      ],
+      "constraints": [
+        "Products must not be sold to customers where they do not meet the target market definition",
+        "Ongoing fair value assessments must be completed at least annually for all retail products",
+        "Customer support channels must be no harder to access than sales channels",
+        "Foreseeable harm must be identified and mitigated before product launch"
+      ]
+    },
+    {
+      "rule_id": "RULE-RB-002",
+      "name": "Mortgage Affordability Assessment",
+      "source_legislation": "FCA Mortgages and Home Finance: Conduct of Business (MCOB) 11.6",
+      "description": "Before granting a residential mortgage, the bank must conduct a thorough affordability assessment of the customer's income, committed expenditure, and the impact of likely future interest rate increases (minimum 3 percentage point stress test). Responsible lending obligations require that the mortgage is only granted if the customer can afford repayments both now and under the stress scenario. Assessed disposable income must be documented in the credit file.",
+      "authority_level": "senior_manager",
+      "approval_chain": [
+        "Mortgage Underwriter",
+        "Senior Underwriter",
+        "Head of Mortgage Underwriting"
+      ],
+      "disclosure_obligations": [
+        "European Standardised Information Sheet (ESIS) provided to customer before binding offer",
+        "Annual Mortgage Statement issued to customer each year",
+        "Declined application reasons communicated to customer on request",
+        "FCA Mortgage Lenders and Administrators Return (MLAR) submitted quarterly"
+      ],
+      "constraints": [
+        "Loan-to-income ratio above 4.5x requires senior underwriter sign-off and triggers PRA LTI flow limit monitoring",
+        "Interest rate stress test must apply a minimum +3 percentage point shock over initial rate for the first five years",
+        "Self-certified income is prohibited; all income must be verified against documentary evidence",
+        "High LTV (>85%) lending subject to enhanced affordability scrutiny and separate credit policy approval"
+      ]
+    },
+    {
+      "rule_id": "RULE-RB-003",
+      "name": "Credit Card Persistent Debt Rules",
+      "source_legislation": "FCA Credit Card Market Study Remedies — CONC 6.7A",
+      "description": "Customers in persistent credit card debt (paying more in interest and charges than principal reduction over 18 months) must be contacted with options to repay faster. At 36 months of persistent debt, the bank must offer a repayment plan that will clear the balance within a reasonable period. If the customer cannot afford any of the options offered, the bank must suspend the card and refer to forbearance or debt management.",
+      "authority_level": "department_head",
+      "approval_chain": [
+        "Collections Team Lead",
+        "Head of Credit Card Operations",
+        "Head of Consumer Credit"
+      ],
+      "disclosure_obligations": [
+        "Persistent debt intervention letters sent at 18 and 36 month trigger points",
+        "Repayment plan options documented and retained on customer record",
+        "Regulatory reporting via FCA REP017 persistent debt return (annual)",
+        "Referral to free debt advice services signposted in all persistent debt communications"
+      ],
+      "constraints": [
+        "Credit card account must be suspended if customer is in persistent debt at 36 months and cannot afford offered repayment options",
+        "Minimum repayment amounts must be set so that debt reduces meaningfully, not just interest covered",
+        "No new promotional balance transfers may be offered to customers already in the 36-month persistent debt stage",
+        "Persistent debt intervention must occur irrespective of account profitability"
+      ]
+    },
+    {
+      "rule_id": "RULE-RB-004",
+      "name": "Deposit Protection Limits",
+      "source_legislation": "Financial Services Compensation Scheme (FSCS) — Depositor Protection Rules (PRA Rulebook)",
+      "description": "The bank must ensure eligible deposits held by retail customers are protected up to £85,000 per depositor per institution (£170,000 for joint accounts). Temporary high balance protection of up to £1 million applies for up to six months following qualifying life events. The bank must display FSCS protection information prominently, maintain accurate depositor records to support a 24-hour payout within seven working days, and participate in the SCV (Single Customer View) framework.",
+      "authority_level": "automated",
+      "approval_chain": [
+        "Head of Deposit Operations",
+        "Chief Financial Officer"
+      ],
+      "disclosure_obligations": [
+        "FSCS Information Sheet provided to customers at account opening and annually",
+        "FSCS Exclusions List provided alongside Information Sheet",
+        "Prominent display of FSCS logo and protection limit on website and branches",
+        "Annual SCV submission and attestation to the PRA",
+        "Temporary High Balance notifications to FSCS when qualifying events identified"
+      ],
+      "constraints": [
+        "FSCS protection limit is £85,000 per eligible depositor (£170,000 joint); no promotional claims may suggest higher coverage",
+        "SCV file must be producible within 24 hours of a request from FSCS or PRA",
+        "Non-eligible depositors (e.g. financial institutions) must be correctly flagged in the SCV and not presented as protected",
+        "Temporary high balance protection window is limited to six months from the qualifying life event"
+      ]
+    },
+    {
+      "rule_id": "RULE-RB-005",
+      "name": "Vulnerable Customer Treatment",
+      "source_legislation": "FCA Guidance for Firms on the Fair Treatment of Vulnerable Customers (FG21/1) — Consumer Duty reinforcement",
+      "description": "The bank must have embedded processes to identify, record, and act on customer vulnerability across all retail channels. Staff must be trained to recognise signs of vulnerability and adapt their approach accordingly. Products and services must be designed and delivered so that vulnerable customers achieve outcomes as good as those of non-vulnerable customers. Vulnerability data, where consented, must be shared across customer touchpoints to avoid repeat disclosure.",
+      "authority_level": "senior_manager",
+      "approval_chain": [
+        "Customer Vulnerability Lead",
+        "Head of Customer Experience",
+        "Chief Customer Officer"
+      ],
+      "disclosure_obligations": [
+        "Consumer Duty annual board report must include section on vulnerable customer outcomes",
+        "Staff training completion rates and quality assurance results reported to Board Risk Committee",
+        "Complaint root cause analysis broken down by vulnerability indicator (where identified)",
+        "Regulatory reporting of vulnerable customer handling deficiencies via SUP 15 if systemic harm identified"
+      ],
+      "constraints": [
+        "Vulnerability status must not be used to deny access to products or services without documented, fair justification",
+        "No automated digital-only journeys may be the sole route to access essential banking services",
+        "Staff must not pressure a customer identified as vulnerable into making an immediate financial decision",
+        "Vulnerability records must be reviewed and updated at each significant customer interaction"
+      ]
+    }
+  ]
+}

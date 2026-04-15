@@ -1,0 +1,222 @@
+{
+  "$schema": "../../schemas/technical-service.schema.json",
+  "services": [
+    {
+      "id": "SVC-100",
+      "name": "Identity & Access Management",
+      "description": "Provides centralised identity, authentication, and authorisation services for all internal staff, external customers, and machine-to-machine service identities. Manages customer profiles, session tokens, OAuth 2.0/OIDC flows, role-based access control, and privileged access for operations teams.",
+      "classification": "foundation",
+      "capability_mappings": [],
+      "dependencies": ["SVC-103"],
+      "technology_constraints": [
+        "FCA SYSC 8: outsourcing of critical functions requires contractual guarantees of service continuity; if IAM is cloud-hosted, PRA operational resilience rules apply",
+        "PSD2 SCA: customer authentication flows must support FIDO2/WebAuthn and OTP as second factors for payment initiation",
+        "UK GDPR: customer identity data is personal data; cross-border transfer to non-UK processors requires appropriate safeguards",
+        "Privileged access management (PAM): all privileged system access must be brokered through a just-in-time access mechanism with full session recording for PRA SS1/21 operational resilience compliance",
+        "Zero-trust architecture: service-to-service authentication must use short-lived mTLS certificates, not long-lived shared secrets"
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-SVC100-1",
+          "decision": "Adopt a federated identity model with a single authoritative identity store, serving both customer-facing (OIDC) and internal staff (SAML/OIDC) flows from the same core identity record.",
+          "rationale": "A single identity store ensures that customer KYC status, consent records, and access rights are consistent across all products and channels. Separate identity stores for different channels create reconciliation risk and complicate FSCS SCV extraction.",
+          "alternatives_considered": ["Separate identity stores per channel (retail app, online banking, branch)", "Federated identity with per-channel identity providers"],
+          "rejected_because": "Per-channel stores create divergent customer records, inconsistent KYC status, and multiple consent stores that cannot be reconciled in real time."
+        },
+        {
+          "id": "DD-SVC100-2",
+          "decision": "Issue short-lived JWT access tokens (15-minute expiry) with refresh token rotation, rather than long-lived session cookies or long-lived tokens.",
+          "rationale": "Short-lived tokens limit the blast radius of a token compromise. Refresh token rotation (rotating refresh token on each use) detects token theft by identifying duplicate use. This aligns with NCSC guidance on token-based authentication.",
+          "alternatives_considered": ["Long-lived session cookies with server-side session invalidation", "Long-lived bearer tokens with a revocation list"],
+          "rejected_because": "Long-lived cookies require server-side session stores that are difficult to scale; revocation lists require synchronous lookup on every request, creating a latency dependency."
+        }
+      ]
+    },
+    {
+      "id": "SVC-101",
+      "name": "API Gateway",
+      "description": "Entry point for all external and internal API traffic. Provides TLS termination, authentication enforcement, rate limiting, request routing, protocol translation, and API lifecycle management. Serves as the technical enforcement point for Open Banking, PSD2, and partner API policies.",
+      "classification": "foundation",
+      "capability_mappings": [],
+      "dependencies": ["SVC-100", "SVC-103"],
+      "technology_constraints": [
+        "PSD2 RTS Article 30: dedicated Open Banking API interface must have equivalent availability and performance to the customer-facing channel",
+        "FCA SYSC 13: the gateway must support DDoS mitigation controls; unmitigated attack volume must not degrade availability of regulated services",
+        "All TLS termination must use TLS 1.2 minimum; TLS 1.0/1.1 and SSLv3 must be disabled per NCSC guidance",
+        "API keys and OAuth tokens must never be logged in access logs; headers containing credentials must be masked before log ingestion",
+        "Change management: API breaking changes must go through a deprecation period with minimum 6-month notice to consumers, per Open Banking operational guidelines"
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-SVC101-1",
+          "decision": "Deploy the API Gateway as the sole external ingress point; no service is permitted to expose a public endpoint that bypasses the gateway.",
+          "rationale": "A single ingress point ensures all external traffic is subject to authentication, rate limiting, and monitoring controls. Bypassing the gateway creates uncontrolled attack surfaces and makes DDoS mitigation and API policy enforcement impossible.",
+          "alternatives_considered": ["Service mesh with mTLS for all traffic including external", "Per-capability API gateways"],
+          "rejected_because": "Service mesh alone does not provide the API management features (rate limiting, developer portal, policy enforcement) needed for Open Banking; per-capability gateways fragment policy enforcement and create inconsistent security postures."
+        },
+        {
+          "id": "DD-SVC101-2",
+          "decision": "Implement a strict inbound request schema validation layer at the gateway for all public APIs, rejecting malformed requests before they reach downstream services.",
+          "rationale": "Gateway-level schema validation provides a first line of defence against injection attacks and malformed payloads. It also reduces load on downstream services from invalid requests and makes API contract enforcement consistent.",
+          "alternatives_considered": ["Schema validation within each downstream service only", "No schema validation, rely on service-level error handling"],
+          "rejected_because": "Service-level validation only means invalid requests consume downstream resources before rejection; no validation exposes services to injection attack patterns and inconsistent error responses."
+        }
+      ]
+    },
+    {
+      "id": "SVC-102",
+      "name": "Event Bus",
+      "description": "Provides durable, ordered, at-least-once event delivery infrastructure for asynchronous inter-service communication. Supports domain event publication, event replay, consumer group management, and schema registry for event contracts.",
+      "classification": "foundation",
+      "capability_mappings": [],
+      "dependencies": ["SVC-100", "SVC-103"],
+      "technology_constraints": [
+        "Events carrying personal data must be encrypted at rest within the event store; encryption keys must be managed via SVC-105 (Secrets Management)",
+        "PRA operational resilience: the event bus is a critical shared dependency; its impact tolerance must be defined and tested under PRA SS1/21 requirements",
+        "Event retention must support at least 7 days of replay for operational recovery scenarios and up to 1 year for events that feed regulatory reporting pipelines",
+        "Schema changes to event contracts must be backwards-compatible; breaking changes require a versioned event type with a deprecation period",
+        "Consumer lag monitoring is mandatory; unprocessed event backlogs must trigger operational alerts before they breach SLA thresholds"
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-SVC102-1",
+          "decision": "Adopt a schema registry with mandatory schema validation on publish, making it a compile-time or deploy-time contract check rather than a runtime surprise.",
+          "rationale": "As the number of event producers and consumers grows, schema drift causes silent runtime failures that are hard to diagnose. A schema registry with publish-time validation catches contract violations before they reach consumers.",
+          "alternatives_considered": ["Ad-hoc JSON without schema enforcement", "Consumer-side schema validation only"],
+          "rejected_because": "Unschema'd JSON produces undetectable breaking changes at the producer; consumer-side validation discovers breakages only after events are published and consumed, causing downstream failures."
+        },
+        {
+          "id": "DD-SVC102-2",
+          "decision": "Partition events by aggregate ID (e.g. customer ID, account ID) rather than by event type, to guarantee ordering per entity without global ordering constraints.",
+          "rationale": "Per-entity ordering is the relevant invariant for banking events (e.g. debit then credit on the same account must be ordered). Global ordering is unnecessary and limits throughput; per-event-type partitioning does not guarantee ordering for the same entity across event types.",
+          "alternatives_considered": ["Global ordered log (single partition)", "Partition by event type"],
+          "rejected_because": "Global ordering creates a throughput bottleneck; event-type partitioning cannot guarantee that related events about the same account (of different types) are processed in order."
+        }
+      ]
+    },
+    {
+      "id": "SVC-103",
+      "name": "Audit & Logging Service",
+      "description": "Centralised, tamper-evident collection, storage, and querying of audit logs, application logs, and security events from all services. Provides the forensic and regulatory audit trail required by FCA, PRA, and GDPR obligations.",
+      "classification": "foundation",
+      "capability_mappings": [],
+      "dependencies": ["SVC-105"],
+      "technology_constraints": [
+        "FCA SYSC 10A: MiFID II transaction records must be retained for 5 years; audit logs supporting those records must be retained for the same period",
+        "Logs containing personal data must have a retention schedule aligned to GDPR data minimisation; personal data in logs must not be retained beyond the operational need",
+        "Audit logs must be immutable after ingestion; no log modification or deletion must be technically possible except via a formally approved legal hold release process",
+        "NCSC Cyber Essentials Plus: security event logs must be centralised and reviewed; alerts for privileged access and authentication anomalies are mandatory",
+        "Log ingestion must not fail silently; if the logging pipeline is degraded, services must queue logs locally and retry rather than dropping them"
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-SVC103-1",
+          "decision": "Implement a two-tier log storage model: hot storage (30 days, queryable index) for operational investigation, and cold WORM storage (7 years) for regulatory retention.",
+          "rationale": "Operational queries (incident investigation, FCA information requests) predominantly access recent logs; cold storage for the full retention period would be prohibitively expensive at banking log volumes. WORM cold storage satisfies immutability requirements at low cost.",
+          "alternatives_considered": ["Single queryable store for full retention period", "Compressed archive with no queryability for historical logs"],
+          "rejected_because": "A single queryable store for 7 years of logs is cost-prohibitive at enterprise log volumes; non-queryable archives cannot satisfy FCA information request timelines."
+        },
+        {
+          "id": "DD-SVC103-2",
+          "decision": "Enforce structured log formats (JSON with mandatory fields: timestamp, service_id, trace_id, actor_id, event_type) at the service SDK level, with unstructured logs rejected at ingestion.",
+          "rationale": "Structured logs enable automated querying and alerting without log parsing. Mandatory fields ensure every log entry can be correlated across services (via trace_id) and attributed to an actor (actor_id), both required for regulatory audit.",
+          "alternatives_considered": ["Free-text logs with pattern extraction at query time", "Per-service log format with gateway normalisation"],
+          "rejected_because": "Pattern extraction is fragile and fails on format variations; per-service formats with gateway normalisation create normalisation errors that corrupt the audit trail."
+        }
+      ]
+    },
+    {
+      "id": "SVC-104",
+      "name": "Data Platform",
+      "description": "Enterprise data warehouse and analytics platform providing consolidated, quality-assured data for regulatory reporting, management information, risk analytics, and customer analytics. Acts as the system of record for analytical workloads, separate from operational transactional systems.",
+      "classification": "foundation",
+      "capability_mappings": [],
+      "dependencies": ["SVC-100", "SVC-103", "SVC-105"],
+      "technology_constraints": [
+        "PRA DARS (Data Standards): the Data Platform must support PRA's bank-specific data collection requirements with documented data lineage from source to reported metric",
+        "BCBS 239: risk data aggregation principles require the platform to produce risk reports within defined timelines with full data lineage, auditability, and accuracy assurance",
+        "UK GDPR: analytics data must be pseudonymised or anonymised before use in non-operational workloads; re-identification risk must be assessed for each analytical dataset",
+        "Regulatory reports (COREP, FINREP) generated from the platform must be reproducible: given the same input snapshot, the same report must always be produced",
+        "Data quality controls must be enforced at ingestion: records failing quality checks must be quarantined, not silently loaded, with automated alerts to data owners"
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-SVC104-1",
+          "decision": "Implement a medallion architecture (raw / curated / analytical layers) with immutable raw layer, transformation-tracked curated layer, and business-logic-applied analytical layer.",
+          "rationale": "An immutable raw layer ensures regulatory reproducibility: any analytical result can be re-derived from the raw data. Separate transformation layers make data lineage traceable from source to regulatory report, satisfying BCBS 239 requirements.",
+          "alternatives_considered": ["Single unified data store with in-place transformations", "Separate operational data store per reporting type"],
+          "rejected_because": "In-place transformations destroy the ability to reproduce historical reports; per-reporting-type stores duplicate ingestion pipelines and prevent cross-domain analytics required for risk aggregation."
+        },
+        {
+          "id": "DD-SVC104-2",
+          "decision": "Publish a governed data catalogue with ownership, quality SLAs, and classification (personal/non-personal, regulatory/non-regulatory) for every dataset in the platform.",
+          "rationale": "Without a catalogue, data consumers build ad-hoc queries on undocumented datasets, leading to inconsistent metrics in regulatory reports. A governed catalogue with quality SLAs enables FCA-level accountability for data accuracy.",
+          "alternatives_considered": ["Informal wiki documentation of available datasets", "No catalogue, consumers query the platform directly"],
+          "rejected_because": "Wiki documentation becomes stale and has no ownership enforcement; no catalogue produces multiple competing definitions of the same metric, creating regulatory reporting inconsistency."
+        }
+      ]
+    },
+    {
+      "id": "SVC-105",
+      "name": "Secrets Management",
+      "description": "Centralised management of secrets, cryptographic keys, certificates, and credentials used by all services. Provides dynamic secret generation, lease-based access, automatic rotation, and audit of secret access events.",
+      "classification": "foundation",
+      "capability_mappings": [],
+      "dependencies": ["SVC-103"],
+      "technology_constraints": [
+        "PCI-DSS Requirement 3: cryptographic keys for cardholder data must be stored in a hardware security module (HSM) or equivalent; software-only key storage is prohibited for PCI in-scope keys",
+        "UK GDPR: encryption keys for personal data must be managed independently of the encrypted data; key and data must not be co-located",
+        "NCSC guidance on secrets management: no hard-coded credentials in source code or configuration files; all secrets must be injected at runtime from the secrets store",
+        "Key rotation: encryption keys must have defined rotation schedules; rotation must not require service downtime",
+        "Access to secrets must be logged per access event with the requesting service identity; access logs must flow to SVC-103"
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-SVC105-1",
+          "decision": "Use a dedicated secrets management platform (e.g. HashiCorp Vault or cloud-native equivalent) with HSM-backed key storage for PCI and GDPR-classified keys, rather than environment variables or configuration files.",
+          "rationale": "Environment variables and config files are frequently leaked via logging, error messages, or repository commits. A dedicated platform with HSM backing provides the tamper-resistance and access control required by PCI-DSS and GDPR.",
+          "alternatives_considered": ["Environment variables injected at deployment", "Encrypted configuration files in source control"],
+          "rejected_because": "Environment variables are visible in process listings and system logs; encrypted config files require managing the decryption key, which re-introduces the secret storage problem."
+        },
+        {
+          "id": "DD-SVC105-2",
+          "decision": "Implement dynamic, short-lived database credentials generated per-service-instance rather than static shared credentials, with automatic revocation on instance termination.",
+          "rationale": "Static shared database credentials are a common breach vector; if leaked, they provide persistent access until manually rotated. Dynamic per-instance credentials limit the blast radius to a single instance's lifetime.",
+          "alternatives_considered": ["Static credentials rotated quarterly", "Per-service static credentials rotated at deployment"],
+          "rejected_because": "Quarterly rotation leaves a 90-day exposure window; deployment-time rotation still creates shared credentials with a longer-than-necessary lifetime and requires deployment for rotation."
+        }
+      ]
+    },
+    {
+      "id": "SVC-106",
+      "name": "Service Mesh",
+      "description": "Provides transparent, infrastructure-level service-to-service communication controls including mutual TLS (mTLS) enforcement, traffic management, circuit breaking, retries, observability (distributed tracing, service-level metrics), and policy enforcement for all east-west traffic within the platform.",
+      "classification": "foundation",
+      "capability_mappings": [],
+      "dependencies": ["SVC-100", "SVC-103", "SVC-105"],
+      "technology_constraints": [
+        "mTLS must be enforced for all service-to-service communication; plaintext east-west traffic must be technically blocked at the mesh policy level",
+        "PRA operational resilience: the mesh must support traffic shifting for zero-downtime deployments and circuit breaking to contain cascading failures within impact tolerances",
+        "Certificate rotation within the mesh must be automatic and must not require service restarts; certificate lifetimes must be short (24-hour maximum) per NCSC zero-trust guidance",
+        "Distributed tracing must propagate trace context (trace_id) across all service calls to enable end-to-end request correlation in SVC-103",
+        "Mesh policy changes (e.g. blocking a traffic path) must be auditable and subject to change management approval"
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-SVC106-1",
+          "decision": "Adopt a sidecar-proxy service mesh pattern (e.g. Istio/Envoy) with mesh-enforced mTLS at the infrastructure layer, making TLS transparent to application code.",
+          "rationale": "Application-layer TLS requires each service to implement certificate management correctly. Sidecar-proxy enforcement means TLS is guaranteed regardless of application implementation quality, removing a class of security misconfiguration risk.",
+          "alternatives_considered": ["Application-layer mTLS implemented per service", "Network-layer encryption only (IPSec between nodes)"],
+          "rejected_because": "Per-service application-layer TLS creates inconsistent implementation quality; IPSec at the node level does not provide service-identity-based authentication needed for zero-trust east-west traffic policy."
+        },
+        {
+          "id": "DD-SVC106-2",
+          "decision": "Configure circuit breakers with service-specific thresholds rather than global defaults, tuned based on observed latency SLAs for each service dependency.",
+          "rationale": "A global circuit breaker threshold trips too early for slow-but-SLA-compliant services (e.g. SVC-015 overnight batch) and too late for fast services (e.g. SVC-051 sanctions screening). Service-specific thresholds prevent false trips and premature cascading failure containment.",
+          "alternatives_considered": ["Global circuit breaker thresholds applied uniformly", "No circuit breakers, rely on timeout configuration only"],
+          "rejected_because": "Global thresholds create unnecessary circuit trips for legitimately slow services and insufficient protection for latency-sensitive services; timeout-only approaches do not prevent connection pool exhaustion during partial downstream failures."
+        }
+      ]
+    }
+  ]
+}

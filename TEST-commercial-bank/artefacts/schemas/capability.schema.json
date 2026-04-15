@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "capability.schema.json",
+  "title": "Capability",
+  "type": "object",
+  "required": ["id", "name", "description", "mandate_source", "sub_capabilities", "design_decisions"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^CAP-[0-9]{3}$" },
+    "name": { "type": "string" },
+    "description": { "type": "string" },
+    "mandate_source": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "sub_capabilities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "description", "promotion_test"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^CAP-[0-9]{3}\\.[0-9]{2}$" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "promotion_test": {
+            "type": "object",
+            "required": ["distinct_participants", "separate_regulatory_framework", "distinct_lifecycle", "independent_scalability", "criteria_met", "decision"],
+            "properties": {
+              "distinct_participants": { "type": "boolean" },
+              "separate_regulatory_framework": { "type": "boolean" },
+              "distinct_lifecycle": { "type": "boolean" },
+              "independent_scalability": { "type": "boolean" },
+              "criteria_met": { "type": "integer", "minimum": 0, "maximum": 4 },
+              "decision": { "enum": ["retain", "promote"] }
+            }
+          },
+          "shared_with": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    },
+    "design_decisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "decision", "rationale"],
+        "properties": {
+          "id": { "type": "string" },
+          "decision": { "type": "string" },
+          "rationale": { "type": "string" },
+          "alternatives_considered": { "type": "array", "items": { "type": "string" } },
+          "rejected_because": { "type": "string" }
+        }
+      }
+    }
+  }
+}

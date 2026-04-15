@@ -1,0 +1,89 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "governance.schema.json",
+  "title": "Governance Mapping",
+  "description": "Schema for capability-level governance rules for a UK commercial bank",
+  "type": "object",
+  "required": ["id", "capability_id", "capability_name", "rules"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^GOV-[0-9]{3}$",
+      "description": "Unique governance mapping identifier in format GOV-XXX"
+    },
+    "capability_id": {
+      "type": "string",
+      "pattern": "^CAP-[0-9]{3}$",
+      "description": "Reference to the capability this governance mapping covers"
+    },
+    "capability_name": {
+      "type": "string",
+      "description": "Human-readable name of the capability"
+    },
+    "rules": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "rule_id",
+          "name",
+          "source_legislation",
+          "description",
+          "authority_level",
+          "approval_chain",
+          "disclosure_obligations",
+          "constraints"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "rule_id": {
+            "type": "string",
+            "pattern": "^RULE-[A-Z0-9]+-[0-9]{3}$",
+            "description": "Unique rule identifier scoped to the capability"
+          },
+          "name": {
+            "type": "string",
+            "description": "Short name of the governance rule"
+          },
+          "source_legislation": {
+            "type": "string",
+            "description": "The regulation, directive, or rule source underpinning this requirement"
+          },
+          "description": {
+            "type": "string",
+            "description": "Full description of the rule and its compliance obligations"
+          },
+          "authority_level": {
+            "type": "string",
+            "enum": [
+              "board",
+              "executive_committee",
+              "senior_manager",
+              "department_head",
+              "team_lead",
+              "automated"
+            ],
+            "description": "Lowest authority level required to approve exceptions or policy changes"
+          },
+          "approval_chain": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Ordered list of roles that must approve policy changes or material exceptions"
+          },
+          "disclosure_obligations": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Mandatory disclosure or reporting obligations triggered by or associated with this rule"
+          },
+          "constraints": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Hard limits, thresholds, or prohibitions imposed by this rule"
+          }
+        }
+      }
+    }
+  }
+}

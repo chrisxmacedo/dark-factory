@@ -1,0 +1,57 @@
+{
+  "shared_sub_capabilities": [
+    {
+      "name": "Customer Onboarding",
+      "appears_in": ["CAP-001 Retail Banking", "CAP-002 Commercial Banking"],
+      "resolution": "shared_service",
+      "resolution_rationale": "Single onboarding service with configurable KYC tiers — retail (individual ID verification) and commercial (beneficial ownership, Companies House checks). Shared CDD data store with capability-specific extensions.",
+      "downstream_implications": [
+        "Single customer identity across retail and commercial",
+        "KYC/AML capability (CAP-005.01) consumes onboarding events for ongoing monitoring",
+        "Digital Channels (CAP-007) provides the customer-facing onboarding UI"
+      ]
+    },
+    {
+      "name": "Sanctions Screening",
+      "appears_in": ["CAP-005 Compliance & Regulatory", "CAP-003 Payment Operations"],
+      "resolution": "shared_service",
+      "resolution_rationale": "Compliance owns the sanctions policy, list management, and screening rules. Payment Operations consumes screening via a synchronous API (sub-200ms p99 SLA). Policy ownership stays in Compliance; runtime execution is contracted.",
+      "downstream_implications": [
+        "International Payments (CAP-003.04) requires real-time screening on outbound transfers",
+        "Trade Finance (CAP-002.03) requires screening on parties and goods",
+        "Card Processing (CAP-003.05) requires screening on merchant onboarding"
+      ]
+    },
+    {
+      "name": "Open Banking Payment Initiation",
+      "appears_in": ["CAP-007 Digital Channels", "CAP-003 Payment Operations"],
+      "resolution": "integration_dependency",
+      "resolution_rationale": "Open Banking APIs (CAP-007.03) handles the consent and API layer for third-party providers. Payment initiation requests are forwarded to Payment Operations (CAP-003) for execution via Faster Payments or BACS. Clear boundary: consent/auth in Digital Channels, execution in Payments.",
+      "downstream_implications": [
+        "API contracts between Open Banking and Payment Operations define the integration boundary",
+        "Consent lifecycle is owned by Digital Channels, payment lifecycle by Payment Operations"
+      ]
+    },
+    {
+      "name": "Credit Risk Assessment",
+      "appears_in": ["CAP-002 Commercial Banking", "CAP-004 Risk Management"],
+      "resolution": "shared_service",
+      "resolution_rationale": "Risk Management owns the credit risk models, scoring engines, and exposure calculations. Commercial Banking (and Retail Banking lending) consumes credit decisions via API. Business Lending originates the application; Risk Management provides the decision.",
+      "downstream_implications": [
+        "Personal Lending (CAP-001.03) also consumes credit risk scoring",
+        "Mortgages (CAP-001.04) requires mortgage-specific affordability models",
+        "Regulatory Reporting (CAP-005.02) consumes credit risk exposure data"
+      ]
+    },
+    {
+      "name": "Card Settlement",
+      "appears_in": ["CAP-001 Retail Banking", "CAP-002 Commercial Banking", "CAP-003 Payment Operations"],
+      "resolution": "integration_dependency",
+      "resolution_rationale": "Card Processing (CAP-003.05) handles authorisation, clearing, and settlement at the scheme level. Credit Cards (CAP-001.05) and Merchant Services (CAP-002.05) own their respective cardholder/merchant relationships. Settlement positions flow to Treasury for liquidity management.",
+      "downstream_implications": [
+        "Card Processing settlement files feed into Treasury Services reconciliation",
+        "Fraud Detection (CAP-004.04) monitors card transactions in real-time"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,116 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "journey-inventory.schema.json",
+  "title": "Journey Inventory",
+  "description": "Schema for the journey inventory of a UK commercial bank, cataloguing end-to-end user journeys that cross capability boundaries.",
+  "type": "object",
+  "required": ["recommended_first_journey", "journeys"],
+  "additionalProperties": false,
+  "properties": {
+    "recommended_first_journey": {
+      "type": "object",
+      "description": "The journey recommended as the first to model in detail, with rationale.",
+      "required": ["id", "rationale"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^JRN-\\d{3}$",
+          "description": "Identifier of the recommended first journey."
+        },
+        "rationale": {
+          "type": "string",
+          "description": "Explanation of why this journey is the recommended starting point."
+        }
+      }
+    },
+    "journeys": {
+      "type": "array",
+      "description": "Ordered list of end-to-end journeys for the bank.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/definitions/Journey"
+      }
+    }
+  },
+  "definitions": {
+    "Journey": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "description",
+        "triggering_persona",
+        "capabilities_touched",
+        "sub_capabilities_involved",
+        "cross_capability",
+        "priority",
+        "priority_rationale",
+        "estimated_complexity",
+        "happy_path_summary"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^JRN-\\d{3}$",
+          "description": "Unique journey identifier in the format JRN-XXX."
+        },
+        "name": {
+          "type": "string",
+          "description": "Short human-readable name for the journey."
+        },
+        "description": {
+          "type": "string",
+          "description": "One- or two-sentence description of the journey scope and outcome."
+        },
+        "triggering_persona": {
+          "type": "string",
+          "pattern": "^PER-\\d{3}$",
+          "description": "Identifier of the primary persona who initiates or is the subject of this journey."
+        },
+        "capabilities_touched": {
+          "type": "array",
+          "description": "Top-level capability identifiers (CAP-XXX) involved in this journey.",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "pattern": "^CAP-\\d{3}$"
+          },
+          "uniqueItems": true
+        },
+        "sub_capabilities_involved": {
+          "type": "array",
+          "description": "Sub-capability identifiers (CAP-XXX.XX) specifically exercised within this journey.",
+          "items": {
+            "type": "string",
+            "pattern": "^CAP-\\d{3}\\.\\d{2}$"
+          },
+          "uniqueItems": true
+        },
+        "cross_capability": {
+          "type": "boolean",
+          "description": "True if the journey spans more than one top-level capability."
+        },
+        "priority": {
+          "type": "string",
+          "enum": ["critical", "high", "medium", "low"],
+          "description": "Business and regulatory priority of this journey."
+        },
+        "priority_rationale": {
+          "type": "string",
+          "description": "Brief explanation of why this priority level was assigned."
+        },
+        "estimated_complexity": {
+          "type": "string",
+          "enum": ["simple", "moderate", "complex"],
+          "description": "Estimated implementation complexity: simple (single system, low branching), moderate (multi-system, some branching), complex (multi-system, high branching, regulatory or risk controls)."
+        },
+        "happy_path_summary": {
+          "type": "string",
+          "description": "Concise description of the ideal end-to-end flow when no exceptions occur."
+        }
+      }
+    }
+  }
+}

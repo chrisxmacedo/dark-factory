@@ -1,0 +1,525 @@
+{
+  "$schema": "../../schemas/technical-service.schema.json",
+  "services": [
+    {
+      "id": "SVC-001",
+      "name": "Mortgage Service",
+      "description": "Manages the full mortgage lifecycle including origination, underwriting, offer generation, drawdown, and ongoing servicing. Encapsulates all long-term secured lending rules specific to residential and buy-to-let products.",
+      "classification": "domain_specific",
+      "capability_mappings": ["CAP-001.04"],
+      "dependencies": ["SVC-050", "SVC-052", "SVC-054", "SVC-100", "SVC-101", "SVC-102", "SVC-103"],
+      "technology_constraints": [
+        "FCA MCOB rules require full audit trail of every affordability assessment with a minimum 7-year retention",
+        "Stress-test calculations must complete within 3 seconds to support advisor-assisted origination flows",
+        "Regulatory capital calculations (Basel III) must be segregated from origination logic to avoid entanglement with trading book systems",
+        "GDPR Article 22 automated decision-making: any credit decline must be reviewable by a human officer"
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-SVC001-1",
+          "decision": "Implement mortgage origination as an event-sourced aggregate with a separate read model for advisor dashboards.",
+          "rationale": "Event sourcing provides the immutable audit trail required by FCA MCOB without bolting on external audit tables. Read models can be rebuilt for regulatory replay.",
+          "alternatives_considered": ["CRUD-based state store with change-data-capture audit", "Saga pattern with relational tables"],
+          "rejected_because": "CDC audit tables are mutable and can be edited post-fact; saga tables embed orchestration logic inside the domain, making regulatory replay harder."
+        },
+        {
+          "id": "DD-SVC001-2",
+          "decision": "Delegate credit scoring and affordability checks to SVC-052 (Credit Decision Service) rather than embedding scoring logic.",
+          "rationale": "Centralising scoring rules in SVC-052 ensures consistent policy application across retail and commercial lending and reduces the risk of scoring drift between channels.",
+          "alternatives_considered": ["Embed scoring engine inside Mortgage Service"],
+          "rejected_because": "Embedding creates duplicated rule sets that diverge under separate release cycles, creating inconsistent customer outcomes and FCA conduct risk."
+        }
+      ]
+    },
+    {
+      "id": "SVC-002",
+      "name": "Credit Card Service",
+      "description": "Manages credit card product lifecycle: account opening, credit limit assignment, transaction authorisation, statement generation, repayment processing, and collections initiation. Covers both consumer and commercial charge cards.",
+      "classification": "domain_specific",
+      "capability_mappings": ["CAP-001.05"],
+      "dependencies": ["SVC-008", "SVC-050", "SVC-052", "SVC-009", "SVC-100", "SVC-101", "SVC-102", "SVC-103"],
+      "technology_constraints": [
+        "PCI-DSS Level 1 compliance: cardholder data must be tokenised at rest and in transit; no full PAN storage in application tier",
+        "Authorisation responses must meet Visa/Mastercard SLA of sub-200ms at 99.9th percentile",
+        "EMV 3DS integration required for Strong Customer Authentication under PSD2",
+        "Card scheme rules (Visa/Mastercard) mandate real-time velocity checks within authorisation path"
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-SVC002-1",
+          "decision": "Route all card authorisation requests through SVC-008 (Card Processing Service) rather than handling scheme connectivity directly.",
+          "rationale": "Card scheme connectivity (Visa VisaNet, Mastercard Banknet) carries heavy certification and PCI obligations. Centralising in SVC-008 means a single certification scope.",
+          "alternatives_considered": ["Embed scheme connectivity in Credit Card Service"],
+          "rejected_because": "Dual certification scope increases cost and creates split ownership of PCI controls, complicating annual QSA audits."
+        },
+        {
+          "id": "DD-SVC002-2",
+          "decision": "Store credit limits and utilisation in a dedicated in-memory data grid (e.g. Redis Cluster) with async persistence to the core ledger.",
+          "rationale": "Sub-200ms authorisation requires in-memory reads; the persistence lag is acceptable because the core ledger is the system of record for regulatory reporting and reconciliation.",
+          "alternatives_considered": ["Relational DB for both authorisation and ledger", "Shared ledger read with read replica"],
+          "rejected_because": "Relational reads at authorisation volumes introduce locking contention; read replicas introduce replication lag risk under burst traffic."
+        }
+      ]
+    },
+    {
+      "id": "SVC-003",
+      "name": "Insurance Distribution Service",
+      "description": "Manages distribution of bank-aligned insurance products (payment protection, home, travel, life) through retail banking channels. Handles product eligibility, quote generation, policy binding, and claims notification routing to insurer partners.",
+      "classification": "domain_specific",
+      "capability_mappings": ["CAP-001.06"],
+      "dependencies": ["SVC-050", "SVC-054", "SVC-053", "SVC-100", "SVC-101", "SVC-103"],
+      "technology_constraints": [
+        "FCA Insurance Distribution Directive (IDD) requires evidence of suitability assessment at point of sale",
+        "Commission disclosure obligations under FCA ICOBS must be stored per-policy for 5 years",
+        "Real-time integration with insurer partner APIs; must tolerate partner latency up to 5 seconds without degrading the banking UI",
+        "Claims data must remain segregated from banking transaction data for data minimisation under GDPR"
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-SVC003-1",
+          "decision": "Model insurer partner integrations as pluggable adapters behind a common InsurancePartnerPort interface.",
+          "rationale": "Insurer APIs change frequently and new partners are onboarded periodically. An adapter pattern isolates partner volatility from core distribution logic and allows A/B routing for commission optimisation.",
+          "alternatives_considered": ["Direct point-to-point integration per partner", "Shared ESB integration layer"],
+          "rejected_because": "Point-to-point creates N integration paths; ESB introduces an enterprise-wide bottleneck and governance overhead for a capability-local concern."
+        },
+        {
+          "id": "DD-SVC003-2",
+          "decision": "Store IDD suitability assessments as immutable documents in SVC-054 (Document Management Service) with a service-local index.",
+          "rationale": "IDD requires producing the original assessment record on regulatory request; immutable document storage prevents post-sale alteration.",
+          "alternatives_considered": ["Store in relational tables with soft-delete"],
+          "rejected_because": "Relational soft-delete is reversible and does not satisfy the immutability requirement for FCA audit purposes."
+        }
+      ]
+    },
+    {
+      "id": "SVC-004",
+      "name": "Trade Finance Service",
+      "description": "Supports commercial trade finance instruments including letters of credit (LC), documentary collections, bank guarantees, and supply chain finance. Manages instrument lifecycle from application through amendment, document checking, and settlement.",
+      "classification": "domain_specific",
+      "capability_mappings": ["CAP-002.03"],
+      "dependencies": ["SVC-013", "SVC-007", "SVC-051", "SVC-054", "SVC-052", "SVC-100", "SVC-101", "SVC-102", "SVC-103"],
+      "technology_constraints": [
+        "UCP 600 and eUCP rules govern LC document checking; rule updates must be deployable without full service redeployment",
+        "SWIFT MT 700/710/720 message formats required for correspondent bank LC issuance",
+        "All trade documents must be retained for 7 years under UK Export Finance and HMRC obligations",
+        "Sanctions screening (SVC-051) must be synchronous and blocking before any LC issuance or amendment"
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-SVC004-1",
+          "decision": "Implement UCP 600 document checking rules as a versioned, externally-managed rule set loaded at service startup rather than hard-coded logic.",
+          "rationale": "ICC periodically updates UCP rules; externalising the rule set allows compliance teams to update and certify rules independently of engineering release cycles.",
+          "alternatives_considered": ["Hard-coded rule engine inside the service", "Shared rules microservice"],
+          "rejected_because": "Hard-coded rules tie compliance updates to engineering sprints, creating regulatory lag. A shared rules microservice introduces a runtime dependency that could block all trade processing."
+        },
+        {
+          "id": "DD-SVC004-2",
+          "decision": "Use SWIFT-compatible message adapters for all inter-bank LC communications, wrapping them behind a MessagingPort abstraction.",
+          "rationale": "SWIFT connectivity is subject to network certification requirements. Abstracting behind a port allows the SWIFT adapter to be swapped for ISO 20022-native messaging as the industry migrates.",
+          "alternatives_considered": ["Proprietary REST-over-HTTPS with correspondent banks"],
+          "rejected_because": "Correspondent banks universally require SWIFT; a proprietary channel would require bilateral agreements with every counterparty."
+        }
+      ]
+    },
+    {
+      "id": "SVC-005",
+      "name": "Treasury Service",
+      "description": "Manages the bank's internal treasury functions including liquidity management, FX hedging, interest rate risk management, and intraday cash position monitoring. Provides funding curves and transfer pricing rates to product pricing engines.",
+      "classification": "domain_specific",
+      "capability_mappings": ["CAP-002.04"],
+      "dependencies": ["SVC-013", "SVC-007", "SVC-015", "SVC-100", "SVC-101", "SVC-102", "SVC-103", "SVC-104"],
+      "technology_constraints": [
+        "PRA SS24/15 and EBA LCR guidelines require intraday liquidity reporting with sub-1-hour granularity",
+        "MiFID II transaction reporting for FX derivatives must reach FCA trade repositories within T+1",
+        "FX rate feeds must have guaranteed max-staleness of 30 seconds for internal pricing",
+        "Stress scenario calculations (ILAAP) must complete overnight batch within a 4-hour window"
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-SVC005-1",
+          "decision": "Separate intraday liquidity monitoring (real-time) from regulatory reporting (near-real-time batch) into distinct processing pipelines sharing a common position store.",
+          "rationale": "Intraday monitoring requires low-latency updates; regulatory reports have different SLAs and data transformation needs. Shared position store avoids dual calculation of cash positions.",
+          "alternatives_considered": ["Single unified pipeline for both monitoring and reporting", "Fully separate position stores per pipeline"],
+          "rejected_because": "A single pipeline cannot simultaneously meet sub-minute monitoring SLAs and overnight batch throughput needs; dual stores create reconciliation risk."
+        },
+        {
+          "id": "DD-SVC005-2",
+          "decision": "Consume FX market data via SVC-102 (Event Bus) from a market data normaliser, not direct vendor feeds.",
+          "rationale": "Direct vendor feeds (Bloomberg, Refinitiv) require per-service licences and introduce vendor coupling. A normaliser on the event bus decouples Treasury from feed vendor changes.",
+          "alternatives_considered": ["Direct Bloomberg B-PIPE integration per consuming service"],
+          "rejected_because": "Per-service licences are cost-prohibitive; direct coupling means any Bloomberg API change requires changes in every consuming service."
+        }
+      ]
+    },
+    {
+      "id": "SVC-006",
+      "name": "Merchant Acquiring Service",
+      "description": "Provides merchant acquiring capabilities including merchant onboarding, terminal management, transaction processing, settlement, dispute and chargeback management, and acquiring-side fraud monitoring.",
+      "classification": "domain_specific",
+      "capability_mappings": ["CAP-002.05"],
+      "dependencies": ["SVC-008", "SVC-009", "SVC-050", "SVC-051", "SVC-100", "SVC-101", "SVC-102", "SVC-103"],
+      "technology_constraints": [
+        "PCI-DSS Level 1: acquiring systems are in-scope for card data; all cardholder data must be tokenised",
+        "Visa and Mastercard acquiring licences impose mandatory compliance certifications (PA-DSS, P2PE) for terminal management",
+        "Settlement files to merchants must be generated and delivered by 06:00 UTC each business day",
+        "FCA Payment Institution regulations require segregation of merchant settlement funds from bank capital"
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-SVC006-1",
+          "decision": "Implement merchant settlement funds in a segregated virtual account ledger, logically isolated from the bank's own capital accounts.",
+          "rationale": "FCA e-money and payment institution regulations require merchant funds to be safeguarded. Virtual account segregation makes compliance demonstrable without physical bank accounts per merchant.",
+          "alternatives_considered": ["Physical bank accounts per merchant", "Pooled suspense account with manual reconciliation"],
+          "rejected_because": "Physical accounts per merchant create operational overhead at scale; pooled suspense accounts make fund segregation non-demonstrable to regulators."
+        },
+        {
+          "id": "DD-SVC006-2",
+          "decision": "Reuse SVC-008 (Card Processing Service) for authorisation path to card schemes, with Merchant Acquiring Service owning the acquiring-specific dispute and chargeback workflows.",
+          "rationale": "Card scheme connectivity is already certified and maintained in SVC-008. Acquiring-specific logic (dispute windows, reason codes, evidence submission) is distinct enough to warrant its own service.",
+          "alternatives_considered": ["Standalone acquiring gateway with own scheme connectivity"],
+          "rejected_because": "Duplicate scheme connectivity doubles PCI certification scope and maintenance cost."
+        }
+      ]
+    },
+    {
+      "id": "SVC-007",
+      "name": "International Payments Service",
+      "description": "Orchestrates cross-border payment processing including SWIFT gpi, correspondent banking, FX conversion, and SEPA cross-border transactions. Manages correspondent bank relationships and nostro account reconciliation.",
+      "classification": "domain_specific",
+      "capability_mappings": ["CAP-003.04"],
+      "dependencies": ["SVC-014", "SVC-051", "SVC-009", "SVC-054", "SVC-100", "SVC-101", "SVC-102", "SVC-103"],
+      "technology_constraints": [
+        "SWIFT gpi Tracker SLA: payment status updates must be published within 30 minutes of state change",
+        "ISO 20022 migration: all SWIFT cross-border messages must support MX (pacs.008/pacs.009) format by 2025 deadline",
+        "Sanctions screening (SVC-051) is mandatory and blocking before any international payment is released",
+        "FX conversion must use intraday treasury rates from SVC-005; stale rates older than 30 seconds must be rejected",
+        "FATF Travel Rule: originator and beneficiary information must accompany payments above CHF/USD 1,000 threshold"
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-SVC007-1",
+          "decision": "Model each cross-border payment as a long-running process manager (saga) to accommodate multi-day settlement and correspondent bank response latency.",
+          "rationale": "International payments can take hours to days due to correspondent chains and time-zone gaps. A saga provides durable state and compensating transactions for failed legs without holding database locks.",
+          "alternatives_considered": ["Synchronous orchestration with timeouts", "Simple workflow table with polling"],
+          "rejected_because": "Synchronous orchestration cannot tolerate multi-day waits; polling tables create tight coupling between payment lifecycle and infrastructure scheduling."
+        },
+        {
+          "id": "DD-SVC007-2",
+          "decision": "Adopt ISO 20022 MX message format as the internal canonical format, with MT legacy adapters for corridors not yet migrated.",
+          "rationale": "ISO 20022 is the industry-mandated standard; designing internally around MX from the outset avoids a future internal migration. MT adapters are explicitly transitional.",
+          "alternatives_considered": ["Maintain MT as internal format with MX output adapters"],
+          "rejected_because": "MT as internal format would require a full data model migration at the MT sunset date, creating a large future remediation cost."
+        }
+      ]
+    },
+    {
+      "id": "SVC-008",
+      "name": "Card Processing Service",
+      "description": "Provides low-level card scheme connectivity including real-time authorisation, clearing file generation, settlement reconciliation, and 3DS authentication processing for Visa, Mastercard, and domestic card schemes.",
+      "classification": "domain_specific",
+      "capability_mappings": ["CAP-003.05"],
+      "dependencies": ["SVC-009", "SVC-051", "SVC-100", "SVC-101", "SVC-102", "SVC-103"],
+      "technology_constraints": [
+        "PCI-DSS Level 1: full in-scope system; cardholder data zone must be network-isolated",
+        "Visa/Mastercard authorisation SLA: 99.99% availability with sub-200ms response at peak",
+        "EMV chip and contactless specifications must be implemented to EMVCo L2/L3 certification level",
+        "3DS 2.x mandatory for all card-not-present transactions under PSD2 SCA",
+        "Clearing file submission windows are scheme-mandated (e.g. Visa TC46 by 23:59 UTC)"
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-SVC008-1",
+          "decision": "Deploy Card Processing Service in an isolated PCI Cardholder Data Environment (CDE) with no direct connectivity to non-PCI services; all interactions via tokenised references only.",
+          "rationale": "Minimising the PCI scope boundary reduces annual QSA audit cost and attack surface. Tokenisation ensures upstream services (SVC-002, SVC-006) never handle raw PANs.",
+          "alternatives_considered": ["Flat network with PCI controls applied broadly"],
+          "rejected_because": "Broad PCI scope dramatically increases audit cost and means any service touching tokens is in-scope, creating an ever-expanding compliance perimeter."
+        },
+        {
+          "id": "DD-SVC008-2",
+          "decision": "Use active-active multi-region deployment with synchronous replication of the authorisation state store to meet Visa/Mastercard 99.99% availability SLA.",
+          "rationale": "Active-active avoids failover delays; synchronous replication ensures no authorisation is lost during a regional failure, protecting against duplicate or lost transactions.",
+          "alternatives_considered": ["Active-passive with warm standby", "Active-active with async replication"],
+          "rejected_because": "Active-passive failover introduces 30-60s window below SLA; async replication risks split-brain authorisation states that generate settlement disputes."
+        }
+      ]
+    },
+    {
+      "id": "SVC-009",
+      "name": "Fraud Detection Service",
+      "description": "Real-time and near-real-time fraud detection across payment channels, card transactions, and account takeover events. Provides risk scoring, rules-based and ML model decisioning, case management, and SAR (Suspicious Activity Report) generation.",
+      "classification": "domain_specific",
+      "capability_mappings": ["CAP-004.04"],
+      "dependencies": ["SVC-100", "SVC-101", "SVC-102", "SVC-103", "SVC-104"],
+      "technology_constraints": [
+        "Fraud scoring for card authorisation must complete within 50ms to stay within the 200ms authorisation SLA",
+        "ML models must be retrained at minimum weekly on fresh transaction data to maintain detection accuracy",
+        "SAR filing with NCA must comply with Proceeds of Crime Act 2002 Part 7 timelines (consent SARs within 7 days)",
+        "Model explainability is required for FCA Consumer Duty: any adverse action taken on fraud grounds must be explainable to the customer",
+        "Fraud case data must be stored for 6 years under AML and FCA record-keeping requirements"
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-SVC009-1",
+          "decision": "Separate real-time scoring (synchronous, <50ms) from case investigation and SAR workflows (asynchronous) into distinct processing tiers within the same service boundary.",
+          "rationale": "Real-time scoring must not be blocked by heavy asynchronous case management workflows. Separation allows independent scaling of the scoring tier during peak transaction volumes.",
+          "alternatives_considered": ["Single synchronous pipeline for scoring and case creation", "Fully separate scoring and case management services"],
+          "rejected_because": "A single pipeline risks timeout cascades during investigation backlog; fully separate services duplicate model management and feature store infrastructure."
+        },
+        {
+          "id": "DD-SVC009-2",
+          "decision": "Maintain a feature store fed by SVC-102 (Event Bus) from all transactional services, rather than querying transactional systems directly at score time.",
+          "rationale": "Direct queries to transactional services at authorisation time create tight coupling and latency risk. A pre-computed feature store decouples fraud detection from transactional system availability.",
+          "alternatives_considered": ["Synchronous feature enrichment from transactional APIs at score time"],
+          "rejected_because": "Synchronous enrichment adds 20-40ms per call and creates a failure dependency: if any upstream service is slow, fraud scoring misses its SLA."
+        }
+      ]
+    },
+    {
+      "id": "SVC-010",
+      "name": "KYC/AML Service",
+      "description": "Manages Know Your Customer and Anti-Money Laundering processes including identity verification, beneficial ownership determination, CDD/EDD workflows, PEP and adverse media screening, and ongoing customer risk monitoring.",
+      "classification": "domain_specific",
+      "capability_mappings": ["CAP-005.01"],
+      "dependencies": ["SVC-050", "SVC-051", "SVC-054", "SVC-055", "SVC-100", "SVC-101", "SVC-102", "SVC-103"],
+      "technology_constraints": [
+        "UK Money Laundering Regulations 2017 (MLR 2017) and JMLSG guidance govern CDD requirements and evidence standards",
+        "FCA SUP 15 requires tipping-off controls: KYC/AML decisions must not surface SAR-linked reasoning to front-line staff",
+        "Beneficial ownership data (PSC register) must be checked against Companies House API in real time",
+        "EDD documentation must be retained for 5 years post-relationship termination",
+        "Automated PEP screening must cover FATF-listed jurisdictions and UK Consolidated List"
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-SVC010-1",
+          "decision": "Implement a risk-based CDD tiering model where the service dynamically determines whether Standard, Enhanced, or Simplified Due Diligence applies, driven by a configurable risk rule engine.",
+          "rationale": "MLR 2017 requires a documented risk-based approach. A configurable rule engine allows compliance teams to adjust risk thresholds as FCA/FATF guidance evolves without engineering changes.",
+          "alternatives_considered": ["Hard-coded CDD tier per customer segment", "Manual case-by-case analyst determination"],
+          "rejected_because": "Hard-coded tiers cannot adapt to regulatory updates without redeployment; manual determination does not scale and introduces inconsistency risk."
+        },
+        {
+          "id": "DD-SVC010-2",
+          "decision": "Consume SVC-051 (Sanctions Screening Service) as a synchronous dependency during onboarding and as an asynchronous daily re-screen for existing customers.",
+          "rationale": "Synchronous onboarding screening prevents onboarding sanctioned entities in real time. Daily re-screening via async batch catches newly sanctioned existing customers within 24 hours, meeting OFSI guidance.",
+          "alternatives_considered": ["Sanctions screening only at onboarding", "Full real-time re-screening on every transaction"],
+          "rejected_because": "Onboarding-only screening misses newly designated entities; full real-time transaction-level screening is disproportionate and impractical at transaction volumes."
+        }
+      ]
+    },
+    {
+      "id": "SVC-011",
+      "name": "Open Banking API Service",
+      "description": "Implements the UK Open Banking Standard and PSD2 regulatory API surface including Account Information Services (AIS), Payment Initiation Services (PIS), and Confirmation of Funds (CoF). Acts as the authorised API layer for Third Party Providers.",
+      "classification": "domain_specific",
+      "capability_mappings": ["CAP-007.03"],
+      "dependencies": ["SVC-012", "SVC-014", "SVC-100", "SVC-101", "SVC-103"],
+      "technology_constraints": [
+        "Open Banking Limited (OBL) Read/Write API Specification v3.1+ compliance mandatory",
+        "FCA PSD2 RTS on SCA: OAuth 2.0 with PKCE and eIDAS-compliant certificates required for TPP authentication",
+        "90-day re-authentication limit for AIS consents per PSD2 RTS Article 10",
+        "API availability SLA of 99.5% during peak hours mandated by PSD2 contingency mechanism requirements",
+        "All TPP consent decisions must be logged with timestamp and consent scope for FCA audit purposes"
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-SVC011-1",
+          "decision": "Build Open Banking API Service as a thin facade over internal domain services (SVC-012, SVC-014), applying OBL schema translation and consent enforcement at the facade layer.",
+          "rationale": "Keeping OBL-specific transformation at the boundary prevents Open Banking schema changes from propagating into internal domain models. Internal services evolve independently of the regulatory API surface.",
+          "alternatives_considered": ["OBL schema as internal canonical format", "Separate data store synced from internal systems"],
+          "rejected_because": "OBL as internal format couples all internal services to a regulatory standard that changes on FCA timelines; a separate sync store introduces staleness and reconciliation risk."
+        },
+        {
+          "id": "DD-SVC011-2",
+          "decision": "Manage TPP consent lifecycle (creation, amendment, revocation) as a first-class domain object within this service, with consent state replicated to SVC-100 (IAM) for enforcement.",
+          "rationale": "PSD2 requires demonstrable consent records per TPP per customer. Treating consent as a domain object provides the auditability and revocation immediacy required by regulation.",
+          "alternatives_considered": ["Store consents solely in IAM system", "Consent as claims in JWT tokens only"],
+          "rejected_because": "IAM systems are not designed for PSD2 consent semantics (scope, expiry, re-authentication); JWT-only consents cannot be revoked without invalidating all active sessions."
+        }
+      ]
+    },
+    {
+      "id": "SVC-012",
+      "name": "Retail Accounts Service",
+      "description": "Core service for retail banking account management covering current accounts, savings accounts, and fixed-term deposits. Handles account opening, balance management, interest calculation, overdraft management, and account closure.",
+      "classification": "domain_specific",
+      "capability_mappings": ["CAP-001.01", "CAP-001.02", "CAP-001.03"],
+      "dependencies": ["SVC-050", "SVC-053", "SVC-054", "SVC-100", "SVC-101", "SVC-102", "SVC-103"],
+      "technology_constraints": [
+        "FSCS eligibility: account and balance data must be extractable in SCV (Single Customer View) format within 24 hours of PRA resolution order",
+        "Interest calculation must use daily compound accrual with end-of-day batch posting; rounding rules must comply with FCA BCOBS",
+        "Current account statement data must be retained for 6 years under FCA record-keeping rules",
+        "Ring-fencing: retail deposit accounts must be in the ring-fenced bank entity; no comingling with investment banking ledgers"
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-SVC012-1",
+          "decision": "Implement double-entry bookkeeping as the core ledger model, with all balance changes represented as immutable debit/credit journal entries.",
+          "rationale": "Double-entry provides inherent auditability, simplifies reconciliation, and maps directly to the accounting records required for FSCS SCV extraction and PRA reporting.",
+          "alternatives_considered": ["Single-balance running total with transaction log", "Event-sourced balance without ledger abstraction"],
+          "rejected_because": "Running total models require full log replay for audit; event-sourced approaches without a double-entry model make multi-currency and inter-account transfers harder to reconcile."
+        },
+        {
+          "id": "DD-SVC012-2",
+          "decision": "Expose account and balance queries via a dedicated read API backed by a CQRS projection, separate from the write path.",
+          "rationale": "Account balance queries from Open Banking (SVC-011), digital channels (SVC-007), and internal services have very different SLA and query patterns from transactional writes.",
+          "alternatives_considered": ["Shared read/write database with read replicas"],
+          "rejected_because": "Read replicas introduce replication lag that can cause balance inconsistencies visible to customers in digital channels, a conduct risk under FCA BCOBS."
+        }
+      ]
+    },
+    {
+      "id": "SVC-013",
+      "name": "Commercial Accounts Service",
+      "description": "Core service for commercial banking account management covering business current accounts, multi-currency accounts, notional pooling, and cash concentration structures for corporate and SME clients.",
+      "classification": "domain_specific",
+      "capability_mappings": ["CAP-002.01", "CAP-002.02"],
+      "dependencies": ["SVC-050", "SVC-010", "SVC-053", "SVC-054", "SVC-100", "SVC-101", "SVC-102", "SVC-103"],
+      "technology_constraints": [
+        "Notional pooling structures must support up to 500 accounts per pool with intraday position netting",
+        "Multi-currency accounts must support ISO 4217 currency codes with same-day FX conversion requests to SVC-005",
+        "Companies House verification mandatory for all corporate account openings under MLR 2017",
+        "FSCS SCV extraction requirements apply; commercial accounts above FSCS threshold must be flagged",
+        "CASS 7 rules: client money accounts for certain commercial clients require segregated sub-ledgers"
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-SVC013-1",
+          "decision": "Implement notional pooling as a virtual overlay on individual account ledgers rather than physically sweeping funds between accounts.",
+          "rationale": "Physical sweeping requires intraday FX transactions and creates CASS 7 segregation complexity. Virtual pooling achieves the same interest optimisation without moving funds, reducing legal and operational risk.",
+          "alternatives_considered": ["Zero-balance sweeping (ZBA)", "Target-balance sweeping"],
+          "rejected_because": "ZBA requires physical transfer entries that trigger settlement obligations; target-balance sweeping creates intraday liquidity complications during stress periods."
+        },
+        {
+          "id": "DD-SVC013-2",
+          "decision": "Enforce a strict KYC gate via SVC-010 before any commercial account becomes operationally active, implemented as an account state machine.",
+          "rationale": "MLR 2017 CDD requirements must be completed before a business relationship can be established. A state machine makes the compliance gate explicit, auditable, and non-bypassable.",
+          "alternatives_considered": ["Advisory KYC check with manual override", "Asynchronous KYC with provisional account access"],
+          "rejected_because": "Advisory checks with overrides create FCA MLR 2017 breach risk; provisional access risks onboarding entities that subsequently fail EDD."
+        }
+      ]
+    },
+    {
+      "id": "SVC-014",
+      "name": "Domestic Payments Service",
+      "description": "Orchestrates UK domestic payment processing including Faster Payments (FPS), BACS, and CHAPS. Manages payment initiation, scheme routing, confirmation, and return/recall processing.",
+      "classification": "domain_specific",
+      "capability_mappings": ["CAP-003.01", "CAP-003.02", "CAP-003.03"],
+      "dependencies": ["SVC-009", "SVC-051", "SVC-012", "SVC-013", "SVC-100", "SVC-101", "SVC-102", "SVC-103"],
+      "technology_constraints": [
+        "Faster Payments Scheme rules: FPS payments must achieve final settlement within 15 seconds end-to-end",
+        "CHAPS RTGS connectivity: PSR rules require CHAPS to be available 08:00-17:00 on UK business days with 99.95% availability",
+        "PSR APP fraud rules: Confirmation of Payee (CoP) check mandatory for all new payees above £250 threshold",
+        "BACS processing windows are scheme-mandated (3-day cycle: Input Day, Processing Day, Entry Day)",
+        "Sanctions screening (SVC-051) is mandatory and blocking on all outbound payments before scheme submission"
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-SVC014-1",
+          "decision": "Model each payment as a state machine with explicit scheme-specific states (e.g. FPS: Submitted, Acknowledged, Settled, Returned) rather than a generic pending/complete model.",
+          "rationale": "Each scheme has distinct lifecycle states and timing obligations. Explicit state machines make scheme rule compliance testable and make operational monitoring unambiguous.",
+          "alternatives_considered": ["Generic payment status with scheme metadata fields", "Saga-per-scheme with shared status"],
+          "rejected_because": "Generic statuses mask scheme-specific compliance states, making it harder to detect and alert on SLA breaches (e.g. FPS 15-second window)."
+        },
+        {
+          "id": "DD-SVC014-2",
+          "decision": "Route Confirmation of Payee checks through SVC-101 (API Gateway) to the Pay.UK CoP directory service, caching positive CoP results for 24 hours to reduce directory call volume.",
+          "rationale": "CoP is mandatory under PSR rules and uses an external Pay.UK directory. Caching reduces external call latency and cost while staying within the directory's recommended cache TTL.",
+          "alternatives_considered": ["No caching, direct CoP call per payment", "Local replica of CoP directory"],
+          "rejected_because": "No caching creates latency risk under peak load; a local replica requires Pay.UK contractual approval and real-time sync infrastructure."
+        }
+      ]
+    },
+    {
+      "id": "SVC-015",
+      "name": "Risk Engine Service",
+      "description": "Provides enterprise risk calculation capabilities including credit risk models (PD, LGD, EAD), market risk VaR/stress testing, operational risk capital calculation, and ICAAP/ILAAP reporting. Serves as the single source of risk metrics for regulatory and management reporting.",
+      "classification": "domain_specific",
+      "capability_mappings": ["CAP-004.01", "CAP-004.02", "CAP-004.03", "CAP-004.05"],
+      "dependencies": ["SVC-100", "SVC-101", "SVC-102", "SVC-103", "SVC-104"],
+      "technology_constraints": [
+        "Basel III/IV IRB models must be validated and approved by PRA before use in regulatory capital calculations",
+        "FRTB SA/IMA calculations require end-of-day positions from all trading book services by 18:00 UTC",
+        "PRA SS11/13 model risk management: all risk models must have documented validation, approval, and performance monitoring",
+        "Stress test scenarios (PRA concurrent stress test) must run on a point-in-time snapshot of positions without affecting live pricing",
+        "ICAAP/ILAAP documents are annual regulatory submissions; the data lineage from source positions to reported metrics must be fully traceable"
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-SVC015-1",
+          "decision": "Store all risk models in a versioned model registry with mandatory approval workflow before production promotion; consuming services reference models by version, not latest.",
+          "rationale": "PRA SS11/13 requires documented model governance. A versioned registry with approval gates makes model changes auditable and prevents unapproved models being used in regulatory calculations.",
+          "alternatives_considered": ["Models deployed as code artefacts in CI/CD without separate registry", "Manual model version tracking in spreadsheets"],
+          "rejected_because": "Code-deployed models lack the independent approval gate required by model risk management; manual tracking is error-prone and non-auditable."
+        },
+        {
+          "id": "DD-SVC015-2",
+          "decision": "Execute stress test scenarios against immutable position snapshots stored in SVC-104 (Data Platform), isolated from live position updates.",
+          "rationale": "PRA stress tests require a consistent point-in-time view. Running stress scenarios against live positions would produce inconsistent results and contaminate live risk metrics.",
+          "alternatives_considered": ["Run stress tests against live positions with read-only transactions", "Copy positions to dedicated stress testing database each run"],
+          "rejected_because": "Read-only transactions still see concurrent updates in some isolation levels; per-run copies create storage overhead and slow the stress test window."
+        }
+      ]
+    },
+    {
+      "id": "SVC-016",
+      "name": "Compliance Service",
+      "description": "Manages regulatory compliance obligations across conduct, prudential, and financial crime dimensions including regulatory change tracking, obligation mapping, control testing, breach management, and regulatory reporting submission.",
+      "classification": "domain_specific",
+      "capability_mappings": ["CAP-005.02", "CAP-005.03", "CAP-005.04", "CAP-005.05"],
+      "dependencies": ["SVC-010", "SVC-051", "SVC-054", "SVC-055", "SVC-100", "SVC-101", "SVC-102", "SVC-103", "SVC-104"],
+      "technology_constraints": [
+        "FCA RegData submissions must be made via FCA Connect API with firm-specific credentials; submission audit trail is mandatory",
+        "PRA regulatory returns (COREP, FINREP) must be submitted in XBRL format via BoE Collect portal",
+        "Control testing evidence must be immutable once reviewed and approved; no post-review modification",
+        "Regulatory change obligations must be traceable from source regulation through to specific controls and responsible owners",
+        "Data retention for compliance records: 6 years minimum under FCA SYSC; some AML records 5 years post-relationship end"
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-SVC016-1",
+          "decision": "Model the regulatory obligation hierarchy (Regulation → Obligation → Control → Evidence) as a directed acyclic graph, enabling impact tracing in both directions.",
+          "rationale": "When regulations change, compliance teams need to trace which controls are impacted. When controls fail, teams need to trace which regulatory obligations are at risk. A DAG supports both traversal directions.",
+          "alternatives_considered": ["Flat obligation-to-control mapping table", "Hierarchical tree structure"],
+          "rejected_because": "Flat tables cannot represent many-to-many obligation/control relationships; tree structures cannot represent a control that satisfies multiple obligations."
+        },
+        {
+          "id": "DD-SVC016-2",
+          "decision": "Generate XBRL regulatory returns by transforming data from SVC-104 (Data Platform) rather than querying transactional services directly.",
+          "rationale": "Regulatory returns require aggregated, reconciled data across multiple domains. The Data Platform provides the consolidated, quality-assured dataset needed for submission-grade accuracy.",
+          "alternatives_considered": ["Direct queries to each transactional service at submission time", "Dedicated regulatory reporting database fed by ETL"],
+          "rejected_because": "Direct queries produce inconsistent point-in-time data; a dedicated ETL database duplicates the Data Platform and creates a reconciliation burden."
+        }
+      ]
+    },
+    {
+      "id": "SVC-017",
+      "name": "Wealth Platform Service",
+      "description": "End-to-end wealth management platform covering client portfolio management, investment advisory workflows, discretionary and advisory mandate management, financial planning tools, and custody/settlement integration.",
+      "classification": "domain_specific",
+      "capability_mappings": ["CAP-006"],
+      "dependencies": ["SVC-050", "SVC-052", "SVC-054", "SVC-055", "SVC-015", "SVC-100", "SVC-101", "SVC-102", "SVC-103", "SVC-104"],
+      "technology_constraints": [
+        "MiFID II suitability assessment: must document and store suitability assessments for all advisory recommendations; periodic re-assessment required",
+        "MiFID II cost and charges: ex-ante and ex-post cost disclosures mandatory for all investment products",
+        "CASS 6: client assets (securities) must be held in segregated custody accounts with daily reconciliation",
+        "FCA PROD rules: investment product governance requires target market assessment documentation per product",
+        "PRIIPs KID: Key Information Document must be provided to retail clients before any PRIIP transaction is executed"
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-SVC017-1",
+          "decision": "Implement suitability assessment as an immutable record created at the time of each recommendation, stored in SVC-054 (Document Management Service), linked to the specific product recommendation.",
+          "rationale": "MiFID II requires the bank to demonstrate suitability at the point of advice. Immutable records prevent post-sale modification and provide the evidential standard required for FCA supervision.",
+          "alternatives_considered": ["Mutable suitability profile updated over time", "Annual suitability review replacing prior records"],
+          "rejected_because": "Mutable profiles cannot demonstrate what the bank knew at the time of each specific recommendation; annual reviews that replace records destroy the per-recommendation evidence trail."
+        },
+        {
+          "id": "DD-SVC017-2",
+          "decision": "Delegate risk profiling inputs to SVC-015 (Risk Engine Service) for portfolio-level risk metrics, while keeping client risk preference data within the Wealth Platform Service.",
+          "rationale": "Portfolio risk metrics (VaR, volatility, drawdown) require quant risk infrastructure that exists in SVC-015. Client preference data is a wealth management domain concern and must not leak into the enterprise risk engine.",
+          "alternatives_considered": ["Build standalone risk calculation within Wealth Platform", "Store client risk preferences in SVC-015"],
+          "rejected_because": "Standalone quant risk calculations duplicate the model governance and validation infrastructure in SVC-015; storing preferences in the risk engine creates inappropriate coupling between conduct and prudential risk domains."
+        }
+      ]
+    }
+  ]
+}

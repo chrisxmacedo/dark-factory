@@ -1,0 +1,295 @@
+{
+  "$schema": "../schemas/observability-model.schema.json",
+  "log_routing_architecture": {
+    "description": "All services emit structured telemetry exclusively via OTLP to a centralised OTel Collector. The collector is the sole ingestion point and the only place where PII scrubbing and CloudEvents header extraction are applied. After transformation, the collector fans out to four logically and physically separate stores: operational logs, distributed traces, metrics, and WORM audit logs. No service ever holds credentials to a telemetry store. The Observability Aggregator sits in front of all stores as a thin backend — it polls each store once per refresh cycle on behalf of all connected dashboard clients, preventing credential sprawl and reducing per-store query load by roughly two orders of magnitude.",
+    "pipeline": [
+      {
+        "stage": "emission",
+        "description": "Every service — synchronous API, async Kafka consumer, batch job, or sidecar — exports telemetry using the OpenTelemetry SDK over OTLP/gRPC (port 4317) or OTLP/HTTP (port 4318) to the OTel Collector endpoint. Direct connections from application code to any storage backend are prohibited by network policy. Services never hold store credentials."
+      },
+      {
+        "stage": "collection",
+        "component": "OTel Collector",
+        "description": "The OTel Collector receives all OTLP signals (logs, traces, metrics) from the service mesh. It applies processor pipelines before export: PII scrubbing removes or masks regulated fields (PAN, CVV, IBAN, NI number, date-of-birth) using field-pattern rules; CloudEvents header extraction promotes ce_type, ce_source, ce_id, and traceparent from Kafka message headers into log record attributes to enable topology derivation without payload deserialisation. Rate-limit and tail-sampling processors apply to traces. All transforms happen in this stage — downstream stores receive only clean, policy-compliant data.",
+        "transforms": [
+          "PII scrubbing (field masking: PAN, CVV, IBAN, NI number, DOB)",
+          "CloudEvents header extraction (ce_type, ce_source, ce_id, traceparent promoted to log attributes)",
+          "Tail-based trace sampling (100% error spans, 1% success spans for non-payment paths)",
+          "Metric relabelling (drop high-cardinality user_id labels before export)"
+        ]
+      },
+      {
+        "stage": "fan_out",
+        "description": "After processing, the OTel Collector exports to four separate exporters in parallel. Each exporter targets a dedicated store with its own retention and access policy. The audit log exporter is on an isolated pipeline with no shared processor chain — it receives a copy of the raw (pre-scrubbing) payment and IAM events before PII scrubbing is applied, as audit records must capture the full event for regulatory completeness. This separation is enforced at the collector pipeline configuration level.",
+        "destinations": [
+          "Log Store (Elasticsearch / Grafana Loki) — operational logs",
+          "Trace Store (Jaeger / Grafana Tempo) — distributed traces",
+          "Metrics Store (Prometheus / Cortex) — time-series metrics",
+          "Audit Log Store (S3 Object Lock COMPLIANCE mode) — WORM audit trail"
+        ]
+      }
+    ],
+    "stores": [
+      {
+        "name": "Log Store",
+        "technology": "Elasticsearch / Grafana Loki",
+        "retention": "90 days",
+        "access": "engineering",
+        "purpose": "Operational logs from all services. Supports full-text search, structured field filtering, and correlation via trace_id and span_id. Used for incident investigation, root-cause analysis, and service debugging. Not a substitute for the Audit Log Store — operational logs may be sampled or rotated and must never be cited as evidence of a compliance event."
+      },
+      {
+        "name": "Trace Store",
+        "technology": "Jaeger / Grafana Tempo",
+        "retention": "30 days",
+        "access": "engineering",
+        "purpose": "Distributed traces and service dependency graph. Traces span synchronous HTTP/gRPC calls and asynchronous Kafka boundaries via traceparent propagation. The Jaeger /api/dependencies endpoint is polled by the Observability Aggregator to derive the live service topology without hardcoding it. Used for latency profiling, identifying unexpected inter-service calls, and understanding the blast radius of a failing dependency."
+      },
+      {
+        "name": "Metrics Store",
+        "technology": "Prometheus / Cortex",
+        "retention": "13 months",
+        "access": "engineering",
+        "purpose": "Time-series metrics for SLA monitoring, capacity planning, and compliance alerting. 13-month retention allows year-on-year comparison and satisfies MAS TRM and DORA quarterly reporting windows. Key signals: p99 latency (CHAPS 300ms SLA), Kafka consumer lag (sanctions delay risk), secret expiry countdowns (PSD2 SCA and SM&CR compliance), and HTTP error rates. High-cardinality labels (user_id, session_id) are prohibited — dropped by the OTel Collector before export."
+      },
+      {
+        "name": "Audit Log Store",
+        "technology": "S3 Object Lock (COMPLIANCE mode)",
+        "retention": "7 years WORM",
+        "access": "auditor_only",
+        "purpose": "Immutable, tamper-evident record of all regulated events: payment authorisations and outcomes, IAM events (login, MFA, privilege escalation, account lock), KYC/AML decisions and SAR filings, admin and config changes, and batch job triggers. Written via a dedicated isolated OTel Collector pipeline. COMPLIANCE mode Object Lock prevents deletion or modification by any principal including the storage account root — satisfying FCA SYSC 9, PCI DSS Requirement 10.7, and PSD2 Article 5 record-keeping obligations. The Observability Aggregator exposes only a summary count and last-event timestamp to the dashboard — direct query access is restricted to the Compliance API to preserve WORM integrity."
+      }
+    ]
+  },
+  "per_service_instrumentation_checklist": [
+    {
+      "id": "OBS-001",
+      "name": "Structured Logging",
+      "description": "All log output must be newline-delimited JSON. The base log schema is mandatory: timestamp (ISO 8601 with milliseconds), level (ERROR|WARN|INFO|DEBUG), service (matches service.name in OTel resource), version (semver), environment (production|staging|development), trace_id (W3C traceparent trace portion), span_id (W3C traceparent parent-id portion), message (human-readable string, no PII). The @platform/logger package enforces schema compliance at process startup — a service that omits any base field will fail to start. console.log, console.error, and all other direct process output are banned at the ESLint/lint-staged level. Log levels must reflect genuine severity: ERROR for unhandled exceptions and data integrity failures, WARN for expected degraded conditions, INFO for business events and audit-relevant actions, DEBUG for diagnostic detail (disabled in production by default).",
+      "mandatory": true
+    },
+    {
+      "id": "OBS-002",
+      "name": "Distributed Tracing",
+      "description": "All services must instrument with the OpenTelemetry SDK. The OTel resource must include service.name (matches service registry id), service.version (semver, injected at build time), and deployment.environment. Every inbound HTTP/gRPC request must start a server span; every outbound call must propagate the W3C traceparent header and start a client span. Kafka producers must inject traceparent into the message headers map; consumers must extract it and link the new span as a causal link (not a child) to preserve the async boundary semantics. Database queries must be recorded as child spans with the sanitised SQL statement (bind parameters replaced with '?') as the db.statement attribute — raw SQL with user-supplied values is forbidden as a span attribute. Span status must be set to ERROR on any exception, and the exception event must be recorded on the span.",
+      "mandatory": false
+    },
+    {
+      "id": "OBS-003",
+      "name": "Prometheus Metrics",
+      "description": "Every service must expose a GET /metrics endpoint in Prometheus text format, scraped by the OTel Collector on the standard port (9090 or as declared in service.yaml). Mandatory labels on every metric: service, version, environment. Prohibited labels: user_id, account_id, session_id, or any other high-cardinality identifier. Required metrics: http_request_duration_seconds (histogram, buckets: 50ms, 100ms, 200ms, 300ms, 500ms, 1s, 5s), http_requests_total (counter, labelled by method, path, status_code), db_query_duration_seconds (histogram, labelled by query_name), kafka_consumer_lag (gauge, labelled by consumer_group, topic, partition), secret_expiry_seconds (gauge, labelled by secret_name — alert threshold: 7 days). Services processing payments must additionally expose payment_processing_duration_seconds and payment_outcome_total (labelled by outcome: authorised, declined, error).",
+      "mandatory": false
+    },
+    {
+      "id": "OBS-004",
+      "name": "Health Endpoints",
+      "description": "Three separate health endpoints are mandatory. GET /healthz: liveness probe — checks only that the process is running and its internal event loop is not blocked. Must never check external dependencies. Must return 200 within 50ms. Used by Kubernetes liveness probe; a failure triggers an immediate pod restart. GET /readyz: readiness probe — checks all hard dependencies (primary database read/write, Kafka broker connectivity, Vault token validity). Returns 200 only when all hard dependencies are reachable and the service can safely handle traffic. Returns 503 with a JSON body listing failing checks if any hard dependency is unavailable. Used by Kubernetes readiness probe and by the load balancer; a 503 removes the instance from rotation without restarting it. GET /infoz: build and dependency metadata — returns JSON with fields: name (service.name), version (semver), commit (full git SHA injected at build time), built_at (ISO 8601 build timestamp), dependencies (object mapping dependency name to version string). Used by the Observability Aggregator to populate the dashboard's service inventory and to detect version drift across replicas.",
+      "mandatory": true
+    },
+    {
+      "id": "OBS-005",
+      "name": "Kafka CloudEvents",
+      "description": "Every Kafka message produced by any service must carry the CloudEvents 1.0 specification headers in the Kafka message headers map (not in the payload body). Required headers: ce_specversion ('1.0'), ce_type (reverse-DNS event name, e.g. 'com.bank.payments.payment.authorised'), ce_source (URI of the producing service, e.g. '/payments-processing/v1'), ce_id (UUID v4, unique per event), ce_time (ISO 8601 timestamp of event creation), traceparent (W3C trace context for causal linking), content-type (MIME type of the message body, e.g. 'application/json'). These headers enable the OTel Collector to extract topology information and event type distribution from Kafka traffic without deserialising the message payload — critical for performance and for avoiding coupling the collector to domain schemas.",
+      "mandatory": false
+    },
+    {
+      "id": "OBS-006",
+      "name": "service.yaml Manifest",
+      "description": "Every service repository must contain a service.yaml manifest at the repository root. This is a machine-readable contract consumed by the Observability Aggregator, the dependency mapper, and the secrets rotation scheduler. Required fields: id (service registry ID, e.g. SVC-012), tier (critical|standard|batch), depends_on (array of objects with fields: id, protocol (http|grpc|kafka|db), criticality (hard|soft)), topics_produced (array of Kafka topic names), topics_consumed (array of Kafka topic names), data_classification (pii|financial|internal|public), secrets (array of objects with fields: name, vault_path, rotation_days). The manifest is validated by the CI pipeline on every pull request — a missing or schema-invalid manifest blocks merge. The Observability Aggregator uses depends_on.criticality to distinguish expected topology edges from anomalous ones.",
+      "mandatory": true
+    }
+  ],
+  "logging_schema_by_category": [
+    {
+      "category": "API / Edge",
+      "services": ["Open Banking API Gateway", "Corporate Portal"],
+      "extension_fields": [
+        "http_method",
+        "http_path",
+        "http_status",
+        "client_ip",
+        "auth_method",
+        "auth_subject",
+        "rate_limit_remaining",
+        "tls_version",
+        "geo_country"
+      ],
+      "critical_rules": "Never log request bodies under any circumstances — this is an absolute prohibition that applies even to internal-only endpoints. Log content-type and content-length headers only. client_ip must be the original client IP extracted from X-Forwarded-For, not the load balancer IP, as it is used for fraud detection and rate limiting. auth_subject must be an opaque subject identifier (OAuth sub claim), never an email address or full name. geo_country is derived from IP at the gateway — never passed in by the client. tls_version must be logged to detect TLS 1.0/1.1 usage, which is prohibited by PCI DSS 4.0."
+    },
+    {
+      "category": "Core Domain",
+      "services": [
+        "Loan Origination",
+        "Payments Processing",
+        "Trade Finance",
+        "FX & Derivatives",
+        "Cash Management"
+      ],
+      "extension_fields": [
+        "entity_type",
+        "entity_id",
+        "actor_type",
+        "actor_id",
+        "operation",
+        "previous_state",
+        "next_state",
+        "downstream_calls[]"
+      ],
+      "critical_rules": "downstream_calls[] must be populated on every log entry that involves an outbound call — it is the primary signal used to build the live service dependency map. Each element must include: service_id, operation, duration_ms, and outcome (success|error|timeout). This allows the Observability Aggregator to detect unexpected service-to-service calls that do not appear in service.yaml depends_on, which is the primary indicator of an accidental coupling or a supply-chain compromise. entity_id and actor_id must be internal identifiers only — never IBAN, account number, or customer name. previous_state and next_state enable state machine audit without querying the database."
+    },
+    {
+      "category": "Payment",
+      "services": ["Payments Processing", "FX settlement"],
+      "extension_fields": [
+        "event_type",
+        "payment_id",
+        "amount_minor",
+        "currency",
+        "outcome",
+        "masked_pan",
+        "payment_method_type",
+        "processor_ref"
+      ],
+      "critical_rules": "Payment logs are on a completely separate WORM pipeline — they must never appear only in the operational Log Store. amount_minor must be an integer representing the amount in the smallest currency unit (pence, cents) to avoid floating-point representation issues. masked_pan must be the last four digits only, prefixed with twelve asterisks (e.g. ************1234) — any other masking format is non-compliant. Full PAN must never appear in any log field under any circumstances. CVV, CVC, and card security codes must never be logged, even transiently. processor_ref is the acquirer or scheme reference and is the primary key for dispute resolution. Logs in this category are admissible evidence in FCA enforcement and Payment Scheme dispute processes."
+    },
+    {
+      "category": "Identity / Auth",
+      "services": ["IAM", "KYC/AML"],
+      "extension_fields": [
+        "event_type",
+        "auth_method",
+        "subject_type",
+        "subject_id",
+        "device_fingerprint",
+        "risk_score",
+        "attempt_number",
+        "new_device"
+      ],
+      "critical_rules": "Failed authentication attempts must be logged at INFO level, not DEBUG — DEBUG is disabled in production and suppressing failed attempts would defeat the credential-stuffing detection alert. attempt_number is the count of consecutive failed attempts for the same subject within a rolling 10-minute window; this field is what distinguishes a genuine forgotten-password scenario (attempt_number 1-3) from a credential-stuffing attack (attempt_number > 10) without requiring a separate fraud database query. new_device (boolean) triggers an additional MFA challenge and must be logged for the FCA SM&CR access audit. risk_score is the output of the fraud scoring model — it must not be derived from or correlated to any protected characteristic."
+    },
+    {
+      "category": "Async / Event",
+      "services": [
+        "Event Bus consumers",
+        "Regulatory Reporting",
+        "ECL Engine batch"
+      ],
+      "extension_fields": [
+        "trigger_topic",
+        "trigger_offset",
+        "trigger_trace_id",
+        "event_type",
+        "outcome"
+      ],
+      "critical_rules": "trigger_trace_id is the single most important field for async observability — it is the trace_id extracted from the traceparent header of the triggering Kafka message and links this async execution back to the originating synchronous request. Without it, the causal chain breaks at every async boundary and incident investigation becomes a manual process of joining offsets across topics. trigger_topic and trigger_offset together form the unique key for idempotency checking and dead-letter reprocessing. outcome must be one of: processed, skipped (idempotent duplicate), dead_lettered, or failed."
+    },
+    {
+      "category": "Admin / Config",
+      "services": ["All services with admin actions"],
+      "extension_fields": [
+        "action_type",
+        "actor_id",
+        "actor_role",
+        "target_type",
+        "target_id",
+        "justification_ref",
+        "session_id"
+      ],
+      "critical_rules": "justification_ref is mandatory for every admin action — it must reference a valid Jira ticket, incident ID, or change record. An admin action log entry with a null or missing justification_ref is a policy violation signal and must trigger a real-time alert to the Security Operations Centre. This is the primary control for preventing unauthorised privileged access (a key FCA SM&CR and PRA Operational Resilience obligation). session_id allows all actions within a single admin session to be grouped for audit purposes. These log entries feed the WORM audit pipeline in addition to the operational Log Store."
+    },
+    {
+      "category": "Batch / Scheduled",
+      "services": [
+        "ECL quarterly run",
+        "Regulatory Reporting",
+        "Data Warehouse ETL"
+      ],
+      "extension_fields": [
+        "job_name",
+        "job_id",
+        "scheduled_at",
+        "triggered_by",
+        "records_processed",
+        "records_failed",
+        "duration_s"
+      ],
+      "critical_rules": "triggered_by is security-critical: it must record whether the job was started by a scheduler (cron), an API call (with the caller's subject_id), or a manual trigger (with the operator's actor_id). An unexpected trigger value — for example, an API-triggered run of the ECL quarterly job at an off-schedule time — is a potential indicator of compromise or rogue insider activity and must be alerted. records_processed and records_failed are used to detect partial-run failures in regulatory submissions where a silent partial write would constitute a false filing. job_id must be a UUID generated at trigger time, not the job name, to allow parallel runs to be distinguished."
+    }
+  ],
+  "data_freshness": [
+    {
+      "data_type": "Deploy state",
+      "freshness": "15-30s",
+      "model": "CD webhook push",
+      "banking_relevance": "Critical during regulatory reporting submission windows (e.g. COREP quarterly). A deployment mid-submission that changes calculation logic must be visible to the operator within seconds so they can halt the submission, not discovered hours later in a retrospective diff. Also required for PRA Operational Resilience self-assessments that must record exact service versions at point of a major incident."
+    },
+    {
+      "data_type": "p99 latency / error rate",
+      "freshness": "30s",
+      "model": "Prometheus poll",
+      "banking_relevance": "CHAPS Real-Time Gross Settlement imposes a 300ms end-to-end processing SLA on payment instructions. UK Sanctions screening (OFSI list checks) must also complete within 300ms or the payment must be held for manual review under the Financial Sanctions Regulations 2017. A latency breach that is not visible within 30s may result in a CHAPS access suspension or a regulatory breach filing obligation."
+    },
+    {
+      "data_type": "Kafka consumer lag",
+      "freshness": "30s",
+      "model": "Prometheus poll",
+      "banking_relevance": "Growing lag on the ECL Engine consumer means IFRS 9 Expected Credit Loss provisioning figures are computed from stale exposure data — a material misstatement risk in financial reports. Growing lag on the Sanctions Screening consumer means payments may be forwarded to settlement before screening completes, which is a criminal liability under the Terrorist Asset-Freezing Act and Financial Sanctions Regulations."
+    },
+    {
+      "data_type": "Service topology",
+      "freshness": "60s",
+      "model": "Trace store poll (Jaeger /api/dependencies)",
+      "banking_relevance": "Topology is derived from real distributed traces, not from a manually maintained diagram. This means unexpected service-to-service calls created by a misconfiguration or a supply-chain compromise appear in the topology within 60s of first occurrence. Used by the Security Operations Centre to detect lateral movement and by Change Management to verify that a deployment has not introduced undeclared dependencies."
+    },
+    {
+      "data_type": "Secret expiry",
+      "freshness": "5-10min",
+      "model": "Vault webhook push",
+      "banking_relevance": "An expired secret in the IAM service would disable Strong Customer Authentication, violating PSD2 Article 97 and FCA PS19/26. An expired secret in Payments Processing could cause payment rails connectivity failure. SM&CR Senior Managers are personally liable for operational resilience failures — secret expiry is a preventable cause. The 7-day alert threshold gives the on-call engineer time to rotate without emergency weekend work."
+    },
+    {
+      "data_type": "CVE exposure",
+      "freshness": "On deploy",
+      "model": "Snyk/Trivy webhook",
+      "banking_relevance": "A Critical (CVSS 9.0+) CVE in the KYC/AML service or Payments Processing is a PRA Operational Resilience material vulnerability finding that may require a mandatory notification to the regulator within 72 hours under DORA Article 19. The webhook fires immediately on each container build and deployment scan, ensuring the vulnerability dashboard reflects the current production image's CVE exposure, not a cached overnight scan."
+    },
+    {
+      "data_type": "Audit log completeness",
+      "freshness": "Never live",
+      "model": "Compliance API only",
+      "banking_relevance": "The WORM audit store must never be queried directly by the observability dashboard. Direct queries would create a read access path that, if exploited, could allow an attacker to enumerate audit records and identify gaps to exploit or cover. The dashboard receives only a summary count (events written in last 24h) and a last-event timestamp via a dedicated Compliance API that validates the requester's auditor role. Full audit log access is gated behind the Compliance API with 4-eyes approval logging."
+    }
+  ],
+  "design_decisions": [
+    {
+      "id": "DD-OBS-001",
+      "decision": "OTel Collector is the sole telemetry ingestion point — services never connect directly to storage backends",
+      "rationale": "Decouples instrumentation code from storage technology. PII scrubbing, tail sampling, and CloudEvents extraction are applied once in a single controlled location rather than duplicated across every service. Storage backends can be replaced (e.g. migrating from Jaeger to Grafana Tempo) without touching application code or redeploying services. Network policy enforces the constraint: services in the service mesh are not permitted to reach store endpoints on their native ports. This also means a compromised service cannot exfiltrate raw telemetry directly to an attacker-controlled endpoint — all egress routes through the collector, where anomalous export destinations would be detected.",
+      "alternatives_considered": [
+        "Each service writes directly to the relevant store using the store's native SDK",
+        "Sidecar proxy per pod intercepts and forwards telemetry to stores"
+      ],
+      "rejected_because": "Direct store connections would require each service to hold store credentials, increasing the blast radius of a service compromise. Sidecar proxies add per-pod resource overhead and complicate PII scrubbing logic, which must be applied consistently — per-sidecar implementations would diverge over time."
+    },
+    {
+      "id": "DD-OBS-002",
+      "decision": "Audit logs are on a physically separate OTel Collector pipeline from operational telemetry, writing to an S3 Object Lock COMPLIANCE mode bucket",
+      "rationale": "Audit and operational telemetry have fundamentally incompatible requirements that cannot be reconciled in a shared pipeline. Operational telemetry needs: tail sampling (high volume, low signal), 90-day rolling retention, engineering read access, sub-second query latency. Audit telemetry needs: 100% capture (no sampling), 7-year WORM retention, auditor-only read access, tamper-proof storage. A managed SaaS observability platform (Datadog, Splunk, New Relic) is not a PCI DSS-compliant or FCA SYSC 9-compliant audit record store. S3 Object Lock in COMPLIANCE mode prevents deletion by any IAM principal including the account root, satisfying the WORM requirement. The physical separation means a configuration error or outage in the operational pipeline cannot affect audit log completeness.",
+      "alternatives_considered": [
+        "Single pipeline with routing rules to segregate audit events",
+        "Managed SIEM (Splunk) as the unified audit and operations store",
+        "Database with append-only table as the audit store"
+      ],
+      "rejected_because": "A shared pipeline creates a single point of failure for both audit and operational telemetry — a misconfigured PII scrubbing rule could accidentally drop audit events. Managed SIEMs do not offer COMPLIANCE-mode immutability and hold data in a vendor-controlled environment that may not satisfy FCA data residency requirements. Append-only databases can be altered at the storage layer by a database administrator and do not constitute a WORM record for audit purposes."
+    },
+    {
+      "id": "DD-OBS-003",
+      "decision": "The Observability Aggregator is a thin backend that polls all stores once per refresh cycle on behalf of all dashboard clients — the dashboard never holds store credentials or issues direct store queries",
+      "rationale": "A dashboard with N concurrent users that each polled four stores independently would generate O(N * stores * refresh_rate) queries. At 80 concurrent users, 4 stores, and 30s refresh: 80 * 4 * 2 = 640 queries/minute = 38,400/hour. The aggregator architecture reduces this to 4 stores * 2 refreshes/minute = 8 queries/minute = 480/hour — a 98.75% reduction in store query load. The security benefit is equally significant: each connected browser session holds only a short-lived JWT issued by the aggregator. A browser compromise exposes only that session's view of the aggregated data, not the credentials needed to query raw traces, logs, or metrics. Credential rotation for store access is a single-service operation rather than a coordinated client update.",
+      "alternatives_considered": [
+        "Dashboard queries stores directly using credentials stored in the browser session",
+        "Server-sent events (SSE) with each client maintaining a persistent store connection"
+      ],
+      "rejected_because": "Browser-held store credentials violate least-privilege principles and mean a single XSS vulnerability exposes the credentials of the affected user to an attacker. Persistent per-client SSE connections to stores consume store connection pool slots proportional to the number of dashboard users, which would exhaust Elasticsearch connection limits under normal office-hours usage."
+    }
+  ]
+}

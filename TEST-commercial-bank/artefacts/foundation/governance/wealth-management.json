@@ -1,0 +1,104 @@
+{
+  "id": "GOV-006",
+  "capability_id": "CAP-006",
+  "capability_name": "Wealth Management",
+  "rules": [
+    {
+      "rule_id": "RULE-WM-001",
+      "name": "Suitability Assessment",
+      "source_legislation": "UK MiFID II — Article 25(2) (as retained in UK law via FSMA 2000 and FCA COBS 9A); FCA Conduct of Business Sourcebook (COBS) 9A",
+      "description": "Before providing personalised investment recommendations or managing a portfolio on a discretionary basis, the bank must assess the suitability of the proposed investment for the client. The assessment must cover: investment knowledge and experience, financial situation (including ability to bear losses), and investment objectives (including risk tolerance and time horizon). A suitability report must be provided to retail clients before the recommended transaction or at the time of execution for ongoing services. Suitability must be reassessed periodically for ongoing advisory relationships.",
+      "authority_level": "senior_manager",
+      "approval_chain": [
+        "Wealth Manager / Investment Adviser",
+        "Suitability Review Team",
+        "Head of Investment Advice"
+      ],
+      "disclosure_obligations": [
+        "Suitability report provided to retail client before or at the point of executing the recommended transaction",
+        "Periodic suitability statement provided at least annually for ongoing advisory clients",
+        "Client suitability files retained for a minimum of five years from the date of the recommendation",
+        "FCA COBS 16A: periodic reports including suitability reminders sent to clients at least annually"
+      ],
+      "constraints": [
+        "An investment may only be recommended or executed on a discretionary basis if it is assessed as suitable for the specific client",
+        "Suitability assessment must be refreshed before making any material change to a client's portfolio strategy",
+        "No suitability assessment may be conducted by a staff member who has a direct financial incentive in the outcome of the recommendation",
+        "Where a client declines to provide information needed for suitability, the bank must warn the client and may decline to make a recommendation"
+      ]
+    },
+    {
+      "rule_id": "RULE-WM-002",
+      "name": "Best Execution",
+      "source_legislation": "UK MiFID II — Article 27 (as retained in UK law); FCA COBS 11.2A — Best Execution",
+      "description": "The bank must take all sufficient steps to obtain the best possible result when executing client orders, taking into account price, costs, speed, likelihood of execution, size, nature, and any other relevant consideration. An Order Execution Policy must be maintained and disclosed to clients. The bank must monitor the effectiveness of its execution arrangements and correct any deficiencies. Annual top-five execution venue reports must be published for each asset class where the bank executes orders.",
+      "authority_level": "department_head",
+      "approval_chain": [
+        "Trading Desk Supervisor",
+        "Head of Execution",
+        "Head of Wealth Operations"
+      ],
+      "disclosure_obligations": [
+        "Order Execution Policy disclosed to clients at onboarding and whenever a material change is made",
+        "Annual top-five execution venue reports published on the bank's website (RTS 28 equivalent)",
+        "Client notification when executing outside a regulated market or MTF (where applicable)",
+        "Annual internal execution quality review presented to the Investment Committee"
+      ],
+      "constraints": [
+        "Best execution must be applied to all client order types including retail, professional, and eligible counterparty where applicable",
+        "Price is the most important factor for retail clients in liquid instruments; deviating from price primacy requires documented justification",
+        "Execution venue selection must not be influenced by commercial relationships with venues that would compromise best execution",
+        "Client standing instructions must be reviewed at least annually to confirm they still deliver best execution"
+      ]
+    },
+    {
+      "rule_id": "RULE-WM-003",
+      "name": "Costs and Charges Disclosure",
+      "source_legislation": "UK MiFID II — Article 24(4) (as retained in UK law); FCA COBS 6.1ZA — Costs and Charges Disclosure",
+      "description": "The bank must disclose all costs and charges associated with investment services and financial instruments in aggregated and itemised form. Ex-ante disclosure must be provided before a service or transaction is agreed, illustrating cumulative cost over one, three, and five years. Ex-post disclosure must be provided at least annually for ongoing clients, showing actual costs and charges incurred. Disclosures must be expressed in both monetary and percentage terms.",
+      "authority_level": "department_head",
+      "approval_chain": [
+        "Investment Adviser",
+        "Product Compliance Manager",
+        "Head of Investment Advice"
+      ],
+      "disclosure_obligations": [
+        "Ex-ante costs and charges disclosure provided to client before entering into a service agreement",
+        "Annual ex-post costs and charges statement provided to ongoing service clients",
+        "Aggregated costs and charges figure (including all layers: service, product, transaction) shown prominently",
+        "Illustration of cumulative effect of costs on returns over 1, 3, and 5 year periods"
+      ],
+      "constraints": [
+        "Costs and charges must be expressed in both monetary value and as a percentage of the amount invested",
+        "Third-party costs (e.g. fund charges, platform fees) must be included in the aggregated disclosure; they may not be excluded",
+        "Where ex-ante charges cannot be stated precisely, a reasonable estimate must be provided with explanation of basis",
+        "Ex-post statement must be issued within 30 calendar days of the end of the reporting period"
+      ]
+    },
+    {
+      "rule_id": "RULE-WM-004",
+      "name": "Product Target Market Assessment",
+      "source_legislation": "FCA PROD 3 — Product Governance: MiFID-related requirements; UK MiFID II Product Governance RTS (as retained in UK law)",
+      "description": "Before distributing any investment product, the bank (as distributor) must assess whether the product's manufacturer-defined target market is compatible with the characteristics and needs of the client segments it intends to target. Distribution must be restricted to clients within the positive target market. For products manufactured by the bank itself, a full target market definition must be completed covering client type, knowledge and experience, financial situation, risk tolerance, and client objective. Target market assessments must be reviewed at least annually and following any material change to the product.",
+      "authority_level": "department_head",
+      "approval_chain": [
+        "Product Manager",
+        "Head of Product Governance",
+        "Chief Investment Officer",
+        "Product and Conduct Committee"
+      ],
+      "disclosure_obligations": [
+        "Target market assessment documented and retained for each distributed product",
+        "Target market information shared with distributors in the product's distribution chain",
+        "Annual product review outcome (including target market reassessment) reported to Product and Conduct Committee",
+        "Adverse distribution outcomes (e.g. product sold outside target market) reported to FCA via PROD product review process"
+      ],
+      "constraints": [
+        "Products must not be actively marketed to clients falling within the negative target market definition",
+        "Target market definition must be documented before first distribution; retrospective approval is not permitted",
+        "Target market must be reassessed within 30 business days of a material product change or adverse performance event",
+        "Distribution strategy must align with manufacturer's intended distribution channels; deviation requires documented justification and manufacturer notification"
+      ]
+    }
+  ]
+}

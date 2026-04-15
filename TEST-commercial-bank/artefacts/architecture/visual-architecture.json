@@ -1,0 +1,420 @@
+{
+  "schema_version": "1.0.0",
+  "document_id": "ARCH-VA-001",
+  "title": "Commercial Bank — Layered System Architecture",
+  "description": "Canonical four-layer architecture for the bank's digital platform, from customer-facing channels down to shared infrastructure foundations.",
+  "last_updated": "2026-04-15",
+
+  "layers": [
+    {
+      "id": "L1",
+      "name": "Channel Layer",
+      "description": "Customer and partner-facing interfaces through which all inbound interactions are received. Encompasses digital self-service channels, third-party API consumers, branch-operated terminals, and telephony. All traffic is authenticated at this layer before being forwarded to domain services.",
+      "position": 1,
+      "capability_references": ["CAP-007"],
+      "services": [
+        "SVC-011 Open Banking API Service"
+      ],
+      "channel_components": [
+        {
+          "id": "CH-001",
+          "name": "Web Portal",
+          "type": "digital_self_service"
+        },
+        {
+          "id": "CH-002",
+          "name": "Mobile App",
+          "type": "digital_self_service"
+        },
+        {
+          "id": "CH-003",
+          "name": "Open Banking API",
+          "type": "third_party_api"
+        },
+        {
+          "id": "CH-004",
+          "name": "Branch Terminal",
+          "type": "assisted_service"
+        },
+        {
+          "id": "CH-005",
+          "name": "SWIFT Network",
+          "type": "interbank_messaging"
+        },
+        {
+          "id": "CH-006",
+          "name": "Internal Portal",
+          "type": "staff_tooling"
+        },
+        {
+          "id": "CH-007",
+          "name": "Regulatory Gateway",
+          "type": "regulatory_reporting"
+        },
+        {
+          "id": "CH-008",
+          "name": "Card Network Interface",
+          "type": "card_scheme"
+        },
+        {
+          "id": "CH-009",
+          "name": "Telephony",
+          "type": "voice_ivr"
+        }
+      ],
+      "responsibilities": [
+        "Authenticate and authorise inbound requests",
+        "Enforce channel-specific rate limits and throttling",
+        "Present role-based and persona-appropriate data projections",
+        "Capture full channel-level audit trails",
+        "Protocol adaptation (REST, ISO 20022, FIX, SWIFT MT/MX)"
+      ],
+      "non_functional": {
+        "availability_target": "99.99%",
+        "latency_p99_ms": 500,
+        "security_classification": "PUBLIC / PARTNER"
+      }
+    },
+    {
+      "id": "L2",
+      "name": "Domain Services Layer",
+      "description": "Seventeen bounded-context services that encapsulate all core banking business logic. Each service owns its own data store and exposes a versioned API contract. Services are organised into six capability domains and communicate asynchronously via the Event Bus (SVC-102) where possible.",
+      "position": 2,
+      "services": [
+        {
+          "id": "SVC-001",
+          "name": "Current Account Service",
+          "domain": "Retail Banking",
+          "description": "Manages personal and business current account lifecycle, balance enquiries, and transactional operations."
+        },
+        {
+          "id": "SVC-002",
+          "name": "Savings Account Service",
+          "domain": "Retail Banking",
+          "description": "Manages savings products, interest accrual, and maturity processing."
+        },
+        {
+          "id": "SVC-003",
+          "name": "Mortgage Service",
+          "domain": "Lending",
+          "description": "Originates, services, and manages residential and commercial mortgage products."
+        },
+        {
+          "id": "SVC-004",
+          "name": "Personal Loan Service",
+          "domain": "Lending",
+          "description": "Handles unsecured personal lending products from origination through repayment."
+        },
+        {
+          "id": "SVC-005",
+          "name": "Business Lending Service",
+          "domain": "Lending",
+          "description": "Manages commercial loans, revolving credit facilities, and term lending for business customers."
+        },
+        {
+          "id": "SVC-006",
+          "name": "Card Service",
+          "domain": "Payments",
+          "description": "Issues and manages debit and credit card products; processes authorisation, clearing, and settlement with card networks."
+        },
+        {
+          "id": "SVC-007",
+          "name": "Domestic Payments Service",
+          "domain": "Payments",
+          "description": "Processes Faster Payments, BACS, and CHAPS transactions within UK payment schemes."
+        },
+        {
+          "id": "SVC-008",
+          "name": "International Payments Service",
+          "domain": "Payments",
+          "description": "Orchestrates cross-border payments via SWIFT, SEPA, and correspondent banking relationships."
+        },
+        {
+          "id": "SVC-009",
+          "name": "FX Service",
+          "domain": "Payments",
+          "description": "Provides foreign exchange rate management, currency conversion, and hedging operations."
+        },
+        {
+          "id": "SVC-010",
+          "name": "Trade Finance Service",
+          "domain": "Corporate & Institutional",
+          "description": "Manages letters of credit, documentary collections, guarantees, and supply-chain finance."
+        },
+        {
+          "id": "SVC-011",
+          "name": "Open Banking API Service",
+          "domain": "Open Banking",
+          "description": "Provides PSD2-compliant Account Information (AISP) and Payment Initiation (PISP) APIs to authorised TPPs."
+        },
+        {
+          "id": "SVC-012",
+          "name": "Wealth Management Service",
+          "domain": "Wealth",
+          "description": "Supports portfolio management, investment advisory, and discretionary fund operations for wealth clients."
+        },
+        {
+          "id": "SVC-013",
+          "name": "Insurance Service",
+          "domain": "Wealth",
+          "description": "Administers bancassurance product catalogue, policy lifecycle, and claims integration with underwriters."
+        },
+        {
+          "id": "SVC-014",
+          "name": "Customer Profile Service",
+          "domain": "Customer Management",
+          "description": "Maintains the golden record for customer identity, KYC status, and relationship data."
+        },
+        {
+          "id": "SVC-015",
+          "name": "AML & Financial Crime Service",
+          "domain": "Risk & Compliance",
+          "description": "Performs transaction monitoring, suspicious activity detection, and STR generation in line with FCA/JMLSG requirements."
+        },
+        {
+          "id": "SVC-016",
+          "name": "Regulatory Reporting Service",
+          "domain": "Risk & Compliance",
+          "description": "Aggregates and submits regulatory returns to the PRA, FCA, Bank of England, and HMRC."
+        },
+        {
+          "id": "SVC-017",
+          "name": "Treasury Service",
+          "domain": "Corporate & Institutional",
+          "description": "Manages liquidity, ALM, interbank funding, and reserve management."
+        }
+      ],
+      "responsibilities": [
+        "Enforce business rules and domain invariants",
+        "Own transactional data stores (one DB per service)",
+        "Publish domain events to Event Bus on state changes",
+        "Expose versioned REST / AsyncAPI contracts",
+        "Maintain bounded context isolation — no direct cross-service DB access"
+      ],
+      "non_functional": {
+        "availability_target": "99.95%",
+        "latency_p99_ms": 200,
+        "security_classification": "INTERNAL"
+      }
+    },
+    {
+      "id": "L3",
+      "name": "Cross-Cutting Services Layer",
+      "description": "Six shared capability services consumed horizontally by all domain services. These services prevent duplication of critical compliance, operational, and orchestration logic. They are versioned independently and expose stable internal APIs.",
+      "position": 3,
+      "services": [
+        {
+          "id": "SVC-050",
+          "name": "Onboarding Service",
+          "description": "Orchestrates end-to-end customer and business onboarding journeys including identity verification (eKYC), document capture, and account opening eligibility checks.",
+          "consumers": ["SVC-001", "SVC-002", "SVC-003", "SVC-004", "SVC-005", "SVC-012", "SVC-014"]
+        },
+        {
+          "id": "SVC-051",
+          "name": "Sanctions Screening Service",
+          "description": "Performs real-time and batch sanctions screening against OFAC, HMT, UN, and EU consolidated lists. Returns match disposition with audit evidence.",
+          "consumers": ["SVC-007", "SVC-008", "SVC-010", "SVC-014", "SVC-015", "SVC-050"]
+        },
+        {
+          "id": "SVC-052",
+          "name": "Credit Decision Service",
+          "description": "Provides centralised creditworthiness assessment using bureau data, internal behavioural scoring, and configurable decision strategies for all lending products.",
+          "consumers": ["SVC-003", "SVC-004", "SVC-005", "SVC-006", "SVC-010"]
+        },
+        {
+          "id": "SVC-053",
+          "name": "Notification Service",
+          "description": "Delivers templated communications across email, SMS, push notification, and in-app messaging channels. Manages opt-in preferences, delivery receipts, and suppression lists.",
+          "consumers": ["ALL"]
+        },
+        {
+          "id": "SVC-054",
+          "name": "Document Management Service",
+          "description": "Stores, versions, and retrieves structured and unstructured documents (agreements, statements, correspondence). Enforces retention schedules per FCA SYSC and data classification policy.",
+          "consumers": ["SVC-003", "SVC-004", "SVC-005", "SVC-010", "SVC-012", "SVC-013", "SVC-016", "SVC-050"]
+        },
+        {
+          "id": "SVC-055",
+          "name": "Workflow Service",
+          "description": "Provides durable process orchestration for multi-step human and automated workflows (e.g. loan approval, dispute resolution, onboarding). Exposes BPMN-compatible task management.",
+          "consumers": ["SVC-003", "SVC-004", "SVC-005", "SVC-010", "SVC-013", "SVC-015", "SVC-016", "SVC-050"]
+        }
+      ],
+      "responsibilities": [
+        "Provide shared compliance and operational capabilities to all domain services",
+        "Eliminate duplication of regulated logic across bounded contexts",
+        "Maintain independent release cadence from domain services",
+        "Enforce service-level SLAs agreed with consuming domains",
+        "Log all invocations to the Audit Service (SVC-103)"
+      ],
+      "non_functional": {
+        "availability_target": "99.95%",
+        "latency_p99_ms": 150,
+        "security_classification": "INTERNAL"
+      }
+    },
+    {
+      "id": "L4",
+      "name": "Foundation Layer",
+      "description": "Seven platform-level services that provide the security, integration, observability, and data infrastructure on which all upper layers depend. These services are managed by the Platform Engineering team and consumed passively by domain and cross-cutting services.",
+      "position": 4,
+      "services": [
+        {
+          "id": "SVC-100",
+          "name": "Identity & Access Management (IAM)",
+          "description": "Centralised identity provider supporting OAuth 2.0 / OIDC, SAML 2.0, and FIDO2/WebAuthn. Issues JWTs and manages role and attribute assignments for all personas.",
+          "standard": "ISO/IEC 27001, NIST SP 800-63-3"
+        },
+        {
+          "id": "SVC-101",
+          "name": "API Gateway",
+          "description": "Ingress controller for all synchronous API traffic. Enforces authentication, authorisation, rate limiting, request validation, and TLS termination. Provides developer portal and API catalogue.",
+          "standard": "OWASP API Security Top 10"
+        },
+        {
+          "id": "SVC-102",
+          "name": "Event Bus",
+          "description": "Distributed, durable message broker supporting publish-subscribe and event-streaming patterns. Guarantees at-least-once delivery with configurable retention for replay and auditing.",
+          "standard": "AsyncAPI 2.x"
+        },
+        {
+          "id": "SVC-103",
+          "name": "Audit & Logging Service",
+          "description": "Immutable, tamper-evident audit log store. Collects structured audit events from all services, provides search and export for compliance investigations, and feeds SIEM.",
+          "standard": "FCA SYSC 10A, ISO/IEC 27001 A.12.4"
+        },
+        {
+          "id": "SVC-104",
+          "name": "Data Platform",
+          "description": "Lakehouse architecture providing batch ingestion, stream processing, feature store, and governed data access for analytics, ML model training, and regulatory reporting.",
+          "standard": "BCBS 239, GDPR Art. 25"
+        },
+        {
+          "id": "SVC-105",
+          "name": "Secrets Management Service",
+          "description": "Centralised secrets vault for cryptographic keys, certificates, API credentials, and configuration secrets. Enforces automated rotation, access policies, and break-glass procedures.",
+          "standard": "NIST SP 800-57, PCI DSS Req. 3 & 6"
+        },
+        {
+          "id": "SVC-106",
+          "name": "Service Mesh",
+          "description": "Transparent L4/L7 proxy layer providing mutual TLS (mTLS) between all services, traffic management, circuit breaking, distributed tracing, and service-level telemetry.",
+          "standard": "NIST SP 800-204"
+        }
+      ],
+      "responsibilities": [
+        "Provide zero-trust network security between all services via mTLS",
+        "Centralise secrets, certificate lifecycle, and key management",
+        "Enforce inbound API policies before requests reach domain services",
+        "Capture immutable audit records for all significant system events",
+        "Supply the data infrastructure for analytics, ML, and regulatory reporting"
+      ],
+      "non_functional": {
+        "availability_target": "99.999%",
+        "latency_overhead_p99_ms": 5,
+        "security_classification": "RESTRICTED"
+      }
+    }
+  ],
+
+  "relationships": [
+    {
+      "id": "REL-001",
+      "from": "L1",
+      "to": "L2",
+      "type": "synchronous",
+      "description": "Channel layer authenticates via IAM (L4) then routes requests to domain services via the API Gateway (SVC-101). Requests carry signed JWTs and are subject to per-channel rate-limit policies enforced at the gateway."
+    },
+    {
+      "id": "REL-002",
+      "from": "L2",
+      "to": "L3",
+      "type": "synchronous_and_asynchronous",
+      "description": "Domain services invoke cross-cutting services for shared compliance and operational capabilities (e.g. SVC-001 calls SVC-051 for sanctions checks on new payees; SVC-003 calls SVC-052 for credit decisions). Calls are synchronous where a real-time response is required, or fire-and-forget via Event Bus where eventual consistency is acceptable."
+    },
+    {
+      "id": "REL-003",
+      "from": "L2",
+      "to": "L4",
+      "type": "infrastructure",
+      "description": "Domain services authenticate inbound calls via SVC-100 (IAM), publish domain events to SVC-102 (Event Bus), write audit records to SVC-103, retrieve secrets from SVC-105, and participate in service mesh mTLS managed by SVC-106. Data is replicated to SVC-104 for analytics and reporting."
+    },
+    {
+      "id": "REL-004",
+      "from": "L3",
+      "to": "L4",
+      "type": "infrastructure",
+      "description": "Cross-cutting services consume the same foundation capabilities as domain services. Additionally, SVC-050–SVC-055 publish their own audit events to SVC-103 and consume secrets from SVC-105 for integration credentials (e.g. bureau API keys, SMTP credentials)."
+    },
+    {
+      "id": "REL-005",
+      "from": "L1",
+      "to": "L4",
+      "type": "direct",
+      "description": "Channel layer integrates directly with SVC-100 (IAM) for token issuance and validation, and with SVC-101 (API Gateway) as the ingress point for all inbound API traffic. No channel bypasses the API Gateway for calls destined for domain services."
+    }
+  ],
+
+  "design_decisions": [
+    {
+      "id": "DD-001",
+      "title": "API Gateway as sole ingress for all synchronous traffic",
+      "status": "ACCEPTED",
+      "date": "2025-09-01",
+      "context": "Multiple channels with differing authentication schemes and rate-limit requirements needed a consistent enforcement point.",
+      "decision": "SVC-101 (API Gateway) is the mandatory ingress for all synchronous traffic from L1 to L2. No channel may call a domain service directly.",
+      "consequences": "Single point of policy enforcement simplifies auditing and reduces per-service boilerplate. Creates a potential single point of failure mitigated by active-active deployment across two availability zones.",
+      "alternatives_considered": ["Per-service ingress controllers", "Client-side load balancing with service discovery"]
+    },
+    {
+      "id": "DD-002",
+      "title": "Event Bus as primary integration pattern between domain services",
+      "status": "ACCEPTED",
+      "date": "2025-09-15",
+      "context": "Synchronous inter-service calls create temporal coupling and cascade failure risk in a banking platform with strict availability targets.",
+      "decision": "Domain services must integrate via SVC-102 (Event Bus) for cross-domain state change notifications. Synchronous calls are permitted only within a domain or where a real-time response is contractually required.",
+      "consequences": "Improved fault isolation and independent scalability. Introduces eventual consistency which must be accounted for in business logic and UI design.",
+      "alternatives_considered": ["Synchronous REST chaining", "GraphQL federation", "Shared database integration (rejected — violates bounded context isolation)"]
+    },
+    {
+      "id": "DD-003",
+      "title": "One data store per domain service",
+      "status": "ACCEPTED",
+      "date": "2025-09-15",
+      "context": "Shared databases create hidden coupling and make independent deployment and scaling impossible.",
+      "decision": "Each domain service owns its own persistent data store. Cross-service data access must occur via published APIs or consumed events, never via direct database queries.",
+      "consequences": "Enables independent release cycles and technology choice per domain. Requires careful design of data consistency strategies and cross-service query patterns.",
+      "alternatives_considered": ["Shared relational database per domain group", "Single enterprise data warehouse as operational store (rejected)"]
+    },
+    {
+      "id": "DD-004",
+      "title": "Zero-trust networking via service mesh mTLS",
+      "status": "ACCEPTED",
+      "date": "2025-10-01",
+      "context": "Perimeter-based network security is insufficient for a microservices architecture where lateral movement is a significant threat vector.",
+      "decision": "SVC-106 (Service Mesh) enforces mutual TLS between all services regardless of network segment. No service-to-service call is permitted without a valid workload certificate.",
+      "consequences": "Cryptographic identity for every service workload. Certificate lifecycle managed centrally via SVC-105. Minor latency overhead (~2 ms p99) accepted as a security requirement.",
+      "alternatives_considered": ["Network-level segmentation only", "Application-layer token validation only"]
+    },
+    {
+      "id": "DD-005",
+      "title": "Cross-cutting services isolated in L3 to avoid domain proliferation",
+      "status": "ACCEPTED",
+      "date": "2025-10-15",
+      "context": "Early prototype had sanctions screening, credit decisioning, and notification logic duplicated across multiple domain services, creating compliance risk when regulatory requirements changed.",
+      "decision": "Capabilities consumed by three or more domain services and subject to regulatory or policy change are promoted to L3 as versioned cross-cutting services. Domain services may not implement their own versions of these capabilities.",
+      "consequences": "Single authoritative implementation of regulated logic. Changes to sanctions lists or credit policy propagate to all consumers from one service. Requires careful SLA definition between L3 and L2 consumers.",
+      "alternatives_considered": ["Shared library approach (rejected — deployment coupling)", "Domain service ownership with API contracts (rejected — duplication risk)"]
+    },
+    {
+      "id": "DD-006",
+      "title": "Foundation layer managed exclusively by Platform Engineering",
+      "status": "ACCEPTED",
+      "date": "2025-08-01",
+      "context": "Foundation services underpin all layers; inconsistent changes by feature teams create systemic risk.",
+      "decision": "L4 services are owned, operated, and released exclusively by the Platform Engineering team. Feature teams consume L4 services via stable, versioned interfaces and raise change requests for new capabilities.",
+      "consequences": "Clear accountability and change governance for critical infrastructure. Risk of Platform Engineering becoming a bottleneck mitigated by a published self-service catalogue and golden-path templates.",
+      "alternatives_considered": ["Federated ownership model", "Shared responsibility with architectural review board gating"]
+    }
+  ]
+}

@@ -1,0 +1,273 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "security-model.schema.json",
+  "title": "Security Model",
+  "description": "Schema for the bank's security architecture following a zero-trust model. Covers security posture controls, service-to-service authentication, data classification, network segmentation, and architectural design decisions.",
+  "type": "object",
+  "required": [
+    "security_posture_controls",
+    "service_to_service_auth",
+    "data_classification",
+    "network_segmentation",
+    "design_decisions"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema reference for this document."
+    },
+    "_meta": {
+      "type": "object",
+      "description": "Document metadata: generation date, description, and authoring context.",
+      "additionalProperties": false,
+      "properties": {
+        "generated": {
+          "type": "string",
+          "description": "ISO 8601 date this document was generated or last updated."
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable summary of this document's purpose and scope."
+        }
+      }
+    },
+    "security_posture_controls": {
+      "type": "array",
+      "description": "Observable security controls rendered on the architecture dashboard. Each control defines what data it consumes, how it is enforced, and the alert severity triggered on violation.",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "description", "data_source", "enforcement", "alert_severity"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^SEC-[0-9]{3}$",
+            "description": "Unique security control identifier in the format SEC-XXX."
+          },
+          "name": {
+            "type": "string",
+            "description": "Short display name for the control as it appears in the dashboard."
+          },
+          "description": {
+            "type": "string",
+            "description": "Full specification of what this control measures, how it is visualised, and what findings it surfaces. Include colour semantics (green/amber/red) and data flow where applicable."
+          },
+          "data_source": {
+            "type": "string",
+            "description": "The system or artefact that provides input data to this control (e.g. Prometheus metrics, service mesh access logs, service.yaml manifests)."
+          },
+          "enforcement": {
+            "type": "string",
+            "description": "The component or system that acts on violations detected by this control (e.g. Zero-Trust Policy Engine, CI/CD pipeline gate)."
+          },
+          "alert_severity": {
+            "type": "string",
+            "description": "Severity classification of alerts raised by this control. Values: critical, critical_on_red, warning_on_amber_critical_on_red, informational, elevated_for_pii_financial, critical_on_gap.",
+            "enum": [
+              "critical",
+              "critical_on_red",
+              "warning_on_amber_critical_on_red",
+              "informational",
+              "elevated_for_pii_financial",
+              "critical_on_gap"
+            ]
+          }
+        }
+      }
+    },
+    "service_to_service_auth": {
+      "type": "object",
+      "description": "Defines how services authenticate to each other across the mesh, the identity model, token propagation strategy, policy enforcement mechanism, and any exceptions for external systems.",
+      "required": ["model", "identity_source", "token_propagation", "policy_enforcement", "exceptions"],
+      "additionalProperties": false,
+      "properties": {
+        "model": {
+          "type": "string",
+          "description": "Authentication mechanism used for all service-to-service calls within the platform."
+        },
+        "identity_source": {
+          "type": "string",
+          "description": "System that issues workload identities (e.g. SPIFFE/SPIRE)."
+        },
+        "token_propagation": {
+          "type": "string",
+          "description": "How identity and authorisation tokens are threaded through call chains — format, header, and claims strategy."
+        },
+        "policy_enforcement": {
+          "type": "string",
+          "description": "Mechanism and artefact that drives enforcement decisions at runtime (e.g. Istio AuthorizationPolicy generated from service.yaml)."
+        },
+        "exceptions": {
+          "type": "array",
+          "description": "Pairs of connections that cannot use the standard auth model, with the alternative mechanism and justification.",
+          "items": {
+            "type": "object",
+            "required": ["pair", "auth", "rationale"],
+            "additionalProperties": false,
+            "properties": {
+              "pair": {
+                "type": "string",
+                "description": "The service pair or category that requires a non-standard authentication approach."
+              },
+              "auth": {
+                "type": "string",
+                "description": "The alternative authentication mechanism in use for this pair."
+              },
+              "rationale": {
+                "type": "string",
+                "description": "Reason the standard model cannot apply to this pair."
+              }
+            }
+          }
+        }
+      }
+    },
+    "data_classification": {
+      "type": "object",
+      "description": "Bank-wide data classification scheme: levels with handling requirements, and a per-service mapping that drives SIEM alert severity, encryption policy, and audit pipeline routing.",
+      "required": ["levels", "per_service_classification"],
+      "additionalProperties": false,
+      "properties": {
+        "levels": {
+          "type": "array",
+          "description": "Ordered classification levels from least to most sensitive. Each level specifies mandatory encryption, audit, and additional regulatory controls.",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["level", "description", "examples", "encryption_at_rest", "encryption_in_transit", "audit_logging"],
+            "additionalProperties": false,
+            "properties": {
+              "level": {
+                "type": "string",
+                "description": "Short identifier for this classification level.",
+                "enum": ["public", "internal", "confidential", "pii", "financial", "regulated"]
+              },
+              "description": {
+                "type": "string",
+                "description": "What this classification level represents and the nature of data it covers."
+              },
+              "examples": {
+                "type": "array",
+                "description": "Representative examples of data that falls under this classification.",
+                "minItems": 1,
+                "items": { "type": "string" }
+              },
+              "encryption_at_rest": {
+                "type": "boolean",
+                "description": "Whether data at this classification level must be encrypted at rest."
+              },
+              "encryption_in_transit": {
+                "type": "boolean",
+                "description": "Whether data at this classification level must be encrypted in transit."
+              },
+              "audit_logging": {
+                "type": "boolean",
+                "description": "Whether access and mutation events must be captured in the audit log store."
+              },
+              "additional_controls": {
+                "type": "array",
+                "description": "Regulatory or architectural controls that apply specifically to this classification level beyond encryption and audit.",
+                "items": { "type": "string" }
+              }
+            }
+          }
+        },
+        "per_service_classification": {
+          "type": "array",
+          "description": "Explicit data classification assigned to each service. This classification is the primary input to SIEM alert severity, CVE triage priority, and audit pipeline routing.",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["service", "classification", "justification"],
+            "additionalProperties": false,
+            "properties": {
+              "service": {
+                "type": "string",
+                "description": "Service identifier and name in the format 'SVC-XXX ServiceName'."
+              },
+              "classification": {
+                "type": "string",
+                "description": "Classification level assigned to this service, drawn from the levels array.",
+                "enum": ["public", "internal", "confidential", "pii", "financial", "regulated"]
+              },
+              "justification": {
+                "type": "string",
+                "description": "Reason this classification was assigned — what sensitive data the service holds or processes."
+              }
+            }
+          }
+        }
+      }
+    },
+    "network_segmentation": {
+      "type": "object",
+      "description": "Network zone model defining which services are grouped into each zone, and the access rules governing traffic between zones.",
+      "required": ["zones"],
+      "additionalProperties": false,
+      "properties": {
+        "zones": {
+          "type": "array",
+          "description": "Defined network zones, each with a list of services that reside in that zone and the access policy governing inbound and outbound traffic.",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["name", "services", "access"],
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Short, human-readable name for the network zone."
+              },
+              "services": {
+                "type": "array",
+                "description": "Services that reside in this zone, referenced by identifier and name.",
+                "minItems": 1,
+                "items": { "type": "string" }
+              },
+              "access": {
+                "type": "string",
+                "description": "Access policy for this zone: who may reach it, from where, and under what conditions."
+              }
+            }
+          }
+        }
+      }
+    },
+    "design_decisions": {
+      "type": "array",
+      "description": "Architectural decisions that shaped the security model, recorded for audit trail and future maintainers. Each decision captures the chosen approach, the forces that drove it, alternatives evaluated, and why they were rejected.",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "decision", "rationale"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^DD-SEC-[0-9]{3}$",
+            "description": "Unique decision identifier in the format DD-SEC-XXX."
+          },
+          "decision": {
+            "type": "string",
+            "description": "The decision taken, stated as a present-tense directive."
+          },
+          "rationale": {
+            "type": "string",
+            "description": "Why this decision was made — the forces, regulatory requirements, and trade-offs considered."
+          },
+          "alternatives_considered": {
+            "type": "array",
+            "description": "Alternative approaches that were evaluated and not chosen.",
+            "items": { "type": "string" }
+          },
+          "rejected_because": {
+            "type": "string",
+            "description": "Consolidated reason why the alternatives were rejected."
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,116 @@
+{
+  "id": "CAP-002",
+  "name": "Commercial Banking",
+  "description": "Provides banking products and services to business customers, including SMEs and mid-market corporates. Covers transactional accounts, lending, trade finance, treasury, and payment acceptance. Operates under FCA conduct rules, PRA prudential standards, and applicable UK financial legislation.",
+  "mandate_source": [
+    "Banking Act 2009",
+    "FCA COBS",
+    "PRA Rulebook - Credit Risk",
+    "Companies Act 2006"
+  ],
+  "sub_capabilities": [
+    {
+      "id": "CAP-002.01",
+      "name": "Business Current Accounts",
+      "description": "Transactional banking for business customers, including account opening, payments, direct debits, overdraft facilities, and online/mobile banking access.",
+      "promotion_test": {
+        "verdict": "RETAIN",
+        "rationale": "Participants are the same business customers served by the broader Commercial Banking capability. Regulatory framework (Banking Act, FCA COBS) is shared with the parent. Lifecycle is tightly coupled to the core customer relationship and onboarding processes. No independent scalability driver that justifies separation at this stage."
+      },
+      "shared_with": [
+        {
+          "capability": "Customer Onboarding",
+          "parent": "Retail Banking",
+          "note": "KYC/AML checks and account opening workflows share infrastructure and compliance processes with the Retail Banking onboarding capability."
+        }
+      ]
+    },
+    {
+      "id": "CAP-002.02",
+      "name": "Business Lending",
+      "description": "Commercial loans, revolving credit facilities, term loans, and asset finance products for business customers. Includes credit assessment, drawdown, repayment scheduling, covenant monitoring, and collections.",
+      "promotion_test": {
+        "verdict": "RETAIN",
+        "rationale": "Close to promote: credit risk lifecycle is distinct and scalability pressures exist. However, the lending lifecycle (origination, approval, drawdown) overlaps significantly with the core commercial banking customer relationship and shared credit risk infrastructure. Retained pending further domain decomposition of the credit origination flow.",
+        "close_to_promote": true
+      },
+      "shared_with": [
+        {
+          "capability": "Credit Risk",
+          "parent": "Risk Management",
+          "note": "Credit scoring models, exposure limits, and Basel III/IV capital calculations are shared with the enterprise credit risk capability."
+        }
+      ]
+    },
+    {
+      "id": "CAP-002.03",
+      "name": "Trade Finance",
+      "description": "Documentary trade products including letters of credit (import and export), documentary collections, standby letters of credit, bank guarantees, and supply chain finance. Supports international trade between UK corporates and overseas counterparties.",
+      "promotion_test": {
+        "verdict": "PROMOTE",
+        "rationale": "Distinct participants (shipping companies, customs authorities, overseas correspondent banks, exporters/importers) not present in core commercial banking. Governed by a separate regulatory and rules framework (UCP 600, ICC Uniform Rules for Collections, ISBP). Distinct multi-party lifecycle per trade instrument (issuance, presentation, examination, settlement) that diverges from standard lending or payments. Can scale independently as trade volumes and correspondent banking relationships grow without coupling to account or lending systems."
+      },
+      "shared_with": []
+    },
+    {
+      "id": "CAP-002.04",
+      "name": "Treasury Services",
+      "description": "Foreign exchange products, interest rate hedging instruments (swaps, caps, collars), and cash management solutions for corporate clients. Includes FX spot and forward contracts, money market placements, and notional pooling.",
+      "promotion_test": {
+        "verdict": "PROMOTE",
+        "rationale": "Distinct participants (financial market counterparties, exchanges, clearing houses, ISDA-contracted entities) who are separate from standard commercial banking customers. Governed by a dedicated regulatory framework (MiFID II, EMIR, FCA MAR) that imposes trade reporting, best execution, and collateral obligations not applicable to core banking. Distinct deal lifecycle (execution, confirmation, settlement, margin calls, ISDA/CSA management) that is independent of lending or account operations. Can scale independently in line with market activity and hedging demand."
+      },
+      "shared_with": [
+        {
+          "capability": "Financial Markets",
+          "parent": "Investment Banking",
+          "note": "Pricing engines, ISDA documentation management, and trade reporting pipelines may be shared with the Investment Banking financial markets capability where the bank operates both divisions."
+        }
+      ]
+    },
+    {
+      "id": "CAP-002.05",
+      "name": "Merchant Services",
+      "description": "Card acquiring services, point-of-sale terminal provision, online payment acceptance, and settlement for business customers who accept card payments. Includes chargeback management, fraud monitoring, and reconciliation reporting.",
+      "promotion_test": {
+        "verdict": "PROMOTE",
+        "rationale": "Distinct participants (card schemes such as Visa/Mastercard, payment service providers, terminal manufacturers, acquiring processors, merchants) who are not standard commercial banking customers or counterparties. Governed by a separate rules framework (PCI-DSS, card scheme operating rules, PSR interchange regulations) independent of banking prudential standards. Distinct lifecycle (merchant onboarding, authorisation, clearing, settlement, chargeback) that operates on different timing and processing rails to accounts or lending. Can scale independently to meet card transaction volume growth without impacting other Commercial Banking systems."
+      },
+      "shared_with": [
+        {
+          "capability": "Payments",
+          "parent": "Retail Banking",
+          "note": "Settlement and reconciliation infrastructure may be shared with the Retail Banking payments capability, particularly for Faster Payments and BACS rails used in merchant settlement runs."
+        }
+      ]
+    }
+  ],
+  "design_decisions": [
+    {
+      "id": "DD-CAP-002-001",
+      "title": "Trade Finance, Treasury Services, and Merchant Services to be bounded as separate domains",
+      "status": "Accepted",
+      "date": "2026-04-15",
+      "context": "All three sub-capabilities passed the promotion test based on distinct participants, separate regulatory frameworks, independent lifecycles, and independent scalability drivers. Retaining them inside a monolithic Commercial Banking bounded context would create unnecessary coupling and complicate compliance obligations under UCP 600/ICC, MiFID II/EMIR, and PCI-DSS respectively.",
+      "decision": "Trade Finance (CAP-002.03), Treasury Services (CAP-002.04), and Merchant Services (CAP-002.05) will be designed and delivered as separate bounded contexts with their own data stores, APIs, and deployment pipelines. They will integrate with core Commercial Banking via published domain events and well-defined API contracts rather than shared databases.",
+      "consequences": [
+        "Each promoted domain owns its regulatory compliance posture independently, reducing blast radius of rule changes.",
+        "Requires investment in inter-domain integration patterns (event bus, API gateway) and clear ownership boundaries.",
+        "Business Lending (CAP-002.02) remains retained but should be re-evaluated for promotion once credit origination workflows are decomposed further."
+      ]
+    },
+    {
+      "id": "DD-CAP-002-002",
+      "title": "Customer Onboarding shared service to serve both Retail and Commercial Banking",
+      "status": "Accepted",
+      "date": "2026-04-15",
+      "context": "Business Current Accounts (CAP-002.01) requires KYC, AML screening, and account opening workflows that are substantively the same as those in Retail Banking. Building a separate onboarding capability for Commercial Banking would duplicate compliance logic and create inconsistent regulatory outcomes.",
+      "decision": "A shared Customer Onboarding capability will serve both Retail Banking and Commercial Banking. Commercial-specific requirements (e.g., beneficial ownership checks under the Money Laundering Regulations 2017, Companies House verification) will be handled as configurable extensions within the shared capability rather than a separate service.",
+      "consequences": [
+        "Reduces duplication of KYC/AML logic and compliance tooling across divisions.",
+        "Shared service must accommodate commercial-specific data requirements (company registration, UBO data) without becoming a bottleneck.",
+        "Governance of the shared capability must include representation from both Retail and Commercial Banking product owners."
+      ]
+    }
+  ]
+}

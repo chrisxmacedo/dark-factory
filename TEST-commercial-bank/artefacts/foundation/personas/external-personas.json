@@ -1,0 +1,192 @@
+{
+  "$schema": "../../schemas/persona.schema.json",
+  "personas": [
+    {
+      "id": "PER-001",
+      "name": "Personal Customer",
+      "type": "external",
+      "description": "A retail banking customer who holds one or more personal accounts (current, savings, credit card, mortgage). They transact daily via digital channels and occasionally visit a branch or call the contact centre. Their primary needs are account access, payments, and product self-service.",
+      "capability_touchpoints": [
+        "CAP-001",
+        "CAP-001.01",
+        "CAP-001.02",
+        "CAP-001.03",
+        "CAP-001.04",
+        "CAP-001.05",
+        "CAP-003.01",
+        "CAP-003.02",
+        "CAP-003.05",
+        "CAP-007.01",
+        "CAP-007.02",
+        "CAP-007.04"
+      ],
+      "access_classification": "authenticated",
+      "channels": ["web_portal", "mobile_app", "branch", "telephone"],
+      "frequency": "daily",
+      "volume_estimate": "Approximately 10–15 million active personal customers generating tens of millions of digital sessions per day."
+    },
+    {
+      "id": "PER-002",
+      "name": "Business Customer",
+      "type": "external",
+      "description": "An SME or mid-market business that holds a business current account and accesses commercial lending, trade finance, and payment services. They interact via online business banking and relationship manager channels, with a need for bulk payment processing, FX, and credit facilities.",
+      "capability_touchpoints": [
+        "CAP-001",
+        "CAP-001.01",
+        "CAP-002",
+        "CAP-002.01",
+        "CAP-002.02",
+        "CAP-002.03",
+        "CAP-003.01",
+        "CAP-003.02",
+        "CAP-003.03",
+        "CAP-003.04",
+        "CAP-007.01",
+        "CAP-007.03"
+      ],
+      "access_classification": "authenticated",
+      "channels": ["web_portal", "api", "telephone", "file_transfer"],
+      "frequency": "daily",
+      "volume_estimate": "Approximately 500,000–800,000 active business banking relationships, generating high volumes of bulk file payments and real-time transactions."
+    },
+    {
+      "id": "PER-003",
+      "name": "High Net Worth Client",
+      "type": "external",
+      "description": "An individual with investable assets typically above £1 million who accesses private banking, investment advisory, and portfolio management services. They have a dedicated wealth advisor and engage on a planned, relationship-led basis for financial planning and discretionary portfolio reviews.",
+      "capability_touchpoints": [
+        "CAP-001",
+        "CAP-001.01",
+        "CAP-001.02",
+        "CAP-006",
+        "CAP-006.01",
+        "CAP-006.02",
+        "CAP-006.03",
+        "CAP-006.04",
+        "CAP-007.01"
+      ],
+      "access_classification": "authenticated",
+      "channels": ["web_portal", "telephone", "branch", "email"],
+      "frequency": "weekly",
+      "volume_estimate": "Approximately 20,000–50,000 HNW and ultra-HNW clients, each generating relatively low transaction volumes but high average portfolio values."
+    },
+    {
+      "id": "PER-004",
+      "name": "Mortgage Applicant",
+      "type": "external",
+      "description": "A personal customer or new prospect who is applying for a residential mortgage, remortgage, or buy-to-let loan. Their interaction is concentrated in the application, underwriting, and completion lifecycle, triggered by a property transaction or rate review rather than ongoing daily activity.",
+      "capability_touchpoints": [
+        "CAP-001",
+        "CAP-001.04",
+        "CAP-004.01",
+        "CAP-005.01",
+        "CAP-007.01",
+        "CAP-007.02"
+      ],
+      "access_classification": "authenticated",
+      "channels": ["web_portal", "mobile_app", "branch", "telephone"],
+      "frequency": "event_driven",
+      "volume_estimate": "Approximately 8,000–15,000 new mortgage applications per month, peaking with house purchase seasons and interest rate changes."
+    },
+    {
+      "id": "PER-005",
+      "name": "Third Party Provider (TPP)",
+      "type": "external",
+      "description": "An FCA-authorised Payment Initiation Service Provider (PISP) or Account Information Service Provider (AISP) consuming Open Banking APIs under PSD2/UK Open Banking standards. They access account data or initiate payments on behalf of their end customers using OAuth 2.0 delegated authorisation.",
+      "capability_touchpoints": [
+        "CAP-007.03",
+        "CAP-003.06",
+        "CAP-003.01",
+        "CAP-005.01",
+        "CAP-005.04"
+      ],
+      "access_classification": "authenticated",
+      "channels": ["api"],
+      "frequency": "daily",
+      "volume_estimate": "Approximately 200–400 active registered TPPs, some generating millions of API calls per day in aggregate across their customer bases."
+    },
+    {
+      "id": "PER-006",
+      "name": "Merchant",
+      "type": "external",
+      "description": "A business that accepts card payments through the bank's acquiring services. They require authorisation, settlement, chargeback management, and reconciliation reports. Larger merchants may also use value-added services such as fraud analytics dashboards and multi-currency settlement.",
+      "capability_touchpoints": [
+        "CAP-002.05",
+        "CAP-003.05",
+        "CAP-004.04",
+        "CAP-007.01"
+      ],
+      "access_classification": "authenticated",
+      "channels": ["web_portal", "api", "file_transfer"],
+      "frequency": "daily",
+      "volume_estimate": "Approximately 30,000–60,000 merchant relationships, collectively processing hundreds of millions of card transactions per year."
+    },
+    {
+      "id": "PER-007",
+      "name": "Correspondent Bank",
+      "type": "external",
+      "description": "A foreign or domestic financial institution that maintains a nostro/vostro relationship with the bank to facilitate cross-border payments, trade finance instruments (LCs, guarantees), and FX settlement. Communication is predominantly via SWIFT messaging and structured file exchange.",
+      "capability_touchpoints": [
+        "CAP-002.03",
+        "CAP-002.04",
+        "CAP-003.03",
+        "CAP-003.04",
+        "CAP-005.01",
+        "CAP-005.05"
+      ],
+      "access_classification": "privileged",
+      "channels": ["swift", "api", "file_transfer"],
+      "frequency": "daily",
+      "volume_estimate": "Approximately 50–150 active correspondent banking relationships, each settling significant daily nostro positions."
+    },
+    {
+      "id": "PER-008",
+      "name": "Regulator (FCA / PRA)",
+      "type": "external",
+      "description": "The Financial Conduct Authority and Prudential Regulation Authority as supervisory bodies. They receive mandatory regulatory submissions (COREP, FINREP, CMAR, SMR notifications, complaint reports) and may conduct supervisory reviews or data requests. Access is structured, scheduled, and governed by legal obligation.",
+      "capability_touchpoints": [
+        "CAP-005.02",
+        "CAP-005.01",
+        "CAP-004.01",
+        "CAP-004.02",
+        "CAP-004.03",
+        "CAP-005.03"
+      ],
+      "access_classification": "privileged",
+      "channels": ["file_transfer", "email", "api"],
+      "frequency": "quarterly",
+      "volume_estimate": "Two primary regulators (FCA and PRA) plus periodic engagement with FOS, ICO, and PSR; bulk submission volumes are large but the persona population is a handful of regulated entities."
+    },
+    {
+      "id": "PER-009",
+      "name": "Card Network (Visa / Mastercard)",
+      "type": "external",
+      "description": "The card scheme operating the payment rails through which authorisation, clearing, and settlement messages flow. The bank participates as both an issuer and acquirer. The relationship involves real-time authorisation messages, daily net settlement files, scheme rules compliance, and chargeback arbitration.",
+      "capability_touchpoints": [
+        "CAP-003.05",
+        "CAP-004.04",
+        "CAP-005.02"
+      ],
+      "access_classification": "privileged",
+      "channels": ["api", "swift", "file_transfer"],
+      "frequency": "daily",
+      "volume_estimate": "One connection per scheme (Visa, Mastercard, and optionally Amex), each carrying hundreds of millions of authorisation messages annually."
+    },
+    {
+      "id": "PER-010",
+      "name": "Insurance Underwriter",
+      "type": "external",
+      "description": "A panel insurer or Lloyd's syndicate that underwrites products distributed by the bank through its Insurance Distribution capability (home, travel, life, payment protection). Interaction includes product scheme management, claims referrals, policy data exchange, and commission reconciliation.",
+      "capability_touchpoints": [
+        "CAP-001.06",
+        "CAP-005.01",
+        "CAP-005.03",
+        "CAP-005.04"
+      ],
+      "access_classification": "authenticated",
+      "channels": ["api", "file_transfer", "email"],
+      "frequency": "event_driven",
+      "volume_estimate": "Approximately 10–30 panel underwriters, with event-driven file exchanges triggered by policy inception, renewal, claim, or cancellation."
+    }
+  ]
+}

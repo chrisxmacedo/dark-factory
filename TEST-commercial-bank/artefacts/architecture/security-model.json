@@ -1,0 +1,209 @@
+{
+  "$schema": "../schemas/security-model.schema.json",
+  "_meta": {
+    "generated": "2026-04-15",
+    "description": "Security architecture for the commercial bank platform following a zero-trust model. Covers the six observable security posture controls surfaced in the Observability Aggregator dashboard, the mTLS service-to-service authentication model using SPIFFE/SPIRE workload identity, a six-level data classification scheme with per-service assignments, five-zone network segmentation, and three architectural design decisions. All policy is version-controlled in service.yaml manifests and enforced at runtime by Istio and the Zero-Trust Policy Engine (SVC-113)."
+  },
+  "security_posture_controls": [
+    {
+      "id": "SEC-001",
+      "name": "Zero-Trust Policy Map",
+      "description": "Overlay on the container diagram showing for each service: what it is allowed to call (from service.yaml), what it actually calls (from Istio/Envoy telemetry), and the diff. Any observed call not in policy = security finding. Any allowed call never made = dead policy to remove (least privilege). Data source: service mesh access logs via OTel Collector → Zero-Trust Policy Engine.",
+      "data_source": "service.yaml manifests + Istio/Envoy access logs",
+      "enforcement": "Zero-Trust Policy Engine (SVC-113)",
+      "alert_severity": "critical"
+    },
+    {
+      "id": "SEC-002",
+      "name": "mTLS Edge Status",
+      "description": "Every connection between services carries encryption status from service mesh telemetry. Green = mTLS (mutual TLS, both sides authenticated). Amber = TLS only (encrypted but no mutual auth). Red = plaintext — immediately actionable. Derived from Istio access log fields.",
+      "data_source": "Istio access logs via OTel Collector",
+      "enforcement": "Service Mesh (SVC-106)",
+      "alert_severity": "critical_on_red"
+    },
+    {
+      "id": "SEC-003",
+      "name": "Secret Rotation Age",
+      "description": "secret_expiry_seconds Prometheus gauge per secret. Green = rotated within window. Amber = approaching expiry (<14 days). Red = overdue — violation of service.yaml rotation_days. Vault event stream transitions from polled to push.",
+      "data_source": "Prometheus scrape of secret_expiry_seconds gauge + Vault/AWS Secrets Manager events",
+      "enforcement": "Secrets Management (SVC-105)",
+      "alert_severity": "warning_on_amber_critical_on_red"
+    },
+    {
+      "id": "SEC-004",
+      "name": "Blast Radius Visualiser",
+      "description": "Click any service to see: upstream (what data it has access to) and downstream (what an attacker could reach). Uses dependency graph from service.yaml — criticality field (hard/soft) determines immediate failure vs degradation.",
+      "data_source": "service.yaml dependency graph traversal",
+      "enforcement": "Observability Aggregator dashboard overlay",
+      "alert_severity": "informational"
+    },
+    {
+      "id": "SEC-005",
+      "name": "CVE Exposure Badges",
+      "description": "Snyk/Dependabot/Trivy results piped to Observability Aggregator via webhook. Each service shows critical/high CVE count. CVE on services with data_classification pii or financial triggers elevated SIEM alerts. Updated on deploy, not continuously.",
+      "data_source": "Snyk/Trivy webhook on new finding",
+      "enforcement": "CI/CD pipeline gate + Observability Aggregator",
+      "alert_severity": "elevated_for_pii_financial"
+    },
+    {
+      "id": "SEC-006",
+      "name": "Audit Log Separation",
+      "description": "Payment, IAM, KYC/AML, admin, and config change logs go to separate WORM pipeline. 100% capture, 7yr retention, immutable, auditor-only access. Engineers excluded. Dashboard gets read-only compliance summary only. S3 Object Lock in COMPLIANCE mode (not GOVERNANCE — GOVERNANCE allows privileged delete).",
+      "data_source": "OTel Collector audit.* topic routing",
+      "enforcement": "Audit Log Store (SVC-111) + S3 Object Lock COMPLIANCE mode",
+      "alert_severity": "critical_on_gap"
+    }
+  ],
+  "service_to_service_auth": {
+    "model": "mTLS via service mesh (Istio)",
+    "identity_source": "SPIFFE/SPIRE workload identity",
+    "token_propagation": "JWT with service identity claims propagated via Authorization header",
+    "policy_enforcement": "Istio AuthorizationPolicy resources generated from service.yaml allowed-call declarations",
+    "exceptions": [
+      {
+        "pair": "External payment rails (SWIFT, FPS, BACS, CHAPS)",
+        "auth": "Scheme-specific PKI and message authentication",
+        "rationale": "External systems use their own auth standards"
+      }
+    ]
+  },
+  "data_classification": {
+    "levels": [
+      {
+        "level": "public",
+        "description": "Non-sensitive, published information",
+        "examples": ["Product information", "Branch locations", "Interest rates"],
+        "encryption_at_rest": false,
+        "encryption_in_transit": true,
+        "audit_logging": false
+      },
+      {
+        "level": "internal",
+        "description": "Internal operational data",
+        "examples": ["Service metrics", "Non-PII logs", "Configuration"],
+        "encryption_at_rest": true,
+        "encryption_in_transit": true,
+        "audit_logging": false
+      },
+      {
+        "level": "confidential",
+        "description": "Business-sensitive data",
+        "examples": ["Credit decisions", "Risk models", "Pricing strategies"],
+        "encryption_at_rest": true,
+        "encryption_in_transit": true,
+        "audit_logging": true
+      },
+      {
+        "level": "pii",
+        "description": "Personally identifiable information",
+        "examples": ["Customer names", "Addresses", "Date of birth", "National Insurance numbers"],
+        "encryption_at_rest": true,
+        "encryption_in_transit": true,
+        "audit_logging": true,
+        "additional_controls": [
+          "GDPR subject access rights",
+          "Right to erasure",
+          "72hr breach notification",
+          "PII scrubbing in OTel pipeline"
+        ]
+      },
+      {
+        "level": "financial",
+        "description": "Financial transaction and account data",
+        "examples": ["Account balances", "Transaction history", "Payment instructions", "Card numbers"],
+        "encryption_at_rest": true,
+        "encryption_in_transit": true,
+        "audit_logging": true,
+        "additional_controls": [
+          "PCI DSS Req 3 (cardholder data storage)",
+          "PCI DSS Req 10 (audit trails)",
+          "WORM audit pipeline",
+          "Never log full PAN or CVV"
+        ]
+      },
+      {
+        "level": "regulated",
+        "description": "Data subject to specific regulatory handling",
+        "examples": ["SAR filings", "OFSI reports", "SM&CR records", "MLR 2017 CDD records"],
+        "encryption_at_rest": true,
+        "encryption_in_transit": true,
+        "audit_logging": true,
+        "additional_controls": [
+          "Tipping-off prevention (SARs)",
+          "5yr+ retention requirements",
+          "Regulator access obligations"
+        ]
+      }
+    ],
+    "per_service_classification": [
+      { "service": "SVC-100 IAM", "classification": "pii", "justification": "Holds customer credentials, session data, SM&CR mappings" },
+      { "service": "SVC-012 Retail Accounts", "classification": "financial", "justification": "Account balances, transaction history" },
+      { "service": "SVC-014 Domestic Payments", "classification": "financial", "justification": "Payment instructions, settlement data" },
+      { "service": "SVC-010 KYC/AML", "classification": "regulated", "justification": "CDD records, SAR filings, PEP screening results" },
+      { "service": "SVC-051 Sanctions Screening", "classification": "regulated", "justification": "OFSI reporting, screening results" },
+      { "service": "SVC-009 Fraud Detection", "classification": "financial", "justification": "Transaction scoring, fraud case data" },
+      { "service": "SVC-008 Card Processing", "classification": "financial", "justification": "Card numbers (tokenised), authorisation data" },
+      { "service": "SVC-015 Risk Engine", "classification": "confidential", "justification": "Credit risk models, exposure calculations" },
+      { "service": "SVC-104 Data Platform", "classification": "pii", "justification": "Aggregated customer and financial data" },
+      { "service": "SVC-016 Compliance Service", "classification": "regulated", "justification": "Regulatory returns, conduct monitoring" },
+      { "service": "SVC-050 Customer Onboarding", "classification": "pii", "justification": "Customer identity documents, verification data" },
+      { "service": "SVC-005 Treasury Service", "classification": "financial", "justification": "FX positions, derivative valuations" },
+      { "service": "SVC-004 Trade Finance", "classification": "financial", "justification": "LC documents, trade guarantees" },
+      { "service": "SVC-017 Wealth Platform", "classification": "financial", "justification": "Portfolio positions, investment advice records (MiFID II)" },
+      { "service": "SVC-102 Event Bus", "classification": "internal", "justification": "Message headers only — payloads classified per topic" },
+      { "service": "SVC-107 OTel Collector", "classification": "internal", "justification": "Telemetry data with PII scrubbing applied" }
+    ]
+  },
+  "network_segmentation": {
+    "zones": [
+      {
+        "name": "DMZ",
+        "services": ["SVC-101 API Gateway", "SVC-011 Open Banking API"],
+        "access": "Internet-facing, WAF-protected"
+      },
+      {
+        "name": "Application Zone",
+        "services": ["All domain and cross-cutting services"],
+        "access": "Internal only, mTLS between services"
+      },
+      {
+        "name": "Data Zone",
+        "services": ["All databases, Event Bus, Data Platform"],
+        "access": "Application zone only, no direct external access"
+      },
+      {
+        "name": "Compliance Zone",
+        "services": ["SVC-111 Audit Log Store", "SVC-010 KYC/AML", "SVC-016 Compliance"],
+        "access": "Restricted access, auditor-only for audit store"
+      },
+      {
+        "name": "Management Zone",
+        "services": ["SVC-107 OTel Collector", "SVC-112 Observability Aggregator", "SVC-113 Zero-Trust Policy Engine"],
+        "access": "Platform engineering only"
+      }
+    ]
+  },
+  "design_decisions": [
+    {
+      "id": "DD-SEC-001",
+      "decision": "Zero-trust model with service.yaml as authoritative allowed-call policy source",
+      "rationale": "service.yaml is version-controlled and code-reviewed. Istio enforces at runtime. Diff between policy and observed calls is a security signal — not just a configuration artefact.",
+      "alternatives_considered": ["Network-only segmentation", "Manual firewall rules"],
+      "rejected_because": "Network-only cannot enforce service-level granularity. Manual rules drift from reality."
+    },
+    {
+      "id": "DD-SEC-002",
+      "decision": "Data classification drives SIEM alert severity — CVE on a pii/financial service triggers elevated alert",
+      "rationale": "Not all vulnerabilities are equal. A CVE in the notification service is less urgent than the same CVE in KYC/AML. data_classification in service.yaml enables automated triage.",
+      "alternatives_considered": ["Uniform severity for all CVEs"],
+      "rejected_because": "Alert fatigue. Uniform severity means critical findings on regulated services get the same attention as low-risk services."
+    },
+    {
+      "id": "DD-SEC-003",
+      "decision": "S3 Object Lock COMPLIANCE mode for audit store — not GOVERNANCE mode",
+      "rationale": "GOVERNANCE mode allows a privileged user to delete objects, defeating WORM requirement. COMPLIANCE mode makes objects immutable for the retention period — even root/admin cannot delete. Required for PCI Req 10, MLR 2017 Reg 40, SM&CR accountability.",
+      "alternatives_considered": ["GOVERNANCE mode with policy controls"],
+      "rejected_because": "Regulatory requirement is immutability, not access control. A sufficiently privileged user bypassing GOVERNANCE mode is exactly the threat model audit logs protect against."
+    }
+  ]
+}

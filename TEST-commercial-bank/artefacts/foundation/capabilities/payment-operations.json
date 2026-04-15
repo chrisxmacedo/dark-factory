@@ -1,0 +1,85 @@
+{
+  "id": "CAP-003",
+  "name": "Payment Operations",
+  "description": "Manages the end-to-end origination, routing, clearing, and settlement of domestic and international payment transactions on behalf of the bank and its customers. Encompasses high-value, bulk, real-time, card, and open banking payment rails, ensuring compliance with UK regulatory obligations, scheme rules, and fraud/sanctions controls.",
+  "mandate_source": [
+    "Payment Services Regulations 2017",
+    "FCA PSRs",
+    "Bank of England RTGS",
+    "Faster Payments Scheme Rules",
+    "SEPA Regulation"
+  ],
+  "sub_capabilities": [
+    {
+      "id": "CAP-003.01",
+      "name": "Faster Payments",
+      "description": "Processes real-time domestic payments via the Faster Payments Scheme (FPS), including single immediate payments, forward-dated payments, and standing orders routed over the FPS rail. Provides near-instantaneous credit confirmation to payers and payees.",
+      "promotion_test": {
+        "outcome": "RETAIN",
+        "rationale": "Tightly coupled to domestic sterling payment infrastructure and the bank's core payment engine. Participant set (UK retail/commercial banks via Pay.UK) and lifecycle are shared with BACS. No independent scalability benefit justifies promotion at this time."
+      }
+    },
+    {
+      "id": "CAP-003.02",
+      "name": "BACS Processing",
+      "description": "Handles bulk payment processing via the BACS scheme, covering direct debits, direct credits, and standing orders settled on a three-day processing cycle. Manages submission, validation, and reconciliation of BACS files.",
+      "promotion_test": {
+        "outcome": "RETAIN",
+        "rationale": "Shares the domestic payment infrastructure, participant model (UK banks via Pay.UK/Vocalink), and operational processes with Faster Payments. The bulk/batch lifecycle is handled within the same payment operations domain."
+      }
+    },
+    {
+      "id": "CAP-003.03",
+      "name": "CHAPS",
+      "description": "Executes high-value, same-day sterling payments through the Bank of England's Real-Time Gross Settlement (RTGS) infrastructure. Used for time-critical wholesale, property, and large corporate transactions requiring irrevocable settlement.",
+      "promotion_test": {
+        "outcome": "RETAIN",
+        "rationale": "Inseparably coupled to the Bank of England RTGS infrastructure and the bank's direct or indirect RTGS membership. Settlement finality mechanics and liquidity management are integral to the core payment operations capability rather than a separately governed domain."
+      }
+    },
+    {
+      "id": "CAP-003.04",
+      "name": "International Payments",
+      "description": "Manages cross-border payment transfers via the SWIFT network and SEPA credit transfers/direct debits for euro-denominated transactions. Includes correspondent banking relationships, nostro/vostro account management, FX conversion, and compliance screening (sanctions, AML) specific to cross-border flows.",
+      "promotion_test": {
+        "outcome": "PROMOTE",
+        "rationale": "Distinct participant set (correspondent banks, SWIFT network, SEPA CSMs) not shared with domestic rails. Operates under a separate sanctions and AML framework (OFAC, UN, UK HMT sanctions lists overlaid on cross-border flows). Payment lifecycle (initiation, correspondent routing, FX conversion, nostro reconciliation) is materially different from domestic schemes. Independent scalability required to support volume growth in international corridors without impacting domestic payment SLAs."
+      }
+    },
+    {
+      "id": "CAP-003.05",
+      "name": "Card Processing",
+      "description": "Covers the issuer-side lifecycle of card transactions, including authorisation, clearing, and settlement with card networks (Visa, Mastercard). Manages chargeback processing, fraud decisioning, card scheme rule compliance, and interchange settlement.",
+      "promotion_test": {
+        "outcome": "PROMOTE",
+        "rationale": "Distinct participant set (card networks, acquirers, processors) operating under card scheme rules (Visa/Mastercard Operating Regulations) that are entirely separate from payment scheme rulebooks. Transaction lifecycle (authorisation message flows, clearing files, settlement positions) is architecturally distinct from credit transfer rails. Requires independent scalability to absorb peak card transaction volumes without contention with payment processing capacity."
+      }
+    },
+    {
+      "id": "CAP-003.06",
+      "name": "Open Banking Payments",
+      "description": "Enables Payment Initiation Services (PIS) via regulated open banking APIs under PSD2/PSRs, allowing authorised Third Party Providers (TPPs) to initiate payments from customer accounts. Manages consent flows, strong customer authentication (SCA), and routing of initiated payments onto underlying rails (typically FPS).",
+      "promotion_test": {
+        "outcome": "RETAIN",
+        "rationale": "Payment initiation ultimately executes on the Faster Payments rail, making it operationally coupled to the domestic payment engine. However, the consent and API layer is shared with the Digital Channels capability."
+      },
+      "shared_with": ["Digital Channels"]
+    }
+  ],
+  "design_decisions": [
+    {
+      "id": "DD-CAP-003-01",
+      "title": "International Payments promoted to standalone capability",
+      "decision": "International Payments is separated from the core Payment Operations capability into its own bounded capability domain.",
+      "rationale": "The distinct participant ecosystem (correspondent banks, SWIFT, SEPA CSMs), the independent sanctions/AML controls regime required for cross-border flows, and the materially different payment lifecycle (correspondent routing, FX conversion, nostro reconciliation) create sufficient complexity and governance separation to warrant a standalone capability. Independent deployment and scalability are required to grow international volumes without contention with high-frequency domestic payment processing.",
+      "consequences": "A formal integration contract (API or event) must be defined between the domestic Payment Operations capability and the International Payments capability. Sanctions screening logic must not be duplicated; a shared Financial Crime Compliance service should be consumed by both."
+    },
+    {
+      "id": "DD-CAP-003-02",
+      "title": "Card Processing promoted to standalone capability",
+      "decision": "Card Processing (issuer-side authorisation, clearing, and settlement) is separated from the core Payment Operations capability into its own bounded capability domain.",
+      "rationale": "Card scheme rules (Visa/Mastercard Operating Regulations) impose governance, certification, and change management obligations entirely separate from UK payment scheme rulebooks (Pay.UK, Bank of England). The authorisation message flow (ISO 8583 / ISO 20022 card messages), clearing file exchange, and chargeback lifecycle are architecturally distinct from credit transfer processing. Independent scalability is required to handle peak card transaction volumes, particularly intraday spikes, without impacting domestic payment SLAs.",
+      "consequences": "Card Processing will maintain its own scheme compliance programme and certification calendar. Settlement positions from card clearing must be reconciled against the bank's liquidity management function, requiring a defined interface to Treasury/Liquidity Management."
+    }
+  ]
+}

@@ -1,0 +1,103 @@
+{
+  "id": "GOV-007",
+  "capability_id": "CAP-007",
+  "capability_name": "Digital Channels",
+  "rules": [
+    {
+      "rule_id": "RULE-DC-001",
+      "name": "Open Banking Consent Management",
+      "source_legislation": "Payment Services Regulations 2017 (PSR 2017) — Regulations 67–69 (implementing PSD2 Articles 65–67); Open Banking Implementation Entity (OBIE) Standards v3.1+",
+      "description": "The bank (as Account Servicing Payment Service Provider, ASPSP) must provide access to customer payment account data and payment initiation to FCA-authorised Third Party Providers (TPPs) in accordance with the Open Banking standards. Customer consent to TPP access must be obtained directly by the TPP and must be explicit and granular. The bank must not impose obstacles to Open Banking access and must provide a dedicated interface (API) that meets OBIE technical standards. Consent must be re-confirmed by the customer at least every 90 days for data access.",
+      "authority_level": "senior_manager",
+      "approval_chain": [
+        "Open Banking Technical Lead",
+        "Head of Digital Channels",
+        "Chief Product Officer"
+      ],
+      "disclosure_obligations": [
+        "OBIE Directory registration kept up to date; any changes to API endpoints or certificates communicated within prescribed timescales",
+        "API performance and availability statistics reported to OBIE quarterly",
+        "Customer-facing documentation explaining Open Banking consent and how to revoke it",
+        "FCA notification of material disruption to Open Banking API availability beyond OBIE SLA thresholds"
+      ],
+      "constraints": [
+        "The bank must not discriminate against TPP-initiated transactions relative to direct customer transactions",
+        "Customer consent for Account Information Service access must be re-established at least every 90 days",
+        "The bank must not require TPPs to enter into commercial agreements or pay fees as a condition of API access",
+        "Fallback access mechanism must be available 24/7 where the dedicated interface is unavailable"
+      ]
+    },
+    {
+      "rule_id": "RULE-DC-002",
+      "name": "Digital Accessibility",
+      "source_legislation": "Equality Act 2010 — Section 20 (Reasonable Adjustments); Public Sector Bodies (Websites and Mobile Applications) (No. 2) Accessibility Regulations 2018; WCAG 2.1 Level AA (referenced standard)",
+      "description": "All digital customer-facing channels (internet banking, mobile app, and public website) must comply with WCAG 2.1 Level AA as a minimum, ensuring they are accessible to customers with disabilities. Public sector body regulations apply directly to the bank's public website; Equality Act duties apply to all channels. An accessibility statement must be published on the website, identifying any known non-compliances, and a feedback mechanism and enforcement contact must be provided. Accessibility must be assessed at the design stage and retested following material releases.",
+      "authority_level": "department_head",
+      "approval_chain": [
+        "Accessibility Lead",
+        "Head of Digital Experience",
+        "Chief Product Officer"
+      ],
+      "disclosure_obligations": [
+        "Accessibility statement published on website and updated within 12 months of the previous statement",
+        "Known non-compliances listed in accessibility statement with remediation timeline",
+        "Accessibility testing results retained and available to the Equality and Human Rights Commission on request",
+        "Customer feedback route for accessibility issues clearly signposted on all digital channels"
+      ],
+      "constraints": [
+        "All new digital features must pass WCAG 2.1 Level AA accessibility testing before production release",
+        "Accessibility statement must be reviewed and updated at least annually or following a material change to the service",
+        "Alternative accessible channel (e.g. telephone) must be available where a digital journey cannot be made accessible",
+        "Third-party components embedded in bank digital services must also meet WCAG 2.1 Level AA or an equivalent standard"
+      ]
+    },
+    {
+      "rule_id": "RULE-DC-003",
+      "name": "Session Timeout Requirements",
+      "source_legislation": "FCA Guidance on Cybersecurity — SYSC 13; FCA PS19/26 SCA-RTS (UK); NCSC Guidance on Session Management",
+      "description": "To reduce the risk of unauthorised access to customer accounts, online banking sessions must time out after a defined period of inactivity. The bank's SCA-RTS implementation requires that sessions accessing sensitive payment account data are re-authenticated using SCA after a maximum of 90 days, but session inactivity timeout must occur much sooner to meet cybersecurity obligations. Sessions must also be explicitly terminated on customer logout, invalidating all session tokens server-side.",
+      "authority_level": "department_head",
+      "approval_chain": [
+        "Cyber Security Engineer",
+        "Head of Cyber Security",
+        "Chief Information Security Officer"
+      ],
+      "disclosure_obligations": [
+        "Session timeout behaviour disclosed in digital channel Terms and Conditions",
+        "Session management controls included in the bank's annual CQUEST self-assessment (Bank of England CBEST framework)",
+        "Material changes to session timeout policy reviewed by the CISO and communicated to customers with 30 days notice",
+        "Incident reports for session hijacking or replay attacks submitted to FCA where meeting regulatory notification thresholds"
+      ],
+      "constraints": [
+        "Internet banking inactivity session timeout must not exceed 10 minutes for non-active user sessions",
+        "Session tokens must be invalidated server-side upon logout; client-side clearance alone is not sufficient",
+        "SCA re-authentication is required after 90 days of continuous session access regardless of activity",
+        "Concurrent session limits must be enforced; simultaneous logins from materially different geolocations must trigger risk-based authentication challenge"
+      ]
+    },
+    {
+      "rule_id": "RULE-DC-004",
+      "name": "Open Banking API Availability SLAs",
+      "source_legislation": "Open Banking Implementation Entity (OBIE) Operational Guidelines v1.0+; FCA PS18/25 — Approach to Final RTS on SCA and CSC; PSR 2017 Regulation 69(3)",
+      "description": "The bank must ensure its Open Banking dedicated interface achieves availability and performance standards at least equivalent to the bank's own direct customer-facing channels. The OBIE operational guidelines specify target availability of 99.5% per month. Planned downtime must be communicated to the OBIE Directory at least 24 hours in advance. Where the dedicated interface is unavailable or underperforming, the bank must activate its fallback mechanism and notify the FCA if the outage exceeds regulatory thresholds.",
+      "authority_level": "team_lead",
+      "approval_chain": [
+        "Open Banking Platform Engineer",
+        "API Operations Team Lead",
+        "Head of Digital Channels"
+      ],
+      "disclosure_obligations": [
+        "API availability and performance statistics published on the OBIE Directory on a monthly basis",
+        "Planned maintenance windows communicated to OBIE and registered TPPs at least 24 hours in advance",
+        "FCA notification if API availability falls below 99.5% over a rolling month for more than two consecutive months",
+        "API incident post-mortem reports retained and provided to FCA on request"
+      ],
+      "constraints": [
+        "Open Banking API monthly uptime must meet or exceed 99.5%; sustained breach triggers mandatory FCA reporting",
+        "Planned maintenance must not occur during peak payment windows (Mon-Fri 08:00–18:00 UK time) without prior FCA agreement",
+        "Response time for account data requests must not exceed 2 seconds at the 95th percentile under normal load",
+        "TPP API access must not be throttled below the rate afforded to the bank's own direct channel applications"
+      ]
+    }
+  ]
+}

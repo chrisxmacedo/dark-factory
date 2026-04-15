@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "service-dependencies.schema.json",
+  "title": "Service Dependencies",
+  "description": "Maps every service to a build tier (T0–T4) with typed dependency edges. Tier assignment determines build order; criticality determines blast radius when a dependency fails.",
+  "type": "object",
+  "required": ["_meta", "tier_definitions", "services", "build_order"],
+  "properties": {
+    "_meta": {
+      "type": "object",
+      "required": ["generated", "description"],
+      "properties": {
+        "generated": { "type": "string", "format": "date" },
+        "description": { "type": "string" },
+        "source_files": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "tier_definitions": {
+      "type": "array",
+      "minItems": 5,
+      "items": {
+        "type": "object",
+        "required": ["tier", "label", "description", "upstream_tiers_allowed"],
+        "properties": {
+          "tier": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4,
+            "description": "Tier number (0 = Foundation, 4 = Overlay)"
+          },
+          "label": {
+            "type": "string",
+            "description": "Short label e.g. T0 FOUNDATION"
+          },
+          "description": {
+            "type": "string",
+            "description": "What this tier represents and its build position"
+          },
+          "upstream_tiers_allowed": {
+            "type": "array",
+            "items": { "type": "integer", "minimum": 0, "maximum": 4 },
+            "description": "Tiers a service in this tier may depend on (empty = no upstream allowed)"
+          }
+        }
+      }
+    },
+    "services": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "tier", "type", "depends_on", "needed_by", "build_notes", "enables"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^SVC-[0-9]{3}$",
+            "description": "Unique service identifier"
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable service name"
+          },
+          "tier": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4,
+            "description": "Build tier assignment (0 = Foundation, 4 = Overlay)"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["DATABASE", "SERVICE", "COMPLIANCE", "INFRASTRUCTURE", "OBSERVABILITY"],
+            "description": "Broad service category"
+          },
+          "depends_on": {
+            "type": "array",
+            "description": "Typed dependency edges to upstream services",
+            "items": {
+              "type": "object",
+              "required": ["service_id", "protocol", "criticality"],
+              "properties": {
+                "service_id": {
+                  "type": "string",
+                  "pattern": "^SVC-[0-9]{3}$"
+                },
+                "protocol": {
+                  "type": "string",
+                  "enum": ["REST", "gRPC", "Kafka", "JDBC", "AMQP", "Internal"],
+                  "description": "Integration protocol between caller and dependency"
+                },
+                "criticality": {
+                  "type": "string",
+                  "enum": ["hard", "soft"],
+                  "description": "hard = sync; caller fails immediately if dependency is down. soft = async/degradable; caller continues in degraded mode."
+                }
+              }
+            }
+          },
+          "needed_by": {
+            "type": "array",
+            "description": "IDs of services that depend on this service (reverse lookup)",
+            "items": {
+              "type": "string",
+              "pattern": "^SVC-[0-9]{3}$"
+            }
+          },
+          "build_notes": {
+            "type": "string",
+            "description": "Rationale for tier placement and what this service unblocks"
+          },
+          "enables": {
+            "type": "array",
+            "description": "Descriptions of capabilities or services this unlocks when built",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    },
+    "build_order": {
+      "type": "array",
+      "description": "Recommended phased build sequence. Services within a phase may be built in parallel.",
+      "items": {
+        "type": "object",
+        "required": ["phase", "tier", "services", "rationale"],
+        "properties": {
+          "phase": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Sequential phase number"
+          },
+          "tier": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4,
+            "description": "Tier these services belong to"
+          },
+          "services": {
+            "type": "array",
+            "description": "Service IDs to build in this phase (parallelisable within the phase)",
+            "items": {
+              "type": "string",
+              "pattern": "^SVC-[0-9]{3}$"
+            }
+          },
+          "rationale": {
+            "type": "string",
+            "description": "Regulatory and business justification for this phase boundary"
+          }
+        }
+      }
+    }
+  }
+}

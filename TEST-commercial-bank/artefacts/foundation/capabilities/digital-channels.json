@@ -1,0 +1,133 @@
+{
+  "id": "CAP-007",
+  "name": "Digital Channels",
+  "description": "Customer-facing digital interfaces providing access to banking services across web, mobile, and API channels",
+  "mandate_source": [
+    "FCA Consumer Duty",
+    "PSD2/Open Banking",
+    "Accessibility Regulations 2018",
+    "Electronic Communications Act 2000"
+  ],
+  "sub_capabilities": [
+    {
+      "id": "CAP-007.01",
+      "name": "Online Banking",
+      "description": "Web-based self-service portal for personal and business customers to manage accounts, payments, and banking services",
+      "status": "RETAIN",
+      "promotion_test": {
+        "distinct_participants": {
+          "result": false,
+          "rationale": "Participants are the bank's own personal and business customers — the same population served by Mobile Banking and Customer Communications"
+        },
+        "distinct_regulatory_framework": {
+          "result": false,
+          "rationale": "Governed by FCA Consumer Duty and Accessibility Regulations 2018, the same framework that applies to Mobile Banking and Customer Communications"
+        },
+        "distinct_lifecycle": {
+          "result": false,
+          "rationale": "Lifecycle follows the customer relationship lifecycle shared with Mobile Banking; web and mobile channels are co-managed under the same digital product ownership model"
+        },
+        "independent_scalability": {
+          "result": false,
+          "rationale": "Web traffic scales with the customer base and session demand, which is correlated with Mobile Banking usage and driven by the same underlying customer events"
+        },
+        "promote": false
+      }
+    },
+    {
+      "id": "CAP-007.02",
+      "name": "Mobile Banking",
+      "description": "Native mobile application providing account management, payments, biometric authentication, and push notifications for customers",
+      "status": "RETAIN",
+      "promotion_test": {
+        "distinct_participants": {
+          "result": false,
+          "rationale": "Participants are the same personal and business customers served by Online Banking; the mobile app is an alternative interface to the same banking services"
+        },
+        "distinct_regulatory_framework": {
+          "result": false,
+          "rationale": "Governed by FCA Consumer Duty, PSD2 SCA requirements, and Accessibility Regulations 2018 — the same framework shared with Online Banking and Customer Communications"
+        },
+        "distinct_lifecycle": {
+          "result": false,
+          "rationale": "App release cycles are managed under the same digital channel governance as Online Banking; feature parity obligations link the two channel lifecycles"
+        },
+        "independent_scalability": {
+          "result": false,
+          "rationale": "Mobile session volume is correlated with Online Banking demand; both scale with the active customer base and are managed within a shared mobile-and-web platform capacity model"
+        },
+        "promote": false
+      }
+    },
+    {
+      "id": "CAP-007.03",
+      "name": "Open Banking APIs",
+      "description": "FCA-regulated AIS and PIS APIs exposing bank data and payment initiation to authorised Third Party Providers under PSD2 and the Open Banking Standard",
+      "status": "PROMOTE",
+      "shared_with": ["CAP-005 Payment Operations"],
+      "promotion_test": {
+        "distinct_participants": {
+          "result": true,
+          "rationale": "Primary participants are FCA-authorised Third Party Providers (AISPs and PISPs) and the Open Banking Implementation Entity (OBIE), not the bank's direct customers. These are categorically different counterparties with their own onboarding, contractual, and regulatory relationships with the bank."
+        },
+        "distinct_regulatory_framework": {
+          "result": true,
+          "rationale": "Governed by PSD2 Articles 66–67, the EBA Regulatory Technical Standards on SCA and CSC (RTS-SCA), and the Open Banking Standard published by OBIE. This is a materially distinct regulatory regime from the FCA Consumer Duty / Accessibility Regulations framework governing the customer-facing channel sub-capabilities, with separate FCA permissions, TPP registration obligations, and technical interface standards."
+        },
+        "distinct_lifecycle": {
+          "result": true,
+          "rationale": "The API lifecycle is driven by OBIE roadmap releases, EBA RTS amendments, and TPP integration versioning — entirely decoupled from the customer-facing channel release cadence. Breaking changes, deprecation windows, and conformance testing are governed by the Open Banking Standard, not the bank's internal digital product lifecycle."
+        },
+        "independent_scalability": {
+          "result": true,
+          "rationale": "API call volume is driven by TPP product adoption and the open banking ecosystem, which is independent of the bank's direct customer session volumes. The infrastructure must scale to serve an unbounded set of third-party applications and aggregators, requiring a separate capacity and availability model."
+        },
+        "promote": true,
+        "promotion_note": "Upon promotion, Open Banking APIs will be established as a standalone capability. Shared concerns with CAP-005 Payment Operations (PIS payment execution, fraud screening on initiated payments) should be modelled as integration dependencies rather than shared sub-capabilities."
+      }
+    },
+    {
+      "id": "CAP-007.04",
+      "name": "Customer Communications",
+      "description": "Secure in-app and email messaging, event-driven push notifications, and digital document delivery to banking customers",
+      "status": "RETAIN",
+      "promotion_test": {
+        "distinct_participants": {
+          "result": false,
+          "rationale": "Participants are the bank's own customers — the same population served by Online Banking and Mobile Banking"
+        },
+        "distinct_regulatory_framework": {
+          "result": false,
+          "rationale": "Governed by FCA Consumer Duty (fair, clear, and not misleading communications), GDPR for personal data in messages, and Electronic Communications Act 2000 — the same overarching framework applying to the broader digital channels capability"
+        },
+        "distinct_lifecycle": {
+          "result": false,
+          "rationale": "Communication templates and notification logic are tightly coupled to the digital channel product lifecycle; secure messaging is surfaced within Online Banking and Mobile Banking interfaces"
+        },
+        "independent_scalability": {
+          "result": false,
+          "rationale": "Message and notification volumes are a function of customer activity in Online Banking and Mobile Banking; no independent volume driver exists"
+        },
+        "promote": false
+      }
+    }
+  ],
+  "design_decisions": [
+    {
+      "id": "DD-CAP-007-001",
+      "title": "Open Banking APIs promoted to standalone capability",
+      "decision": "CAP-007.03 Open Banking APIs is promoted out of Digital Channels to become a standalone capability, with a declared integration dependency on CAP-005 Payment Operations for payment execution.",
+      "rationale": "Open Banking APIs passes all four promotion criteria: it serves FCA-authorised TPPs and OBIE rather than direct customers; it operates under a distinct PSD2/RTS-SCA regulatory framework with separate FCA permissions; its lifecycle is governed by the OBIE roadmap and EBA RTS versioning independently of the customer channel release cycle; and it must scale to serve an open ecosystem of third-party applications with its own capacity model. Retaining it within Digital Channels would conflate two architecturally and regulatorily distinct domains and create governance ambiguity. The shared concern with Payment Operations (PIS execution) is better expressed as an explicit integration dependency.",
+      "date": "2026-04-15",
+      "status": "ACCEPTED"
+    },
+    {
+      "id": "DD-CAP-007-002",
+      "title": "Online Banking and Mobile Banking retained as co-equal sub-capabilities under a single digital channel capability",
+      "decision": "Online Banking and Mobile Banking are retained as separate sub-capabilities within CAP-007 rather than being merged into a single 'Customer Self-Service' sub-capability or promoted individually.",
+      "rationale": "The two channels share participants, regulatory framework, and lifecycle but are operationally distinct delivery surfaces with different release toolchains, platform dependencies (browser vs. native OS), and accessibility compliance profiles. Retaining them as separate sub-capabilities preserves the ability to assign distinct product ownership and track channel-specific metrics, while the shared governance overhead of a single capability wrapper remains appropriate given their deep interdependencies. Neither meets the independent scalability or distinct regulatory framework criteria required for promotion.",
+      "date": "2026-04-15",
+      "status": "ACCEPTED"
+    }
+  ]
+}

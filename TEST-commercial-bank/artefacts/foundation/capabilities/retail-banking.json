@@ -1,0 +1,141 @@
+{
+  "id": "CAP-001",
+  "name": "Retail Banking",
+  "description": "Provision of regulated banking products and services to personal (retail) customers, including day-to-day transactional accounts, savings and deposit products, personal lending, residential mortgages, credit cards, and insurance distribution. Retail Banking operates under FCA conduct rules (BCOBS, MCOB, CONC, ICOBS) and PRA prudential requirements, serving individual consumers rather than business entities.",
+  "mandate_source": [
+    "Banking Act 2009",
+    "FCA BCOBS",
+    "PRA Rulebook - Deposits",
+    "Consumer Credit Act 1974"
+  ],
+  "sub_capabilities": [
+    {
+      "id": "CAP-001.01",
+      "name": "Current Accounts",
+      "description": "Day-to-day transactional banking for personal customers, including account opening, payment services (direct debits, standing orders, Faster Payments, CHAPS), debit card issuance, overdraft facilities, and statement provision. Core to the bank's retail proposition and subject to FCA BCOBS and PSR Payment Services Regulations.",
+      "regulatory_refs": ["FCA BCOBS", "Payment Services Regulations 2017", "Consumer Duty"],
+      "shared_with": ["Commercial Banking"],
+      "promotion_test": {
+        "distinct_participants": false,
+        "separate_regulatory_framework": false,
+        "distinct_lifecycle": false,
+        "independent_scalability": false,
+        "criteria_met": 0,
+        "decision": "retain",
+        "rationale": "Current Accounts are the foundational retail product. Participants are standard retail banking staff and customers, the regulatory framework (BCOBS, PSRs) is shared across transactional banking, the lifecycle is continuous and tightly coupled with other retail products, and scalability is achieved through shared retail banking infrastructure."
+      }
+    },
+    {
+      "id": "CAP-001.02",
+      "name": "Savings & Deposits",
+      "description": "Interest-bearing savings accounts, Individual Savings Accounts (ISAs), fixed-term deposits, and notice accounts for personal customers. Products are subject to FSCS deposit protection, FCA BCOBS, and PRA liquidity requirements. ISA products are additionally governed by HMRC ISA regulations.",
+      "regulatory_refs": ["FCA BCOBS", "PRA Rulebook - Deposits", "FSCS Deposit Protection", "HMRC ISA Regulations"],
+      "shared_with": ["Commercial Banking"],
+      "promotion_test": {
+        "distinct_participants": false,
+        "separate_regulatory_framework": false,
+        "distinct_lifecycle": false,
+        "independent_scalability": false,
+        "criteria_met": 0,
+        "decision": "retain",
+        "rationale": "Savings & Deposits uses the same customer base, relationship managers, and core banking infrastructure as Current Accounts. The regulatory framework overlaps substantially with transactional banking (BCOBS, PRA Deposits), the product lifecycle is short and renewable (unlike mortgages), and scalability is best delivered through shared retail deposit infrastructure."
+      }
+    },
+    {
+      "id": "CAP-001.03",
+      "name": "Personal Lending",
+      "description": "Unsecured personal loans and arranged/unarranged overdrafts for retail customers. Governed by the Consumer Credit Act 1974 and FCA CONC sourcebook. Includes credit assessment, loan origination, repayment scheduling, collections, and arrears management.",
+      "regulatory_refs": ["Consumer Credit Act 1974", "FCA CONC", "Consumer Duty"],
+      "shared_with": [],
+      "promotion_test": {
+        "distinct_participants": false,
+        "separate_regulatory_framework": false,
+        "distinct_lifecycle": false,
+        "independent_scalability": false,
+        "criteria_met": 0,
+        "decision": "retain",
+        "rationale": "Personal Lending shares credit assessment and collections capabilities with broader retail banking operations. The CCA/CONC framework, while distinct from BCOBS, is operationally managed within the same retail credit function. Loan lifecycles (typically 1-7 years) do not require dedicated long-horizon servicing teams separate from the retail operation, and volume scaling follows overall retail growth."
+      }
+    },
+    {
+      "id": "CAP-001.04",
+      "name": "Mortgages",
+      "description": "Residential mortgage origination, servicing, and collections for personal customers. Covers the full mortgage lifecycle: affordability assessment, property valuation, legal conveyancing coordination, offer and completion, on-going account servicing, payment holidays, arrears management, and possession proceedings. Subject to FCA MCOB and the EU-derived Mortgage Credit Directive (MCD) as retained UK law.",
+      "regulatory_refs": ["FCA MCOB", "Mortgage Credit Directive (UK retained)", "FCA Consumer Duty", "Land Registration Act 2002"],
+      "shared_with": [],
+      "promotion_test": {
+        "distinct_participants": true,
+        "distinct_participants_detail": "Surveyors, conveyancers/solicitors, Land Registry, mortgage brokers (intermediaries), and specialist mortgage underwriters are participants unique to this sub-capability and not present in other retail banking products.",
+        "separate_regulatory_framework": true,
+        "separate_regulatory_framework_detail": "FCA MCOB and the Mortgage Credit Directive constitute a dedicated, detailed regulatory regime governing mortgage advice, affordability, arrears, and possession — entirely separate from BCOBS or CCA.",
+        "distinct_lifecycle": true,
+        "distinct_lifecycle_detail": "Mortgage terms span 10-35 years with distinct phases (origination, early repayment, standard servicing, arrears, possession), requiring specialist long-horizon servicing capabilities not shared with other retail products.",
+        "independent_scalability": true,
+        "independent_scalability_detail": "Mortgage volumes are driven by housing market cycles that are independent of current account or savings growth. The origination platform, valuation pipeline, and collections function must scale separately from core retail banking.",
+        "criteria_met": 4,
+        "decision": "promote",
+        "rationale": "All four promotion criteria are met. Mortgages involve a unique participant ecosystem (surveyors, conveyancers, Land Registry), operate under a separate and detailed regulatory regime (MCOB/MCD), span a multi-decade lifecycle with specialist servicing phases, and must scale independently with housing market cycles. Promoting Mortgages to a standalone capability avoids conflating long-tenure secured lending with short-cycle retail banking operations."
+      }
+    },
+    {
+      "id": "CAP-001.05",
+      "name": "Credit Cards",
+      "description": "Consumer credit card issuance, account servicing, rewards programme management, and dispute resolution. Includes card scheme participation (Visa/Mastercard), merchant acquiring relationships (indirect), PCI-DSS compliance, and consumer credit regulation under CCA 1974 and FCA CONC. Rewards and co-brand partnerships introduce additional commercial relationships outside standard retail banking.",
+      "regulatory_refs": ["Consumer Credit Act 1974", "FCA CONC", "PCI-DSS", "Visa/Mastercard Scheme Rules", "Consumer Duty"],
+      "shared_with": [],
+      "promotion_test": {
+        "distinct_participants": true,
+        "distinct_participants_detail": "Card networks (Visa, Mastercard), merchants, payment processors, co-brand partners, and specialist chargeback/dispute teams are unique to this sub-capability.",
+        "separate_regulatory_framework": true,
+        "separate_regulatory_framework_detail": "PCI-DSS compliance obligations, card scheme contractual rules (Visa/Mastercard Operating Regulations), and Section 75 CCA liability form a regulatory and compliance layer entirely distinct from deposit-taking or personal lending regulation.",
+        "distinct_lifecycle": true,
+        "distinct_lifecycle_detail": "The credit card product lifecycle — application, underwriting, activation, utilisation, statement cycle, rewards accrual, disputes, and closure — is operationally distinct from loan or current account lifecycles, particularly the chargeback and dispute resolution phases.",
+        "independent_scalability": true,
+        "independent_scalability_detail": "Credit card transaction volumes, fraud management infrastructure, and rewards fulfilment platforms must scale independently of deposit or loan volumes, driven by spend behaviour rather than savings or housing market cycles.",
+        "criteria_met": 4,
+        "decision": "promote",
+        "rationale": "All four promotion criteria are met. Credit Cards operate within a distinct ecosystem of card networks, merchants, and processors; are governed by PCI-DSS and card scheme rules in addition to CCA/CONC; follow a unique statement-and-rewards lifecycle; and require infrastructure (fraud monitoring, dispute processing, rewards engine) that scales independently. Promoting Credit Cards as a standalone capability reflects the operational and technical complexity that, if retained in Retail Banking, would distort the capability's coherence."
+      }
+    },
+    {
+      "id": "CAP-001.06",
+      "name": "Insurance Distribution",
+      "description": "Distribution of insurance products to retail customers on behalf of third-party underwriters. Includes home insurance (buildings and contents), payment protection insurance (PPI replacement products), travel insurance, and life/critical illness cover sold alongside mortgage or lending products. The bank acts as an insurance intermediary, not an underwriter. Governed by FCA ICOBS and the Insurance Distribution Directive (IDD) as retained UK law.",
+      "regulatory_refs": ["FCA ICOBS", "Insurance Distribution Directive (UK retained)", "FCA Consumer Duty"],
+      "shared_with": [],
+      "promotion_test": {
+        "distinct_participants": true,
+        "distinct_participants_detail": "Insurance underwriters, reinsurers, claims handlers, and actuaries are participants unique to insurance distribution and not present in core retail banking sub-capabilities.",
+        "separate_regulatory_framework": true,
+        "separate_regulatory_framework_detail": "FCA ICOBS and the IDD constitute a dedicated regulatory regime for insurance intermediation — covering demands and needs assessments, fair value, and claims handling — which is entirely separate from BCOBS, MCOB, or CONC.",
+        "distinct_lifecycle": true,
+        "distinct_lifecycle_detail": "Insurance products follow an annual renewal lifecycle with distinct phases (needs assessment, quotation, binding, mid-term adjustments, renewal, claims) that differ fundamentally from loan amortisation or deposit accumulation lifecycles.",
+        "independent_scalability": true,
+        "independent_scalability_detail": "Insurance distribution volumes are driven by underwriter panel capacity and insurance market pricing cycles, and require a separate distribution platform and compliance monitoring capability that scales independently of core banking product volumes.",
+        "criteria_met": 4,
+        "decision": "promote",
+        "rationale": "All four promotion criteria are met. Insurance Distribution involves a distinct participant ecosystem (underwriters, claims handlers), operates under a separate regulatory regime (ICOBS/IDD), follows an annual renewal lifecycle unconnected to banking product lifecycles, and requires independent platform and compliance infrastructure. As the bank acts purely as distributor (not underwriter), retaining this within Retail Banking would obscure the materially different risk, regulatory, and operational profile of the intermediation activity."
+      }
+    }
+  ],
+  "design_decisions": [
+    {
+      "id": "DD-CAP-001-001",
+      "title": "Mortgages promoted to standalone capability",
+      "decision": "Mortgages (CAP-001.04) is promoted out of Retail Banking into a standalone Mortgages capability.",
+      "rationale": "The residential mortgage business satisfies all four promotion criteria. It requires a unique participant ecosystem (surveyors, conveyancers, Land Registry, specialist brokers), operates under a dedicated and detailed regulatory regime (FCA MCOB and the retained Mortgage Credit Directive), spans a multi-decade product lifecycle with phases (origination, standard servicing, arrears, possession) that demand specialised long-tenure operations, and must scale independently with housing market cycles that are decoupled from deposit or transactional banking volumes. Retaining Mortgages within Retail Banking would create a capability that is too broad to govern coherently, conflating short-cycle transactional products with a long-horizon secured lending business that carries distinct credit risk, collateral management, and regulatory obligations.",
+      "alternatives_considered": "Retaining Mortgages within Retail Banking was considered on the basis that the customer base overlaps. This was rejected because the operational, regulatory, and technology requirements are sufficiently distinct that a single Retail Banking capability owner could not govern both domains without creating accountability ambiguity.",
+      "status": "accepted",
+      "date": "2026-04-15"
+    },
+    {
+      "id": "DD-CAP-001-002",
+      "title": "Current Accounts and Savings retained within Retail Banking despite shared participants with Commercial Banking",
+      "decision": "Current Accounts (CAP-001.01) and Savings & Deposits (CAP-001.02) are retained within the Retail Banking capability despite noting a shared_with relationship with Commercial Banking.",
+      "rationale": "Although both personal and business customers use current accounts and deposits, the retail variants are governed by BCOBS and FCA Consumer Duty rules that do not apply to commercial equivalents, and the product features, pricing models, and customer journeys differ materially. Promoting either to a cross-cutting shared capability was considered but rejected: the regulatory difference between retail and commercial deposit-taking is sufficiently significant that a shared capability would require constant regulatory segmentation logic, reducing clarity. Instead, the shared_with annotation flags the relationship for architecture governance without merging the capabilities.",
+      "alternatives_considered": "A shared Transactional Banking capability covering both retail and commercial current accounts was considered. Rejected because FCA Consumer Duty and BCOBS obligations apply exclusively to retail customers, creating a governance burden that is cleaner to isolate within Retail Banking.",
+      "status": "accepted",
+      "date": "2026-04-15"
+    }
+  ]
+}
