@@ -82,10 +82,10 @@ Every non-obvious design choice must be recorded in the artefact:
 
 | Term | Definition | Stable over |
 |------|-----------|-------------|
-| Capability | A distinct area of institutional responsibility that could be delegated to a separate department. What the organisation **does**. Each capability is also the **deployment boundary** — a self-contained domain with its own data (database schema), logic (application), contracts (OpenAPI), events, and test suite. Retained sub-capabilities are part of the parent's deployable unit; promoted sub-capabilities become their own. | Decades — changes only when mandate changes |
-| Sub-capability | A subdivision of a capability. May be promoted to standalone if it meets 3+ of 4 promotion criteria (distinct participants, distinct legal framework, distinct lifecycle, distinct data domain). Promoted sub-capabilities become independently deployable capabilities. | Years |
-| Shared sub-capability | A sub-capability that appears in more than one capability, with a documented resolution pattern (single service, shared data, or duplicate by design). | Years |
-| Technical service | A software service supporting one or more capabilities. Classified as domain-specific, cross-cutting, or foundation infrastructure. Domain-specific services map 1:1 to deployable capabilities. | Project lifetime |
+| Capability | A business domain grouping containing one or more independently deployable technical services that together fulfil that domain's responsibilities. Owns its data (one or more databases/schemas), publishes event contracts, and exposes a REST API surface. Cross-capability communication is exclusively asynchronous events — no capability calls another capability's API. See `context/architecture-specification.md` for the full definition. | Decades — changes only when mandate changes |
+| Sub-capability | A subdivision of a capability. May be promoted to a separate service if it meets 3+ of 4 promotion criteria (distinct participants, distinct legal framework, distinct lifecycle, distinct data domain). Promoted sub-capabilities become separate services but remain inside the capability boundary. | Years |
+| Shared sub-capability | A sub-capability concept that appears in more than one capability. Each capability owns its own representation — no shared data models. Synchronisation through domain events. | Years |
+| Technical service | An independently deployable component within a capability — an API, worker, processor, or scheduled job. Services within the same capability may share databases and communicate freely. Services in different capabilities communicate only via async events. | Project lifetime |
 | Governance rule | A legislative, regulatory, or policy constraint that bounds a capability — who can do what, under what conditions, with what approvals. | Changes with legislation/policy |
 | Persona | A person or organisational role that interacts with capabilities. Internal (employees) or external (counterparties, regulators, public). | Years |
 | Channel | How a persona type accesses the system — each channel has its own auth model, rate limits, data projection, and audit requirements. | Project lifetime |
@@ -97,8 +97,8 @@ Every non-obvious design choice must be recorded in the artefact:
 | NFR | Non-functional requirement per journey — latency, throughput, availability, security classification. | Per journey |
 | Entity | A data model object derived from journeys. Aggregated into the central model. | Grows with each journey |
 | Service boundary | The ownership line around a group of entities — determines which service owns which data. | Per journey, architect decision |
-| API contract | OpenAPI specification for service-to-service or service-to-participant interaction. Design-time artefact — lives in the repo and CI pipeline. Runtime validation is handled by the application framework's own validation layer, not by reading the spec file. | Per journey |
-| Event | A fact about what happened (past tense). Published by a service, consumed by others. | Per journey |
+| API contract | OpenAPI specification for a capability's REST API surface, exposed to channel UIs and external consumers. Design-time artefact — lives in the repo and CI pipeline. Runtime validation is handled by the application framework, not by reading the spec file. Not used for cross-capability communication (which is events-only). | Per journey |
+| Event | A fact about what happened (past tense). Published by a capability, consumed by other capabilities via the Event Bus. The sole mechanism for cross-capability communication. Validated at runtime by the Schema Registry. | Per journey |
 | Portal | A user-facing application serving one or more participant types through a specific channel. | Project lifetime |
 | Screen | A single view within a portal showing data, actions, and states. | Per portal |
 | Task flow | User-level interaction sequence through screens for a specific journey. | Per journey per portal |
@@ -110,8 +110,8 @@ Every non-obvious design choice must be recorded in the artefact:
 | Security model | Architecture-level definition of zero-trust policy, mTLS requirements, data classification levels, network segmentation, and security posture controls. | Project lifetime (updated as services added) |
 | service.yaml | Machine-readable manifest per service repo: id, tier, depends_on (with protocol and criticality), topics_produced, topics_consumed, data_classification, secrets with rotation_days. The authoritative source for the zero-trust policy engine. | Per service |
 | Environment specification | Defines CI, RC, and prod-parity environment configurations derived from the service catalogue, dependencies, and security model. Specifies what is real vs stubbed in each environment. | Project lifetime |
-| Platform layer | Shared runtime infrastructure that all capabilities depend on: Event Bus, Schema Registry (the one runtime contract element), Observability, Audit Pipeline, Auth, Cache. Principle: share the mechanism, isolate the state. | Project lifetime |
-| Contract layer | Design-time specification artefacts consumed by channel UIs and AI development agents: API contracts (OpenAPI), event contracts (schemas), journey contracts (process specs). Live in the repo and CI pipeline — not runtime containers, not on C4 diagrams. The Schema Registry is the sole exception (validates event payloads at runtime). | Per journey |
+| Platform layer | Shared runtime infrastructure that all capabilities depend on: Event Bus, Schema Registry, Observability, Audit Pipeline, Auth, Cache. Principle: share the mechanism, isolate the state. Contains no business logic. | Project lifetime |
+| Contract layer | Design-time specification artefacts consumed by channel UIs and AI development agents: API contracts (OpenAPI), event contracts (schemas), journey contracts (process specs). Live in the repo and CI pipeline — not runtime containers, not on C4 diagrams. The Schema Registry is the sole runtime manifestation and sits in the Platform Layer. | Per journey |
 
 ## Cross-references
 

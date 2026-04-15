@@ -13,9 +13,10 @@ artefacts consumed by a development pipeline (starter-development-team).
     ui-specification-team.md   — Phase D (steps 14-18, per portal)
     review-team.md             — Cross-cutting quality gate
   context/
-    project.md             — Project identity, Jira config, artefact repo
-    phases.md              — Phase model, gates, orchestration
-    artefact-standards.md  — JSON format, naming, lifecycle, vocabulary
+    project.md                  — Project identity, Jira config, artefact repo
+    phases.md                   — Phase model, gates, orchestration
+    artefact-standards.md       — JSON format, naming, lifecycle, vocabulary
+    architecture-specification.md — Capability-driven architecture spec (authoritative)
     best-practices/
       capability-modelling.md  — Phase A-C best practices
       ui-specification.md      — Phase D best practices

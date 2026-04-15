@@ -4,38 +4,34 @@ Read by: Discovery Team, Journey Modelling Team
 
 ## Architectural philosophy
 
-This pipeline produces a **capability-driven architecture** where each
-capability is the deployment boundary — a self-contained domain with its
-own data, logic, contracts, events, and test suite. This is a modular
-monolith, not microservices. Each capability is sized to fit within an
-AI agent's context window for development.
+See `context/architecture-specification.md` for the full specification.
+The key points that inform capability modelling:
 
-**Three layers:**
-- **Runtime — Capability Layer**: domain modules owning data, exposing
-  REST APIs, publishing/consuming events. Data status within capabilities
-  implicitly represents journey progress.
-- **Runtime — Platform Layer**: shared infrastructure (Event Bus, Schema
-  Registry, Observability, Audit, Auth, Cache). Share the mechanism,
-  isolate the state.
-- **Design-time — Contract Layer**: API specs, event schemas, journey
-  specs. Live in the repo and CI pipeline, consumed by channel UIs and
-  AI development agents. Not runtime containers, not on C4 diagrams.
-  The Schema Registry is the sole runtime exception.
-
-**Key principles:**
-- Share contracts, not implementations — each capability owns its own
-  representation of shared concepts
-- Capabilities communicate through domain events, not shared databases
-- Journeys are design-time specifications, not runtime orchestration
-- Verification independence (can I test this in isolation?) is the
-  decomposition criterion, not deployment independence
-- C4 diagrams show runtime only — capabilities + platform layer
+- A **capability** is a business domain grouping containing one or more
+  independently deployable technical services. It is NOT a single service.
+- A **service** is a component inside a capability — an API, worker,
+  processor, or scheduled job. Services within a capability may share
+  databases and communicate by whatever means suits the domain (direct
+  method calls, shared DB, internal REST/gRPC, internal queues).
+- **Cross-capability communication is exclusively asynchronous events.**
+  No capability calls another capability's API. No shared databases
+  across capabilities. The Event Bus is the sole integration mechanism.
+- **Channel UIs** sit outside the system boundary and call capability
+  REST APIs synchronously. This is not cross-capability communication.
+- **Capabilities are sized to fit an AI agent's context window.** This
+  is the primary decomposition constraint.
+- **Journey state is implicit in capability data.** No central
+  orchestrator. The data IS the state.
+- **C4 L2 shows capabilities; L3 shows services within a capability.**
+  Design-time artefacts do not appear on C4 diagrams.
 
 ## Capability decomposition
 
 - Start from what the organisation **does**, not what systems it needs
-- Each capability is a distinct area of institutional responsibility
-- Each capability is also the **deployment boundary** — own database schema, own application, own test suite
+- Each capability is a business domain grouping containing one or more
+  services that together fulfil that domain's responsibilities
+- Capabilities own their data — one or more databases or schemas,
+  invisible to other capabilities
 - Capabilities are stable over decades — they change only when the mandate changes
 - Technology choices are derived from capability requirements, never the reverse
 - **Research before drafting**: the agent must research the market landscape
@@ -57,14 +53,21 @@ Every sub-capability must be evaluated against four criteria:
 3. Distinct lifecycle (end-to-end phases that don't map onto the parent)?
 4. Independent scalability requirements?
 
-If 3+ criteria met → promote to standalone capability. Document the
-decision in the artefact.
+If 3+ criteria met → promote to a separate service within the
+capability. Document the decision in the artefact.
 
-Promotion has a direct deployment consequence:
-- **Retained** sub-capabilities are part of the parent capability's
-  deployable unit (same database schema, same application)
-- **Promoted** sub-capabilities become independently deployable
-  capabilities (own schema, own application, own test suite)
+Promotion determines the service structure within a capability:
+- **Retained** sub-capabilities are implemented as internal modules
+  within an existing service — shared database, direct method calls
+- **Promoted** sub-capabilities become their own service (own repo,
+  own deployment unit) but remain inside the capability boundary. They
+  may share databases with other services in the same capability or
+  have their own — this is an internal decision.
+
+Promotion does NOT mean leaving the capability. A promoted
+sub-capability is still part of its parent capability. It becomes a
+separate service, not a separate capability. Cross-capability
+communication rules do not apply within the capability boundary.
 
 The market research from Step 1 provides evidence for promotion:
 - Specialist providers exist → evidence for distinct participants
@@ -108,12 +111,17 @@ When a sub-capability appears in more than one capability:
 
 ## Service boundary principles
 
-- Boundaries follow business capability lines, not technical convenience
-- A capability owns its data — no shared databases between capabilities
-- Cross-capability communication is explicit: synchronous via REST API, asynchronous via domain events on the event backbone
-- High revision counts on a boundary signal it should be redrawn
+- The capability boundary is the hard boundary — no shared databases
+  across capabilities, no synchronous calls between capabilities
+- Within a capability, services communicate by whatever means suits the
+  domain (direct method calls, shared database, internal REST/gRPC,
+  internal queues) — this is an internal technical decision
+- Cross-capability communication is exclusively asynchronous domain
+  events via the Event Bus. No capability calls another capability's API.
+- High revision counts on a capability boundary signal it should be redrawn
 - The Architect makes boundary decisions — the agent provides options analysis
-- Each deployable capability has: own database schema, own application, own test suite, own service.yaml manifest
+- Each capability has: its own data (one or more databases/schemas),
+  its own services, its own event contracts, its own REST API surface
 
 ## Sequence principles
 
@@ -129,11 +137,14 @@ When a sub-capability appears in more than one capability:
 
 - The C4 workspace (`architecture/c4-workspace.dsl`) is a single Structurizr DSL file that is the source of truth for all architecture diagrams
 - It is a **living artefact** — not baselined, continuously updated across all phases
-- **C4 shows runtime only** — capabilities (deployment units) sitting on the platform layer. No contract layer on the diagrams. API specs, journey specs, and regulatory constraints are design-time artefacts that live in the repo, not runtime containers.
-- **System Context (L1)**: produced by Discovery Team at step 5. Shows the system boundary, system users (personas), and external systems. Does NOT show developers or AI agents — those are development concerns, not runtime.
-- **Container (L2)**: capabilities as deployment units on top of the platform layer, with dependency arrows flowing downward. One container per deployable capability (retained sub-caps are internal, promoted sub-caps are separate containers). Platform containers: Event Bus, Schema Registry, Observability, Audit Pipeline, Auth, Cache.
-- **Component (L3)**: produced by Journey Modelling Team after each journey. One component diagram per capability, showing internal structure derived from service boundaries and data model entities. Components connect to platform containers (Event Bus, Schema Registry, Audit Pipeline, Observability).
-- Every element in the C4 workspace must trace to a JSON artefact: personas to `personas/*.json`, containers to `service-map.json`, components to `service-boundaries.json`, relationships to `api-contracts/*.openapi.json`
+- **C4 shows only what runs in production.** Design-time artefacts (API specs, journey specs, regulatory constraints) do not appear on C4 diagrams.
+- **System Context (L1)**: the system boundary, actual system users (personas), and external systems. AI agents do not appear — development concern, not system user.
+- **Container (L2)**: two boundary groupings within the system:
+  - **Capabilities boundary** — each capability appears as a container. Arrows between capabilities are labelled with the async events they exchange. No synchronous arrows between capabilities.
+  - **Platform boundary** — sits below capabilities. Event Bus, Schema Registry, Observability, Audit Pipeline, Auth, Cache. Dependency arrows flow downward from capabilities to platform.
+  - The Contract Layer does not appear on L2.
+- **Component (L3)**: zooms into a single capability. Shows internal services, inbound ports (event consumers), outbound ports (event publishers), API controllers, data stores, platform adapters. External dependencies shown are the platform containers the capability connects to at runtime.
+- Every element traces to a JSON artefact: personas to `personas/*.json`, capabilities to `service-map.json`, components to `service-boundaries.json`
 - The Review Team validates C4-to-JSON consistency at every review
 
 ## API contract principles
