@@ -44,8 +44,9 @@ Covers: Ready for Full E2E Regression → In Full E2E Regression → human appro
 | 12 | Feature flag status | Noted in readiness report |
 | 13 | Third-party integration readiness | Noted in readiness report |
 | 14 | Observability readiness | Noted in readiness report |
-| 15 | Rollback plan defined | Noted in readiness report |
-| 16 | Docker build gate before merge to main | BLOCKED — fix RC first |
+| 15 | Rollback plan defined and **tested in RC environment** | BLOCKED — must test rollback before merge |
+| 16 | All migration down/rollback scripts verified | BLOCKED — irreversible migration requires human approval |
+| 17 | Docker build gate before merge to main | BLOCKED — fix RC first |
 
 ## Flake investigation
 
@@ -67,10 +68,25 @@ This is different from feature branch defects:
 5. Only proceed when regression is fully green
 6. Do NOT cut a new RC — fix the existing one
 
+## Rollback testing
+
+Before requesting human approval, the Team Lead must verify the rollback plan:
+
+1. Record the current state: `docker images | grep :rc` (note image tags)
+2. Apply the rollback: run the down/rollback migrations, revert to previous images
+3. Verify the system returns to a healthy state (all health endpoints pass)
+4. Re-apply the RC: run the forward migrations, restore RC images
+5. Verify the system is healthy again
+6. Document the result in the Jira comment: "Rollback tested: [pass|fail]"
+
+If rollback involves a destructive migration that cannot be reversed, the Jira comment
+must state: "⚠️ Migration not reversible — requires human approval." This is a HARD
+GATE — do not request human approval until this is explicitly acknowledged.
+
 ## Human approval gate
 
-After regression passes:
-- Team Lead posts: "✅ Regression complete. Awaiting human approval to promote to Main."
+After regression AND rollback testing pass:
+- Team Lead posts: "✅ Regression complete. Rollback tested. Awaiting human approval to promote to Main."
 - Do NOT merge until human explicitly replies: "Approve promote {PROJECT_KEY}-{key}"
 - This is a business decision — timing, risk tolerance, and context require human judgement
 

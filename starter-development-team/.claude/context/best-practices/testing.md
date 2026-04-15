@@ -45,10 +45,10 @@ NEVER rely solely on API tests for features that have a UI.
 | Branch | Scripted gates | Reasoning gates | Total |
 |---|---|---|---|
 | Feature | 7 (tests, build, lint, format) | Devil's Advocate (continuous) | ~7 + review |
-| CI | 7 scripted + 1 build gate | 10 analysis (analyst, observability, E2E) | 18 |
+| CI | 11 scripted + 1 build gate | 12 analysis (analyst, observability, E2E, quality) | 24 |
 | RC | 9 scripted + 1 build gate | 6 readiness checks | 16 |
 | Main | 10 scripted | 3 observation (15 min) | 13 |
-| **Total** | **35** | **19 + review** | **~54** |
+| **Total** | **39** | **21 + review** | **~60** |
 
 For the specific gates per branch, see:
 - `pipeline-feature-branch.md` — 7 gates
@@ -123,10 +123,14 @@ Mapping scenarios to tests:
 - Common causes: timing issues, shared state, network dependency, non-deterministic data
 - If flaky after investigation: isolate the non-deterministic part, mock it
 
-## Coverage
+## Coverage enforcement
 
-- Track coverage delta per PR — did this change increase or decrease coverage?
-- Don't enforce arbitrary thresholds (80% is meaningless if the important paths aren't covered)
+- **Minimum thresholds enforced at CI stage (HARD GATE):**
+  - 80% line coverage, 70% branch coverage per service
+  - New code in a PR must have ≥ 90% line coverage (diff coverage)
+- Coverage is measured per-service, not as a project aggregate
+- Coverage report is generated on every CI run and included in the Jira comment
+- Coverage decreasing vs the previous CI run is flagged as a warning
 - Focus on: error paths, boundary conditions, state mutations
 - Coverage of happy path alone is insufficient
 
@@ -157,6 +161,76 @@ that exercises the full chain from producer to consumer against real
 infrastructure (not mocks). The test should use data that exercises edge
 cases in the contract — not just the happy path with seed data.
 
+## Contract testing
+
+When service A produces an API that service B consumes, **both sides must
+have contract tests** that verify the request/response shape:
+
+- **Producer contract test**: verify that the actual response matches
+  the documented schema (JSON Schema or TypeScript interface)
+- **Consumer contract test**: verify that the consumer can parse and
+  use the producer's response shape (using recorded fixtures, not mocks)
+- Contract tests run at CI stage before integration tests
+- A contract test failure is a **HARD GATE** — blocks promotion to RC
+- When a service changes its API response, the contract tests for
+  every consumer must be updated in the same PR
+- Additive changes (new optional fields) are non-breaking and must pass
+- Removal or renaming of fields is breaking and must fail
+
+Location: `tests/contract/` — one file per service boundary.
+
+## Migration safety
+
+Database migrations must be tested against a populated schema before
+being applied to shared environments:
+
+- Every migration is tested against a snapshot of the current schema
+  WITH seed data (not an empty database)
+- The test verifies: no data loss (row counts match), no constraint
+  violations, rollback works
+- **Destructive migrations** (DROP TABLE, DROP COLUMN, ALTER TYPE) are
+  flagged for human review — HARD GATE
+- Every migration must have a corresponding down/rollback migration
+- Migration safety is checked at CI stage before integration tests
+
+## Data quality gates
+
+Every service must validate its inputs at the boundary:
+
+- Incoming HTTP requests: validate required fields, types, non-empty
+  for mandatory fields, value ranges
+- Queue messages: validate schema before processing
+- Invalid data is rejected with a structured error (never silently accepted)
+- Rejected data is logged with correlation ID, source service, and reason
+- Quality metrics (accepted/rejected/error counts) exposed via Prometheus
+- A function that transforms external data must log a warning if
+  non-empty input produces empty output
+
+## Dependency vulnerability scanning
+
+Every CI build must run a dependency vulnerability scan:
+
+- `npm audit` for JavaScript services, `pip-audit` for Python services
+- Critical and high-severity vulnerabilities are a **HARD GATE** — block
+  promotion to RC
+- Medium-severity vulnerabilities are flagged as warnings
+- A suppressions file allows known-accepted vulnerabilities with a
+  documented reason and expiry date
+
+## Rollback procedures
+
+Every release must have a tested rollback plan:
+
+- Docker images tagged with release version (not just `latest`),
+  retained for at least 5 releases
+- Every database migration has a tested down/rollback counterpart
+- The rollback plan specifies: images to revert, migrations to roll
+  back, environment variable changes, verification steps
+- Rollback is tested in the RC environment before every release to main
+- If rollback is not possible (destructive migration), this must be
+  explicitly flagged and approved by the human before release
+- Rollback must be executable in under 5 minutes
+
 NEVER:
 - Test implementation details (private methods, internal state)
 - Use `test.skip()` as a permanent solution
@@ -166,3 +240,7 @@ NEVER:
 - Use real API keys or external services in automated tests
 - Rely solely on fixture data with known-good IDs — test with data that
   exercises foreign key paths, nullable fields, and fallback identifiers
+- Apply a migration to a shared environment without testing it against
+  populated data first
+- Deploy without a documented rollback plan
+- Ignore dependency vulnerability scan results

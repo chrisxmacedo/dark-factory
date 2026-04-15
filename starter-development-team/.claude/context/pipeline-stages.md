@@ -16,15 +16,18 @@ Read by: Team Lead only
 
 [CI Branch]  — first point where changes interact with the broader system
   → In Integration Test          ← set by pipelinectl after merge
-                                 ← SCRIPT: pipelinectl ci-gate (mechanical)
+                                 ← SCRIPT: pipelinectl ci-gate (mechanical — 11 gates incl.
+                                    coverage, vuln scan, contracts, migration safety)
                                  ← SPAWN: Integration Analyst + Observability Checker only (reasoning)
-  → In E2E Impact Test           ← SPAWN: e2e-impact-team.md (Claude — journey analysis)
+  → In E2E Impact Test           ← SPAWN: e2e-impact-team.md (Claude — journey analysis,
+                                    data quality gates, rollback plan)
                                  ← SCRIPT: pipelinectl cut-rc (after E2E passes)
 
 [Release Branch]  — stabilisation, no new features
   → In Full E2E Regression       ← set by pipelinectl after RC cut
                                  ← SCRIPT: envctl test rc (mechanical regression)
                                  ← SPAWN: Regression Analyst only (release readiness reasoning)
+                                 ← SCRIPT: rollback test (verify rollback works before approval)
 
 [Main]  — production-ready, receives only the RC merge
   → Release / Production        ← SCRIPT: pipelinectl merge-rc (after human approval)

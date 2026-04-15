@@ -11,8 +11,9 @@ Every ticket flows through a progressive confidence pipeline where specialist ag
 ### Pipeline at a Glance
 
 - **6 pipeline stages** — Development, Local Test, Integration Test, E2E Impact Test, Full E2E Regression, Release
-- **6 agent teams** — one per stage, with specialised roles
-- **2 human gates** — entering the pipeline (Ready for Dev) and promoting to production (Approve promote)
+- **7 agent teams** — one per stage plus a Diagnostics Team for defect handling
+- **2 human gates** — entering the pipeline (Backlog → In Development via refinement) and promoting to production (Approve promote)
+- **~61 quality gates** — 39 scripted + 22 reasoning gates across all stages
 - **Token-saving scripts** — jiractl, pipelinectl, envctl handle mechanical operations without Claude tokens
 - **3 concurrent Docker environments** — CI (:3000), RC (:3100), Prod-parity (:3200), always running
 
@@ -250,23 +251,24 @@ Company-managed project with short key (e.g. `PRJ`).
 | **Initiative** | High-level grouping | Simple workflow |
 | **Issue** | Bugs and defects | Simple or pipeline |
 
-### Pipeline Statuses (13)
+### Pipeline Statuses (12)
 
 | # | Status Name | Category |
 |---|-------------|----------|
 | 1 | Backlog | To Do |
-| 2 | Selected for Development | To Do |
-| 3 | In Development | In Progress |
-| 4 | Ready for Local Test | To Do |
-| 5 | In Local Test | In Progress |
-| 6 | Ready for Integration Test | To Do |
-| 7 | In Integration Test | In Progress |
-| 8 | Ready for E2E Impact Test | To Do |
-| 9 | In E2E Impact Test | In Progress |
-| 10 | Ready for Full E2E Regression | To Do |
-| 11 | In Full E2E Regression | In Progress |
-| 12 | Release / Production | Done |
-| 13 | Done | Done |
+| 2 | In Development | In Progress |
+| 3 | Ready for Local Test | To Do |
+| 4 | In Local Test | In Progress |
+| 5 | Ready for Integration Test | To Do |
+| 6 | In Integration Test | In Progress |
+| 7 | Ready for E2E Impact Test | To Do |
+| 8 | In E2E Impact Test | In Progress |
+| 9 | Ready for Full E2E Regression | To Do |
+| 10 | In Full E2E Regression | In Progress |
+| 11 | Release / Production | Done |
+| 12 | Done | Done |
+
+Note: "Selected for Development" was removed — tickets go directly from Backlog to In Development. The only human gates are entering the pipeline (Backlog → In Development via refinement) and promoting to production (Approve promote).
 
 ### Retrieve Transition IDs
 
@@ -363,8 +365,8 @@ Exception: `pipelinectl` scripts handle mechanical gates without Claude tokens.
 
 | Status | Transition to | Action |
 |---|---|---|
-| Ready for Dev | In Development | **SPAWN:** development-team.md |
-| Ready for Local Test | In Local Test | **SCRIPT:** `pipelinectl local-gate` → merge if pass, Fix Agent if fail |
+| Backlog | In Development | **SPAWN:** refinement-team.md then development-team.md |
+| Ready for Local Test | In Local Test | **SCRIPT:** `pipelinectl local-gate` → merge if pass, Diagnostics Team if fail |
 | Ready for Integration Test | In Integration Test | **SCRIPT:** `pipelinectl ci-gate` → **SPAWN:** Analyst + Observability Checker |
 | Ready for E2E Impact Test | In E2E Impact Test | **SPAWN:** e2e-impact-team.md → **SCRIPT:** `pipelinectl cut-rc` |
 | Ready for Full E2E Regression | In Full E2E Regression | **SCRIPT:** `envctl test rc` → **SPAWN:** Regression Analyst |
@@ -408,21 +410,27 @@ Run by: `pipelinectl ci-gate` (scripted) + agents (reasoning)
 | 1 | Unit tests in Docker | Scripted | `docker compose exec npm test` | Fix Agent on ci (2 attempts) |
 | 2 | Lint in Docker | Scripted | `docker compose exec npm run lint` | Fix Agent on ci |
 | 3 | Format in Docker | Scripted | `docker compose exec npm run format:check` | Fix Agent on ci |
-| 4 | Integration: health endpoints | Scripted | Playwright `tests/integration/health.spec.ts` | Fix Agent on ci |
-| 5 | Integration: LLM stub flow | Scripted | Playwright `tests/integration/llm-stub.spec.ts` | Fix Agent on ci |
-| 6 | Integration: correlation IDs | Scripted | Playwright `tests/integration/correlation.spec.ts` | Fix Agent on ci |
-| 7 | Integration: storage (MinIO) | Scripted | Playwright `tests/integration/minio.spec.ts` | Fix Agent on ci |
-| 8 | Contract validation | Reasoning | Integration Analyst (Claude) | Back to Ready for Local Test |
-| 9 | Downstream impact assessment | Reasoning | Integration Analyst (Claude) | Back to Ready for Local Test |
-| 10 | Data consistency (correlation ID tracing) | Reasoning | Integration Analyst (Claude) | Back to Ready for Local Test |
-| 11 | Migration safety | Reasoning | Integration Analyst (Claude) | Back to Ready for Local Test |
-| 12 | Observability: structured logs at decision points | Reasoning | Observability Checker (Claude) | Noted, may not block |
-| 13 | Observability: correlation IDs propagating | Reasoning | Observability Checker (Claude) | Noted, may not block |
-| 14 | Observability: new signals appearing | Reasoning | Observability Checker (Claude) | Noted, may not block |
-| 15 | Observability: defined-but-unused detection | Reasoning | Observability Checker (Claude) | Flagged as gap |
-| 16 | E2E: affected user journeys pass | Reasoning | E2E Runner (Claude) | Fix Agent on ci (2 attempts) |
-| 17 | E2E: data-level assertions per journey | Reasoning | E2E Runner (Claude) | Fix Agent on ci |
-| 18 | Docker build gate before RC cut | Scripted | `docker build` on ci | BLOCKED — fix ci first |
+| 4 | Coverage enforcement (≥80% line, ≥70% branch) | Scripted | `npm test -- --coverage` | Fix Agent on ci |
+| 5 | Dependency vulnerability scan (critical/high = HARD GATE) | Scripted | `npm audit` / `pip-audit` | Fix Agent on ci |
+| 6 | Contract tests (producer + consumer shapes match) | Scripted | `tests/contract/` | Fix Agent on ci |
+| 7 | Migration safety (test against populated schema) | Scripted | Migration test runner | BLOCKED — human review if destructive |
+| 8 | Integration: health endpoints | Scripted | Playwright `tests/integration/health.spec.ts` | Fix Agent on ci |
+| 9 | Integration: LLM stub flow | Scripted | Playwright `tests/integration/llm-stub.spec.ts` | Fix Agent on ci |
+| 10 | Integration: correlation IDs | Scripted | Playwright `tests/integration/correlation.spec.ts` | Fix Agent on ci |
+| 11 | Integration: storage | Scripted | Playwright `tests/integration/storage.spec.ts` | Fix Agent on ci |
+| 12 | Contract validation | Reasoning | Integration Analyst (Claude) | Back to Ready for Local Test |
+| 13 | Downstream impact assessment | Reasoning | Integration Analyst (Claude) | Back to Ready for Local Test |
+| 14 | Data consistency (correlation ID tracing) | Reasoning | Integration Analyst (Claude) | Back to Ready for Local Test |
+| 15 | Migration safety assessment | Reasoning | Integration Analyst (Claude) | Back to Ready for Local Test |
+| 16 | Observability: structured logs at decision points | Reasoning | Observability Checker (Claude) | Noted, may not block |
+| 17 | Observability: correlation IDs propagating | Reasoning | Observability Checker (Claude) | Noted, may not block |
+| 18 | Observability: new signals appearing | Reasoning | Observability Checker (Claude) | Noted, may not block |
+| 19 | Observability: defined-but-unused detection | Reasoning | Observability Checker (Claude) | Flagged as gap |
+| 20 | E2E: affected user journeys pass | Reasoning | E2E Runner (Claude) | Fix Agent on ci (2 attempts) |
+| 21 | E2E: data-level assertions per journey | Reasoning | E2E Runner (Claude) | Fix Agent on ci |
+| 22 | Data quality: input validation on all service boundaries | Reasoning | E2E Runner (Claude) | Fix Agent on ci |
+| 23 | Rollback plan documented | Reasoning | E2E Runner (Claude) | BLOCKED — must document before RC |
+| 24 | Docker build gate before RC cut | Scripted | `docker build` on ci | BLOCKED — fix ci first |
 
 Docker environment: CI (base + ci), ephemeral, LLM stub, images tagged `:ci`.
 
@@ -446,8 +454,9 @@ Run by: `envctl test rc` (scripted) + agent (reasoning)
 | 12 | Feature flag status | Reasoning | Regression Analyst (Claude) | Noted in readiness report |
 | 13 | Third-party integration readiness | Reasoning | Regression Analyst (Claude) | Noted in readiness report |
 | 14 | Observability readiness | Reasoning | Regression Analyst (Claude) | Noted in readiness report |
-| 15 | Rollback plan defined | Reasoning | Regression Analyst (Claude) | Noted in readiness report |
-| 16 | Docker build gate before merge to main | Scripted | `docker build` on RC | BLOCKED — fix RC first |
+| 15 | Rollback plan defined and tested in RC environment | Reasoning | Regression Analyst (Claude) | BLOCKED — must test rollback before merge |
+| 16 | All migration down/rollback scripts verified | Reasoning | Regression Analyst (Claude) | BLOCKED — irreversible migration requires human approval |
+| 17 | Docker build gate before merge to main | Scripted | `docker build` on RC | BLOCKED — fix RC first |
 
 Docker environment: RC (base + ci + test), fixture-seeded, images tagged `:rc`.
 
@@ -486,18 +495,21 @@ Session reset: `/compact` after release completes.
 | Branch | Scripted | Reasoning | Total |
 |--------|----------|-----------|-------|
 | Feature | 7 | Devil's Advocate (continuous) | ~7 + review |
-| CI | 7 scripted + 1 build gate | 10 analysis gates | 18 |
-| RC | 9 scripted + 1 build gate | 6 readiness checks | 16 |
+| CI | 11 scripted + 1 build gate | 12 analysis gates | 24 |
+| RC | 9 scripted + 1 build gate | 7 readiness checks | 17 |
 | Main | 10 scripted | 3 observation checks | 13 |
-| **Total** | **35** | **19 + review** | **~54** |
+| **Total** | **39** | **22 + review** | **~61** |
 
 ### Defect Handling
 
+All defects are handled by the **Diagnostics Team** (`diagnostics-team.md`), not inline Fix Agents. The Team Lead spawns the Diagnostics Team when a gate fails.
+
 | Where found | Action |
 |---|---|
-| Feature branch | Return to In Development, fix on same branch, no separate ticket |
-| RC branch | Create Issue, fix on RC, merge RC back to ci, re-run regression |
-| Production | Create Issue with `production-defect` label, human decides |
+| Feature branch | Return to In Development, Diagnostics Team fixes on same branch |
+| CI branch | Diagnostics Team fixes on ci (up to 2 attempts), or return to feature |
+| RC branch | Create Issue, Diagnostics Team fixes on RC, merge RC back to ci, re-run regression |
+| Production | Create Issue with `production-defect` label, human decides priority |
 
 ### Rate Limit Handling
 
@@ -528,7 +540,7 @@ After merge to main: suggest `/compact`. PostToolUse hook fires automatically.
 **Branch:** `feature/{KEY}-{n}/{slug}` | **Goal:** "Works in isolation"
 
 - **Implementer** — writes code + unit/component tests, opens PR
-- **Devil's Advocate** — real-time review with mandatory pattern checks (transactions, retry, middleware, validation, logging, unused infrastructure)
+- **Devil's Advocate** — real-time review with mandatory pattern checks (transactions, retry, middleware, validation, logging, unused infrastructure, data quality gates at service boundaries, contract tests for inter-service APIs, migration safety with rollback scripts, dependency vulnerability scanning)
 - **Test Writer** — behaviour + edge case + integration tests with data assertions
 
 **Gate:** All signals received, tests pass, lint/format clean, build passes.
@@ -643,7 +655,7 @@ Software failures come from undetected problems accumulating across layers. This
 
 | Gate | Why |
 |---|---|
-| Ready for Dev | Refinement requires product + engineering judgement |
+| Backlog → In Development | Refinement requires product + engineering judgement |
 | Promote to Main | Deploying is a business decision |
 
 ### Agent Design
@@ -668,7 +680,7 @@ Software failures come from undetected problems accumulating across layers. This
 
 ## 10. Lessons Learned
 
-25+ improvements from Hindsite and Treemail:
+35+ improvements from Hindsite, Treemail, and Sentiment Forecaster:
 
 ### Repository & Git
 1. Separate repos per service — no monorepos
@@ -702,13 +714,20 @@ Software failures come from undetected problems accumulating across layers. This
 21. Mandatory patterns: transactions, retry, middleware, validation, logging
 22. Per-deliverable observability scoping (infrastructure vs feature vs bugfix)
 23. Data-level assertions on every state-mutating test
+24. Contract tests for every inter-service API boundary
+25. Migration safety: test against populated data, rollback scripts mandatory
+26. Data quality gates at every service boundary — reject malformed input
+27. Dependency vulnerability scanning at CI — critical/high blocks promotion
+28. Coverage enforcement at CI — 80% line, 70% branch, 90% diff on new code
+29. Rollback tested in RC before every release — executable in under 5 minutes
 
 ### Process
-24. Teams report FUTURE WORK — Team Lead creates Backlog tickets with full template
-25. Defect routing by location: feature branch vs RC vs production
-26. Session reset after merge to main (/compact)
-27. Rate limit handling: pause at 98%, resume automatically
-28. Never combine pipeline stages into one agent spawn
+30. Teams report FUTURE WORK — Team Lead creates Backlog tickets with full template
+31. Defect routing by location: feature branch vs CI vs RC vs production
+32. Session reset after merge to main (/compact)
+33. Rate limit handling: pause at 98%, resume automatically
+34. Never combine pipeline stages into one agent spawn
+35. Diagnostics Team handles all defects — no inline Fix Agents
 
 ---
 
@@ -837,6 +856,14 @@ python + fastapi + async-python → starter-api; typescript + async-typescript �
 
 **Pipeline (4 files)** — Team Lead only:
 pipeline-orchestration, pipeline-feature-branch, pipeline-ci-branch, pipeline-release-branch
+
+**Testing best practices (testing.md) includes 6 additional sections added post-initial-release:**
+- **Contract testing** — producer and consumer contract tests for every inter-service API boundary, run at CI stage as HARD GATE
+- **Migration safety** — every migration tested against populated schema with data; destructive migrations flagged for human review; rollback migration required
+- **Data quality gates** — input validation at every service boundary; reject malformed data with structured errors; quality metrics via Prometheus
+- **Dependency vulnerability scanning** — `npm audit` / `pip-audit` at CI; critical/high = HARD GATE; suppressions file with expiry dates
+- **Coverage enforcement** — 80% line / 70% branch per service; 90% diff coverage on new code; coverage report in Jira comment
+- **Rollback procedures** — Docker images tagged with release version; tested rollback in RC before every release; executable in under 5 minutes; irreversible migrations require human approval
 
 ### 12.8 Environment Dashboard Enhancements
 

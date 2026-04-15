@@ -19,7 +19,7 @@ Covers: Ready for Integration Test → In Integration Test → Ready for E2E Imp
 - Ports: web on `${WEB_PORT}`, sync on `${SYNC_PORT}`, stub on `${LLM_STUB_PORT}`
 - After every merge to ci: `envctl rebuild ci && envctl test ci` (mandatory)
 
-## Test gates (18 gates)
+## Test gates (24 gates)
 
 ### Scripted gates (run by `pipelinectl ci-gate`)
 
@@ -28,10 +28,14 @@ Covers: Ready for Integration Test → In Integration Test → Ready for E2E Imp
 | 1 | Unit tests in Docker container | `docker compose exec npm test` | Fix Agent on ci (2 attempts) |
 | 2 | Lint in Docker | `docker compose exec npm run lint` | Fix Agent on ci |
 | 3 | Format in Docker | `docker compose exec npm run format:check` | Fix Agent on ci |
-| 4 | Integration: health endpoints (web + sync) | Playwright `tests/integration/health.spec.ts` | Fix Agent on ci |
-| 5 | Integration: LLM stub flow | Playwright `tests/integration/llm-stub.spec.ts` | Fix Agent on ci |
-| 6 | Integration: correlation ID propagation | Playwright `tests/integration/correlation.spec.ts` | Fix Agent on ci |
-| 7 | Integration: storage (MinIO) | Playwright `tests/integration/minio.spec.ts` | Fix Agent on ci |
+| 4 | **Coverage enforcement** | `npm test -- --coverage` (≥80% line, ≥70% branch) | Fix Agent on ci |
+| 5 | **Dependency vulnerability scan** | `npm audit` / `pip-audit` (critical/high = HARD GATE) | Fix Agent on ci |
+| 6 | **Contract tests** | `tests/contract/` (producer + consumer shapes match) | Fix Agent on ci |
+| 7 | **Migration safety** | Test migration against populated schema snapshot | BLOCKED — human review if destructive |
+| 8 | Integration: health endpoints (web + services) | `tests/integration/health.spec.ts` | Fix Agent on ci |
+| 9 | Integration: LLM stub flow | `tests/integration/llm-stub.spec.ts` | Fix Agent on ci |
+| 10 | Integration: correlation ID propagation | `tests/integration/correlation.spec.ts` | Fix Agent on ci |
+| 11 | Integration: storage | `tests/integration/storage.spec.ts` | Fix Agent on ci |
 
 ### Reasoning gates (Claude agents — spawn after scripted gates pass)
 
@@ -39,27 +43,29 @@ Covers: Ready for Integration Test → In Integration Test → Ready for E2E Imp
 
 | # | Gate | Fails → |
 |---|------|---------|
-| 8 | Contract validation: interfaces match consumers | Back to Ready for Local Test |
-| 9 | Downstream impact: services at risk from changes | Back to Ready for Local Test |
-| 10 | Data consistency: correlation ID tracing across boundaries | Back to Ready for Local Test |
-| 11 | Migration safety: schema changes safe to apply | Back to Ready for Local Test |
+| 12 | Contract validation: interfaces match consumers | Back to Ready for Local Test |
+| 13 | Downstream impact: services at risk from changes | Back to Ready for Local Test |
+| 14 | Data consistency: correlation ID tracing across boundaries | Back to Ready for Local Test |
+| 15 | Migration safety: schema changes safe to apply | Back to Ready for Local Test |
 
 **Observability Checker (scoped by deliverable type):**
 
 | # | Gate | Fails → |
 |---|------|---------|
-| 12 | Structured logs at key decision points | Flagged as gap |
-| 13 | Correlation IDs propagating across boundaries | Flagged as gap |
-| 14 | New signals appearing (features) or same signals (bugfix) | Flagged as gap |
-| 15 | Defined-but-unused infrastructure detection | Flagged as gap |
+| 16 | Structured logs at key decision points | Flagged as gap |
+| 17 | Correlation IDs propagating across boundaries | Flagged as gap |
+| 18 | New signals appearing (features) or same signals (bugfix) | Flagged as gap |
+| 19 | Defined-but-unused infrastructure detection | Flagged as gap |
 
 **E2E Impact (Impact Analyst + E2E Runner):**
 
 | # | Gate | Fails → |
 |---|------|---------|
-| 16 | Affected user journeys identified and tested | Fix Agent on ci (2 attempts) |
-| 17 | Data-level assertions per journey confirmed | Fix Agent on ci |
-| 18 | Docker build gate before RC cut | BLOCKED — fix ci first |
+| 20 | Affected user journeys identified and tested | Fix Agent on ci (2 attempts) |
+| 21 | Data-level assertions per journey confirmed | Fix Agent on ci |
+| 22 | **Data quality: input validation on all service boundaries** | Fix Agent on ci |
+| 23 | **Rollback plan documented** for this release | BLOCKED — must document before RC |
+| 24 | Docker build gate before RC cut | BLOCKED — fix ci first |
 
 ## Cutting the RC
 

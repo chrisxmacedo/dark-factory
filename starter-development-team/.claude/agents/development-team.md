@@ -165,6 +165,21 @@ checked. If the FINAL REVIEW has not arrived, the Team Lead waits for it.
     log the request (correlation ID, path, method) and response (status
     code, duration). If a logger module exists, use it. If it doesn't,
     create one before writing routes.
+  - **Data quality validation at service boundaries** — every service
+    that receives data from another service (HTTP or queue) must validate
+    inputs before processing. Reject invalid data with a structured error
+    and log the rejection with correlation ID and reason. Never silently
+    accept malformed input from an upstream service.
+  - **Contract tests for inter-service APIs** — when adding or modifying
+    a service API endpoint that another service consumes, write a contract
+    test in `tests/contract/` that verifies the response schema matches
+    what the consumer expects. When changing a response shape, update
+    contract tests for all consumers in the same PR.
+  - **Migration safety** — every database migration must have a
+    corresponding down/rollback migration. Destructive migrations (DROP
+    TABLE, DROP COLUMN, ALTER TYPE) must be flagged in the PR description
+    for human review. Never apply a migration to a shared environment
+    without testing it against a populated database first.
 - Commits only to the feature branch — never to ci or main
 - **Add `data-testid` attributes** to every interactive UI element:
   pages, lists, list items, buttons, forms, error states, loading states.
@@ -228,6 +243,17 @@ checked. If the FINAL REVIEW has not arrived, the Team Lead waits for it.
      - Hardcoded test emails/user IDs that don't match seed data — flag as
        "test data incoherence". All auth flows, fixtures, and test sessions
        must use canonical seeded identities
+     - Service endpoints that accept data from other services without input
+       validation — flag as "missing data quality gate". Every service
+       boundary must validate inputs and reject malformed data
+     - Inter-service API changes without updated contract tests in
+       `tests/contract/` — flag as "missing contract test". Response
+       shape changes must be verified against all consumers
+     - Database migrations without a corresponding down/rollback migration
+       — flag as "irreversible migration". Destructive migrations (DROP,
+       ALTER TYPE) must be flagged for human review
+     - Dependencies with known critical/high CVEs — flag as "vulnerable
+       dependency". Run `npm audit` / `pip-audit` to check
 - Sends findings to Team Lead via inbox as they arise:
   `CRITIQUE [low|medium|high]: [issue] — [file:line if known] — [suggestion]`
 - Does not block the Implementer — critique is advisory unless rated high
