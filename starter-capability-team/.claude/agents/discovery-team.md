@@ -17,19 +17,77 @@ Outputs are baselined and rarely revised.
 
 | Step | Artefact | Lead | Agent role |
 |------|----------|------|------------|
-| 1. Capabilities | `foundation/capabilities/*.json` | Domain Analyst | Drafts from public sources (mandate, legislation, charter) |
-| 3. Governance | `foundation/governance/*.json` | Domain Analyst | Structures rules; cannot validate correctness |
-| 4. Personas | `foundation/personas/*.json` | Domain Analyst | Generates from capabilities; human adds tacit knowledge |
+| 1. Capabilities | `foundation/capabilities/*.json` | Domain Analyst | Researches market landscape, competitive structure, and regulatory horizon before drafting capabilities (see Step 1 research brief below) |
+| 3. Governance | `foundation/governance/*.json` | Domain Analyst | Structures current rules AND flags incoming regulation from Step 1 horizon scanning; cannot validate correctness |
+| 4. Personas | `foundation/personas/*.json` | Domain Analyst | Generates from capabilities including persona types revealed by market research (e.g. TPPs from open banking, ESG rating agencies from sustainability regulation); human adds tacit knowledge |
 
 These artefacts are **deeply institutional**. The agent generates first
-drafts from public sources. The Domain Analyst validates against
-institutional reality that isn't written in any document.
+drafts from public sources and market research. The Domain Analyst
+validates against institutional reality that isn't written in any
+document. The research depth at Step 1 determines the quality of
+everything that follows.
+
+### Step 1 research brief
+
+Before producing any capability artefact, the agent must research the
+market context for the organisation's sector. This is not optional — a
+capability list derived only from the org chart or mandate produces a
+shallow architecture that misses strategic context. The agent does the
+breadth; the Domain Analyst does the depth.
+
+**Market landscape (per capability domain):**
+- What do the leading organisations in this sector currently offer?
+  What is table stakes vs genuine differentiator?
+- Which capabilities are being unbundled by specialist or technology-led
+  entrants? Which are being re-bundled by platform players?
+- Where is the margin — what commercial model sustains each capability?
+- For each capability, who are the top incumbents and top challengers?
+- What capabilities are candidates for buy-not-build (platform providers,
+  BaaS, SaaS)? What must be built in-house for regulatory or competitive
+  reasons?
+
+**Regulatory landscape:**
+- What current legislation and regulation creates or constrains each
+  capability? (This feeds directly into the mandate_source field)
+- What regulation is coming in the next 2-3 years that will create new
+  capabilities or reshape existing ones?
+- What enforcement actions or supervisory statements signal where the
+  regulator's attention is focused?
+
+**Competitive positioning:**
+- What is being commoditised vs where is there genuine differentiation?
+- Where are partnerships replacing build?
+- What industry standards or shared infrastructure exist (e.g. payment
+  schemes, industry utilities, shared data platforms)?
+- What technology shifts are changing the cost structure of capabilities
+  (e.g. AI in fraud detection, digitisation of trade finance documents)?
+
+**Sub-capability boundary evidence:**
+The market research directly informs the promotion test:
+- If specialist providers exist for a sub-capability, that is evidence
+  for "distinct external participants" and "independent scalability"
+- If a separate regulatory framework governs a sub-capability, that is
+  evidence for "separate regulatory framework"
+- If the market treats something as a distinct product with its own
+  lifecycle, that is evidence for "distinct lifecycle"
+
+**Output:** The research findings are captured in a `market_context`
+section within each capability artefact (competitive landscape,
+regulatory horizon, build-vs-buy assessment) and in the design
+decisions (rationale for promotion/retention informed by market
+evidence).
+
+The Domain Analyst reviews the research against what this specific
+organisation actually does and intends to do. The agent can find that
+a capability is being disrupted by technology entrants; only the Domain
+Analyst knows whether this organisation is investing in it, outsourcing
+it, or exiting it.
 
 ### Layer 2: Technical Architecture (Steps 2, 5)
 
 | Step | Artefact | Lead | Agent role |
 |------|----------|------|------------|
-| 2. Technical services | `foundation/technical-services/*.json` | Architect | Enumerates from capabilities; identifies shared services |
+| 2. Technical services | `foundation/technical-services/*.json` | Architect | Enumerates from capabilities; identifies shared services; considers industry standards and buy-vs-build from Step 1 research |
 | 5. Visual architecture | `architecture/visual-architecture.json` + `channel-model.json` | Architect | Produces structured representation; human defines layering |
 | 5. C4 workspace (L1 + L2) | `architecture/c4-workspace.dsl` | Architect | Generates Structurizr DSL from capabilities, services, personas, channels |
 | 5. Service dependencies | `architecture/service-dependencies.json` | Architect | Assigns tier (T0-T4), maps dependency criticality (hard/soft), defines build order |
@@ -123,14 +181,19 @@ a prioritised backlog of journeys for Phase C.
 
 ```
 Step 1: Capabilities
+  │  1a. Market research (agent: competitive landscape, regulatory
+  │      horizon, build-vs-buy, sub-capability boundary evidence)
+  │  1b. Capability drafting (agent: from research + mandate + legislation)
+  │  1c. Domain Analyst review (human: validates against institutional
+  │      reality, adjusts promotion decisions, makes build-vs-buy calls)
   ↓ (capabilities define what services are needed)
 Step 2: Technical services
   ↓ (services need governance constraints)
-Step 3: Governance mapping
+Step 3: Governance mapping (includes incoming regulation from Step 1 horizon scan)
   ↓ (governance constrains who can do what)
-Step 4: Personas
+Step 4: Personas (includes persona types revealed by market research)
   ↓ (personas + capabilities → architecture)
-Step 5: Visual architecture
+Step 5: Visual architecture + service dependencies + observability + security + environments
   ↓ (architecture + personas → journey inventory)
 Step 6: Journey inventory
   ↓ Gate 1
@@ -147,15 +210,22 @@ transition.
   that isn't in any document
 - Leads steps 1, 3, 4, 6
 - Validates every artefact against institutional reality
-- Applies the sub-capability promotion test:
-  1. Distinct external participants?
-  2. Separate regulatory framework?
-  3. Distinct lifecycle?
-  4. Independent scalability requirements?
+- Reviews the agent's market research against what this specific
+  organisation actually does, intends to do, and has decided not to do
+- Applies the sub-capability promotion test, using market evidence
+  from the research to support or challenge the agent's assessment:
+  1. Distinct external participants? (market: do specialist providers exist?)
+  2. Separate regulatory framework? (market: is there distinct regulation?)
+  3. Distinct lifecycle? (market: is it treated as a separate product?)
+  4. Independent scalability requirements? (market: different demand drivers?)
   If 3+ criteria met → promote to standalone capability
 - Identifies shared sub-capabilities across capabilities
+- Makes build-vs-buy decisions informed by market research — the agent
+  identifies what platforms and providers exist; the Domain Analyst
+  decides what this organisation builds, buys, or partners for
 - Sources: organisational mandate, legislation, charter, strategic plan,
-  annual reports, organisational charts, delegated authority matrices
+  annual reports, organisational charts, delegated authority matrices,
+  regulator publications, industry body reports, competitor analysis
 
 ### Architect (leads Layer 2)
 - Structural and technical decisions

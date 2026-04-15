@@ -38,6 +38,16 @@ AI agent's context window for development.
 - Each capability is also the **deployment boundary** — own database schema, own application, own test suite
 - Capabilities are stable over decades — they change only when the mandate changes
 - Technology choices are derived from capability requirements, never the reverse
+- **Research before drafting**: the agent must research the market landscape
+  for each capability domain before producing artefacts. A capability list
+  derived only from the org chart produces a shallow architecture. The
+  research captures: competitive landscape (who does what, what's being
+  unbundled/re-bundled), regulatory horizon (what's coming in 2-3 years),
+  build-vs-buy assessment (what platforms exist, what must be in-house),
+  and sub-capability boundary evidence (market structure informs the
+  promotion test)
+- Each capability artefact includes a `market_context` section capturing
+  the research findings that informed its design
 
 ## Sub-capability promotion test
 
@@ -55,6 +65,14 @@ Promotion has a direct deployment consequence:
   deployable unit (same database schema, same application)
 - **Promoted** sub-capabilities become independently deployable
   capabilities (own schema, own application, own test suite)
+
+The market research from Step 1 provides evidence for promotion:
+- Specialist providers exist → evidence for distinct participants
+  and independent scalability
+- Separate regulation governs it → evidence for separate regulatory
+  framework
+- The market treats it as a distinct product → evidence for distinct
+  lifecycle
 
 ## Shared sub-capabilities
 
