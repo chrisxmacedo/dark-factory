@@ -108,11 +108,12 @@ hr { border: none; border-top: 1px solid var(--border-light); margin: 32px 0; }
 <nav>
 <div class="logo">
 <h1>Capability-Driven System Design</h1>
-<p>Bootstrap methodology v1.0</p>
+<p>Headless system specification v2.0</p>
 </div>
 <div class="nav-section">Overview</div>
 <ul>
 <li><a href="#principles" class="active">Principles</a></li>
+<li><a href="#architecture-spec">Architecture specification</a></li>
 <li><a href="#phases">Phase model</a></li>
 <li><a href="#seq-vs-iter">Sequential vs iterative</a></li>
 </ul>
@@ -138,15 +139,6 @@ hr { border: none; border-top: 1px solid var(--border-light); margin: 32px 0; }
 <li><a href="#step12">12. API contracts</a></li>
 <li><a href="#step13">13. Event catalogue</a></li>
 </ul>
-<div class="nav-section">Phase D — UI specification</div>
-<ul>
-<li><a href="#step14">14. Portal definition</a></li>
-<li><a href="#step15">15. Screen specifications</a></li>
-<li><a href="#step16">16. Task flows</a></li>
-<li><a href="#step17">17. Form specifications</a></li>
-<li><a href="#step18">18. Design system</a></li>
-<li><a href="#step19">19. Error &amp; edge cases</a></li>
-</ul>
 <div class="nav-section">Supporting structures</div>
 <ul>
 <li><a href="#transparency">Transparency framework</a></li>
@@ -159,6 +151,7 @@ hr { border: none; border-top: 1px solid var(--border-light); margin: 32px 0; }
 <div class="nav-section">Development</div>
 <ul>
 <li><a href="#design-to-dev">Design to development handoff</a></li>
+<li><a href="#sprint0">Sprint 0 handoff</a></li>
 <li><a href="#dependency-map">Dependency map</a></li>
 <li><a href="#build-order">Suggested build order</a></li>
 <li><a href="#repo-inventory">Repository inventory</a></li>
@@ -177,16 +170,85 @@ hr { border: none; border-top: 1px solid var(--border-light); margin: 32px 0; }
 
 <h3>Core tenets</h3>
 <ol>
-<li><strong>Capabilities first, technology second.</strong> Start from what the organisation does, not what systems it needs. Technology choices are derived from capability requirements, never the reverse.</li>
-<li><strong>Journeys are the unit of delivery.</strong> Every data model, API contract, and screen specification traces back to a persona journey. Nothing exists in the system that isn't required by at least one journey.</li>
+<li><strong>Capabilities first, technology second.</strong> Start from what the organisation does, not what systems it needs. Capabilities are business domain groupings containing services, not single services. Technology choices are derived from capability requirements, never the reverse.</li>
+<li><strong>Journeys are the unit of delivery.</strong> Every data model, API contract, and event specification traces back to a persona journey. Nothing exists in the system that isn't required by at least one journey. Journeys are design-time specifications, not runtime orchestration.</li>
 <li><strong>Artefacts are machine-readable.</strong> Every output is a validated JSON document stored in version control. No PDFs, no slide decks, no documents that can't be consumed by an agentic development team.</li>
-<li><strong>Sequential discovery, iterative modelling.</strong> The first six steps are done once in order. Steps 7–19 are repeated per journey and per portal, with feedback loops between them.</li>
+<li><strong>Sequential discovery, iterative modelling.</strong> The first six steps are done once in order. Steps 7-13 are repeated per journey, with feedback loops between them.</li>
+<li><strong>Cross-capability communication is exclusively async events.</strong> Services within a capability communicate freely. Capabilities never call each other's APIs. The Event Bus is the sole cross-capability integration mechanism.</li>
+<li><strong>Three architectural layers.</strong> The Capability Layer (runtime business domain groupings), the Platform Layer (runtime shared infrastructure), and the Contract Layer (design-time specifications). C4 diagrams show runtime only.</li>
 <li><strong>Transparency is a capability, not a feature.</strong> If the organisation has public accountability obligations, transparency is modelled as a first-class capability with its own services, projections, and disclosure timelines.</li>
 </ol>
 
 <div class="callout callout-info">
-<strong>Design vs development.</strong> This methodology produces specifications, not running software. The output is consumed by a separate development pipeline (your DEV project) which builds, tests, and deploys the actual system. The handoff point is a stable journey model in Phase C plus approved screen specs in Phase D — together they constitute a buildable unit of work.
+<strong>Design vs development.</strong> This methodology produces a headless system specification, not running software. The output is consumed by a separate development pipeline (your DEV project) which builds, tests, and deploys the actual system. Channel UIs (web, mobile, branch, partner portals) sit outside the system boundary and are a separate development concern consuming the capability APIs produced here. The handoff point is a stable journey model in Phase C — each stable journey constitutes one buildable vertical slice.
 </div>
+
+<!-- ============================================ -->
+<!-- ARCHITECTURE SPECIFICATION -->
+<!-- ============================================ -->
+<h2 id="architecture-spec">Architecture specification</h2>
+
+<p>The architecture is capability-driven: the system is decomposed into distinct business capabilities that own their data, publish event contracts, and expose REST APIs. The architecture has two runtime layers and one design-time layer.</p>
+
+<h3>What a capability is</h3>
+<p>A capability is a business domain grouping. It represents what the organisation does, not how the software is built. A capability is <strong>not</strong> a single deployable service. It is a grouping of one or more independently deployable technical services that together fulfil a business domain's responsibilities.</p>
+
+<p>Each capability contains:</p>
+<ul>
+<li><strong>One or more technical services</strong> — APIs, workers, processors, scheduled jobs, or any other deployment unit the domain requires</li>
+<li><strong>Its own data</strong> — one or more databases or database schemas. Services within a capability may share a database or have their own. This is an internal decision, invisible to other capabilities.</li>
+<li><strong>Published event contracts</strong> — the events it produces, registered in the Schema Registry</li>
+<li><strong>Consumed event subscriptions</strong> — the events it listens for from other capabilities</li>
+<li><strong>A REST API surface</strong> — exposed to external consumers (channel UIs, internal tooling, external partners)</li>
+</ul>
+
+<h3>Communication rules</h3>
+
+<div class="card">
+<h4>Within a capability (free)</h4>
+<p>Services within a capability communicate by whatever means makes sense for the domain: synchronous REST/gRPC, shared database access, direct method calls, or internal message queues. The architecture does not prescribe internal communication. The capability boundary is a business domain boundary, not a technical communication boundary.</p>
+</div>
+
+<div class="card">
+<h4>Across capabilities (events only)</h4>
+<p>Communication between capabilities is exclusively asynchronous events through the Platform Layer's Event Bus. A capability <strong>never</strong> calls another capability's API directly. A capability <strong>never</strong> reads from or writes to another capability's database. A capability <strong>never</strong> communicates synchronously with another capability.</p>
+</div>
+
+<div class="card">
+<h4>Channel interaction (external REST)</h4>
+<p>Channel UIs (customer-facing apps, websites, internal tooling, partner portals) sit outside the system boundary. They interact with capabilities through their published REST APIs using standard stateless request-response calls. A channel may call multiple capabilities in sequence to assemble a user journey. The channel orchestrates the user interaction; the event bus orchestrates the cross-capability consequences.</p>
+</div>
+
+<h3>Three architectural layers</h3>
+<table>
+<tr><th>Layer</th><th>Type</th><th>Description</th></tr>
+<tr><td><strong>Capability Layer</strong></td><td>Runtime</td><td>Business domain groupings containing independently deployable technical services. Each capability owns its data, publishes events, and exposes REST APIs.</td></tr>
+<tr><td><strong>Platform Layer</strong></td><td>Runtime</td><td>Shared infrastructure that all capabilities depend on: Event Bus, Schema Registry, Observability, Audit Pipeline, Auth, Cache. Principle: share the mechanism, isolate the state. Contains no business logic.</td></tr>
+<tr><td><strong>Contract Layer</strong></td><td>Design-time</td><td>Specification artefacts that live in the repository and CI pipeline: API contracts (OpenAPI), event contracts (schemas), journey contracts (process specs). Not runtime containers, not on C4 diagrams. The Schema Registry is the sole runtime manifestation.</td></tr>
+</table>
+
+<h3>Journey state</h3>
+<p>User journeys are not orchestrated by a central process manager or saga. Journey state is implicit in the data held by capabilities. There is no separate state machine. The data IS the state. Coordination happens through capabilities reacting to each other's published events.</p>
+
+<h3>C4 mapping</h3>
+<table>
+<tr><th>Level</th><th>What it shows</th></tr>
+<tr><td><strong>L1 — System Context</strong></td><td>The system boundary and its users. People: actual users. External systems: regulators, payment providers, industry infrastructure. AI agents do not appear — development concern, not system user.</td></tr>
+<tr><td><strong>L2 — Container Diagram</strong></td><td>Only what runs in production. Two boundary groupings: <strong>Capabilities boundary</strong> (capability containers with async event arrows between them) and <strong>Platform boundary</strong> (infrastructure containers below capabilities, dependency arrows flow downward). The Contract Layer does not appear on L2.</td></tr>
+<tr><td><strong>L3 — Component Diagram</strong></td><td>Zooms into a single capability: internal services, inbound/outbound ports, API controllers, data stores, platform adapters. No design-time artefacts.</td></tr>
+</table>
+
+<h3>Key architectural principles</h3>
+<ol>
+<li>Capabilities are business domain groupings, not deployment units. A capability contains one or more independently deployable services.</li>
+<li>Cross-capability communication is exclusively asynchronous events. No synchronous calls between capabilities.</li>
+<li>Share the mechanism, isolate the state. Platform infrastructure is shared; business data is isolated per capability.</li>
+<li>Each capability owns its own data representations. No shared data models. Synchronisation through domain events.</li>
+<li>Journey state is implicit in capability data. No central orchestrator or saga.</li>
+<li>The Contract Layer is design-time, not runtime. The Schema Registry is the sole runtime manifestation.</li>
+<li>C4 diagrams show only what runs in production.</li>
+<li>Capabilities are sized to fit within an AI agent's context window. This is the primary decomposition constraint.</li>
+</ol>
 
 <!-- ============================================ -->
 <!-- PHASE MODEL -->
@@ -200,53 +262,48 @@ hr { border: none; border-top: 1px solid var(--border-light); margin: 32px 0; }
 <p>Produces the system map and the prioritised journey backlog. These are the inputs that enable all subsequent iterative work. The visual architecture becomes a living document enriched by later phases.</p>
 
 <div class="phase-banner c">Phase C — Analytical modelling (iterative, per journey)</div>
-<p>Pick the next highest-priority journey. Work through steps 7–13 for that journey. Aggregate outputs into the central data model and service map. Repeat. Steps within a journey form a tight feedback loop — discovering a missing entity in step 12 sends you back to step 10.</p>
-
-<div class="phase-banner d">Phase D — UI specification (iterative, per portal)</div>
-<p>Take all journeys that flow through a portal and design its screens holistically. Steps 14–19 produce the specifications that let an agentic dev team build working UIs. Gaps discovered here feed back into Phase C as refinement tickets.</p>
+<p>Pick the next highest-priority journey. Work through steps 7-13 for that journey. Aggregate outputs into the central data model, service map, and event catalogue. Update the C4 workspace. Repeat. A journey may span multiple capabilities — the sequence diagram makes cross-capability data flows visible. Steps within a journey form a tight feedback loop — discovering a missing entity in step 12 sends you back to step 10. Each stable journey is immediately available for handoff to DEV.</p>
 
 <div class="callout callout-warn">
-<strong>Phases C and D run in parallel.</strong> Phase D can begin as soon as the first batch of Phase C journey models reach "stable" status. The design team continues modelling new journeys in Phase C while UI specifications are being written for completed journeys in Phase D. Managing the flow between these phases is the programme owner's primary job.
+<strong>Headless system specification.</strong> This pipeline produces a headless system specification. Channel UIs (web, mobile, branch, partner portals) sit outside the system boundary and are a separate development concern. They consume the capability APIs and journey contracts produced here. Channel teams start once the first journey's API contracts are stable.
 </div>
 
 <h3 id="seq-vs-iter">Sequential vs iterative: understanding the two rhythms</h3>
 
-<p>The 19 steps are not a waterfall. They cluster into two fundamentally different working rhythms, and confusing the two is the most common way to misapply this methodology.</p>
+<p>The 13 steps are not a waterfall. They cluster into two fundamentally different working rhythms, and confusing the two is the most common way to misapply this methodology.</p>
 
 <h4>Phases A and B are convergent and sequential</h4>
 <p>You are narrowing from the universe of possibilities down to a fixed set of capabilities, personas, and a prioritised journey backlog. Each step depends on the completed, reviewed, and baselined output of the previous step. You cannot identify personas (step 4) until you know what capabilities exist (step 1). You cannot inventory journeys (step 6) until you know who the personas are (step 4) and what the architecture looks like (step 5). The total number of steps here is small (6), they flow in strict order, and the outputs are stable — you don't revisit "what are the capabilities" once you've moved on.</p>
 
 <p>The working rhythm is: produce an artefact, review it, baseline it, move to the next step. The Jira workflow reflects this — FOUND uses a Kanban board where artefacts move through Draft → In review → Approved → Baselined, with review gates between steps.</p>
 
-<h4>Phases C and D are divergent and iterative</h4>
+<h4>Phase C is divergent and iterative</h4>
 <p>You are expanding outward from each journey into increasing specificity, and every journey you model teaches you something that changes the central model. The second journey you model will discover that the <code>Institution</code> entity from the first journey needs three new fields. The third journey will reveal that what you thought was one service is actually two. The fifth journey will expose a service boundary that was drawn in the wrong place. This is expected and healthy — the iteration <em>is</em> the methodology, not a failure of it.</p>
 
-<h4>Phases C and D iterate on different axes</h4>
-<p>Phase C iterates <strong>per journey</strong> — you pick a journey, work through steps 7–13, aggregate the results into the central model, and pick the next journey. Phase D iterates <strong>per portal</strong> — you take all the journeys that flow through a given portal and design its screens holistically, rather than one journey at a time. This distinction matters because a single screen often serves multiple journeys: the "facility overview" screen in the internal portal is used by the ELA journey, the standing facility journey, and the OMO journey. Designing it three times and merging would produce a mess.</p>
+<p>Phase C iterates <strong>per journey</strong> — you pick a journey, work through steps 7-13, aggregate the results into the central model, and pick the next journey. Each stable journey is immediately available for handoff to DEV as a buildable vertical slice.</p>
 
 <h4>The feedback loops</h4>
-<p>Three feedback loops connect the iterative phases:</p>
+<p>Two feedback loops connect the iterative work:</p>
 <table>
 <tr><th>Loop</th><th>Direction</th><th>Trigger</th><th>Example</th></tr>
 <tr><td>Intra-journey (Phase C)</td><td>Step 12 → Step 10</td><td>API contract design reveals a missing entity or field in the data model</td><td>Settlement instruction needs a <code>priority_level</code> field not in the original entity</td></tr>
 <tr><td>Cross-journey (Phase C)</td><td>Journey N → Central model → Journey N+1</td><td>New journey discovers that a shared entity needs restructuring</td><td>Second journey reveals <code>Institution</code> needs a <code>preferred_currency</code> field</td></tr>
-<tr><td>UI-to-model (Phase D → C)</td><td>Screen spec → MODEL refinement ticket</td><td>Screen specification reveals a missing field, API endpoint, or entity that the analytical model doesn't provide</td><td>The margin call screen needs the institution's preferred notification channel — no such field exists on <code>Institution</code></td></tr>
 </table>
 
 <h4>Gate points between phases</h4>
 <p>Two explicit gate points control the flow:</p>
 <table>
 <tr><th>Gate</th><th>Between</th><th>Condition to pass</th></tr>
-<tr><td>Gate 1: Modelling readiness</td><td>Phase B → Phase C</td><td>All six FOUND artefacts are baselined. The journey inventory is prioritised. The first journey is selected.</td></tr>
-<tr><td>Gate 2: UI spec readiness</td><td>Phase C → Phase D</td><td>At least one journey's MODEL spec tasks are all "stable". The central model has been updated. No blocking refinements are outstanding.</td></tr>
+<tr><td>Gate 1: Modelling readiness</td><td>Phase B → Phase C</td><td>All foundation artefacts are baselined (including C4, service dependencies, observability model, security model). The journey inventory is prioritised. The first journey is selected.</td></tr>
+<tr><td>Gate 2: Journey stable</td><td>Phase C → Handoff to DEV</td><td>Journey's artefacts (steps 7-13) are all committed and "Stable". The central model has been updated. C4 workspace updated. No blocking refinements outstanding.</td></tr>
 </table>
-<p>Gate 1 is passed once and never revisited. Gate 2 is passed repeatedly — each time a new batch of journeys reaches "stable", more work becomes available for Phase D.</p>
+<p>Gate 1 is passed once and never revisited. Gate 2 is passed repeatedly — each time a journey reaches "stable", it is immediately available for handoff to DEV as a buildable vertical slice.</p>
 
 <h4>What this means for scheduling</h4>
-<p>Phases A and B take 2–3 weeks with the domain analyst and architect working as a pair. Phase C then runs for 8–12 weeks, modelling journeys in priority order. Phase D starts 2–3 weeks into Phase C, once the first batch of journey models are stable. The total design pipeline is 12–16 weeks, but the development team can begin receiving buildable units of work from sprint 5 onwards — they don't wait for all design to complete.</p>
+<p>Phases A and B take 2-3 weeks with the domain analyst and architect working as a pair. Sprint 0 (platform + environments) takes 1-2 weeks and overlaps with the start of Phase C. Phase C then runs for 8-12 weeks, modelling journeys in priority order. The total design pipeline is 10-14 weeks, but the DEV team receives Sprint 0 at week 3 and buildable journey units from week 5 onwards — they don't wait for all design to complete.</p>
 
 <div class="callout callout-tip">
-<strong>The pipeline, not the waterfall.</strong> The overall flow is: Phase A → Phase B → [Phase C and Phase D in parallel, feeding DEV incrementally]. Design and development overlap. The first journey can be in production while the fifteenth journey is still being modelled. The methodology is a pipeline with four stages running concurrently at steady state, not a sequence of phases that must complete before the next begins.
+<strong>The pipeline, not the waterfall.</strong> The overall flow is: Phase A → Phase B → [Sprint 0 to DEV + Phase C feeding DEV incrementally per journey]. Design and development overlap. The first journey can be in production while the fifteenth journey is still being modelled. Channel development (web, mobile, branch, partner portals) runs as a separate concern, consuming the capability APIs and journey contracts produced here. Channel teams start once the first journey's API contracts are stable.
 </div>
 
 <!-- ============================================ -->
@@ -256,24 +313,36 @@ hr { border: none; border-top: 1px solid var(--border-light); margin: 32px 0; }
 <div class="card step-card phase-a">
 <span class="step-num a">PHASE A · STEP 1</span>
 <div class="step-title">Identify organisational capabilities</div>
-<p>Define what the organisation does at the highest level of abstraction. Each capability is a distinct area of institutional responsibility that could, in principle, be delegated to a separate department. Capabilities are stable over decades — they change only when the organisation's mandate changes.</p>
+<p>Define what the organisation does at the highest level of abstraction. Each capability is a business domain grouping containing one or more independently deployable technical services. Capabilities are stable over decades — they change only when the organisation's mandate changes.</p>
+
+<p><strong>Before drafting any capability artefact</strong>, the agent must research the market context for the organisation's sector. A capability list derived only from the org chart or mandate produces a shallow architecture. The research captures:</p>
+<ul>
+<li><strong>Competitive landscape</strong> — who does what, what's being unbundled/re-bundled, where is the margin, who are the top incumbents and challengers</li>
+<li><strong>Regulatory horizon</strong> — what's coming in 2-3 years that will create new capabilities or reshape existing ones, what enforcement actions signal regulator focus</li>
+<li><strong>Build-vs-buy assessment</strong> — what platforms exist (BaaS, SaaS), what must be built in-house for regulatory or competitive reasons</li>
+<li><strong>Sub-capability boundary evidence</strong> — market structure informs the promotion test (specialist providers = distinct participants, separate regulation = separate framework, distinct product = distinct lifecycle)</li>
+</ul>
+
 <div class="meta-grid">
-<div class="meta-box"><div class="meta-label">Inputs</div><div class="meta-value">Organisational mandate, legislation, charter, strategic plan, annual reports</div></div>
-<div class="meta-box"><div class="meta-label">Outputs</div><div class="meta-value"><code>capabilities/*.json</code> — one file per capability with name, description, legislative basis, and structured sub-capabilities. Also contributes to <code>foundation/shared-sub-capabilities.json</code> when overlaps are detected.</div></div>
-<div class="meta-box"><div class="meta-label">Owner</div><div class="meta-value"><span class="tag tag-human">Domain analyst</span> leads. <span class="tag tag-agent">Agent</span> generates first draft from public sources. Human validates against institutional reality and applies promotion tests.</div></div>
+<div class="meta-box"><div class="meta-label">Inputs</div><div class="meta-value">Organisational mandate, legislation, charter, strategic plan, annual reports, market research</div></div>
+<div class="meta-box"><div class="meta-label">Outputs</div><div class="meta-value"><code>capabilities/*.json</code> — one file per capability with name, description, legislative basis, market context, and structured sub-capabilities. Also contributes to <code>foundation/shared-sub-capabilities.json</code> when overlaps are detected.</div></div>
+<div class="meta-box"><div class="meta-label">Owner</div><div class="meta-value"><span class="tag tag-human">Domain analyst</span> leads. <span class="tag tag-agent">Agent</span> researches market landscape and generates first draft. Human validates against institutional reality and applies promotion tests.</div></div>
 </div>
 
 <h4>Sub-capability promotion test</h4>
-<p>Every sub-capability must be evaluated against four criteria. If it meets three or more, it should be promoted to a standalone capability. The test is documented in the artefact so the decision can be revisited in Phase C if journey modelling reveals more complexity than expected.</p>
+<p>Every sub-capability must be evaluated against four criteria. If it meets three or more, it should be promoted to a <strong>separate service within the capability</strong>. Promotion does NOT mean leaving the capability — a promoted sub-capability is still part of its parent capability. It becomes its own service (own repo, own deployment unit) but remains inside the capability boundary. Promoted services may share databases with other services in the same capability or have their own — this is an internal decision.</p>
 <table>
 <tr><th>Criterion</th><th>Question</th><th>Example (syndicated lending)</th></tr>
 <tr><td>Distinct external participants</td><td>Does it involve participant types absent from the parent?</td><td>Yes — agent banks, participant banks</td></tr>
 <tr><td>Distinct legal/regulatory framework</td><td>Is it governed by its own legislation or industry standard?</td><td>Yes — LMA documentation</td></tr>
 <tr><td>Distinct lifecycle</td><td>Does it have end-to-end phases that don't map onto the parent?</td><td>Yes — bookbuilding, allocation, agency administration</td></tr>
-<tr><td>Distinct data domain</td><td>Does it require entities not shared with sibling sub-capabilities?</td><td>Yes — syndicate_member, participation_agreement, agency_fee_schedule</td></tr>
+<tr><td>Independent scalability requirements</td><td>Does it have different demand drivers from the parent?</td><td>Yes — syndication volumes independent of bilateral lending</td></tr>
 </table>
+<div class="callout callout-info">
+<strong>Retained vs promoted:</strong> Retained sub-capabilities are implemented as internal modules within an existing service (shared database, direct method calls). Promoted sub-capabilities become their own service but remain inside the capability boundary. Cross-capability communication rules do not apply within the capability boundary.
+</div>
 <div class="callout callout-tip">
-<strong>Promotion result values:</strong> <code>promote_to_capability</code> (3–4 criteria met — extract to its own capability file), <code>remain_sub_capability</code> (0–2 criteria met — stays where it is), <code>review_in_phase_c</code> (borderline — 2 criteria met but complexity is uncertain, defer decision until journey modelling).
+<strong>Promotion result values:</strong> <code>promote_to_service</code> (3-4 criteria met — becomes a separate service within the capability), <code>remain_sub_capability</code> (0-2 criteria met — stays as an internal module), <code>review_in_phase_c</code> (borderline — 2 criteria met but complexity is uncertain, defer decision until journey modelling).
 </div>
 
 <h4>Artefact schema</h4>
@@ -282,6 +351,12 @@ hr { border: none; border-top: 1px solid var(--border-light); margin: 32px 0; }
   "name": "Corporate lending",
   "description": "Provision and management of credit facilities to corporate clients...",
   "legislative_basis": "Banking Act 2009, FCA Handbook BIPRU",
+  "market_context": {
+    "competitive_landscape": "Traditional banks dominate bilateral lending. Fintech lenders (e.g. OakNorth, Funding Circle) competing on speed and data-driven decisioning for SME segment. Syndicated lending remains bank-dominated with LMA standardisation.",
+    "regulatory_horizon": "Basel III.1 implementation 2025-2027 increases capital requirements for credit risk. ESG disclosure requirements expanding to lending portfolios.",
+    "build_vs_buy": "Core credit decisioning must be in-house (regulatory requirement for model governance). Syndication workflow platforms exist (Finastra Fusion, IHS Markit) but lock-in risk is high. Document management is buy (OpenText, Box).",
+    "sub_capability_evidence": "Syndicated lending has specialist providers (agent banks), separate regulation (LMA), and distinct lifecycle — strong promotion evidence. Credit restructuring governed by separate insolvency law."
+  },
   "sub_capabilities": [
     {
       "id": "credit_origination",
@@ -291,7 +366,7 @@ hr { border: none; border-top: 1px solid var(--border-light); margin: 32px 0; }
         "distinct_participants": false,
         "distinct_legal_framework": false,
         "distinct_lifecycle": true,
-        "distinct_data_domain": false,
+        "independent_scalability": false,
         "result": "remain_sub_capability"
       },
       "boundary_notes": null
@@ -304,10 +379,10 @@ hr { border: none; border-top: 1px solid var(--border-light); margin: 32px 0; }
         "distinct_participants": true,
         "distinct_legal_framework": true,
         "distinct_lifecycle": true,
-        "distinct_data_domain": true,
-        "result": "promote_to_capability"
+        "independent_scalability": true,
+        "result": "promote_to_service"
       },
-      "boundary_notes": "Meets all four promotion criteria. Recommend promoting to standalone capability."
+      "boundary_notes": "Meets all four promotion criteria. Becomes a separate service within the corporate-lending capability (own repo, own deployment unit, may share database)."
     },
     {
       "id": "credit_restructuring_and_workout",
@@ -317,7 +392,7 @@ hr { border: none; border-top: 1px solid var(--border-light); margin: 32px 0; }
         "distinct_participants": false,
         "distinct_legal_framework": true,
         "distinct_lifecycle": true,
-        "distinct_data_domain": false,
+        "independent_scalability": false,
         "result": "review_in_phase_c"
       },
       "boundary_notes": "Borderline. Distinct insolvency law framework and lifecycle, but shares core credit entities with origination. Defer until Phase C reveals whether the journey complexity warrants separation."
@@ -359,11 +434,13 @@ hr { border: none; border-top: 1px solid var(--border-light); margin: 32px 0; }
 
 <h4>Definition of done</h4>
 <ul>
+<li>Market research completed for each capability domain (competitive landscape, regulatory horizon, build-vs-buy, sub-capability boundary evidence)</li>
 <li>Every area of organisational responsibility is represented</li>
 <li>No capability overlaps with another (clear boundaries)</li>
 <li>Each capability has a legislative or charter basis</li>
+<li>Each capability includes a <code>market_context</code> section capturing research findings</li>
 <li>Promotion test applied to every sub-capability — results documented in each sub-capability object</li>
-<li>Any sub-capability meeting 3+ promotion criteria has been extracted to its own capability file</li>
+<li>Promoted sub-capabilities become separate services within the capability (not separate capabilities)</li>
 <li>All overlapping sub-capabilities recorded in <code>shared-sub-capabilities.json</code> with a resolution pattern</li>
 <li>Every sub-capability has a description and at least one primary persona</li>
 <li>Reviewed and approved by domain analyst</li>
@@ -470,16 +547,48 @@ hr { border: none; border-top: 1px solid var(--border-light); margin: 32px 0; }
 <!-- ============================================ -->
 <!-- PHASE B STEPS -->
 <!-- ============================================ -->
-<h2 id="step5">Step 5 — Visual architecture</h2>
+<h2 id="step5">Step 5 — Visual architecture and system models</h2>
 <div class="card step-card phase-b">
 <span class="step-num b">PHASE B · STEP 5</span>
-<div class="step-title">Produce the system architecture map</div>
-<p>Synthesise capabilities, technical services, and personas into a layered architecture diagram. This is the single visual that communicates the entire system to stakeholders. It includes three layers (capability domains, cross-cutting services, foundation infrastructure) plus a channel model showing how different participant types access the system.</p>
+<div class="step-title">Produce the system architecture map and supporting models</div>
+<p>Synthesise capabilities, technical services, and personas into a layered architecture. This step produces multiple artefacts: the visual architecture, channel model, C4 workspace, service dependencies, service catalogue, observability model, security model, and environment specification.</p>
 <div class="meta-grid">
 <div class="meta-box"><div class="meta-label">Inputs</div><div class="meta-value">All Phase A outputs</div></div>
-<div class="meta-box"><div class="meta-label">Outputs</div><div class="meta-value"><code>architecture/visual-architecture.json</code> and <code>architecture/channel-model.json</code></div></div>
-<div class="meta-box"><div class="meta-label">Owner</div><div class="meta-value"><span class="tag tag-both">Architect + Agent</span> — architect defines the layering, agent produces the structured representation, both iterate on the visual</div></div>
+<div class="meta-box"><div class="meta-label">Outputs</div><div class="meta-value"><code>architecture/visual-architecture.json</code>, <code>architecture/channel-model.json</code>, <code>architecture/c4-workspace.dsl</code>, <code>architecture/service-dependencies.json</code>, <code>architecture/service-catalogue.json</code>, <code>architecture/observability-model.json</code>, <code>architecture/security-model.json</code>, <code>architecture/environment-spec.json</code></div></div>
+<div class="meta-box"><div class="meta-label">Owner</div><div class="meta-value"><span class="tag tag-both">Architect + Agent</span> — architect defines the layering and makes structural decisions, agent produces the structured representations</div></div>
 </div>
+
+<h4>Service dependencies (T0-T4 tier framework)</h4>
+<p>Every service is assigned a build tier based on its upstream dependencies. Each dependency is classified by criticality (hard = sync, immediate failure if down; soft = async/degradable). The build order is regulatory-driven: compliance prerequisites must be live before payment or onboarding services.</p>
+<table>
+<tr><th>Tier</th><th>Name</th><th>Rule</th><th>Examples</th></tr>
+<tr><td>T0</td><td>Foundation</td><td>No upstream dependencies — build first</td><td>IAM, API Gateway, Event Bus, OTel Collector, Secrets Management, Service Mesh</td></tr>
+<tr><td>T1</td><td>Core Infrastructure</td><td>Depends only on T0 — compliance prerequisites</td><td>Log Store, Trace Store, Metrics Store, Audit Log Store (WORM)</td></tr>
+<tr><td>T2</td><td>Business Services</td><td>Depends on T0 + T1 — core business capabilities</td><td>Counterparty management, Entity registry</td></tr>
+<tr><td>T3</td><td>Composite</td><td>Depends on T0 + T1 + T2 — multi-dependency capabilities</td><td>Credit risk, Collateral valuation</td></tr>
+<tr><td>T4</td><td>Overlay</td><td>Depends on full stack — build last</td><td>Domain-specific services consuming multiple lower tiers</td></tr>
+</table>
+
+<h4>Service catalogue</h4>
+<p>Consolidates all services with owner capability, API style, data store type, SLA targets, and <code>service.yaml</code> manifest per repo (id, tier, depends_on with protocol and criticality, topics_produced, topics_consumed, data_classification, secrets with rotation_days).</p>
+
+<h4>Observability model</h4>
+<p>Defines the telemetry architecture with OTel Collector as the sole ingestion point. PII scrubbing happens centrally in the collector pipeline. Four stores with different retention and access: Log (90d, engineering), Trace (30d, engineering), Metrics (13mo, engineering), Audit (7yr WORM, auditor-only). Includes per-service instrumentation checklist (6 items, mandatory gate) and logging schemas by service category (7 categories).</p>
+
+<h4>Security model</h4>
+<p>Defines zero-trust security posture: <code>service.yaml</code> as authoritative allowed-call policy source, mTLS via service mesh with workload identity, data classification levels (public to regulated) driving SIEM severity, network segmentation zones (DMZ, Application, Data, Compliance, Management).</p>
+
+<h4>Environment specification</h4>
+<p>Derives CI, RC, and prod-parity environment configurations from the service catalogue, dependencies, and security model. Defines what is real vs stubbed in each environment:</p>
+<table>
+<tr><th>Component</th><th>CI</th><th>RC</th><th>Prod-parity</th></tr>
+<tr><td>Domain capabilities</td><td>Real</td><td>Real</td><td>Real</td></tr>
+<tr><td>Platform (IAM, Event Bus)</td><td>Real</td><td>Real</td><td>Real</td></tr>
+<tr><td>External systems</td><td>Stubs</td><td>Stubs</td><td>Stubs or sandbox</td></tr>
+<tr><td>Databases</td><td>Ephemeral</td><td>Persistent</td><td>Persistent + seed data</td></tr>
+<tr><td>OTel pipeline</td><td>Collector only</td><td>Full stack</td><td>Full stack</td></tr>
+<tr><td>Secrets</td><td>Test values</td><td>Rotated</td><td>Rotated, secrets-manager-backed</td></tr>
+</table>
 <h4>Channel model</h4>
 <p>The channel model defines how each participant type accesses the system. Each channel has its own authentication model, rate limits, data projection rules, and audit requirements.</p>
 <table>
@@ -735,83 +844,6 @@ hr { border: none; border-top: 1px solid var(--border-light); margin: 32px 0; }
 </div>
 
 <!-- ============================================ -->
-<!-- PHASE D STEPS -->
-<!-- ============================================ -->
-<h2 id="step14">Step 14 — Portal definition</h2>
-<div class="card step-card phase-d">
-<span class="step-num d">PHASE D · STEP 14</span>
-<div class="step-title">Define portal information architecture</div>
-<p>For each portal (internal ops, external institution, public data, public transparency, etc.), define the top-level navigation structure, the screen inventory, and how screens map to journey phases and personas.</p>
-<div class="meta-grid">
-<div class="meta-box"><div class="meta-label">Inputs</div><div class="meta-value">All stable Phase C journey models that flow through this portal</div></div>
-<div class="meta-box"><div class="meta-label">Outputs</div><div class="meta-value"><code>ui-specs/{portal}/information-architecture.json</code></div></div>
-<div class="meta-box"><div class="meta-label">Owner</div><div class="meta-value"><span class="tag tag-human">Interaction designer</span> leads. Agent generates initial screen inventory from journey phases.</div></div>
-</div>
-</div>
-
-<h2 id="step15">Step 15 — Screen specifications</h2>
-<div class="card step-card phase-d">
-<span class="step-num d">PHASE D · STEP 15</span>
-<div class="step-title">Specify fields, states, and actions per screen</div>
-<p>For each screen, define which data entities and fields are displayed (referencing the data model), which projection rules apply (referencing the participant interaction model), what actions are available (referencing API contracts), and what states the screen can be in.</p>
-<div class="meta-grid">
-<div class="meta-box"><div class="meta-label">Inputs</div><div class="meta-value">Information architecture, data model, participant interaction model, API contracts</div></div>
-<div class="meta-box"><div class="meta-label">Outputs</div><div class="meta-value"><code>ui-specs/{portal}/screens/{screen}.json</code></div></div>
-<div class="meta-box"><div class="meta-label">Owner</div><div class="meta-value"><span class="tag tag-both">Interaction designer + Agent</span> — designer defines composition and priority, agent fills in field-level detail from the data model</div></div>
-</div>
-<h4>Screen states</h4>
-<p>Every screen specification must address: loading, empty (no data yet), happy path (normal data), partial data (some API calls succeeded, some failed), error (service unavailable), and forbidden (user lacks entitlement).</p>
-</div>
-
-<h2 id="step16">Step 16 — Task flows</h2>
-<div class="card step-card phase-d">
-<span class="step-num d">PHASE D · STEP 16</span>
-<div class="step-title">Define user-level interaction sequences</div>
-<p>Translate system-level sequence diagrams into user-level interaction sequences: what the user clicks, what they see in response, where they navigate next. This is the sequence diagram's counterpart from the user's perspective.</p>
-<div class="meta-grid">
-<div class="meta-box"><div class="meta-label">Inputs</div><div class="meta-value">Screen specs, sequence diagrams, journey detail</div></div>
-<div class="meta-box"><div class="meta-label">Outputs</div><div class="meta-value"><code>ui-specs/{portal}/task-flows/{journey}-flow.json</code></div></div>
-<div class="meta-box"><div class="meta-label">Owner</div><div class="meta-value"><span class="tag tag-human">Interaction designer</span></div></div>
-</div>
-</div>
-
-<h2 id="step17">Step 17 — Form specifications</h2>
-<div class="card step-card phase-d">
-<span class="step-num d">PHASE D · STEP 17</span>
-<div class="step-title">Specify input fields, validation, and conditional logic</div>
-<p>For every data-entry interaction, define the fields, their input types, validation rules, defaults, required/optional status, and conditional visibility logic.</p>
-<div class="meta-grid">
-<div class="meta-box"><div class="meta-label">Inputs</div><div class="meta-value">Data model (field types, validation), screen specs, governance rules (who can enter what)</div></div>
-<div class="meta-box"><div class="meta-label">Outputs</div><div class="meta-value"><code>ui-specs/{portal}/forms/{form}.json</code></div></div>
-<div class="meta-box"><div class="meta-label">Owner</div><div class="meta-value"><span class="tag tag-both">Agent + Interaction designer</span> — agent generates from data model field specs, designer adds UX refinements</div></div>
-</div>
-</div>
-
-<h2 id="step18">Step 18 — Design system</h2>
-<div class="card step-card phase-d">
-<span class="step-num d">PHASE D · STEP 18</span>
-<div class="step-title">Define component patterns and visual vocabulary</div>
-<p>Establish the design system that applies across all portals: the visual vocabulary, layout patterns, and interaction conventions. This can reference an existing system (e.g. GOV.UK Design System for UK public bodies) or define a bespoke one.</p>
-<div class="meta-grid">
-<div class="meta-box"><div class="meta-label">Inputs</div><div class="meta-value">Portal definitions, institutional brand guidelines, accessibility standards</div></div>
-<div class="meta-box"><div class="meta-label">Outputs</div><div class="meta-value"><code>design-system/component-patterns.json</code></div></div>
-<div class="meta-box"><div class="meta-label">Owner</div><div class="meta-value"><span class="tag tag-human">Interaction designer</span> — this is a human judgment call about visual identity. Can be done once upfront if an existing design system is adopted.</div></div>
-</div>
-</div>
-
-<h2 id="step19">Step 19 — Error and edge case catalogue</h2>
-<div class="card step-card phase-d">
-<span class="step-num d">PHASE D · STEP 19</span>
-<div class="step-title">Define what happens when things go wrong</div>
-<p>For every screen and journey phase, catalogue the error states, edge cases, and empty states. What does the officer see when the supervisory intelligence service is unavailable? What happens when collateral eligibility returns a partial result?</p>
-<div class="meta-grid">
-<div class="meta-box"><div class="meta-label">Inputs</div><div class="meta-value">Screen specs, NFRs, service boundaries (to identify failure modes)</div></div>
-<div class="meta-box"><div class="meta-label">Outputs</div><div class="meta-value"><code>design-system/error-states.json</code></div></div>
-<div class="meta-box"><div class="meta-label">Owner</div><div class="meta-value"><span class="tag tag-both">Agent + Architect + Designer</span> — architect identifies failure modes, agent enumerates them, designer specifies UI treatment</div></div>
-</div>
-</div>
-
-<!-- ============================================ -->
 <!-- TRANSPARENCY -->
 <!-- ============================================ -->
 <h2 id="transparency">Transparency framework</h2>
@@ -868,7 +900,7 @@ hr { border: none; border-top: 1px solid var(--border-light); margin: 32px 0; }
 <p>All artefacts are JSON files stored in a single Git repository. Each file validates against its schema. PRs require schema validation to pass. The central model folder is the aggregation point updated at the end of each MODEL sprint.</p>
 
 <h3>Repository structure</h3>
-<pre>foundation-artefacts/
+<pre>artefacts/
   schemas/                          # JSON Schema definitions
     capability.schema.json
     sub-capability.schema.json
@@ -883,20 +915,26 @@ hr { border: none; border-top: 1px solid var(--border-light); margin: 32px 0; }
     service-boundary.schema.json
     api-contract.schema.json
     event.schema.json
-    screen-spec.schema.json
-    task-flow.schema.json
-    form-spec.schema.json
-    component-pattern.schema.json
-    error-state.schema.json
 
-  foundation/                       # Phase A + B outputs
+  foundation/                       # Phase A outputs
     capabilities/
     shared-sub-capabilities.json
     technical-services/
     governance/
     personas/
-    architecture/
-    journeys/
+
+  architecture/                     # Phase B outputs
+    visual-architecture.json
+    channel-model.json
+    c4-workspace.dsl                # Structurizr DSL (living artefact)
+    service-dependencies.json
+    service-catalogue.json
+    observability-model.json
+    security-model.json
+    environment-spec.json
+
+  foundation/journeys/              # Phase B output
+    journey-inventory.json
 
   models/                           # Phase C outputs (per journey)
     ela-facility-approval/
@@ -907,30 +945,19 @@ hr { border: none; border-top: 1px solid var(--border-light); margin: 32px 0; }
       service-boundaries.json
       api-contracts/
       events/
-      sequence-diagrams/
+      sequence-diagrams/            # JSON + Mermaid (.mmd) pairs
 
   central-model/                    # Aggregated from all journeys
     entities/
     service-map.json
-    event-catalogue.json
-
-  ui-specs/                         # Phase D outputs (per portal)
-    internal-ops-portal/
-      information-architecture.json
-      screens/
-      task-flows/
-      forms/
-
-  design-system/
-    component-patterns.json
-    error-states.json</pre>
+    event-catalogue.json</pre>
 
 <!-- ============================================ -->
 <!-- JIRA -->
 <!-- ============================================ -->
 <h2 id="jira">Jira configuration</h2>
 
-<h3>Three design projects + one development project</h3>
+<h3>Two design projects + one development project</h3>
 
 <div class="card">
 <h4>FOUND — Foundation (Phases A + B)</h4>
@@ -952,33 +979,20 @@ hr { border: none; border-top: 1px solid var(--border-light); margin: 32px 0; }
 <tr><td>Workflow</td><td>Backlog → In progress → In review → Stable → Revised</td></tr>
 <tr><td>Issue types</td><td>Journey epic, Spec task, Refinement, Central model update</td></tr>
 <tr><td>Sprint goal</td><td>"Model journeys X and Y to stable"</td></tr>
-<tr><td>Healthy ratio</td><td>70% new journey work / 30% refinements from UXSPEC feedback</td></tr>
-</table>
-</div>
-
-<div class="card">
-<h4>UXSPEC — UI specification (Phase D)</h4>
-<table>
-<tr><th>Property</th><th>Value</th></tr>
-<tr><td>Board type</td><td>Kanban with WIP limits</td></tr>
-<tr><td>Workflow</td><td>Backlog → Drafting → In review → Approved → Revised</td></tr>
-<tr><td>Issue types</td><td>Portal epic, Screen spec, Task flow, Component pattern, Model feedback</td></tr>
-<tr><td>Prioritisation</td><td>Complete one portal before starting the next. Prioritise by journey count.</td></tr>
+<tr><td>Healthy ratio</td><td>70% new journey work / 30% cross-journey refinements</td></tr>
 </table>
 </div>
 
 <div class="card">
 <h4>DEV — Development (your existing workflow)</h4>
-<p>Consumes stable artefacts from MODEL and approved specs from UXSPEC. Each stable journey model + its screen specs = one buildable unit of work. The handoff is incremental, not big-bang.</p>
+<p>Consumes stable artefacts from MODEL. Each stable journey model = one buildable headless vertical slice. The handoff is incremental, not big-bang. Channel development is a separate concern consuming capability APIs.</p>
 </div>
 
 <h3>Cross-project links</h3>
 <table>
 <tr><th>Link type</th><th>From</th><th>To</th><th>Meaning</th></tr>
 <tr><td>"enables"</td><td>FOUND artefact</td><td>MODEL journey epic</td><td>Journey can't start until foundation is baselined</td></tr>
-<tr><td>"feeds"</td><td>MODEL journey epic</td><td>UXSPEC screen spec</td><td>Screen spec references which journeys it serves</td></tr>
-<tr><td>"requires change in"</td><td>UXSPEC model feedback</td><td>MODEL refinement</td><td>Gap found in UI spec that needs model change</td></tr>
-<tr><td>"triggers review of"</td><td>MODEL central model update</td><td>UXSPEC screen spec</td><td>Central model change may affect approved screens</td></tr>
+<tr><td>"triggers"</td><td>MODEL journey "Stable"</td><td>DEV Deliverable creation</td><td>Stable journey is immediately available for handoff to DEV</td></tr>
 </table>
 
 <!-- ============================================ -->
@@ -986,26 +1000,25 @@ hr { border: none; border-top: 1px solid var(--border-light); margin: 32px 0; }
 <!-- ============================================ -->
 <h2 id="team">Team and roles</h2>
 
-<h3>Design team (Phases A–D)</h3>
+<h3>Design team (Phases A-C)</h3>
 <table>
 <tr><th>Role</th><th>Phase focus</th><th>Agentic augmentation</th><th>Count</th></tr>
-<tr><td><strong>Domain analyst</strong></td><td>Leads A + B, authority on C (journey accuracy)</td><td>Low — value is tacit institutional knowledge that isn't written down</td><td>1–2</td></tr>
-<tr><td><strong>Solution architect</strong></td><td>Contributes to A + B, leads C (data model, boundaries, APIs)</td><td>High — structural transformation is what LLMs excel at</td><td>1</td></tr>
-<tr><td><strong>Interaction designer</strong></td><td>Leads D (portals, screens, task flows)</td><td>Medium — agent generates from model, human ensures usability</td><td>1 (starts when Phase C has stable journeys)</td></tr>
+<tr><td><strong>Domain analyst</strong></td><td>Leads A + B, authority on C (journey accuracy)</td><td>Low — value is tacit institutional knowledge that isn't written down</td><td>1-2</td></tr>
+<tr><td><strong>Solution architect</strong></td><td>Contributes to A + B, leads C (data model, boundaries, APIs, events)</td><td>High — structural transformation is what LLMs excel at</td><td>1</td></tr>
 <tr><td><strong>Programme owner (you)</strong></td><td>All phases — prioritisation, review gates, conflict resolution</td><td>High for analysis, low for judgment calls</td><td>1</td></tr>
 </table>
 
 <h3>Timeline estimate</h3>
 <table>
 <tr><th>Phase</th><th>Duration</th><th>Team</th></tr>
-<tr><td>A + B (Foundation)</td><td>2–3 weeks</td><td>Domain analyst + architect</td></tr>
-<tr><td>C (Modelling, all journeys)</td><td>8–12 weeks</td><td>Domain analyst + architect (designer joins at week 3)</td></tr>
-<tr><td>D (UI specs, all portals)</td><td>6–8 weeks (overlaps C)</td><td>Designer + architect (for boundary questions)</td></tr>
-<tr><td>Total design phase</td><td>12–16 weeks</td><td>3–4 people + you</td></tr>
+<tr><td>A + B (Foundation)</td><td>2-3 weeks</td><td>Domain analyst + architect</td></tr>
+<tr><td>Sprint 0 (platform + environments)</td><td>1-2 weeks (overlaps with Phase C start)</td><td>DEV team</td></tr>
+<tr><td>C (Modelling, all journeys)</td><td>8-12 weeks</td><td>Domain analyst + architect</td></tr>
+<tr><td>Total design phase</td><td>10-14 weeks</td><td>DEV receives Sprint 0 at week 3, buildable journey units from week 5 onwards</td></tr>
 </table>
 
 <div class="callout callout-tip">
-<strong>Agentic augmentation model.</strong> Each role can be partially augmented by AI agents. The domain analyst works with agents to generate first drafts from public sources. The architect reviews and refines agent-generated data models and API contracts. The designer uses agents to populate screen specs from the data model. The agents do the heavy lifting of structural transformation; the humans do the heavy lifting of ensuring artefacts reflect reality.
+<strong>Agentic augmentation model.</strong> Each role can be partially augmented by AI agents. The domain analyst works with agents to research market landscapes and generate first drafts from public sources. The architect reviews and refines agent-generated data models, API contracts, and event catalogues. The agents do the heavy lifting of structural transformation and market research; the humans do the heavy lifting of ensuring artefacts reflect institutional reality.
 </div>
 
 <!-- ============================================ -->
@@ -1080,38 +1093,70 @@ hr { border: none; border-top: 1px solid var(--border-light); margin: 32px 0; }
 <h2 id="design-to-dev">Design to development handoff</h2>
 
 <div class="callout callout-warn">
-<strong>Everything above this section is design, not development.</strong> Phases A through D produce specifications — JSON artefacts stored in a repository. They do not produce running software, deployed services, tested UIs, or operational infrastructure. The design pipeline feeds the development pipeline. They are separate concerns staffed by different teams with different workflows.
+<strong>Everything above this section is design, not development.</strong> Phases A through C produce a headless system specification — JSON artefacts stored in a repository. They do not produce running software, deployed services, or operational infrastructure. Channel UIs are a separate development concern. The design pipeline feeds the development pipeline. They are separate concerns staffed by different teams with different workflows.
 </div>
 
-<p>The relationship between design and development is incremental, not big-bang. As soon as the first journey reaches "stable" in the MODEL project and its screen specs are "approved" in the UXSPEC project, the development team can begin building while the design team continues modelling the next journey.</p>
+<p>The relationship between design and development is incremental, not big-bang. The handoff has two parts: Sprint 0 (platform foundation, once) and per-journey Deliverables (repeating).</p>
 
-<h3>What the dev team receives per journey</h3>
+<h3 id="sprint0">Sprint 0: Foundation handoff (after Gate 1)</h3>
+<p>Before the first journey Deliverable, hand off the foundation that all journeys require. Created once from the architecture artefacts:</p>
 
 <table>
-<tr><th>From project</th><th>Artefact</th><th>Dev team uses it to build</th></tr>
-<tr><td>MODEL</td><td>Data model (<code>data-model.json</code>)</td><td>Database migrations, ORM models, entity classes</td></tr>
-<tr><td>MODEL</td><td>Service boundaries (<code>service-boundaries.json</code>)</td><td>Service scaffolds, repository structure, deployment units</td></tr>
-<tr><td>MODEL</td><td>API contracts (<code>*.openapi.json</code>)</td><td>API route handlers, request/response validation, client SDKs</td></tr>
-<tr><td>MODEL</td><td>Event catalogue (<code>events/*.json</code>)</td><td>Event publishers, subscribers, message broker topics</td></tr>
-<tr><td>MODEL</td><td>Sequence diagrams (<code>sequence-diagrams/*.json</code>)</td><td>Integration tests, end-to-end test scenarios</td></tr>
-<tr><td>MODEL</td><td>NFRs (<code>nfr.json</code>)</td><td>Performance test thresholds, SLA configuration, caching strategy</td></tr>
-<tr><td>UXSPEC</td><td>Screen specs (<code>screens/*.json</code>)</td><td>Frontend components, page layouts, data-binding logic</td></tr>
-<tr><td>UXSPEC</td><td>Task flows (<code>task-flows/*.json</code>)</td><td>Navigation routing, wizard/stepper logic, user acceptance tests</td></tr>
-<tr><td>UXSPEC</td><td>Form specs (<code>forms/*.json</code>)</td><td>Form components, validation rules, conditional field logic</td></tr>
-<tr><td>UXSPEC</td><td>Error states (<code>error-states.json</code>)</td><td>Error boundaries, fallback UIs, retry logic</td></tr>
-<tr><td>UXSPEC</td><td>Design system (<code>component-patterns.json</code>)</td><td>Shared component library, CSS/token definitions</td></tr>
+<tr><th>Ticket type</th><th>Source artefact</th><th>Description</th></tr>
+<tr><td>Environment setup (CI)</td><td><code>service-dependencies.json</code> + <code>service-catalogue.json</code> + <code>security-model.json</code></td><td>docker-compose, CI pipeline, ephemeral databases, test secrets, OTel collector (minimal), external system stubs</td></tr>
+<tr><td>Environment setup (RC)</td><td>Same sources</td><td>Persistent databases, full OTel stack, rotated secrets</td></tr>
+<tr><td>Environment setup (prod-parity)</td><td>Same sources</td><td>Full OTel + audit pipeline, secrets-manager-backed secrets, network zones</td></tr>
+<tr><td>T0 platform service (per service)</td><td><code>service-dependencies.json</code> tier 0</td><td>IAM, API Gateway, Event Bus, OTel Collector, Secrets Management, Service Mesh</td></tr>
+<tr><td>T1 observability stores</td><td><code>observability-model.json</code></td><td>Log Store, Trace Store, Metrics Store, Audit Log Store (WORM)</td></tr>
 </table>
+
+<h3>Journey Deliverables (repeating, per journey)</h3>
+<p>When a journey model reaches "Stable" (Gate 2 passed), create a Deliverable in the DEV project. This is a headless vertical slice — no UI artefacts. Channel development is a separate concern that consumes capability APIs.</p>
+
+<table>
+<tr><th>Artefact</th><th>Dev team uses it to build</th></tr>
+<tr><td>Journey detail (<code>journey-detail.json</code>)</td><td>Phases, paths, governance rules — the narrative context</td></tr>
+<tr><td>Participant interaction (<code>participant-interaction.json</code>)</td><td>Projections, entitlements, notifications</td></tr>
+<tr><td>NFRs (<code>nfr.json</code>)</td><td>Per-phase latency, throughput, availability, regulatory SLAs</td></tr>
+<tr><td>Data model (<code>data-model.json</code>)</td><td>Database migrations, ORM models, entity classes</td></tr>
+<tr><td>Service boundaries (<code>service-boundaries.json</code>)</td><td>Capability ownership, internal services, deployment units</td></tr>
+<tr><td>API contracts (<code>*.openapi.json</code>)</td><td>API route handlers, request/response validation, client SDKs</td></tr>
+<tr><td>Sequence diagrams (<code>*.json</code> + <code>*.mmd</code>)</td><td>Cross-capability event flows, integration tests</td></tr>
+<tr><td>Event catalogue (<code>events/*.json</code>)</td><td>Events, payload schemas, consumers, topics</td></tr>
+<tr><td>C4 component diagrams</td><td>Relevant L3 diagrams for affected capabilities</td></tr>
+<tr><td><code>service.yaml</code> manifests</td><td>Per-service configuration for affected services</td></tr>
+<tr><td>Observability + security requirements</td><td>From architecture models — instrumentation, classification, network zone</td></tr>
+</table>
+
+<h3>Ticket decomposition strategy</h3>
+<p><strong>Vertical slices by journey, on a foundation base.</strong> Sprint 0 builds the platform. Then each journey is a vertical slice through the capability stack — not "build all services then journeys."</p>
+
+<table>
+<tr><th>Ticket type</th><th>Source artefact</th><th>Scope</th></tr>
+<tr><td>Capability scaffold</td><td><code>service-boundaries.json</code></td><td>One per new capability this journey introduces — containing its services, database(s), event contracts</td></tr>
+<tr><td>Service implementation</td><td><code>service-boundaries.json</code></td><td>One per new service within a capability — own repo, own deployment unit</td></tr>
+<tr><td>Entity implementation</td><td><code>data-model.json</code></td><td>One per entity — fields, types, validation, relationships</td></tr>
+<tr><td>API endpoint</td><td><code>api-contracts/*.openapi.json</code></td><td>One per endpoint — must include example request/response bodies</td></tr>
+<tr><td>Event producer/consumer</td><td><code>events/*.json</code></td><td>One per event — source, payload schema, consumers</td></tr>
+<tr><td>Integration test</td><td><code>sequence-diagrams/*.json</code></td><td>One per journey path (happy, alt, exception) — tests cross-capability event flows</td></tr>
+<tr><td>Instrumentation</td><td><code>observability-model.json</code></td><td>One per new capability — per-category logging schema, health endpoints, service.yaml</td></tr>
+<tr><td>Security classification</td><td><code>security-model.json</code></td><td>One per new capability — data classification, network zone, mTLS config</td></tr>
+</table>
+
+<div class="callout callout-info">
+<strong>Incremental capability growth.</strong> Capabilities grow incrementally: JRN-001 builds the Customer entity with 10 fields. JRN-005 adds 5 more fields for Business Account. JRN-008 adds lending fields. The central model aggregation tracks this growth across journeys.
+</div>
 
 <h3>The handoff contract</h3>
 <p>A journey is "ready for development" when all of the following are true:</p>
 <ul>
 <li>All MODEL spec tasks for that journey are in "stable" status</li>
-<li>The central model has been updated to include the journey's entities</li>
-<li>All UXSPEC screen specs for screens touched by that journey are "approved"</li>
-<li>No open "model feedback" issues from UXSPEC are blocking against that journey's entities</li>
+<li>The central model has been updated to include the journey's entities, services, and events</li>
+<li>The C4 workspace has been updated</li>
+<li>No blocking refinements outstanding</li>
 </ul>
 
-<p>The dev team should never build from artefacts that are still in "in progress" or "in review" — the risk of rework is too high. The "stable" and "approved" statuses exist precisely to signal buildability.</p>
+<p>The dev team should never build from artefacts that are still in "in progress" or "in review" — the risk of rework is too high. The "stable" status exists precisely to signal buildability.</p>
 
 <!-- ============================================ -->
 <!-- DEPENDENCY MAP -->
@@ -1321,7 +1366,7 @@ hr { border: none; border-top: 1px solid var(--border-light); margin: 32px 0; }
 <h3>Artefact repository (1)</h3>
 <table>
 <tr><th>Repo</th><th>Contents</th></tr>
-<tr><td><code>foundation-artefacts</code></td><td>All JSON specifications from Phases A–D. The contract between design and development.</td></tr>
+<tr><td><code>foundation-artefacts</code></td><td>All JSON specifications from Phases A-C. The contract between design and development.</td></tr>
 </table>
 
 <h3>Domain service repositories (~15)</h3>
@@ -1436,7 +1481,7 @@ hr { border: none; border-top: 1px solid var(--border-light); margin: 32px 0; }
 
 <hr>
 
-<p style="color: var(--text-tertiary); font-size: 13px; margin-top: 32px;">Capability-Driven System Design Methodology v1.0. Generated from a structured analytical conversation. All artefact schemas are illustrative — validate and extend for your specific domain before use in production.</p>
+<p style="color: var(--text-tertiary); font-size: 13px; margin-top: 32px;">Capability-Driven System Design Methodology v2.0 — Headless system specification. All artefact schemas are illustrative — validate and extend for your specific domain before use in production.</p>
 
 </main>
 </div>
