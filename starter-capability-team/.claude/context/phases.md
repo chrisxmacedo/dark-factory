@@ -9,10 +9,13 @@ Phase A (Discovery)      → sequential, do once
 Phase B (Framing)        → sequential, do once
   ── Gate 1 ──
 Phase C (Modelling)      → iterative, per journey
-  ── Gate 2 (repeating) ──
-Phase D (UI Spec)        → iterative, per portal (parallel with C)
-  ── Handoff to DEV ──
+  ── Gate 2 (repeating) → Handoff to DEV ──
 ```
+
+This pipeline produces a **headless system specification**. Channel UIs
+(web, mobile, branch, partner portals) sit outside the system boundary
+and are a separate development concern. They consume the capability APIs
+and journey contracts produced here. See `architecture-specification.md`.
 
 ## Phase A — Discovery (steps 1-4)
 
@@ -76,27 +79,15 @@ Feedback loops:
 - Intra-journey: step 12 → step 10 (API reveals missing entity)
 - Cross-journey: journey N → central model → journey N+1 (shared entity needs restructuring)
 
-## Gate 2: UI spec readiness (repeating)
+## Gate 2: Journey stable (repeating)
 
-Passed repeatedly. Conditions:
-- At least one journey's artefacts are "Stable"
-- Central model updated
+Passed repeatedly — once per journey. Conditions:
+- Journey's artefacts (steps 7-13) are all committed and "Stable"
+- Central model updated with journey's entities, services, and events
+- C4 workspace updated (L2 relationships refined, L3 components added)
 - No blocking refinements outstanding
 
-## Phase D — UI Specification (steps 14-18, per portal)
-
-Iterative. Runs parallel with Phase C once Gate 2 is passed.
-
-| Step | Artefact | Inputs | Owner |
-|------|----------|--------|-------|
-| 14. Portal definition | `ui-specs/{portal}/information-architecture.json` | Stable journey models | Designer |
-| 15. Screen specs | `ui-specs/{portal}/screens/{screen}.json` | IA, data model, interaction model, APIs | Designer |
-| 16. Task flows | `ui-specs/{portal}/task-flows/{journey}-flow.json` | Screen specs, sequence diagrams | Designer |
-| 17. Form specs | `ui-specs/{portal}/forms/{form}.json` | Data model, screen specs, governance | Designer |
-| 18. Design system | `ui-specs/{portal}/design-system.json` | Screen specs, NFRs | Designer |
-
-Feedback loop:
-- UI-to-model: screen spec reveals missing field → MODEL refinement ticket
+Each stable journey is immediately available for handoff to DEV.
 
 ## Handoff to DEV
 
@@ -126,13 +117,23 @@ Environment differences:
 
 ### Journey Deliverables (repeating, per journey)
 
-When stable journey model + approved screen specs exist:
+When a journey model reaches "Stable" (Gate 2 passed):
 - Create Deliverable in DEV project
-- Include: journey detail, data model, API contracts, sequence diagrams
-  (JSON + Mermaid), screen specs, task flows, relevant C4 component diagrams,
-  service.yaml manifests for affected services, observability and security
-  requirements from the architecture models
-- This is one buildable unit of work
+- This is a headless system specification — no UI artefacts. Channel
+  development is a separate concern that consumes capability APIs.
+- Include:
+  - Journey detail (phases, paths, governance rules)
+  - Participant interaction (projections, entitlements, notifications)
+  - NFRs (per-phase latency, throughput, availability, regulatory SLAs)
+  - Data model (entities, fields, validation, relationships)
+  - Service boundaries (capability ownership, internal services)
+  - API contracts (OpenAPI specs with example bodies)
+  - Sequence diagrams (JSON + Mermaid — cross-capability event flows)
+  - Event catalogue (events, payload schemas, consumers, topics)
+  - Relevant C4 component diagrams
+  - service.yaml manifests for affected services
+  - Observability and security requirements from architecture models
+- This is one buildable vertical slice
 
 ### Ticket decomposition strategy
 
@@ -145,27 +146,27 @@ Each journey Deliverable is decomposed into tickets by artefact type:
 
 | Ticket type | Source artefact | Scope |
 |-------------|----------------|-------|
-| Capability scaffold | `service-boundaries.json` | One per new capability this journey introduces — own DB schema, own app, own test suite, service.yaml |
+| Capability scaffold | `service-boundaries.json` | One per new capability this journey introduces — containing its services, database(s), event contracts |
+| Service implementation | `service-boundaries.json` | One per new service within a capability — own repo, own deployment unit |
 | Entity implementation | `data-model.json` | One per entity — fields, types, validation, relationships |
 | API endpoint | `api-contracts/*.openapi.json` | One per endpoint — must include example request/response bodies |
 | Event producer/consumer | `events/*.json` | One per event — source, payload schema, consumers |
-| Screen | `screens/{screen}.json` | One per screen — all 6 states mandatory |
-| Task flow E2E test | `task-flows/*.json` | One per journey path (happy, alt, exception) |
+| Integration test | `sequence-diagrams/*.json` | One per journey path (happy, alt, exception) — tests the cross-capability event flows |
 | Instrumentation | `observability-model.json` | One per new capability — per-category logging schema, health endpoints, service.yaml |
 | Security classification | `security-model.json` | One per new capability — data classification, network zone, mTLS config |
 
-Services grow incrementally: JRN-001 builds the Customer entity with
-10 fields. JRN-005 adds 5 more fields for Business Account. JRN-008
-adds lending fields. The central model aggregation tracks this growth.
+Capabilities grow incrementally: JRN-001 builds the Customer entity
+with 10 fields. JRN-005 adds 5 more fields for Business Account.
+JRN-008 adds lending fields. The central model aggregation tracks this.
 
 Journey dependencies: the journey inventory priority order respects
 capability dependencies — you cannot model JRN-003 (Mortgage) until
 JRN-001 (Account Opening) establishes the Customer and Account entities.
 
-**Capabilities are the deployment boundary.** Each promoted sub-capability
-and each retained parent capability is one deployable unit with its own
-database schema, application, and test suite. The promotion test
-determines the boundary.
+**Capabilities are business domain groupings.** A capability contains
+one or more services. Services within a capability may share databases
+and communicate freely. Cross-capability communication is exclusively
+async events. See `architecture-specification.md`.
 
 ## Timeline (typical)
 
@@ -173,6 +174,10 @@ determines the boundary.
 |-------|----------|------|
 | A + B | 2-3 weeks | Domain Analyst + Architect |
 | Sprint 0 (platform) | 1-2 weeks | DEV team (overlaps with Phase C start) |
-| C (all journeys) | 8-12 weeks | Domain Analyst + Architect + Designer (from week 3) |
-| D (all portals) | 6-8 weeks (overlaps C) | Designer + Architect |
-| Total design | 12-16 weeks | DEV receives Sprint 0 at week 3, buildable journey units from week 5 onwards |
+| C (all journeys) | 8-12 weeks | Domain Analyst + Architect |
+| Total design | 10-14 weeks | DEV receives Sprint 0 at week 3, buildable journey units from week 5 onwards |
+
+Channel development (web, mobile, branch, partner portals) runs as a
+separate concern, consuming the capability APIs and journey contracts
+produced here. Channel teams start once the first journey's API contracts
+are stable.

@@ -10,7 +10,6 @@ artefacts consumed by a development pipeline (starter-development-team).
   agents/
     discovery-team.md          — Phase A + B (steps 1-6, do once)
     journey-modelling-team.md  — Phase C (steps 7-13, per journey)
-    ui-specification-team.md   — Phase D (steps 14-18, per portal)
     review-team.md             — Cross-cutting quality gate
   context/
     project.md                  — Project identity, Jira config, artefact repo
@@ -19,14 +18,11 @@ artefacts consumed by a development pipeline (starter-development-team).
     architecture-specification.md — Capability-driven architecture spec (authoritative)
     best-practices/
       capability-modelling.md  — Phase A-C best practices
-      ui-specification.md      — Phase D best practices
 artefacts/                 — All design outputs
   foundation/              — Phase A + B (JSON)
   architecture/            — Phase B (JSON + Structurizr DSL + observability + security)
   models/                  — Phase C per journey (JSON + Mermaid)
   central-model/           — Aggregated from all journeys (JSON)
-  ui-specs/                — Phase D per portal (JSON)
-  design-system/           — Cross-portal patterns (JSON)
   schemas/                 — JSON schemas for validation
 PIPELINE.md                — Programme Lead orchestration
 ```
