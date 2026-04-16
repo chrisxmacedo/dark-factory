@@ -113,6 +113,50 @@ Consequences for artefacts:
     `validate-journey.py` and `validate-sequences.py` after each journey
     model is completed. Failures block Gate 2.
 
+13b. **Central model entity files are the most commonly missed update.**
+    The agent consistently updates service-map.json and event-catalogue.json
+    but forgets to create individual entity files in central-model/entities/.
+    The `validate-journey.py` script catches this. Consider a
+    `sync-central-entities.py` script that creates missing entity files
+    automatically from the journey's data-model.json.
+
+13c. **Annotated IDs persist despite manifest rules.** The agent
+    sometimes writes `"ENT-036 (LetterOfCredit)"` in published_events
+    or owned_entities despite the manifest saying plain IDs only. The
+    validator catches this. Consider a post-write cleanup script.
+
+## Data transformation specifications
+
+18. **The pipeline has a data transformation gap.** The data model
+    describes data at rest. Sequence diagrams show call order. Event
+    catalogues show payload schemas. But none of them capture how data
+    is transformed as it flows. Four transformation types are missing:
+
+    a. **Inbound event mapping** — when a capability consumes an event,
+       how does it map the event payload to its own internal entities?
+       E.g. Compliance consumes AccountOpened → maps to KycMonitoringRecord.
+       Add a `maps_to` section to consumed_events in service-boundaries.
+
+    b. **Outbound event derivation** — when a capability publishes an
+       event, which entity fields produce which payload fields? What is
+       included, excluded, masked, computed? Add a `derived_from` section
+       to each event in the event catalogue.
+
+    c. **API response projection** — how does the stored entity map to
+       the API response? Especially field-level projections per persona/
+       entitlement. The OpenAPI spec shows the shape but not the mapping.
+       Add transformation notes to API contract response schemas.
+
+    d. **Cross-entity derivation** — computed fields that span multiple
+       entities within a capability. E.g. affordability_result derived
+       from gross_income + committed_expenditure + stress_test_rate.
+       Add a `computed_from` section to derived fields in the data model.
+
+    This is an L3 (component) concern — internal to the capability. The
+    transformations belong in extensions to existing artefacts (event
+    catalogue, service boundaries, API contracts, data model) rather
+    than a separate artefact type.
+
 ## Sequence diagram and API contract rules
 
 14. **Personas never call services or capabilities directly** — in

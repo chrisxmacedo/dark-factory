@@ -123,6 +123,23 @@ When a sub-capability appears in more than one capability:
 - Each capability has: its own data (one or more databases/schemas),
   its own services, its own event contracts, its own REST API surface
 
+## Data transformation principles
+
+- The data model describes data **at rest**. Transformations describe
+  how data changes as it **flows** between capabilities and to channels.
+- **Inbound event mapping**: when a consumed_event is declared in
+  service-boundaries.json, include a `maps_to` section specifying which
+  entity fields the event payload maps to in the consuming capability.
+- **Outbound event derivation**: in the event catalogue, each event
+  should include a `derived_from` section listing which entity fields
+  produce which payload fields, including masking and exclusion rules.
+- **API response projection**: in API contracts, response schemas
+  should note which entity fields are projected, especially where
+  field visibility varies by persona/entitlement.
+- **Computed fields**: in the data model, fields that are derived from
+  other fields should include a `computed_from` section listing the
+  source fields and the derivation logic.
+
 ## API contract principles
 
 - API contracts are **per-capability, not per-service** — each capability
@@ -132,7 +149,7 @@ When a sub-capability appears in more than one capability:
 - The first journey that touches a capability creates its API contract;
   subsequent journeys extend it
 - API contracts must include example request/response bodies, error
-  responses, and auth requirements
+  responses, auth requirements, and response projection notes
 - Channels never address a service directly — only the capability API
 
 ## Sequence principles
