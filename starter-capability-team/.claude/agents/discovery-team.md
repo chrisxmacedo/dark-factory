@@ -251,6 +251,24 @@ transition.
 - Does NOT produce artefacts — only validates
 - Sends findings: `REVIEW [info|warning|blocker]: [issue] — [artefact]`
 
+## Error handling
+
+If any step fails — a file cannot be written, a tool call errors, an
+external source is unavailable, or a schema validation fails — the team
+MUST:
+
+1. **Stop immediately** — do not continue to the next step
+2. **Report the failure** to the Programme Lead with:
+   ```
+   DISCOVERY BLOCKED.
+   Step: [{step number and name}]
+   Failure: [{what failed and why}]
+   Files completed before failure: [{list}]
+   Suggested resolution: [{what needs to happen to unblock}]
+   ```
+3. **Do not silently skip or work around the failure**
+4. The Programme Lead decides how to proceed
+
 ## Signal to Programme Lead
 
 ```

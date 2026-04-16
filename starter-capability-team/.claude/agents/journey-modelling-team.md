@@ -13,6 +13,33 @@ that are then aggregated into the central model. A journey may span
 multiple capabilities — this is expected and reveals the integration
 points between capability domains.
 
+## Pre-modelling: scaffold
+
+Before producing any artefact, the Programme Lead runs the scaffold
+script to create the journey directory with:
+- Template files with the correct JSON structure
+- A `_manifest.json` assigning the next available globally sequential
+  IDs (PH-NNN, ENT-NNN, EVT-NNN)
+- Format rules (plain ID strings, no annotations)
+
+The modelling agent MUST read `_manifest.json` before starting work
+and use ONLY the assigned ID ranges. No journey-specific prefixes.
+
+## Post-modelling: validation
+
+After all artefacts are produced and the central model is updated,
+the Programme Lead runs:
+1. `validate-journey.py` — checks files, ID formats, entity ownership,
+   central model sync
+2. `validate-sequences.py` — checks sequence diagrams for
+   cross-capability synchronous call violations
+
+Failures block Gate 2. The team must fix violations before the journey
+can be marked Stable.
+
+See `context/process-improvements.md` for the full list of learnings
+that inform these checks.
+
 ## Deliverables
 
 ### Layer 4: Journey Narrative (Steps 7-9)
@@ -147,6 +174,32 @@ A journey may span multiple capabilities. When modelling such a journey:
   4. Cross-journey consistency (same entity name = same thing everywhere)
   5. Schema compliance
 - Sends findings: `REVIEW [info|warning|blocker]: [issue] — [artefact]`
+
+## Error handling
+
+If any step fails — a file cannot be written, a central model update
+conflicts, a schema validation fails, or a tool call errors — the team
+MUST:
+
+1. **Stop immediately** — do not continue to the next step
+2. **Report the failure** to the Programme Lead with:
+   ```
+   JOURNEY MODEL BLOCKED.
+   Journey: [{journey-name}]
+   Step: [{step number and name}]
+   Failure: [{what failed and why}]
+   Files completed before failure: [{list}]
+   Files NOT completed: [{list}]
+   Suggested resolution: [{what needs to happen to unblock}]
+   ```
+3. **Do not attempt to silently work around the failure** — the
+   Programme Lead decides how to proceed (retry, skip, redesign)
+4. **Do not partially update the central model** — either all central
+   model updates for this journey succeed, or none are applied
+
+The same rule applies to the Discovery Team and Review Team. Any agent
+that encounters a failure reports it immediately rather than continuing
+with incomplete or inconsistent artefacts.
 
 ## Signal to Programme Lead
 

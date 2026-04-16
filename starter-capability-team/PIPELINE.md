@@ -90,12 +90,20 @@ cd infra && ./jiractl poll
 
 For each journey in priority order:
 1. Create a journey epic in the MODEL project
-2. Spawn journey-modelling-team.md with the journey name
-3. After each artefact, spawn review-team.md
-4. Wait for JOURNEY MODEL COMPLETE signal
-5. Verify Gate 2 (journey stable)
-6. Hand off to DEV as a Deliverable
-7. Select next journey, repeat
+2. Run `scaffold-journey.py {journey-id} {journey-slug}` to create
+   directory, manifest, and template files with next available IDs
+3. Spawn journey-modelling-team.md with the journey name
+   (agent reads `_manifest.json` first)
+4. After each artefact, spawn review-team.md
+5. Wait for JOURNEY MODEL COMPLETE signal
+6. Run `validate-journey.py {journey-slug}` — check files, IDs,
+   entity ownership, central model sync
+7. Run `validate-sequences.py {journey-slug}` — check for
+   cross-capability synchronous call violations
+8. If validation fails → return to team for fixes before Gate 2
+9. Verify Gate 2 (journey stable)
+10. Hand off to DEV as a Deliverable
+11. Select next journey, repeat
 
 ### Sprint 0 handoff (once, after Gate 1)
 

@@ -18,6 +18,7 @@ artefacts consumed by a development pipeline (starter-development-team).
     architecture-specification.md — Capability-driven architecture spec (authoritative)
     best-practices/
       capability-modelling.md  — Phase A-C best practices
+    process-improvements.md    — Generalised learnings, script inventory
 artefacts/                 — All design outputs
   foundation/              — Phase A + B (JSON)
   architecture/            — Phase B (JSON + Structurizr DSL + observability + security)
