@@ -155,9 +155,10 @@ runtime containers and do not appear on C4 diagrams.
 
 ### 4.2 Contract Artefact Types
 
-- **API Contracts** — OpenAPI specs per capability. Validation at runtime
-  is performed by the application framework, not by referencing the spec
-  file.
+- **API Contracts** — OpenAPI specs per capability (not per service).
+  Each capability exposes one API surface to channels. Internal service
+  routing is an implementation detail. Validation at runtime is performed
+  by the application framework, not by referencing the spec file.
 - **Event Contracts** — schemas registered in the Schema Registry. The
   schema definitions live in the repository; the Schema Registry enforces
   them at runtime.
@@ -176,29 +177,50 @@ runtime containers and do not appear on C4 diagrams.
 
 ## 5. Communication Summary
 
-### 5.1 External to Capability (Channel → Capability)
+There are exactly four valid communication paths:
 
-- Mechanism: Synchronous REST
-- Direction: Channel UIs call capability REST APIs
-- Example: Customer app calls GET /accounts on the Retail Banking API
+### 5.1 Channel → Capability API (synchronous REST)
 
-### 5.2 Within a Capability (Service → Service)
+Channels (web portal, mobile app, internal tooling, branch terminal,
+partner portal) call the capability's published REST API. The capability
+routes internally to whatever service handles the request. The channel
+never addresses a service directly — it only sees the capability's API
+surface. A persona (customer, analyst, officer) always interacts through
+a channel, never directly with a service or capability.
 
-- Mechanism: Whatever the capability decides — direct method calls,
-  shared database, internal REST/gRPC, internal queues
-- Direction: Between services inside the same capability boundary
-- Example: Account provisioning service calls KYC check service; both
-  within the same capability
+Example: A credit analyst uses the internal portal (channel) which calls
+`GET /loan-applications/{id}/credit-assessment` on the Commercial
+Banking capability API. The capability routes to its internal credit
+assessment service.
 
-### 5.3 Across Capabilities (Capability → Capability)
+### 5.2 Event Bus → Capability (asynchronous events)
 
-- Mechanism: Asynchronous domain events via Event Bus
-- Direction: Publishing capability emits event; consumers receive
-  independently
-- Validated by: Schema Registry at runtime
-- Example: Retail Banking publishes AccountOpened; Compliance consumes it
+A capability publishes a domain event to the Event Bus. Other
+capabilities consume it independently. The consuming capability routes
+internally to the right service. This is the sole mechanism for
+cross-capability communication. No synchronous cross-capability calls.
 
-There is no synchronous cross-capability communication.
+Example: Commercial Banking publishes LoanApproved; Risk Management
+consumes it to update exposure calculations.
+
+### 5.3 Service → Service within a capability (internal)
+
+Services within the same capability communicate by whatever means the
+capability decides — direct method calls, shared database, internal
+REST/gRPC, internal queues. This is an internal implementation detail,
+invisible outside the capability boundary.
+
+Example: The mortgage underwriting service calls the affordability
+calculation service; both are within the Retail Banking capability.
+
+### 5.4 Service → Platform service (infrastructure)
+
+Any service can call platform infrastructure (IAM, Audit, Observability,
+Cache, Schema Registry, Notifications). These are shared mechanisms
+that sit below the capability layer.
+
+No other communication paths exist. Services are never directly
+addressable from outside their capability.
 
 ---
 

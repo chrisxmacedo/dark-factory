@@ -60,13 +60,15 @@ actually operates, not how the model assumes it should.
 |------|----------|------|------------|
 | 10. Data model | `models/{journey}/data-model.json` | Architect | Derives entities from journey; Domain Analyst validates completeness |
 | 11. Service boundaries | `models/{journey}/service-boundaries.json` | Architect | Makes boundary decisions; agent provides options analysis |
-| 12. API contracts + sequences | `models/{journey}/api-contracts/*.openapi.json` + `models/{journey}/sequence-diagrams/*.json` + `models/{journey}/sequence-diagrams/*.mmd` | Architect | Generates OpenAPI specs and sequence diagrams (JSON + Mermaid); human validates call flows |
+| 12. API contracts + sequences | `models/{journey}/api-contracts/{capability}.openapi.json` + `models/{journey}/sequence-diagrams/*.json` + `models/{journey}/sequence-diagrams/*.mmd` | Architect | One API contract per capability (not per service). Sequence diagrams show Channel → Capability API, never Persona → Service. |
 | 13. Event catalogue | `models/{journey}/events/*.json` | Architect | Derives events from sequence diagrams; human validates ordering guarantees |
 
-These artefacts define **how data flows** and **which services own what**.
-The sequence diagrams (step 12) are architecturally critical — they
-make cross-capability interactions visible by showing exactly how data
-moves between services owned by different capabilities.
+These artefacts define **how data flows** and **which capabilities own
+what**. API contracts are per-capability — each capability exposes one
+REST surface to channels. Internal service routing is an L3 concern.
+Sequence diagrams show capability boundaries and async event flows
+between them. Personas always interact through channels, never directly
+with services.
 
 ### Central model aggregation (after each journey)
 

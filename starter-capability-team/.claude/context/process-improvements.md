@@ -67,6 +67,41 @@ gates.
     Notifications, etc.) are not cross-capability violations. They are
     shared infrastructure.
 
+## Communication model (four valid paths only)
+
+There are exactly four ways a service can be reached:
+
+1. **Channel → Capability API** — synchronous REST. The channel (web
+   portal, mobile app, internal tooling, branch terminal) calls the
+   capability's published REST API. The capability routes internally
+   to whatever service handles the request. The channel never addresses
+   a service directly — it only sees the capability's API surface.
+
+2. **Event Bus → Capability** — async event consumed by a capability's
+   event consumer. The capability routes internally to the right
+   service. This is the sole mechanism for cross-capability communication.
+
+3. **Service → Service (within same capability)** — direct method call,
+   shared DB, internal REST/gRPC, internal queue. Internal implementation
+   detail, invisible outside the capability boundary.
+
+4. **Service → Platform service** — any service can call platform
+   infrastructure (IAM, Audit, Observability, Cache, Schema Registry,
+   Notifications). These are shared mechanisms.
+
+No other communication paths exist. Services are never directly
+addressable from outside their capability.
+
+Consequences for artefacts:
+- **API contracts are per-capability, not per-service.** A capability
+  exposes one API surface. Internal service routing is an L3 concern.
+- **Sequence diagrams show Channel → Capability API**, never
+  Channel → Service or Persona → Service. The persona uses a channel;
+  the channel calls the capability.
+- **Personas never appear calling services directly** in sequence
+  diagrams. A credit analyst uses an internal portal (channel) which
+  calls the capability's API.
+
 ## Error handling
 
 12. **Agents must report failures immediately** — if a file write fails,
@@ -77,6 +112,27 @@ gates.
 13. **Validation runs after every journey** — the Programme Lead runs
     `validate-journey.py` and `validate-sequences.py` after each journey
     model is completed. Failures block Gate 2.
+
+## Sequence diagram and API contract rules
+
+14. **Personas never call services or capabilities directly** — in
+    sequence diagrams, personas interact through a channel. Show
+    `Persona → Channel → Capability API`, never `Persona → Service`.
+    A credit analyst using an internal tool is using a channel.
+
+15. **Sequence diagrams show capability boundaries** — show
+    `Channel → CAP-002 API`, not `Channel → SVC-005`. The internal
+    routing from capability API to service is an L3 concern.
+
+16. **API contracts are per-capability, not per-service** — each
+    capability exposes one API surface. The first journey that touches
+    a capability creates its contract; subsequent journeys extend it.
+    Internal service routing is not documented in the API contract.
+
+17. **Every capability touched by a journey needs an API contract** —
+    if a capability appears in the journey's service boundaries, it
+    must have a corresponding API contract documenting its published
+    REST surface for channels.
 
 ## Script inventory
 

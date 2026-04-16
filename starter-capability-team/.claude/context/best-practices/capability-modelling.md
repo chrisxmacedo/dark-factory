@@ -123,12 +123,32 @@ When a sub-capability appears in more than one capability:
 - Each capability has: its own data (one or more databases/schemas),
   its own services, its own event contracts, its own REST API surface
 
+## API contract principles
+
+- API contracts are **per-capability, not per-service** — each capability
+  exposes one published REST API surface to channels
+- Internal routing from the capability API to its services is an L3
+  (component) concern, not documented in the API contract
+- The first journey that touches a capability creates its API contract;
+  subsequent journeys extend it
+- API contracts must include example request/response bodies, error
+  responses, and auth requirements
+- Channels never address a service directly — only the capability API
+
 ## Sequence principles
 
-- A sequence is the end-to-end flow of data and control between participants and services during a journey
-- Expressed as a Mermaid sequence diagram (`.mmd`) derived from structured JSON (`.json`) — the JSON is the source of truth, the Mermaid is the renderable representation
+- A sequence is the end-to-end flow of data and control between
+  participants, channels, and capabilities during a journey
+- **Personas never call services or capabilities directly** — they
+  interact through a channel (web portal, mobile app, internal tooling).
+  Show `Persona → Channel → Capability API`, never `Persona → Service`
+- Expressed as a Mermaid sequence diagram (`.mmd`) derived from
+  structured JSON (`.json`) — the JSON is the source of truth
 - Both files must be committed together and kept in sync
-- For cross-capability journeys, the sequence diagram is the most architecturally significant artefact — it shows exactly how data moves from one capability's services to another's
+- Sequence diagrams show **capability boundaries**, not service
+  boundaries. Show `Channel → CAP-001 API`, not `Channel → SVC-001`
+- For cross-capability journeys, the sequence diagram shows events
+  flowing via the Event Bus between capabilities
 - Every journey phase produces at least one sequence diagram
 - Sequence diagrams are the primary input for cross-cutting service design and API contract definition
 - The Architect on the Journey Modelling Team produces both the JSON and the Mermaid representation at step 12

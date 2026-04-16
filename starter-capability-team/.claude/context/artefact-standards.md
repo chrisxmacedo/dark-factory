@@ -97,7 +97,7 @@ Every non-obvious design choice must be recorded in the artefact:
 | NFR | Non-functional requirement per journey — latency, throughput, availability, security classification. | Per journey |
 | Entity | A data model object derived from journeys. Aggregated into the central model. | Grows with each journey |
 | Service boundary | The ownership line around a group of entities — determines which service owns which data. | Per journey, architect decision |
-| API contract | OpenAPI specification for a capability's REST API surface, exposed to channel UIs and external consumers. Design-time artefact — lives in the repo and CI pipeline. Runtime validation is handled by the application framework, not by reading the spec file. Not used for cross-capability communication (which is events-only). | Per journey |
+| API contract | OpenAPI specification for a capability's published REST API surface — one contract per capability, not per service. Channels call the capability API; the capability routes internally. Design-time artefact — lives in the repo and CI pipeline. Runtime validation is handled by the application framework. Not used for cross-capability communication (which is events-only). | Per capability (grows with each journey) |
 | Event | A fact about what happened (past tense). Published by a capability, consumed by other capabilities via the Event Bus. The sole mechanism for cross-capability communication. Validated at runtime by the Schema Registry. | Per journey |
 | Portal | A user-facing application serving one or more participant types through a specific channel. | Project lifetime |
 | Screen | A single view within a portal showing data, actions, and states. | Per portal |
