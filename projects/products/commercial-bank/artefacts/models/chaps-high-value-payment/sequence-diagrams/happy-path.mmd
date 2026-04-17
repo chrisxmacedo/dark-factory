@@ -26,8 +26,8 @@ sequenceDiagram
     Note over CAP005: PH-079: Sanctions Screening
     EventBus--)CAP005: EVT-108 consumed — sanctions screening initiated
     CAP005->>CAP005: SVC-014 → SVC-051 screen beneficiary (<3000ms GOV-005-R02)
-    CAP005--)EventBus: publish SanctionsScreeningCompleted EVT-P02 (result=clear)
-    EventBus--)CAP001: EVT-109 + EVT-P02 consumed — status→sanctions_complete
+    CAP005--)EventBus: publish SanctionsScreeningCompleted EVT-180 (result=clear)
+    EventBus--)CAP001: EVT-109 + EVT-180 consumed — status→sanctions_complete
 
     Note over PER001,CAP001: PH-080: Payment Authorisation
     CH001->>CAP001: GET /chaps-payments/{id} — poll status=sanctions_complete

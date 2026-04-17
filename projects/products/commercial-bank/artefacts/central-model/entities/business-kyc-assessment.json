@@ -1,5 +1,5 @@
 {
-  "entity_id": "ENT-B005",
+  "entity_id": "ENT-083",
   "name": "BusinessKycAssessment",
   "description": "Company-level KYC/CDD assessment record produced by SVC-014 (KYC/AML Service) in BPH-005. Extends the KycAssessment pattern (ENT-003) for legal entities: company-level PEP/sanctions/adverse media screening, sector risk assessment, jurisdictional risk, aggregated UBO/director individual screening results, and composite risk scoring. The MLRO (PER-052) holds accountability for this assessment under MLR 2017 SMF17. This is the bank's primary audit record for MLR 2017 Regulation 28 compliance for each business customer. Note: BusinessKycAssessment is a SEPARATE entity from ENT-003 (KycAssessment) — they share a conceptual pattern but are not a subtype/supertype. Each evolves independently per its capability domain.",
   "owning_service": "SVC-014",
@@ -144,7 +144,7 @@
   ],
   "relationships": [
     {
-      "target_entity": "ENT-B001",
+      "target_entity": "ENT-079",
       "type": "many-to-one",
       "description": "BusinessKycAssessment belongs to one BusinessCustomer (cross-service reference via business_customer_id)."
     }

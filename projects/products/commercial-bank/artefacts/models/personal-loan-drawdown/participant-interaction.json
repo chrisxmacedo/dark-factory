@@ -1,0 +1,56 @@
+{
+  "journey_id": "JRN-027",
+  "document_version": "0.1.0",
+  "status": "Draft",
+  "participants": [
+    {
+      "persona_id": "PER-001",
+      "persona_name": "Personal Customer",
+      "channel": ["CH-001 (Web)", "CH-002 (Mobile)"],
+      "phases": [
+        {
+          "phase_id": "PH-111",
+          "projection": ["Loan calculator: amount selector (£1,000–£25,000), term selector (12–84 months), indicative monthly repayment", "APR range disclosure (indicative — final APR depends on credit assessment)", "SECCI form — Standard European Consumer Credit Information", "Income and expenditure form", "SCA prompt"],
+          "entitlements": ["Enter loan parameters", "View indicative APR", "Submit application", "Complete SCA"],
+          "notifications": ["Progress: 'Application received — assessing your creditworthiness'"],
+          "data_visibility_rules": "Indicative APR shown as a range. Hard credit search disclosed before submission. Customer data used for credit assessment disclosed in SECCI."
+        },
+        {
+          "phase_id": "PH-112",
+          "projection": ["Processing indicator: 'We are assessing your application'"],
+          "entitlements": ["View application status"],
+          "notifications": ["Push/email: 'Your loan application has been assessed — check your result'"],
+          "data_visibility_rules": "Credit score is not shown to customer. Risk_band is not shown. Final APR is shown once assessment is complete."
+        },
+        {
+          "phase_id": "PH-113",
+          "projection": ["Loan offer: amount, final APR, monthly repayment, total cost of credit, term, repayment schedule", "14-day withdrawal right notice", "Full credit agreement (CONC-compliant format)", "SCA prompt for agreement signing"],
+          "entitlements": ["Accept or decline loan offer", "View full credit agreement", "Sign agreement electronically (SCA)", "Exercise withdrawal right after signing"],
+          "notifications": ["Summary: loan offer details", "Confirmation: agreement signed — cooling off period information"],
+          "data_visibility_rules": "Full APR, monthly repayment, and total repayable shown in CONC-required format. Credit agreement uses prescribed pre-contract information form."
+        },
+        {
+          "phase_id": "PH-114",
+          "projection": ["Disbursement confirmation: amount credited, repayment start date", "Loan account number and direct debit setup instructions"],
+          "entitlements": ["View disbursement confirmation", "Set up direct debit for repayments"],
+          "notifications": ["Push notification: 'Your loan of £[amount] has been paid to your account'", "Email: disbursement confirmation with repayment schedule and direct debit setup"],
+          "data_visibility_rules": "Loan account number, first repayment date, and monthly repayment amount shown. Full repayment schedule accessible in-app."
+        }
+      ]
+    },
+    {
+      "persona_id": "PER-055",
+      "persona_name": "Mortgage Underwriter (acting as loan underwriter for referred cases)",
+      "channel": ["CH-005 (Internal Portal)"],
+      "phases": [
+        {
+          "phase_id": "PH-112",
+          "projection": ["Referred application details: income, expenditure, credit bureau report, debt-to-income ratio, application purpose", "Decision controls: approve with rate / approve with conditions / decline"],
+          "entitlements": ["Review referred application", "Request additional documentation", "Override automated decision (with documented rationale)", "Record manual decision"],
+          "notifications": ["Alert: referred application assigned for manual review", "SLA reminder: decision required within 2 business days"],
+          "data_visibility_rules": "Full credit bureau report accessible. Internal risk score visible. Customer personal details accessible for verification."
+        }
+      ]
+    }
+  ]
+}

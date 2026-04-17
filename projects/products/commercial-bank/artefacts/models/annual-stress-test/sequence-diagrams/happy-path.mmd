@@ -1,0 +1,35 @@
+sequenceDiagram
+    actor CRO as PER-059 (Senior Manager — CRO)
+    participant Risk as SVC-012<br/>Risk Engine
+    participant EventBus as SVC-102<br/>Event Bus
+    participant Compliance as SVC-015<br/>Compliance Core
+    participant Audit as SVC-103<br/>Audit & Logging
+
+    Note over CRO,Audit: PH-123 — Scenario Loading and Model Initialisation
+
+    CRO->>Risk: POST /stress-tests {exercise_year: 2026, pra_scenario_version: ACS-2026-v1.0, pra_deadline: 2026-07-31}
+    Note right of Risk: Create StressTestExercise (status=in_progress)<br/>Load PRA scenarios into model parameters
+    Risk->>EventBus: Publish StressTestExerciseStarted (EVT-161)
+    EventBus->>Compliance: Consume EVT-161 → Create RegulatorySubmission (ENT-074) status=pending
+    EventBus->>Audit: Consume EVT-161 → Write immutable exercise start record
+    Risk-->>CRO: 201 Created {exercise_id, status: in_progress}
+
+    Note over CRO,Audit: PH-124 — Risk Model Projection
+
+    Note right of Risk: Run credit risk projections (IFRS 9 ECL under stress)<br/>Run market risk projections (FRTB)<br/>Run OpRisk Basel SA capital<br/>Compute projected stressed CET1 Y1/Y2/Y3<br/>Status → projections_complete
+    CRO->>Risk: GET /stress-tests/{exercise_id}
+    Risk-->>CRO: {cet1_y1: 12.4%, y2: 10.8%, y3: 11.2%, model_validation_sign_off_ref}
+
+    Note over CRO,Audit: PH-125 — Board Review and Approval
+
+    CRO->>Risk: Board approval obtained; PATCH status → approved_for_submission
+    Note right of Risk: Update StressTestExercise<br/>status=approved_for_submission<br/>Record board_approved_at, cro_attestation_ref
+
+    Note over CRO,Audit: PH-126 — PRA Submission and Feedback
+
+    CRO->>Risk: POST /stress-tests/{exercise_id}/confirm-submission {pra_submission_ref: BEEDS-2026-XXXX, cro_attestation_ref}
+    Note right of Risk: Update StressTestExercise status=submitted<br/>Record pra_submission_ref and submitted_at
+    Risk->>EventBus: Publish StressTestSubmitted (EVT-162)
+    EventBus->>Compliance: Consume EVT-162 → Update RegulatorySubmission status=submitted
+    EventBus->>Audit: Consume EVT-162 → Write immutable PRA submission record
+    Risk-->>CRO: 200 OK {status: submitted, pra_submission_ref: BEEDS-2026-XXXX}

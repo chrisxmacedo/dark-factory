@@ -164,7 +164,7 @@
       "name": "TransferCleared",
       "source_service": "SVC-010",
       "source_entity": "ENT-026",
-      "trigger": "SVC-010 has received both TransferSanctionsScreened (EVT-051, outcome = clear) and TransferFraudScored (EVT-052, risk_level != block), and has assembled the SWIFT pacs.008 message in PH-032. Published to signal that the transfer is cleared for SWIFT submission. Analogous to PaymentCleared (EVT-P04) in JRN-002.",
+      "trigger": "SVC-010 has received both TransferSanctionsScreened (EVT-051, outcome = clear) and TransferFraudScored (EVT-052, risk_level != block), and has assembled the SWIFT pacs.008 message in PH-032. Published to signal that the transfer is cleared for SWIFT submission. Analogous to PaymentCleared (EVT-182) in JRN-002.",
       "journey_phase": "PH-032",
       "payload_schema": {
         "transfer_id": "string (UUID v4)",

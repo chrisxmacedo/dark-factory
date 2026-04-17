@@ -1,0 +1,211 @@
+{
+  "journey_id": "JRN-018",
+  "name": "Merchant Onboarding",
+  "description": "An SME merchant customer applies to the bank for card acquiring services. The journey covers merchant application, credit risk assessment for chargeback exposure, PCI DSS compliance assessment, scheme registration with Visa/Mastercard, and terminal provisioning. This exercises the Merchant Services sub-capability (CAP-002.05, promoted to standalone) and crosses into Payment Operations (CAP-003) for scheme registration and Compliance & Regulatory (CAP-005) for KYC/AML. Governed by PSR MR22/1.7 remedies and Visa/Mastercard scheme rules.",
+  "triggering_persona": "PER-007",
+  "capabilities_touched": ["CAP-002", "CAP-003", "CAP-005"],
+  "sub_capabilities_involved": ["CAP-002.05", "CAP-003.05", "CAP-005.01"],
+  "domain_events_published": [
+    "MerchantApplicationSubmitted",
+    "MerchantKYCCompleted",
+    "MerchantCreditAssessmentCompleted",
+    "PCIDSSAssessmentCompleted",
+    "MerchantApproved",
+    "MerchantSchemeRegistered",
+    "MerchantTerminalProvisioned",
+    "MerchantLive"
+  ],
+  "channels_involved": ["CH-001", "CH-005"],
+  "services_involved": ["SVC-005", "SVC-008", "SVC-014", "SVC-015", "SVC-051", "SVC-103", "SVC-111"],
+  "phases": [
+    {
+      "id": "PH-093",
+      "name": "Merchant Application and KYC",
+      "description": "The merchant (PER-007) submits an application for card acquiring services via the bank's web portal (CH-001) or through a relationship manager. The application captures business details (company name, registration number, trading address, directors, UBOs), estimated transaction volumes, average transaction value, industry MCC code, and current payment processing arrangements. KYC/AML checks are performed by the KYC/AML Service (SVC-014) including sanctions screening (SVC-051), beneficial ownership verification against Companies House, and PEP/adverse media checks on directors and UBOs. The Merchant Acquiring Service (SVC-008) records the application and the Compliance Core Service (SVC-015) manages KYC case flow.",
+      "actors": ["PER-007", "PER-059"],
+      "channels": ["CH-001", "CH-005"],
+      "services": ["SVC-008", "SVC-014", "SVC-051", "SVC-015", "SVC-103"],
+      "governance_rules": ["GOV-005-R01", "GOV-005-R02", "GOV-005-R06"],
+      "governance_notes": "MLR 2017 mandates CDD on the merchant as a business customer. Sanctions screening must be real-time per GOV-005-R02. Beneficial ownership verification requires identification of all UBOs with >25% ownership per MLR 2017 Regulation 5. PSR MR22/1.7 requires transparent pricing disclosure at application stage.",
+      "entry_conditions": [
+        "Merchant has accessed web portal or relationship manager has initiated application",
+        "Merchant has provided company registration number (Companies House registered)",
+        "Merchant has declared estimated monthly card transaction volume and average transaction value"
+      ],
+      "exit_conditions": [
+        "MerchantApplicationSubmitted event published with application reference",
+        "KYC/AML checks completed — MerchantKYCCompleted event published with outcome CLEAR",
+        "Sanctions screening returned CLEAR for all directors and UBOs",
+        "Merchant progresses to credit assessment (PH-094)"
+      ],
+      "exit_conditions_failure": [
+        "Sanctions hit on director or UBO — application blocked, MLRO escalation (EX-018-001)",
+        "KYC referral — additional EDD required for high-risk industry (gambling, crypto, adult content)",
+        "Incomplete beneficial ownership — merchant requested to provide additional UBO documentation"
+      ]
+    },
+    {
+      "id": "PH-094",
+      "name": "Credit Risk and Chargeback Assessment",
+      "description": "The Commercial Banking Core (SVC-005) performs a credit risk assessment on the merchant to determine chargeback exposure and the appropriate reserve requirement. Assessment includes: business financial history (filed accounts via Companies House), director credit bureau checks, industry chargeback risk profile (based on MCC code — high-risk MCCs include travel, digital goods, subscription services), estimated monthly volume, and average ticket size. A chargeback reserve percentage is calculated and a processing limit is set. The Merchant Acquiring Service (SVC-008) records the assessment outcome.",
+      "actors": ["PER-059"],
+      "channels": ["CH-005"],
+      "services": ["SVC-005", "SVC-008", "SVC-103"],
+      "governance_rules": ["GOV-004-R01"],
+      "governance_notes": "Credit risk assessment for acquiring is distinct from lending credit risk — the exposure is to chargeback losses, not loan default. PRA expects the bank to hold appropriate reserves for acquiring exposure. High-risk MCC categories require enhanced assessment and may require additional collateral or rolling reserves.",
+      "entry_conditions": [
+        "MerchantKYCCompleted event with outcome CLEAR received",
+        "Merchant financial data available (filed accounts, director credit bureau data)"
+      ],
+      "exit_conditions": [
+        "MerchantCreditAssessmentCompleted event published with outcome APPROVED",
+        "Chargeback reserve percentage set",
+        "Processing volume limit set",
+        "Merchant progresses to PCI DSS assessment (PH-095)"
+      ],
+      "exit_conditions_failure": [
+        "Credit assessment DECLINED — merchant notified with reason; appeal process available",
+        "Credit assessment REFERRED — additional financial information requested (bank statements, management accounts)"
+      ]
+    },
+    {
+      "id": "PH-095",
+      "name": "PCI DSS Compliance Assessment",
+      "description": "The Merchant Acquiring Service (SVC-008) assesses the merchant's PCI DSS compliance level. Merchants are categorized by annual transaction volume: Level 1 (>6M transactions/year — requires annual QSA audit and quarterly ASV scan), Level 2 (1-6M — annual SAQ and quarterly ASV), Level 3 (20K-1M e-commerce — annual SAQ), Level 4 (<20K e-commerce or <1M other — annual SAQ recommended). The merchant completes the appropriate Self-Assessment Questionnaire (SAQ) or provides their QSA Report on Compliance (ROC). For new merchants without PCI DSS documentation, a provisional acceptance is granted with a 90-day deadline to achieve compliance.",
+      "actors": ["PER-007", "PER-059"],
+      "channels": ["CH-001", "CH-005"],
+      "services": ["SVC-008", "SVC-103"],
+      "governance_rules": [],
+      "governance_notes": "PCI DSS v4.0 compliance is mandatory for all merchants accepting card payments. The bank as acquirer is liable for non-compliant merchants under Visa/Mastercard scheme rules. Non-compliance fines range from $5,000-$100,000 per month under scheme rules. New merchants may be onboarded provisionally but must achieve compliance within 90 days or face suspension.",
+      "entry_conditions": [
+        "MerchantCreditAssessmentCompleted with outcome APPROVED",
+        "Merchant PCI DSS level determined based on estimated transaction volume"
+      ],
+      "exit_conditions": [
+        "PCIDSSAssessmentCompleted event published with compliance status",
+        "Merchant either fully compliant (SAQ/ROC on file) or provisionally accepted with 90-day compliance deadline",
+        "Merchant progresses to approval and scheme registration (PH-096)"
+      ],
+      "exit_conditions_failure": [
+        "Merchant refuses PCI DSS assessment — application cannot proceed",
+        "Merchant's existing PCI DSS compliance has material findings — remediation required before onboarding"
+      ]
+    },
+    {
+      "id": "PH-096",
+      "name": "Merchant Approval and Scheme Registration",
+      "description": "The Merchant Acquiring Service (SVC-008) consolidates the KYC, credit assessment, and PCI DSS outcomes and produces an approval recommendation. A senior approver reviews and approves the merchant. On approval, the bank registers the merchant with Visa and Mastercard schemes — obtaining a Merchant ID (MID) for each scheme. The scheme registration is processed through the bank's acquiring processor connection. A MerchantApproved event triggers the scheme registration process, and MerchantSchemeRegistered events confirm registration with each scheme.",
+      "actors": ["PER-059"],
+      "channels": ["CH-005"],
+      "services": ["SVC-008", "SVC-005", "SVC-103", "SVC-111"],
+      "governance_rules": ["GOV-005-R04"],
+      "governance_notes": "SM&CR accountability applies — the designated senior manager for merchant acquiring must approve high-risk merchants (MCC risk, high volume, or chargeback history). Visa and Mastercard scheme rules require the acquirer to validate merchant legitimacy before registration. The bank must maintain records of all merchant approvals for scheme audits.",
+      "entry_conditions": [
+        "KYC CLEAR, credit assessment APPROVED, PCI DSS assessment complete",
+        "All approval prerequisites met"
+      ],
+      "exit_conditions": [
+        "MerchantApproved event published",
+        "Visa MID obtained and MerchantSchemeRegistered event published",
+        "Mastercard MID obtained and MerchantSchemeRegistered event published",
+        "Merchant progresses to terminal provisioning (PH-097)"
+      ],
+      "exit_conditions_failure": [
+        "Approval rejected by senior approver — merchant notified",
+        "Scheme registration rejected by Visa/Mastercard — bank investigates reason and advises merchant"
+      ]
+    },
+    {
+      "id": "PH-097",
+      "name": "Terminal Provisioning and Go-Live",
+      "description": "The Merchant Acquiring Service (SVC-008) provisions the merchant's payment acceptance infrastructure. This may include: physical POS terminal delivery and configuration (for in-store merchants), virtual terminal setup (for MOTO/e-commerce merchants), or payment gateway API credentials (for online merchants). Terminal configuration includes the merchant's MIDs, pricing plan (interchange++ or blended rate per PSR MR22/1.7 transparency requirements), settlement account details, and reporting access. A test transaction is processed to confirm end-to-end connectivity. On successful test, the merchant is marked as live.",
+      "actors": ["PER-007", "PER-059"],
+      "channels": ["CH-001", "CH-005"],
+      "services": ["SVC-008", "SVC-005", "SVC-103"],
+      "governance_rules": [],
+      "governance_notes": "PSR MR22/1.7 requires that pricing is clearly disclosed to the merchant before go-live — interchange++ pricing must show interchange, scheme fees, and acquirer margin separately. Settlement timing must be disclosed (typically T+1 or T+2 working days). The merchant must have access to a reporting portal showing transaction detail, fees, and chargebacks.",
+      "entry_conditions": [
+        "MerchantSchemeRegistered events received for all applicable schemes",
+        "Settlement account confirmed (bank account for merchant funds settlement)",
+        "Pricing plan agreed and disclosed per PSR MR22/1.7"
+      ],
+      "exit_conditions": [
+        "Terminal/gateway provisioned and configured",
+        "MerchantTerminalProvisioned event published",
+        "Test transaction successfully processed",
+        "MerchantLive event published",
+        "Merchant notified of go-live confirmation with reporting portal access"
+      ],
+      "exit_conditions_failure": [
+        "Terminal delivery failure — replacement dispatched",
+        "Test transaction failure — technical investigation; merchant go-live delayed",
+        "Settlement account validation failure — merchant must provide alternative bank details"
+      ]
+    }
+  ],
+  "paths": {
+    "happy_path": {
+      "description": "An SME merchant applies for card acquiring, passes KYC/AML checks, credit assessment, and PCI DSS assessment without issues. The merchant is approved, registered with Visa and Mastercard, provisioned with a POS terminal or payment gateway, and goes live after a successful test transaction. Typical timeline: 5-10 working days for the full onboarding.",
+      "phases": ["PH-093", "PH-094", "PH-095", "PH-096", "PH-097"],
+      "estimated_duration": "5-10 working days"
+    },
+    "alternative_paths": [
+      {
+        "id": "AP-018-001",
+        "name": "High-Risk MCC Enhanced Assessment",
+        "description": "Merchants in high-risk MCC categories (gambling MCC 7995, cryptocurrency MCC 6051, adult content, travel agencies) require enhanced credit assessment with higher chargeback reserves (typically 5-10% of monthly volume held in rolling reserve), additional director due diligence, and senior management approval. The enhanced assessment adds 3-5 working days to the onboarding timeline.",
+        "trigger": "MCC code identified as high-risk during PH-093",
+        "additional_actors": ["PER-059"],
+        "phases_modified": ["PH-094", "PH-096"],
+        "regulatory_basis": "PRA credit risk expectations; Visa/Mastercard high-risk merchant programme requirements",
+        "sla": "Enhanced assessment completed within 5 additional working days"
+      },
+      {
+        "id": "AP-018-002",
+        "name": "E-Commerce Only Merchant (No Physical Terminal)",
+        "description": "For online-only merchants, PH-097 skips physical terminal provisioning and instead provisions payment gateway API credentials, test sandbox access, and integration documentation. The merchant integrates via API and performs a test transaction via the sandbox before going live.",
+        "trigger": "Merchant declares e-commerce only during PH-093 application",
+        "additional_actors": [],
+        "phases_modified": ["PH-095", "PH-097"],
+        "regulatory_basis": "PCI DSS SAQ A or SAQ A-EP applies to e-commerce merchants redirecting to payment page",
+        "sla": "API credentials provisioned within 1 working day of scheme registration"
+      }
+    ],
+    "exception_paths": [
+      {
+        "id": "EX-018-001",
+        "name": "Sanctions Hit on Director or UBO",
+        "description": "During KYC (PH-093), sanctions screening identifies a confirmed match against a director or UBO of the merchant. The application is immediately blocked, the MLRO is notified, and OFSI notification obligations apply. The merchant is informed that the application cannot proceed without disclosing the sanctions match (tipping-off prohibition applies).",
+        "trigger": "SanctionsHitDetected event during PH-093 KYC screening",
+        "additional_actors": ["PER-059"],
+        "regulatory_basis": "GOV-005-R02; OFSI sanctions regulations; POCA 2002 s333A (tipping off)",
+        "sla": "OFSI notification within 14 days of confirmed designated person identification"
+      },
+      {
+        "id": "EX-018-002",
+        "name": "PCI DSS Non-Compliance — 90-Day Remediation",
+        "description": "The merchant cannot demonstrate PCI DSS compliance at application time. A provisional acceptance is granted with a 90-day compliance deadline. The merchant must submit their SAQ or ROC within 90 days or face suspension of acquiring services. The Merchant Acquiring Service tracks compliance deadlines and sends reminders at 60, 30, and 7 days.",
+        "trigger": "PCI DSS assessment at PH-095 returns NO_DOCUMENTATION or MATERIAL_FINDINGS",
+        "additional_actors": [],
+        "regulatory_basis": "PCI DSS v4.0; Visa/Mastercard acquirer compliance programme",
+        "sla": "90-day compliance deadline from provisional acceptance"
+      }
+    ]
+  },
+  "design_decisions": [
+    {
+      "id": "DD-JRN018-001",
+      "decision": "Scheme registration (Visa/Mastercard MID assignment) crosses from CAP-002 to CAP-003 via domain events",
+      "rationale": "The Merchant Acquiring Service (SVC-008) in CAP-002 owns the merchant onboarding process. Scheme registration requires interaction with Visa/Mastercard networks, which is operationally managed by CAP-003 Payment Operations. The MerchantApproved event from CAP-002 triggers scheme registration in CAP-003, and MerchantSchemeRegistered events flow back. This maintains the async cross-capability rule.",
+      "alternatives_considered": ["Synchronous API call from SVC-008 to scheme registration service"],
+      "rejected_because": "Violates cross-capability async communication rule."
+    },
+    {
+      "id": "DD-JRN018-002",
+      "decision": "KYC for merchant onboarding reuses the existing KYC/AML Service (SVC-014) and Sanctions Screening Service (SVC-051) from CAP-005",
+      "rationale": "Merchant KYC follows the same MLR 2017 CDD requirements as personal or corporate customer KYC. The KYC/AML Service handles all CDD. The MerchantKYCCompleted event is published by CAP-005 and consumed by CAP-002 to continue the onboarding flow.",
+      "alternatives_considered": ["Separate merchant-specific KYC service"],
+      "rejected_because": "Would duplicate CDD logic and create regulatory inconsistency. MLR 2017 CDD applies uniformly."
+    }
+  ]
+}

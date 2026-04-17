@@ -1,0 +1,126 @@
+{
+  "id": "ENT-058",
+  "name": "Restatement",
+  "description": "Records a restatement of a previously submitted COREP return. Contains the corrected figures, root cause analysis, and remediation plan. A restatement triggers a new submission cycle (correction, validation, CFO sign-off, PRA submission) and requires proactive PRA notification.",
+  "owning_service": "SVC-015",
+  "fields": [
+    {
+      "name": "restatement_id",
+      "type": "string",
+      "format": "UUID",
+      "description": "Unique identifier for the restatement",
+      "validation": "Required. UUID v4.",
+      "source": "System-generated"
+    },
+    {
+      "name": "original_return_id",
+      "type": "string",
+      "description": "Reference to the original submitted COREPReturn being restated",
+      "validation": "Required.",
+      "source": "SVC-015 workflow"
+    },
+    {
+      "name": "restated_return_id",
+      "type": "string",
+      "description": "Reference to the new corrected COREPReturn",
+      "validation": "Required when restatement is submitted.",
+      "source": "SVC-015 workflow"
+    },
+    {
+      "name": "error_identified_date",
+      "type": "date",
+      "format": "ISO 8601",
+      "description": "Date the material error was identified",
+      "validation": "Required.",
+      "source": "Manual input"
+    },
+    {
+      "name": "error_source",
+      "type": "enum",
+      "values": [
+        "INTERNAL_QA",
+        "PRA_QUERY",
+        "SUBSEQUENT_PERIOD_RECONCILIATION",
+        "EXTERNAL_AUDIT"
+      ],
+      "description": "How the error was identified",
+      "validation": "Required.",
+      "source": "Manual classification"
+    },
+    {
+      "name": "error_description",
+      "type": "string",
+      "description": "Description of the material error",
+      "validation": "Required.",
+      "source": "Manual input"
+    },
+    {
+      "name": "affected_templates",
+      "type": "array",
+      "items": "string",
+      "description": "COREP template codes affected by the error (e.g., CA1, CR_SA)",
+      "validation": "Required. At least one template.",
+      "source": "Manual input"
+    },
+    {
+      "name": "root_cause_analysis",
+      "type": "string",
+      "description": "Root cause analysis documenting how the error occurred",
+      "validation": "Required.",
+      "source": "Manual input"
+    },
+    {
+      "name": "remediation_plan",
+      "type": "string",
+      "description": "Plan to prevent recurrence of the error",
+      "validation": "Required.",
+      "source": "Manual input"
+    },
+    {
+      "name": "pra_notified_date",
+      "type": "date",
+      "description": "Date the PRA was proactively notified of the error",
+      "validation": "Required. Must be within 2 working days of error_identified_date.",
+      "source": "Manual input"
+    },
+    {
+      "name": "status",
+      "type": "enum",
+      "values": [
+        "IDENTIFIED",
+        "INVESTIGATING",
+        "CORRECTING",
+        "REVALIDATING",
+        "AWAITING_SIGNOFF",
+        "SUBMITTED",
+        "CLOSED"
+      ],
+      "description": "Restatement lifecycle status",
+      "validation": "Required.",
+      "source": "SVC-015 workflow"
+    },
+    {
+      "name": "created_at",
+      "type": "datetime",
+      "format": "ISO 8601",
+      "validation": "Required.",
+      "source": "System clock"
+    }
+  ],
+  "relationships": [
+    {
+      "target_entity": "ENT-056",
+      "relationship_type": "restates",
+      "description": "A Restatement references both the original return and the corrected return"
+    }
+  ],
+  "design_decisions": [
+    {
+      "decision": "Restatement is a separate entity rather than a status on COREPReturn",
+      "rationale": "A restatement involves its own lifecycle (investigation, correction, re-validation, re-submission), root cause analysis, remediation plan, and PRA notification \u2014 sufficient complexity to warrant an independent entity. The original return and restated return are both COREPReturn instances linked through the Restatement entity."
+    }
+  ],
+  "source_journeys": [
+    "JRN-017"
+  ]
+}

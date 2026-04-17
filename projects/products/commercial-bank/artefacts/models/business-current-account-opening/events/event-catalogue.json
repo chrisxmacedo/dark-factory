@@ -15,14 +15,14 @@
   ],
   "events": [
     {
-      "event_id": "EVT-B001",
+      "event_id": "EVT-168",
       "name": "BusinessApplicationStarted",
       "source_service": "SVC-005",
       "source_service_name": "Commercial Banking Core",
-      "source_entity": "ENT-B001",
+      "source_entity": "ENT-079",
       "source_entity_name": "BusinessCustomer",
       "trigger": "PER-002 submits the business account application form. SVC-017 calls SVC-005 to create BusinessCustomer (prospect) and BusinessApplicationRecord with status = in_progress. BusinessApplicationStarted is published immediately on successful creation.",
-      "journey_phase": "BPH-001",
+      "journey_phase": "PH-139",
       "journey_phase_name": "Application Initiation",
       "capability_scope": "cross-capability",
       "capability_scope_rationale": "Published by CAP-002 (Commercial Banking / SVC-005); consumed by CAP-005 (SVC-050 — initialises onboarding case) and CAP-007 (SVC-017 — initialises application UI).",
@@ -43,7 +43,7 @@
         {
           "service": "SVC-050",
           "service_name": "Customer Onboarding Service",
-          "action": "Initialises the business onboarding case. No identity verification sessions are created yet — sessions are created after UBO identification completes (BPH-003)"
+          "action": "Initialises the business onboarding case. No identity verification sessions are created yet — sessions are created after UBO identification completes (PH-141)"
         },
         {
           "service": "SVC-103",
@@ -66,14 +66,14 @@
       "governance_references": ["GOV-005-R01", "MLR 2017 Regulation 28"]
     },
     {
-      "event_id": "EVT-B002",
+      "event_id": "EVT-169",
       "name": "CompaniesHouseVerified",
       "source_service": "SVC-005",
       "source_service_name": "Commercial Banking Core",
-      "source_entity": "ENT-B001",
+      "source_entity": "ENT-079",
       "source_entity_name": "BusinessCustomer",
-      "trigger": "SVC-005 successfully calls the Companies House API at BPH-002 and reconciles the returned company data with the applicant's submitted details. Company status = active, legal name matches within threshold. DirectorRecord and UBO staging entities have been created from CH officer and PSC data.",
-      "journey_phase": "BPH-002",
+      "trigger": "SVC-005 successfully calls the Companies House API at PH-140 and reconciles the returned company data with the applicant's submitted details. Company status = active, legal name matches within threshold. DirectorRecord and UBO staging entities have been created from CH officer and PSC data.",
+      "journey_phase": "PH-140",
       "journey_phase_name": "Companies House Verification",
       "capability_scope": "cross-capability",
       "capability_scope_rationale": "Published by CAP-002 (SVC-005); consumed by CAP-005 (SVC-014 — uses company details as CDD inputs) and CAP-007 (SVC-017 — renders verification confirmation to PER-002).",
@@ -95,7 +95,7 @@
         {
           "service": "SVC-014",
           "service_name": "KYC/AML Service",
-          "action": "Receives company details (legal name, SIC codes, incorporation date, operating countries) as inputs for company-level CDD screening at BPH-005. Sector risk and jurisdictional risk assessment begins on receipt."
+          "action": "Receives company details (legal name, SIC codes, incorporation date, operating countries) as inputs for company-level CDD screening at PH-143. Sector risk and jurisdictional risk assessment begins on receipt."
         },
         {
           "service": "SVC-017",
@@ -118,14 +118,14 @@
       "governance_references": ["GOV-005-R01", "MLR 2017 Regulation 28(11)"]
     },
     {
-      "event_id": "EVT-B003",
+      "event_id": "EVT-170",
       "name": "UBOIdentified",
       "source_service": "SVC-005",
       "source_service_name": "Commercial Banking Core",
-      "source_entity": "ENT-B003",
+      "source_entity": "ENT-081",
       "source_entity_name": "UltimateBeneficialOwner",
-      "trigger": "Each UltimateBeneficialOwner entity is created and confirmed by the applicant at BPH-003. One UBOIdentified event is published per natural person UBO. Events are published in batch after the applicant submits the confirmed UBO list.",
-      "journey_phase": "BPH-003",
+      "trigger": "Each UltimateBeneficialOwner entity is created and confirmed by the applicant at PH-141. One UBOIdentified event is published per natural person UBO. Events are published in batch after the applicant submits the confirmed UBO list.",
+      "journey_phase": "PH-141",
       "journey_phase_name": "Director and UBO Identification",
       "capability_scope": "cross-capability",
       "capability_scope_rationale": "Published by CAP-002 (SVC-005); consumed by CAP-005 (SVC-050 — creates verification sessions; SVC-014 — queues individual screening). Cross-capability: commercial → compliance.",
@@ -149,7 +149,7 @@
         {
           "service": "SVC-014",
           "service_name": "KYC/AML Service",
-          "action": "Registers this UBO in the BPH-005 screening queue. Prepares to run PEP/sanctions/adverse media screening once the individual's identity verification is confirmed via DirectorVerified event."
+          "action": "Registers this UBO in the PH-143 screening queue. Prepares to run PEP/sanctions/adverse media screening once the individual's identity verification is confirmed via DirectorVerified event."
         },
         {
           "service": "SVC-103",
@@ -167,14 +167,14 @@
       "governance_references": ["GOV-005-R01", "MLR 2017 Regulation 5", "MLR 2017 Regulation 28(3)(a)"]
     },
     {
-      "event_id": "EVT-B004",
+      "event_id": "EVT-171",
       "name": "DirectorVerified",
       "source_service": "SVC-050",
       "source_service_name": "Customer Onboarding Service",
       "source_entity": "ENT-002",
       "source_entity_name": "IdentityVerification",
       "trigger": "SVC-050 receives a terminal pass outcome from the identity verification vendor (Onfido/Jumio) for a director or UBO individual. One DirectorVerified event is published per individual on pass. Each individual's session is independent — events are published asynchronously as each person completes their verification.",
-      "journey_phase": "BPH-004",
+      "journey_phase": "PH-142",
       "journey_phase_name": "Identity Verification",
       "capability_scope": "cross-capability",
       "capability_scope_rationale": "Published by CAP-005 (SVC-050); consumed by CAP-002 (SVC-005 — updates verification_status) and CAP-005 intra-capability (SVC-014 — triggers individual CDD screening) and CAP-007 (SVC-017 — updates verification status dashboard).",
@@ -198,7 +198,7 @@
         {
           "service": "SVC-005",
           "service_name": "Commercial Banking Core",
-          "action": "Updates DirectorRecord.verification_status or UltimateBeneficialOwner.verification_status to 'verified'. Tracks overall verification completeness — once all required individuals are verified, the application transitions to BPH-005."
+          "action": "Updates DirectorRecord.verification_status or UltimateBeneficialOwner.verification_status to 'verified'. Tracks overall verification completeness — once all required individuals are verified, the application transitions to PH-143."
         },
         {
           "service": "SVC-014",
@@ -226,17 +226,17 @@
       "governance_references": ["GOV-005-R01", "MLR 2017 Regulation 28(3)", "UK GDPR Article 9"]
     },
     {
-      "event_id": "EVT-B005",
+      "event_id": "EVT-172",
       "name": "BusinessKYCCleared",
       "source_service": "SVC-014",
       "source_service_name": "KYC/AML Service",
-      "source_entity": "ENT-B005",
+      "source_entity": "ENT-083",
       "source_entity_name": "BusinessKycAssessment",
-      "trigger": "SVC-014 has completed the full BPH-005 CDD assessment: company-level PEP/sanctions/adverse media screening is complete (all clear); all director and UBO individual screenings are complete (all clear); sector risk and jurisdictional risk assessment complete; risk_category determined; EDD not required (or EDD required and MLRO has signed off via AP-B001). The BusinessKycAssessment entity has been created with the final assessment outcome.",
-      "journey_phase": "BPH-005",
+      "trigger": "SVC-014 has completed the full PH-143 CDD assessment: company-level PEP/sanctions/adverse media screening is complete (all clear); all director and UBO individual screenings are complete (all clear); sector risk and jurisdictional risk assessment complete; risk_category determined; EDD not required (or EDD required and MLRO has signed off via AP-B001). The BusinessKycAssessment entity has been created with the final assessment outcome.",
+      "journey_phase": "PH-143",
       "journey_phase_name": "KYC/CDD Assessment",
       "capability_scope": "cross-capability",
-      "capability_scope_rationale": "Published by CAP-005 (SVC-014); consumed by CAP-002 (SVC-005 — gates BPH-006 account decision) and CAP-007 (SVC-017 — notifies customer of CDD completion).",
+      "capability_scope_rationale": "Published by CAP-005 (SVC-014); consumed by CAP-002 (SVC-005 — gates PH-144 account decision) and CAP-007 (SVC-017 — notifies customer of CDD completion).",
       "payload_schema": {
         "assessment_id": "string (UUID v4) — BusinessKycAssessment entity identifier",
         "business_customer_id": "string (UUID v4)",
@@ -252,7 +252,7 @@
         {
           "service": "SVC-005",
           "service_name": "Commercial Banking Core",
-          "action": "This event is the gate for BPH-006. On receipt, SVC-005 runs the automated account decision engine. Without BusinessKYCCleared, SVC-005 will not run the decision engine (MLR 2017 Regulation 28: no business relationship before CDD complete)."
+          "action": "This event is the gate for PH-144. On receipt, SVC-005 runs the automated account decision engine. Without BusinessKYCCleared, SVC-005 will not run the decision engine (MLR 2017 Regulation 28: no business relationship before CDD complete)."
         },
         {
           "service": "SVC-017",
@@ -280,14 +280,14 @@
       "governance_references": ["GOV-005-R01", "GOV-005-R06", "MLR 2017 Regulation 28", "MLR 2017 Regulation 33"]
     },
     {
-      "event_id": "EVT-B006",
+      "event_id": "EVT-175",
       "name": "BusinessAccountOpened",
       "source_service": "SVC-005",
       "source_service_name": "Commercial Banking Core",
-      "source_entity": "ENT-B002",
+      "source_entity": "ENT-080",
       "source_entity_name": "BusinessAccount",
-      "trigger": "SVC-005 creates the BusinessAccount entity at BPH-007 following an approved BusinessApplicationDecisionMade event. Account number and sort code allocated from the commercial banking range. IBAN and BIC computed. BusinessCustomer.status promoted to 'active'.",
-      "journey_phase": "BPH-007",
+      "trigger": "SVC-005 creates the BusinessAccount entity at PH-145 following an approved BusinessApplicationDecisionMade event. Account number and sort code allocated from the commercial banking range. IBAN and BIC computed. BusinessCustomer.status promoted to 'active'.",
+      "journey_phase": "PH-145",
       "journey_phase_name": "Account Provisioning",
       "capability_scope": "cross-capability",
       "capability_scope_rationale": "Published by CAP-002 (SVC-005); consumed by CAP-007 (SVC-017 — renders account details to PER-002) and CAP-005 (SVC-014 — initiates pKYC monitoring).",
@@ -331,14 +331,14 @@
       "governance_references": ["GOV-005-R01", "GOV-002-R06"]
     },
     {
-      "event_id": "EVT-B007",
+      "event_id": "EVT-176",
       "name": "BusinessAccountProvisioned",
       "source_service": "SVC-005",
       "source_service_name": "Commercial Banking Core",
-      "source_entity": "ENT-B002",
+      "source_entity": "ENT-080",
       "source_entity_name": "BusinessAccount",
       "trigger": "BusinessAccount.status transitions to 'active' and the multi-signatory configuration (authorised users, payment approval threshold, payment rails) has been written to the account. Published immediately after BusinessAccountOpened in the same provisioning transaction.",
-      "journey_phase": "BPH-007",
+      "journey_phase": "PH-145",
       "journey_phase_name": "Account Provisioning",
       "capability_scope": "cross-capability",
       "capability_scope_rationale": "Published by CAP-002 (SVC-005); consumed by CAP-007 (SVC-017 — enables business portal setup) and CAP-005 (SVC-014 — activates pKYC ongoing monitoring).",
@@ -356,7 +356,7 @@
         {
           "service": "SVC-017",
           "service_name": "Digital Channels",
-          "action": "Receives the provisioned configuration to set up the business portal with the correct payment approval workflow and multi-user access configuration. Triggers BPH-008 digital channel activation setup."
+          "action": "Receives the provisioned configuration to set up the business portal with the correct payment approval workflow and multi-user access configuration. Triggers PH-146 digital channel activation setup."
         },
         {
           "service": "SVC-014",
@@ -380,13 +380,13 @@
     }
   ],
   "event_id_registry": {
-    "EVT-B001": "BusinessApplicationStarted",
-    "EVT-B002": "CompaniesHouseVerified",
-    "EVT-B003": "UBOIdentified",
-    "EVT-B004": "DirectorVerified",
-    "EVT-B005": "BusinessKYCCleared",
-    "EVT-B006": "BusinessAccountOpened",
-    "EVT-B007": "BusinessAccountProvisioned",
-    "note": "BusinessKYCReferralRaised (EDD path) and BusinessSanctionsHitDetected are published by SVC-014 as exception events and are catalogued here by reference to the service-boundaries.json definitions. BusinessApplicationDecisionMade and BusinessDigitalChannelActivated are published by SVC-005 and SVC-017 respectively and follow the same pattern as EVT-B006/B007 above."
+    "EVT-168": "BusinessApplicationStarted",
+    "EVT-169": "CompaniesHouseVerified",
+    "EVT-170": "UBOIdentified",
+    "EVT-171": "DirectorVerified",
+    "EVT-172": "BusinessKYCCleared",
+    "EVT-175": "BusinessAccountOpened",
+    "EVT-176": "BusinessAccountProvisioned",
+    "note": "BusinessKYCReferralRaised (EDD path) and BusinessSanctionsHitDetected are published by SVC-014 as exception events and are catalogued here by reference to the service-boundaries.json definitions. BusinessApplicationDecisionMade and BusinessDigitalChannelActivated are published by SVC-005 and SVC-017 respectively and follow the same pattern as EVT-175/B007 above."
   }
 }

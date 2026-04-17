@@ -70,7 +70,7 @@
       "capability_name": "Commercial Banking",
       "tier": "T2",
       "role_in_journey": "JRN-014 additions to existing SVC-005. Provides BusinessCustomer status validation and account balance checks (called synchronously by SVC-007, same-capability). Executes account debit (sell leg) and credit (buy leg) at settlement. Publishes no new events unique to JRN-014.",
-      "owned_entities": ["ENT-B001", "ENT-B002"],
+      "owned_entities": ["ENT-079", "ENT-080"],
       "published_events": [],
       "consumed_events": [
         {

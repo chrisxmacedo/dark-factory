@@ -6,13 +6,13 @@
     {
       "id": "ENT-036",
       "name": "LetterOfCredit",
-      "description": "Aggregate root for a documentary letter of credit. Captures the full lifecycle from application through issuance to settlement or expiry. Owned exclusively by SVC-006 (Trade Finance Service). References BusinessCustomer (ENT-B001) and BusinessAccount (ENT-B002) from SVC-005 by foreign key — no local copies.",
+      "description": "Aggregate root for a documentary letter of credit. Captures the full lifecycle from application through issuance to settlement or expiry. Owned exclusively by SVC-006 (Trade Finance Service). References BusinessCustomer (ENT-079) and BusinessAccount (ENT-080) from SVC-005 by foreign key — no local copies.",
       "owning_service": "SVC-006",
       "fields": [
         { "name": "lc_id", "type": "UUID v4", "description": "Immutable LC identifier — primary key", "required": true },
         { "name": "lc_reference", "type": "string", "description": "Bank-assigned LC reference number (SWIFT field 20, max 16 chars alphanumeric)", "required": true },
-        { "name": "business_customer_id", "type": "UUID v4 (FK → ENT-B001)", "description": "Applicant — references BusinessCustomer in SVC-005. Read via same-capability API. No local copy.", "required": true },
-        { "name": "account_id", "type": "UUID v4 (FK → ENT-B002)", "description": "Applicant's BusinessAccount to be debited on settlement. References SVC-005 entity by FK.", "required": true },
+        { "name": "business_customer_id", "type": "UUID v4 (FK → ENT-079)", "description": "Applicant — references BusinessCustomer in SVC-005. Read via same-capability API. No local copy.", "required": true },
+        { "name": "account_id", "type": "UUID v4 (FK → ENT-080)", "description": "Applicant's BusinessAccount to be debited on settlement. References SVC-005 entity by FK.", "required": true },
         { "name": "lc_type", "type": "enum (sight | usance | standby | revolving)", "description": "Letter of credit type. sight = immediate payment on compliant presentation. usance = deferred payment at tenor.", "required": true },
         { "name": "status", "type": "enum (application_submitted | under_review | compliance_blocked | credit_declined | issued | documents_presented | documents_under_examination | settled | expired | documents_refused | cancelled)", "description": "Current lifecycle status of the LC.", "required": true },
         { "name": "credit_status", "type": "enum (pending | facility_confirmed | credit_approved | credit_declined)", "description": "Result of PH-053 credit/facility headroom check.", "required": true },
@@ -54,8 +54,8 @@
         { "type": "has_many", "target": "ENT-037 (LCAmendment)", "description": "An LC may have zero or more amendments. Each amendment references lc_id." },
         { "type": "has_many", "target": "ENT-038 (TradeDocument)", "description": "An LC has one or more document presentations. Each TradeDocument set references lc_id." },
         { "type": "has_many", "target": "ENT-039 (DocumentExamination)", "description": "An LC has one DocumentExamination per presentation event." },
-        { "type": "references", "target": "ENT-B001 (BusinessCustomer) — SVC-005", "description": "FK reference to applicant. No local copy. Read via SVC-005 GET /business-customers/{id}." },
-        { "type": "references", "target": "ENT-B002 (BusinessAccount) — SVC-005", "description": "FK reference to settlement account. No local copy. Read via SVC-005 GET /business-accounts/{id}." }
+        { "type": "references", "target": "ENT-079 (BusinessCustomer) — SVC-005", "description": "FK reference to applicant. No local copy. Read via SVC-005 GET /business-customers/{id}." },
+        { "type": "references", "target": "ENT-080 (BusinessAccount) — SVC-005", "description": "FK reference to settlement account. No local copy. Read via SVC-005 GET /business-accounts/{id}." }
       ],
       "design_decisions": [
         "status field is the master lifecycle state machine. All phase transitions map to a status transition.",
@@ -153,8 +153,8 @@
     }
   ],
   "referenced_existing_entities": [
-    { "id": "ENT-B001", "name": "BusinessCustomer", "owning_service": "SVC-005", "usage": "JRN-013 applicant reference — read via SVC-005 GET /business-customers/{id}. SVC-006 stores business_customer_id FK in ENT-036 only." },
-    { "id": "ENT-B002", "name": "BusinessAccount", "owning_service": "SVC-005", "usage": "Settlement account for LC payment — debited by SVC-006 calling SVC-005 (same-capability) in PH-058." }
+    { "id": "ENT-079", "name": "BusinessCustomer", "owning_service": "SVC-005", "usage": "JRN-013 applicant reference — read via SVC-005 GET /business-customers/{id}. SVC-006 stores business_customer_id FK in ENT-036 only." },
+    { "id": "ENT-080", "name": "BusinessAccount", "owning_service": "SVC-005", "usage": "Settlement account for LC payment — debited by SVC-006 calling SVC-005 (same-capability) in PH-058." }
   ],
   "entity_extensions": []
 }

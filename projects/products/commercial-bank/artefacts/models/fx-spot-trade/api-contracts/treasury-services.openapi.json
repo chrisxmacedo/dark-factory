@@ -474,7 +474,7 @@
           "client_id": {
             "type": "string",
             "format": "uuid",
-            "description": "BusinessCustomer.business_customer_id (ENT-B001). Must reference an active BusinessCustomer."
+            "description": "BusinessCustomer.business_customer_id (ENT-079). Must reference an active BusinessCustomer."
           },
           "sell_currency": {
             "type": "string",

@@ -30,7 +30,7 @@
         },
         {
           "event_id": "EVT-AccountDebited",
-          "name": "AccountDebited (re-used from JRN-002, EVT-P06 pattern)",
+          "name": "AccountDebited (re-used from JRN-002, EVT-184 pattern)",
           "from_service": "SVC-001",
           "purpose": "SVC-001 publishes AccountDebited after successfully debiting the customer account at D-0 (PH-050). SVC-009 consumes this to update DirectDebitCollection.status = collected and publish EVT-072."
         },

@@ -70,7 +70,7 @@ sequenceDiagram
     rect rgb(255, 245, 220)
         Note over SVC006,SVC053: PH-058: Settlement — account debit (same-capability) then SWIFT reimbursement (cross-capability)
         SVC006->>SVC005: POST /business-accounts/{id}/debit<br/>{amount: 250000, currency: USD, ref: LCIMPORT-2026-089}<br/>(same-capability — must succeed before SWIFT event)
-        SVC005->>SVC005: Debits BusinessAccount (ENT-B002)<br/>Creates debit transaction TXN-2026-LC-089
+        SVC005->>SVC005: Debits BusinessAccount (ENT-080)<br/>Creates debit transaction TXN-2026-LC-089
         SVC005-->>SVC006: 200 OK {debit_reference: TXN-2026-LC-089, settlement_confirmed: true}
         SVC006->>SVC006: LetterOfCredit.status = settled<br/>settlement_date=2026-07-11, settlement_amount=250000 USD
         SVC006-)SVC102: EVT-081: LCSettled [CROSS-CAPABILITY ▶]<br/>topic: commercial.trade-finance<br/>{settlement_amount: 250000 USD, advising_bank_bic: ICBKCNBJXXX,<br/>debit_reference: TXN-2026-LC-089}

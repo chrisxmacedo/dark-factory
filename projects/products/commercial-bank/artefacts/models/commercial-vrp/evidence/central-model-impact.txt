@@ -1,0 +1,29 @@
+Central Model Impact Assessment — JRN-029 Commercial VRP Consent Setup
+Generated: 2026-04-15
+
+ENTITIES
+  vrp-consent.json   — CREATED (ENT-070, owned by SVC-009)
+  vrp-payment.json   — CREATED (ENT-071, owned by SVC-009)
+
+EVENTS
+  EVT-156 VrpConsentGranted   — ADDED to central catalogue
+  EVT-157 VrpPaymentExecuted  — ADDED to central catalogue
+  EVT-158 VrpConsentRevoked   — ADDED to central catalogue
+
+SERVICE MAP
+  SVC-017  Digital Channels     — extended with VRP API surface (CAP-007)
+  SVC-009  Domestic Payments    — extended with VRP consent/payment ownership (CAP-003)
+  SVC-013  Fraud Detection      — extended (consumer of EVT-157 for model training)
+  SVC-001  Retail Banking Core  — extended (consumer of EVT-157 for account debit)
+  SVC-053  Notifications        — extended (consumer of EVT-156/157/158)
+  SVC-103  Audit & Logging      — extended (consumer of EVT-156/157/158)
+
+CROSS-JOURNEY IMPACT
+  No existing event IDs modified or reassigned.
+  No existing entity schemas modified.
+  SVC-009 previously appeared in FPS (JRN-002), domestic payments patterns. VRP adds a new
+  consent-gated payment product — no schema conflict with existing FPS payment entities.
+  SVC-013 (Fraud Detection) has existing EVT-157 registration — new VRP payment event adds
+  a new behaviour pattern for fraud model training; no conflict.
+
+VERDICT: No breaking changes. All additions are net-new. Safe to proceed.

@@ -1,0 +1,43 @@
+{
+  "diagram_id": "SEQ-JRN021-001",
+  "name": "Happy Path — GDPR SAR Submission and Response",
+  "journey_id": "JRN-021",
+  "scenario": "happy-path",
+  "description": "Customer submits SAR digitally. Identity verified via SCA. Automated data extraction from all source systems. DPO review and redaction. Encrypted response delivered via secure link within 30 days.",
+  "participants": [
+    {"id": "Customer", "label": "PER-001 (Customer)", "type": "actor"},
+    {"id": "Channel", "label": "SVC-017 (Digital Channels)", "type": "service"},
+    {"id": "IAM", "label": "SVC-100 (IAM)", "type": "service"},
+    {"id": "Compliance", "label": "SVC-015 (Compliance Core)", "type": "service"},
+    {"id": "KYC", "label": "SVC-014 (KYC/AML)", "type": "service"},
+    {"id": "EventBus", "label": "SVC-102 (Event Bus)", "type": "infrastructure"},
+    {"id": "Retail", "label": "SVC-001 (Retail Banking Core)", "type": "service"},
+    {"id": "Notifications", "label": "SVC-053 (Notifications)", "type": "service"},
+    {"id": "Audit", "label": "SVC-103 (Audit & Logging)", "type": "service"}
+  ],
+  "steps": [
+    {"step": 1, "from": "Customer", "to": "Channel", "type": "sync", "action": "Submit SAR via online banking portal + complete SCA", "phase": "PH-119"},
+    {"step": 2, "from": "Channel", "to": "IAM", "type": "sync", "action": "POST /sca/validate {assertion}", "phase": "PH-119"},
+    {"step": 3, "from": "IAM", "to": "Channel", "type": "sync-return", "action": "200 OK {valid: true}", "phase": "PH-119"},
+    {"step": 4, "from": "Channel", "to": "Compliance", "type": "sync", "action": "POST /sar {sca_assertion_ref}", "phase": "PH-119"},
+    {"step": 5, "from": "Compliance", "to": "Compliance", "type": "internal", "action": "Create SarCase (ENT-072) status=received; set deadline_date = today + 30 days", "phase": "PH-119"},
+    {"step": 6, "from": "Compliance", "to": "EventBus", "type": "async-publish", "action": "Publish SarCaseOpened (EVT-159)", "phase": "PH-119"},
+    {"step": 7, "from": "EventBus", "to": "Notifications", "type": "async-consume", "action": "Consume EVT-159 → Send acknowledgement: case ref, 30-day deadline", "phase": "PH-119"},
+    {"step": 8, "from": "EventBus", "to": "Audit", "type": "async-consume", "action": "Consume EVT-159 → Write immutable SAR receipt record", "phase": "PH-119"},
+    {"step": 9, "from": "Compliance", "to": "Channel", "type": "sync-return", "action": "201 Created {sar_case_id, deadline_date}", "phase": "PH-119"},
+    {"step": 10, "from": "Channel", "to": "Customer", "type": "ui", "action": "Display SAR confirmation: case reference, 30-day deadline", "phase": "PH-119"},
+    {"step": 11, "from": "EventBus", "to": "KYC", "type": "async-consume", "action": "Consume EVT-159 → Extract KYC/AML records for customer_id (intra-CAP-005)", "phase": "PH-120"},
+    {"step": 12, "from": "KYC", "to": "Compliance", "type": "sync", "action": "Return KYC data extract (intra-capability direct call)", "phase": "PH-120"},
+    {"step": 13, "from": "EventBus", "to": "Retail", "type": "async-consume", "action": "Consume EVT-159 → Extract account data and transaction history for customer_id", "phase": "PH-120"},
+    {"step": 14, "from": "Retail", "to": "EventBus", "type": "async-publish", "action": "Publish SarDataExtractReady (internal event) → SVC-015 receives data extract", "phase": "PH-120"},
+    {"step": 15, "from": "Compliance", "to": "Compliance", "type": "internal", "action": "Compile full data pack; update SarCase status=under_review", "phase": "PH-120"},
+    {"step": 16, "from": "Compliance", "to": "Compliance", "type": "internal", "action": "DPO review; apply Schedule 2 exemptions; redact third-party data; generate encrypted PDF", "phase": "PH-121"},
+    {"step": 17, "from": "Compliance", "to": "Compliance", "type": "internal", "action": "Update SarCase status=response_ready; generate secure download link (14-day expiry)", "phase": "PH-121"},
+    {"step": 18, "from": "Compliance", "to": "EventBus", "type": "async-publish", "action": "Publish SarCaseClosed (EVT-160) {dispatched_at, days_to_close, response_download_link}", "phase": "PH-122"},
+    {"step": 19, "from": "EventBus", "to": "Channel", "type": "async-consume", "action": "Consume EVT-160 → Make download link available in customer portal", "phase": "PH-122"},
+    {"step": 20, "from": "EventBus", "to": "Notifications", "type": "async-consume", "action": "Consume EVT-160 → Send response ready notification with secure download link", "phase": "PH-122"},
+    {"step": 21, "from": "EventBus", "to": "Audit", "type": "async-consume", "action": "Consume EVT-160 → Write immutable closure record with days_to_close", "phase": "PH-122"},
+    {"step": 22, "from": "Customer", "to": "Channel", "type": "sync", "action": "Download encrypted response pack via secure link", "phase": "PH-122"},
+    {"step": 23, "from": "Channel", "to": "Customer", "type": "ui", "action": "Deliver encrypted PDF response pack (within 30-day deadline)", "phase": "PH-122"}
+  ]
+}

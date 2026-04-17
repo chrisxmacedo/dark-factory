@@ -15,7 +15,7 @@
       "authentication_requirements": "Step-up MFA required for SAR workflow access — beyond standard employee authentication. Hardware token or biometric required. Separate role-gated application — not accessible from standard compliance desktop.",
       "interactions_by_phase": [
         {
-          "phase": "SAR-PH-001 (Suspicion Trigger)",
+          "phase": "PH-152 (Suspicion Trigger)",
           "actions": [
             "Receives secure internal notification of new trigger (automated event or staff disclosure)",
             "Reviews trigger details in SARInvestigationRecord",
@@ -37,7 +37,7 @@
           ]
         },
         {
-          "phase": "SAR-PH-002 (MLRO Investigation)",
+          "phase": "PH-153 (MLRO Investigation)",
           "actions": [
             "Reads Customer record (ENT-001) — full identity data",
             "Reads KycAssessment (ENT-003) — PEP/sanctions screening results, risk score, EDD history",
@@ -59,7 +59,7 @@
           "data_masked": []
         },
         {
-          "phase": "SAR-PH-003 (SAR Decision)",
+          "phase": "PH-154 (SAR Decision)",
           "actions": [
             "Records formal decision (file_sar | file_defensive_sar | dismiss)",
             "Documents decision rationale — must be specific and legally defensible",
@@ -70,7 +70,7 @@
           "data_created": ["SuspiciousActivityReport (ENT-008) — if filing decision"]
         },
         {
-          "phase": "SAR-PH-004 (SAR Preparation)",
+          "phase": "PH-155 (SAR Preparation)",
           "actions": [
             "Completes NCA SAR form fields in SVC-014 case management",
             "Reviews draft SAR for completeness and accuracy",
@@ -87,7 +87,7 @@
           ]
         },
         {
-          "phase": "SAR-PH-005 (SAR Submission)",
+          "phase": "PH-156 (SAR Submission)",
           "actions": [
             "Triggers SAR submission to NCA SAR Online",
             "Reviews NCA acknowledgement and reference number",
@@ -103,7 +103,7 @@
           ]
         },
         {
-          "phase": "SAR-PH-006 (Post-Filing Actions)",
+          "phase": "PH-157 (Post-Filing Actions)",
           "actions": [
             "Monitors NCA consent response via SAR Online (if consent SAR)",
             "Determines whether account restrictions are required",
@@ -126,11 +126,11 @@
       "persona_id": "PER-053",
       "persona_name": "Deputy MLRO",
       "persona_description": "Delegated authority from PER-052. May carry out investigation phases and SAR preparation under MLRO supervision. Cannot submit SARs without MLRO sign-off except where explicitly delegated in the MLRO's statement of responsibilities.",
-      "role_in_journey": "Delegated investigator. May perform SAR-PH-002 and SAR-PH-004 activities. All submissions must be confirmed by MLRO (PER-052).",
+      "role_in_journey": "Delegated investigator. May perform PH-153 and PH-155 activities. All submissions must be confirmed by MLRO (PER-052).",
       "access_level": "delegated_investigation",
       "access_constraints": "Same step-up MFA requirement as MLRO. Access restricted to investigations explicitly assigned to PER-053 by PER-052.",
       "prohibited_actions": [
-        "Cannot make the formal SAR decision (SAR-PH-003) without MLRO authorisation",
+        "Cannot make the formal SAR decision (PH-154) without MLRO authorisation",
         "Cannot submit SAR to NCA without MLRO sign-off",
         "Cannot dismiss an investigation without MLRO sign-off"
       ]

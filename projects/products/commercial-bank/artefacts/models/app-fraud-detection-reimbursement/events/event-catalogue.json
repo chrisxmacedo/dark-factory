@@ -17,7 +17,7 @@
       "name": "FraudCaseCreated",
       "source_service": "SVC-013",
       "source_entity": "ENT-043",
-      "trigger": "SVC-013 creates a new FraudCase entity. Triggered by two paths: (1) SVC-017 calls POST /fraud-cases when PER-001 submits a fraud report via mobile app (CH-002) or telephone (CH-004); (2) SVC-013 auto-creates a case on consumption of PaymentFraudBlocked (EVT-P08) from SVC-001. The event is published after the FraudCase is persisted and a case_reference is assigned.",
+      "trigger": "SVC-013 creates a new FraudCase entity. Triggered by two paths: (1) SVC-017 calls POST /fraud-cases when PER-001 submits a fraud report via mobile app (CH-002) or telephone (CH-004); (2) SVC-013 auto-creates a case on consumption of PaymentFraudBlocked (EVT-186) from SVC-001. The event is published after the FraudCase is persisted and a case_reference is assigned.",
       "journey_phase": "PH-064",
       "payload_schema": {
         "case_id": "string (UUID v4) — FraudCase entity identifier",

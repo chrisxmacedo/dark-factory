@@ -1,0 +1,132 @@
+{
+  "journey_id": "JRN-021",
+  "document_version": "0.1.0",
+  "status": "Draft",
+  "architectural_principle": "Cross-capability communication is exclusively async events. Within a capability, services communicate freely.",
+  "services": [
+    {
+      "service_id": "SVC-017",
+      "service_name": "Digital Channels",
+      "capability_id": "CAP-007",
+      "owned_entities": [],
+      "published_events": [],
+      "consumed_events": [
+        {
+          "event_id": "EVT-160",
+          "name": "SarCaseClosed",
+          "provider_service_id": "SVC-015",
+          "purpose": "Trigger secure download link generation and delivery to customer via digital channel"
+        }
+      ],
+      "consumed_apis": [],
+      "design_decisions": [
+        "SVC-017 provides the SAR submission portal (online banking) and secure response delivery link. It does not own the SAR case — that is SVC-015's domain."
+      ]
+    },
+    {
+      "service_id": "SVC-015",
+      "service_name": "Compliance Core",
+      "capability_id": "CAP-005",
+      "owned_entities": ["ENT-072"],
+      "published_events": ["EVT-159", "EVT-160"],
+      "consumed_events": [],
+      "consumed_apis": [],
+      "design_decisions": [
+        "SVC-015 owns SarCase (ENT-072) and orchestrates the data extraction workflow.",
+        "SVC-015 publishes EVT-159 SarCaseOpened which triggers SVC-001 and SVC-014 to respond with data extracts via async events.",
+        "SVC-014 (KYC/AML) is intra-capability with SVC-015 (both in CAP-005) — KYC data extraction is a direct service call within CAP-005.",
+        "SVC-001 (CAP-001) data extraction is cross-capability — triggered by EVT-159 and SVC-001 responds with a data extract event."
+      ]
+    },
+    {
+      "service_id": "SVC-014",
+      "service_name": "KYC/AML Service",
+      "capability_id": "CAP-005",
+      "owned_entities": [],
+      "published_events": [],
+      "consumed_events": [
+        {
+          "event_id": "EVT-159",
+          "name": "SarCaseOpened",
+          "provider_service_id": "SVC-015",
+          "purpose": "Intra-capability: extract KYC/AML records for the customer and return to SVC-015 for SAR compilation"
+        }
+      ],
+      "consumed_apis": [],
+      "design_decisions": [
+        "SVC-014 and SVC-015 are both within CAP-005 — intra-capability communication. SVC-014 responds to SarCaseOpened by providing its data extract directly to SVC-015."
+      ]
+    },
+    {
+      "service_id": "SVC-001",
+      "service_name": "Retail Banking Core",
+      "capability_id": "CAP-001",
+      "owned_entities": [],
+      "published_events": [],
+      "consumed_events": [
+        {
+          "event_id": "EVT-159",
+          "name": "SarCaseOpened",
+          "provider_service_id": "SVC-015",
+          "purpose": "Cross-capability: extract account data, transaction history, and communications data for the customer; publish data extract event back to SVC-015"
+        }
+      ],
+      "consumed_apis": [],
+      "design_decisions": [
+        "SVC-001 (CAP-001) responds to EVT-159 by querying its own data stores and publishing a SAR data extract event consumed by SVC-015. This preserves data ownership while enabling compliance access — no direct database query from SVC-015 to SVC-001's store."
+      ]
+    },
+    {
+      "service_id": "SVC-053",
+      "service_name": "Notifications",
+      "capability_id": "CAP-007",
+      "owned_entities": [],
+      "published_events": [],
+      "consumed_events": [
+        {
+          "event_id": "EVT-159",
+          "name": "SarCaseOpened",
+          "provider_service_id": "SVC-015",
+          "purpose": "Send SAR acknowledgement to customer with case reference and 30-day deadline"
+        },
+        {
+          "event_id": "EVT-160",
+          "name": "SarCaseClosed",
+          "provider_service_id": "SVC-015",
+          "purpose": "Send response delivery notification to customer with secure download link"
+        }
+      ],
+      "consumed_apis": [],
+      "design_decisions": []
+    },
+    {
+      "service_id": "SVC-103",
+      "service_name": "Audit & Logging",
+      "capability_id": "CAP-008",
+      "owned_entities": [],
+      "published_events": [],
+      "consumed_events": [
+        {
+          "event_id": "EVT-159",
+          "name": "SarCaseOpened",
+          "provider_service_id": "SVC-015",
+          "purpose": "Write immutable SAR receipt record (ICO audit)"
+        },
+        {
+          "event_id": "EVT-160",
+          "name": "SarCaseClosed",
+          "provider_service_id": "SVC-015",
+          "purpose": "Write immutable SAR closure record including days_to_close for SLA reporting"
+        }
+      ],
+      "consumed_apis": [],
+      "design_decisions": []
+    }
+  ],
+  "cross_service_interaction_summary": [
+    "SVC-017 (CAP-007) → SVC-015 (CAP-005): SAR submission via Channel→Capability API pattern",
+    "SVC-015 (CAP-005) → EVT-159 → SVC-001 (CAP-001): Cross-capability data extraction request; SVC-001 responds with data extract event",
+    "SVC-014 (CAP-005) ↔ SVC-015 (CAP-005): Intra-capability KYC data extraction (direct call within CAP-005)",
+    "SVC-015 (CAP-005) → EVT-160 → SVC-017 (CAP-007), SVC-053 (CAP-007), SVC-103 (CAP-008): Case closure notifications all async via Event Bus"
+  ]
+}

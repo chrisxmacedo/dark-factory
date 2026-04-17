@@ -1,0 +1,334 @@
+{
+  "id": "ENT-059",
+  "name": "MerchantApplication",
+  "description": "Captures the merchant's application for card acquiring services, including business details, estimated volumes, KYC status, credit assessment outcome, PCI DSS compliance status, and approval decision. This is the aggregate root for the merchant onboarding journey.",
+  "owning_service": "SVC-008",
+  "fields": [
+    {
+      "name": "application_id",
+      "type": "string",
+      "format": "UUID",
+      "description": "Unique application identifier",
+      "validation": "Required.",
+      "source": "System-generated"
+    },
+    {
+      "name": "company_name",
+      "type": "string",
+      "description": "Legal company name",
+      "validation": "Required.",
+      "source": "Merchant input"
+    },
+    {
+      "name": "company_registration_number",
+      "type": "string",
+      "description": "Companies House registration number",
+      "validation": "Required. Valid CRN format.",
+      "source": "Merchant input"
+    },
+    {
+      "name": "trading_name",
+      "type": "string",
+      "description": "Trading name (if different from legal name)",
+      "validation": "Optional.",
+      "source": "Merchant input"
+    },
+    {
+      "name": "trading_address",
+      "type": "object",
+      "description": "Primary trading address",
+      "fields": [
+        {
+          "name": "line1",
+          "type": "string"
+        },
+        {
+          "name": "line2",
+          "type": "string"
+        },
+        {
+          "name": "city",
+          "type": "string"
+        },
+        {
+          "name": "postcode",
+          "type": "string"
+        },
+        {
+          "name": "country",
+          "type": "string"
+        }
+      ],
+      "source": "Merchant input"
+    },
+    {
+      "name": "mcc_code",
+      "type": "string",
+      "description": "Merchant Category Code (ISO 18245)",
+      "validation": "Required. Valid MCC.",
+      "source": "Merchant input / bank classification"
+    },
+    {
+      "name": "mcc_risk_category",
+      "type": "enum",
+      "values": [
+        "STANDARD",
+        "ELEVATED",
+        "HIGH"
+      ],
+      "description": "Risk category derived from MCC code",
+      "validation": "Required.",
+      "source": "SVC-008 MCC risk classification"
+    },
+    {
+      "name": "estimated_monthly_volume",
+      "type": "decimal",
+      "description": "Estimated monthly card transaction volume in GBP",
+      "validation": "Required. Must be > 0.",
+      "source": "Merchant input"
+    },
+    {
+      "name": "average_ticket_size",
+      "type": "decimal",
+      "description": "Average transaction value in GBP",
+      "validation": "Required. Must be > 0.",
+      "source": "Merchant input"
+    },
+    {
+      "name": "directors",
+      "type": "array",
+      "description": "List of company directors",
+      "items": {
+        "name": "string",
+        "dob": "date",
+        "nationality": "string",
+        "kyc_status": "enum: PENDING | CLEAR | REFERRAL | FAILED"
+      },
+      "source": "Merchant input + SVC-014"
+    },
+    {
+      "name": "ubos",
+      "type": "array",
+      "description": "Ultimate beneficial owners (>25% ownership)",
+      "items": {
+        "name": "string",
+        "ownership_percentage": "decimal",
+        "kyc_status": "enum: PENDING | CLEAR | REFERRAL | FAILED"
+      },
+      "source": "Merchant input + SVC-014"
+    },
+    {
+      "name": "kyc_status",
+      "type": "enum",
+      "values": [
+        "PENDING",
+        "CLEAR",
+        "REFERRAL",
+        "FAILED"
+      ],
+      "description": "Overall KYC status",
+      "validation": "Required.",
+      "source": "SVC-014 via domain event"
+    },
+    {
+      "name": "credit_assessment_status",
+      "type": "enum",
+      "values": [
+        "PENDING",
+        "APPROVED",
+        "DECLINED",
+        "REFERRED"
+      ],
+      "description": "Credit assessment outcome",
+      "validation": "Required.",
+      "source": "SVC-005"
+    },
+    {
+      "name": "chargeback_reserve_percentage",
+      "type": "decimal",
+      "description": "Required chargeback reserve as % of monthly volume",
+      "validation": "Required when credit_assessment_status is APPROVED.",
+      "source": "SVC-005 credit assessment"
+    },
+    {
+      "name": "processing_limit_monthly",
+      "type": "decimal",
+      "description": "Maximum monthly processing volume in GBP",
+      "validation": "Required when credit_assessment_status is APPROVED.",
+      "source": "SVC-005 credit assessment"
+    },
+    {
+      "name": "pci_dss_level",
+      "type": "enum",
+      "values": [
+        "LEVEL_1",
+        "LEVEL_2",
+        "LEVEL_3",
+        "LEVEL_4"
+      ],
+      "description": "PCI DSS merchant level",
+      "validation": "Required.",
+      "source": "SVC-008 volume classification"
+    },
+    {
+      "name": "pci_dss_status",
+      "type": "enum",
+      "values": [
+        "PENDING",
+        "COMPLIANT",
+        "PROVISIONAL",
+        "NON_COMPLIANT"
+      ],
+      "description": "PCI DSS compliance status",
+      "validation": "Required.",
+      "source": "SVC-008 PCI assessment"
+    },
+    {
+      "name": "pci_dss_deadline",
+      "type": "date",
+      "description": "Deadline for PCI DSS compliance (if provisional)",
+      "validation": "Required when pci_dss_status is PROVISIONAL.",
+      "source": "SVC-008"
+    },
+    {
+      "name": "approval_status",
+      "type": "enum",
+      "values": [
+        "PENDING",
+        "APPROVED",
+        "DECLINED"
+      ],
+      "description": "Overall merchant approval status",
+      "validation": "Required.",
+      "source": "SVC-008 approval workflow"
+    },
+    {
+      "name": "approved_by",
+      "type": "string",
+      "description": "Identity of the approver",
+      "validation": "Required when approval_status is APPROVED.",
+      "source": "SVC-008"
+    },
+    {
+      "name": "visa_mid",
+      "type": "string",
+      "description": "Visa Merchant ID",
+      "validation": "Required when scheme registration complete.",
+      "source": "Visa scheme registration"
+    },
+    {
+      "name": "mastercard_mid",
+      "type": "string",
+      "description": "Mastercard Merchant ID",
+      "validation": "Required when scheme registration complete.",
+      "source": "Mastercard scheme registration"
+    },
+    {
+      "name": "settlement_account",
+      "type": "object",
+      "description": "Merchant's settlement bank account details",
+      "fields": [
+        {
+          "name": "sort_code",
+          "type": "string"
+        },
+        {
+          "name": "account_number",
+          "type": "string"
+        },
+        {
+          "name": "account_name",
+          "type": "string"
+        }
+      ],
+      "source": "Merchant input"
+    },
+    {
+      "name": "pricing_plan",
+      "type": "object",
+      "description": "Agreed pricing plan",
+      "fields": [
+        {
+          "name": "model",
+          "type": "enum",
+          "values": [
+            "INTERCHANGE_PLUS_PLUS",
+            "BLENDED"
+          ]
+        },
+        {
+          "name": "acquirer_margin_bps",
+          "type": "integer"
+        },
+        {
+          "name": "settlement_timing",
+          "type": "string"
+        }
+      ],
+      "source": "SVC-008 pricing engine"
+    },
+    {
+      "name": "terminal_type",
+      "type": "enum",
+      "values": [
+        "POS_PHYSICAL",
+        "VIRTUAL_TERMINAL",
+        "PAYMENT_GATEWAY_API",
+        "NONE"
+      ],
+      "description": "Type of payment acceptance method",
+      "validation": "Required.",
+      "source": "Merchant selection"
+    },
+    {
+      "name": "status",
+      "type": "enum",
+      "values": [
+        "APPLICATION",
+        "KYC_IN_PROGRESS",
+        "CREDIT_ASSESSMENT",
+        "PCI_ASSESSMENT",
+        "PENDING_APPROVAL",
+        "APPROVED",
+        "SCHEME_REGISTRATION",
+        "PROVISIONING",
+        "LIVE",
+        "SUSPENDED",
+        "CLOSED"
+      ],
+      "description": "Overall application lifecycle status",
+      "validation": "Required.",
+      "source": "SVC-008 workflow"
+    },
+    {
+      "name": "created_at",
+      "type": "datetime",
+      "format": "ISO 8601",
+      "validation": "Required.",
+      "source": "System clock"
+    },
+    {
+      "name": "updated_at",
+      "type": "datetime",
+      "format": "ISO 8601",
+      "validation": "Required.",
+      "source": "System clock"
+    }
+  ],
+  "relationships": [
+    {
+      "target_entity": "ENT-060",
+      "relationship_type": "has_one",
+      "description": "A MerchantApplication has one TerminalProvision record when provisioned"
+    }
+  ],
+  "design_decisions": [
+    {
+      "decision": "MerchantApplication is a single aggregate root owned by SVC-008 rather than splitting across services",
+      "rationale": "The merchant onboarding lifecycle is tightly coupled \u2014 KYC, credit, PCI, and approval are sequential phases of one process. SVC-008 owns the aggregate and receives updates from other capabilities via domain events (MerchantKYCCompleted from CAP-005, credit assessment from SVC-005 within CAP-002)."
+    }
+  ],
+  "source_journeys": [
+    "JRN-018"
+  ]
+}

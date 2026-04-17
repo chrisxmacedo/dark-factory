@@ -1,0 +1,49 @@
+{
+  "journey_id": "JRN-030",
+  "document_version": "0.1.0",
+  "status": "Draft",
+  "description": "Event catalogue for Insurance Product Distribution journey. Introduces 1 event: EVT-167. Published by SVC-004 (Insurance Distribution Service, CAP-001).",
+  "events": [
+    {
+      "event_id": "EVT-167",
+      "name": "InsurancePolicyBound",
+      "source_service": "SVC-004",
+      "source_service_name": "Insurance Distribution Service",
+      "source_entity": "ENT-078",
+      "source_entity_name": "InsurancePolicy",
+      "trigger": "Customer accepts insurance terms and IPID. Policy successfully bound with underwriter (Aviva). InsurancePolicy created with status = active.",
+      "journey_phase": "PH-137",
+      "journey_phase_name": "Customer Acceptance and Policy Binding",
+      "capability_scope": "cross-capability",
+      "payload_schema": {
+        "policy_id": "string (UUID v4)",
+        "customer_id": "string (UUID v4)",
+        "account_id": "string (UUID v4)",
+        "product_type": "string enum",
+        "underwriter_name": "string",
+        "underwriter_policy_ref": "string",
+        "annual_premium": "string (decimal as string, GBP)",
+        "start_date": "string (ISO 8601 date)",
+        "end_date": "string (ISO 8601 date)",
+        "consumer_duty_evidence_ref": "string",
+        "ipid_acknowledged_at": "string (ISO 8601 UTC timestamp)",
+        "bound_at": "string (ISO 8601 UTC timestamp)"
+      },
+      "consumers": [
+        {"service": "SVC-001", "service_name": "Retail Banking Core", "action": "Intra-capability: upgrade current account to Premier with insurance bundle fee."},
+        {"service": "SVC-017", "service_name": "Digital Channels", "action": "Update customer app to display active insurance policy and management options."},
+        {"service": "SVC-053", "service_name": "Notifications Service", "action": "Send policy confirmation email with certificate of insurance."},
+        {"service": "SVC-103", "service_name": "Audit & Logging Service", "action": "Write immutable insurance distribution record (FCA PROD / ICOBS evidence)."}
+      ],
+      "ordering_guarantees": "Per-customer ordering via customer_id partition key on topic retail.insurance.",
+      "topic": "retail.insurance",
+      "data_classification": "PII + Financial",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "Insurance distribution with Consumer Duty evidence is an FCA PROD record — immutable for regulatory audit.",
+      "retention": "6 years",
+      "cloudevents_type": "uk.bank.retail.insurance_policy.bound",
+      "governance_references": ["GOV-001-R06"],
+      "source_journeys": ["JRN-030"]
+    }
+  ]
+}

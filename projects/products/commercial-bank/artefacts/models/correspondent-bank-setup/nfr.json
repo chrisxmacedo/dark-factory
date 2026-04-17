@@ -1,0 +1,65 @@
+{
+  "journey_id": "JRN-023",
+  "document_version": "0.1.0",
+  "status": "Draft",
+  "per_phase_nfrs": [
+    {
+      "phase_id": "PH-127",
+      "phase_name": "FATF EDD and KYC Assessment",
+      "latency": {"sanctions_screening_p95": "< 5 minutes", "edd_completion_sla": "Target < 10 working days"},
+      "availability": "99.5%",
+      "security": {"data_classification": "Highly Confidential — EDD documentation, correspondent bank financial data", "access_control": "Restricted to Compliance team. EDD documents encrypted at rest.", "audit": "Sanctions screening result logged with screening reference and timestamp"}
+    },
+    {
+      "phase_id": "PH-128",
+      "phase_name": "Senior Management Approval",
+      "latency": {"approval_sla": "MLR 2017 R34 requires approval before relationship is active — no specific time limit"},
+      "availability": "Internal governance process",
+      "security": {"data_classification": "Highly Confidential — EDD risk assessment", "access_control": "SMF holder only. Attestation stored immutably.", "audit": "SMF approval with timestamp logged as MLR R34 evidence"}
+    },
+    {
+      "phase_id": "PH-129",
+      "phase_name": "Nostro Account Setup and SWIFT Registration",
+      "latency": {"nostro_account_creation_p95": "< 1 hour", "bic_registration_p95": "< 2 hours"},
+      "availability": "99.9%",
+      "security": {"data_classification": "Financial — nostro account details, SWIFT credentials", "access_control": "Treasury team only. SWIFT BIC credentials are privileged.", "audit": "Account creation and BIC registration logged"}
+    },
+    {
+      "phase_id": "PH-130",
+      "phase_name": "Annual EDD Review Scheduling",
+      "latency": {"scheduling_p95": "< 5 minutes (automated)"},
+      "availability": "99.9%",
+      "security": {"data_classification": "Internal — review schedule", "access_control": "Automated system action", "audit": "Review schedule creation logged"}
+    }
+  ],
+  "cross_cutting_nfrs": [
+    {
+      "id": "XNFR-JRN023-01",
+      "name": "Correspondent Relationship Record Retention",
+      "requirement": "CorrespondentRelationship records (including EDD documentation and SM approval) retained for minimum 5 years after relationship termination per MLR 2017.",
+      "rationale": "MLR 2017 record-keeping requirements for correspondent banking relationships."
+    },
+    {
+      "id": "XNFR-JRN023-02",
+      "name": "Sanctions Screening — No Bypass",
+      "requirement": "Sanctions screening against the correspondent bank entity, its directors, and beneficial owners must be completed before any approval. No override of a positive sanctions hit is permitted.",
+      "rationale": "OFSI enforcement; sanctions breach carries criminal liability and significant financial penalties."
+    }
+  ],
+  "regulatory_slas": [
+    {
+      "id": "REG-SLA-JRN023-01",
+      "name": "MLR 2017 Regulation 34 — Senior Management Approval",
+      "requirement": "Senior Management approval must be obtained before establishing a new correspondent banking relationship.",
+      "source": "MLR 2017 Regulation 34, FATF Recommendation 13",
+      "breach_consequence": "FCA enforcement; potential criminal liability for MLRO; relationship is illegal without approval"
+    },
+    {
+      "id": "REG-SLA-JRN023-02",
+      "name": "MLR 2017 Regulation 34 — Annual EDD Review",
+      "requirement": "Correspondent banking relationships must be subject to enhanced ongoing monitoring and annual EDD review.",
+      "source": "MLR 2017 Regulation 34",
+      "breach_consequence": "FCA enforcement; potential suspension of relationship"
+    }
+  ]
+}

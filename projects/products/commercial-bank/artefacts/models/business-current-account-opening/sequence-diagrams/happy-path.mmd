@@ -16,7 +16,7 @@ sequenceDiagram
     participant SVC053 as SVC-053<br/>Notifications
 
     rect rgb(230, 245, 255)
-        Note over PER002,SVC005: BPH-001 — Application Initiation (Day 1)
+        Note over PER002,SVC005: PH-139 — Application Initiation (Day 1)
         PER002->>SVC017: Submit business application<br/>(entity_type: limited_company, company_number: 12345678,<br/>applicant name/email, role: director)
         SVC017->>SVC005: POST /business-applications
         SVC005->>EB: publish BusinessApplicationStarted<br/>{ application_id, business_customer_id, company_number, entity_type }
@@ -25,7 +25,7 @@ sequenceDiagram
     end
 
     rect rgb(230, 255, 230)
-        Note over SVC005,CHAPI: BPH-002 — Companies House Verification (Day 1, ~seconds)
+        Note over SVC005,CHAPI: PH-140 — Companies House Verification (Day 1, ~seconds)
         SVC005->>CHAPI: GET /company/12345678 + /officers + /persons-with-significant-control
         Note over CHAPI: Normal response: ~500ms<br/>Returns: company active, 2 directors,<br/>2 PSCs (Sarah 50%, Priya 30%)
         CHAPI-->>SVC005: 200 OK { company profile, officers, PSCs }
@@ -35,7 +35,7 @@ sequenceDiagram
     end
 
     rect rgb(255, 245, 220)
-        Note over PER002,SVC053: BPH-003 — Director/UBO Identification (Day 1, ~minutes)
+        Note over PER002,SVC053: PH-141 — Director/UBO Identification (Day 1, ~minutes)
         PER002->>SVC017: Confirm UBO list<br/>(confirm Sarah 50%, Priya 30% — both UBOs)<br/>Provide Priya Kapoor email for invitation<br/>Confirm James Chen = director, not UBO
         SVC005->>EB: publish UBOIdentified (x2)<br/>{ ubo_id, ubo_name: Sarah Thornton, ownership: 50% }<br/>{ ubo_id, ubo_name: Priya Kapoor, ownership: 30% }
         SVC050->>SVC053: Dispatch invitation emails to James Chen + Priya Kapoor
@@ -43,7 +43,7 @@ sequenceDiagram
     end
 
     rect rgb(245, 230, 255)
-        Note over PER002,SVC050: BPH-004 — Identity Verification (Day 1-2, async per individual)
+        Note over PER002,SVC050: PH-142 — Identity Verification (Day 1-2, async per individual)
         PER002->>SVC050: Onfido SDK — document (passport) + liveness check<br/>{ biometric_match_score: 0.94, address: confirmed }
         Note over SVC050: Persists IdentityVerification (Sarah Thornton)<br/>Biometric template NOT stored — UK GDPR Art.9
         SVC050->>EB: publish DirectorVerified (Sarah Thornton)<br/>{ individual_type: ubo, outcome: pass, verified_nationality: [GB] }
@@ -55,7 +55,7 @@ sequenceDiagram
     end
 
     rect rgb(255, 230, 220)
-        Note over SVC014,SVC051: BPH-005 — KYC/CDD Assessment (Day 2, ~minutes, parallel fan-out)
+        Note over SVC014,SVC051: PH-143 — KYC/CDD Assessment (Day 2, ~minutes, parallel fan-out)
         Note over SVC014: Receives all 3 DirectorVerified events — all individuals now verified
         par Parallel sanctions screening fan-out
             SVC014->>SVC051: POST /screen { entity: Example Tech Solutions Ltd }
@@ -70,14 +70,14 @@ sequenceDiagram
     end
 
     rect rgb(220, 245, 255)
-        Note over SVC005: BPH-006 — Account Decision (Day 2, automated)
+        Note over SVC005: PH-144 — Account Decision (Day 2, automated)
         Note over SVC005: Decision engine: CH verified + all verifications PASS<br/>+ risk standard + no sanctions → APPROVED
         SVC005->>EB: publish BusinessApplicationDecisionMade<br/>{ application_id, decision_outcome: APPROVED, decided_at }
         SVC053-->>PER002: Email + In-app: "Application approved — setting up your account"
     end
 
     rect rgb(230, 255, 245)
-        Note over SVC005: BPH-007 — Account Provisioning (Day 2, automated)
+        Note over SVC005: PH-145 — Account Provisioning (Day 2, automated)
         Note over SVC005: Create BusinessAccount:<br/>account_number: 62345678 (commercial range)<br/>sort_code: 60-83-21, IBAN: GB29BANK60832162345678<br/>Dual-authorisation: threshold £5,000<br/>Authorised users: Sarah Thornton + James Chen (dual_authoriser)<br/>BusinessCustomer.status → active
         SVC005->>EB: publish BusinessAccountOpened<br/>{ business_account_id, account_number, sort_code, iban, bic, fscs_eligible: false }
         SVC005->>EB: publish BusinessAccountProvisioned<br/>{ business_account_id, status: active,<br/>payment_approval_threshold: 5000, authorised_users: 2,<br/>payment_rails: [bacs, fps, chaps] }
@@ -85,7 +85,7 @@ sequenceDiagram
     end
 
     rect rgb(255, 255, 220)
-        Note over PER002,SVC100: BPH-008 — Digital Channel Activation (Day 2)
+        Note over PER002,SVC100: PH-146 — Digital Channel Activation (Day 2)
         PER002->>SVC017: Set up business portal credentials (username + password)
         SVC017->>SVC100: Create credentials + register FIDO2/WebAuthn device<br/>{ business_customer_id, email, fido2_credential_id, device_id }
         Note over SVC100: Biometric assertion stays on device<br/>(FIDO2/WebAuthn + UK GDPR data minimisation)

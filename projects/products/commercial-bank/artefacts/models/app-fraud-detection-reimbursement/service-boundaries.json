@@ -33,7 +33,7 @@
       ],
       "new_consumed_events": [
         {
-          "event_id": "EVT-P08",
+          "event_id": "EVT-186",
           "name": "PaymentFraudBlocked",
           "provider_service_id": "SVC-001",
           "purpose": "JRN-005 sub-flow 1: Triggers automatic FraudCase creation with trigger_type = realtime_block. SVC-013 already consumed this in JRN-002 to create a fraud operations platform case — JRN-005 formalises this as a FraudCase entity write with full lifecycle management."
@@ -149,7 +149,7 @@
     },
     {
       "step": 2,
-      "description": "Alternatively: PaymentFraudBlocked (EVT-P08) consumed by SVC-013. FraudCase created automatically with trigger_type = realtime_block.",
+      "description": "Alternatively: PaymentFraudBlocked (EVT-186) consumed by SVC-013. FraudCase created automatically with trigger_type = realtime_block.",
       "services_involved": ["SVC-001 (publisher)", "SVC-013 (consumer)"]
     },
     {

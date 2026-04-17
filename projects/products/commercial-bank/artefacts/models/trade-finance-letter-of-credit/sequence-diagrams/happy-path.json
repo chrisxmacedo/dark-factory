@@ -64,7 +64,7 @@
 
     { "step": 40, "phase": "PH-058", "type": "note", "description": "PH-058: Settlement — account debit (same-capability) then SWIFT reimbursement (cross-capability)" },
     { "step": 41, "phase": "PH-058", "from": "SVC006", "to": "SVC005", "type": "sync", "label": "POST /business-accounts/{id}/debit\n{amount: 250000, currency: USD, reference: LCIMPORT-2026-089,\npurpose: lc_settlement}\n(same-capability — must succeed before SWIFT event)" },
-    { "step": 42, "phase": "PH-058", "from": "SVC005", "to": "SVC005", "type": "internal", "label": "Debits BusinessAccount (ENT-B002)\nbalance reduced by USD 250,000\ncreates debit transaction record" },
+    { "step": 42, "phase": "PH-058", "from": "SVC005", "to": "SVC005", "type": "internal", "label": "Debits BusinessAccount (ENT-080)\nbalance reduced by USD 250,000\ncreates debit transaction record" },
     { "step": 43, "phase": "PH-058", "from": "SVC005", "to": "SVC006", "type": "sync_return", "label": "200 OK {debit_reference: TXN-2026-LC-089,\nsettlement_confirmed: true}" },
     { "step": 44, "phase": "PH-058", "from": "SVC006", "to": "SVC006", "type": "internal", "label": "LetterOfCredit.status = settled\nsettlement_date = 2026-07-11\nsettlement_amount = 250000 USD\naccount_debit_reference = TXN-2026-LC-089" },
     { "step": 45, "phase": "PH-058", "from": "SVC006", "to": "SVC102", "type": "async", "label": "EVT-081: LCSettled [CROSS-CAPABILITY ▶]\ntopic: commercial.trade-finance\n{settlement_amount: 250000, currency: USD,\nadvising_bank_bic: ICBKCNBJXXX,\naccount_debit_reference: TXN-2026-LC-089}" },

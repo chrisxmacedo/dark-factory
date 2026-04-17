@@ -47,7 +47,7 @@
   },
   "phases": [
     {
-      "phase_id": "SAR-PH-001",
+      "phase_id": "PH-152",
       "name": "Suspicion Trigger",
       "description": "A suspicion is raised either by an automated system event or by a member of staff submitting an internal suspicious activity disclosure to the MLRO. The trigger is logged and a SARInvestigationRecord is created.",
       "trigger_types": [
@@ -77,7 +77,7 @@
       "events_published": ["EVT-014 (SARInvestigationOpened)"]
     },
     {
-      "phase_id": "SAR-PH-002",
+      "phase_id": "PH-153",
       "name": "MLRO Investigation",
       "description": "MLRO reviews all available evidence: customer identity data, KYC assessment, transaction history, adverse media, prior SARs, and any staff disclosure details. MLRO documents their review findings in the SARInvestigationRecord. This phase may span multiple working days but must conclude before the 5-business-day filing window closes.",
       "actions": [
@@ -95,18 +95,18 @@
       "sla_note": "Investigation must be completed in time to allow SAR preparation and filing within 5 business days of the decision to file (GOV-005-R01). Best practice: investigation target completion within 3 business days of trigger to allow 2 days for preparation."
     },
     {
-      "phase_id": "SAR-PH-003",
+      "phase_id": "PH-154",
       "name": "SAR Decision",
       "description": "MLRO makes and documents their formal decision: file a SAR, file a defensive SAR, or dismiss. Decision and rationale are permanently recorded. SARDecisionMade event is published.",
       "decision_outcomes": [
         {
           "outcome": "file_sar",
           "description": "MLRO forms a suspicion on the balance of probabilities. A SAR must be filed. SuspiciousActivityReport entity is created with status = draft.",
-          "trigger_path": "Happy path — proceeds to SAR-PH-004"
+          "trigger_path": "Happy path — proceeds to PH-155"
         },
         {
           "outcome": "file_defensive_sar",
-          "description": "Suspicion level is low but MLRO files for protection (low-suspicion defensive filing). Entity created, notes reflect defensive rationale. Proceeds to SAR-PH-004.",
+          "description": "Suspicion level is low but MLRO files for protection (low-suspicion defensive filing). Entity created, notes reflect defensive rationale. Proceeds to PH-155.",
           "trigger_path": "Alternative path — AP-001"
         },
         {
@@ -127,7 +127,7 @@
       "events_published": ["EVT-015 (SARDecisionMade)"]
     },
     {
-      "phase_id": "SAR-PH-004",
+      "phase_id": "PH-155",
       "name": "SAR Preparation",
       "description": "MLRO completes the NCA SAR Online submission form. All required fields are populated: subject details (anonymised references, not full PII in the draft), grounds of suspicion, relevant dates, transaction details, and typology indicators. MLRO reviews the draft for completeness and accuracy.",
       "nca_form_sections": [
@@ -152,7 +152,7 @@
       "tipping_off_check": "MLRO must confirm review of tipping-off risk before the submission control is enabled"
     },
     {
-      "phase_id": "SAR-PH-005",
+      "phase_id": "PH-156",
       "name": "SAR Submission",
       "description": "MLRO submits the SAR to the NCA UKFIU via SAR Online (SVC-014 calls NCA SAR Online API or MLRO submits via web portal). NCA acknowledges receipt and issues an NCA reference number. SARFiled event is published.",
       "submission_channel": "NCA SAR Online (https://www.sars.ncsc.police.uk/) — web portal submission or API integration where available",
@@ -172,7 +172,7 @@
       "sla": "5 business days from MLRO decision date to filed_date (GOV-005-R01 / POCA 2002 s338)"
     },
     {
-      "phase_id": "SAR-PH-006",
+      "phase_id": "PH-157",
       "name": "Post-Filing Actions",
       "description": "After filing, the MLRO monitors the NCA consent regime (where applicable), coordinates account restrictions with Retail Banking, and closes the investigation record. If NCA refuses consent or imposes a moratorium, transactions are held. If consent is granted or the 7-day moratorium expires without NCA response, normal account operations resume (subject to ongoing monitoring).",
       "consent_regime": {
@@ -196,14 +196,14 @@
   "paths": {
     "happy_path": {
       "description": "SAR filed within 5 business days of MLRO decision. No consent regime required. Account restrictions applied as needed.",
-      "phase_sequence": ["SAR-PH-001", "SAR-PH-002", "SAR-PH-003 (file_sar)", "SAR-PH-004", "SAR-PH-005", "SAR-PH-006"]
+      "phase_sequence": ["PH-152", "PH-153", "PH-154 (file_sar)", "PH-155", "PH-156", "PH-157"]
     },
     "alternative_paths": [
       {
         "id": "AP-001",
         "name": "Defensive SAR",
         "description": "MLRO's suspicion level is low but the MLRO files for protection. The SAR is labelled defensive in the grounds of suspicion narrative. All other steps identical to happy path.",
-        "phase_sequence": ["SAR-PH-001", "SAR-PH-002", "SAR-PH-003 (file_defensive_sar)", "SAR-PH-004", "SAR-PH-005", "SAR-PH-006"]
+        "phase_sequence": ["PH-152", "PH-153", "PH-154 (file_defensive_sar)", "PH-155", "PH-156", "PH-157"]
       }
     ],
     "exception_paths": [
@@ -211,14 +211,14 @@
         "id": "EX-001",
         "name": "No SAR Filed — Dismissal",
         "description": "MLRO is satisfied that no money laundering is occurring after investigation. SAR is dismissed with documented rationale. SARInvestigationRecord.status = dismissed.",
-        "phase_sequence": ["SAR-PH-001", "SAR-PH-002", "SAR-PH-003 (dismiss)"],
+        "phase_sequence": ["PH-152", "PH-153", "PH-154 (dismiss)"],
         "outcome": "SARInvestigationRecord closed. No SuspiciousActivityReport entity created."
       },
       {
         "id": "EX-002",
         "name": "NCA Consent Hold — Transaction Moratorium",
         "description": "MLRO files a consent SAR (seeking NCA permission before processing a transaction). NCA refuses consent or issues a moratorium. Transaction is held for up to 31+31 days. MLRO must not tip off the customer about the reason for the hold.",
-        "phase_sequence": ["SAR-PH-001", "SAR-PH-002", "SAR-PH-003", "SAR-PH-004", "SAR-PH-005 (consent SAR)", "SAR-PH-006 (consent hold active)"],
+        "phase_sequence": ["PH-152", "PH-153", "PH-154", "PH-155", "PH-156 (consent SAR)", "PH-157 (consent hold active)"],
         "outcome": "Transaction held until NCA consent granted, moratorium expires, or NCA extends moratorium. Customer informed only of generic account hold — no SAR reference."
       },
       {
@@ -232,7 +232,7 @@
         "id": "EX-004",
         "name": "SLA Breach — 5 Business Day Window Missed",
         "description": "SAR is not filed within 5 business days of the MLRO forming a suspicion. This is a criminal offence under POCA 2002 s331. Immediate escalation to Board Risk Committee and Legal. Voluntary disclosure to NCA and FCA.",
-        "phase_sequence": ["SAR-PH-001", "SAR-PH-002", "SAR-PH-003", "SAR-PH-004", "SAR-PH-005 — delay"],
+        "phase_sequence": ["PH-152", "PH-153", "PH-154", "PH-155", "PH-156 — delay"],
         "outcome": "MLRO makes voluntary disclosure to NCA. Legal assesses criminal liability. FCA notified under SYSC breach reporting. Root cause analysis and remediation plan. Board report."
       }
     ]

@@ -1,0 +1,77 @@
+{
+  "journey_id": "JRN-021",
+  "document_version": "0.1.0",
+  "status": "Draft",
+  "description": "Event catalogue for the GDPR Data Subject Access Request journey. Introduces 2 events: EVT-159 through EVT-160. Both events published by SVC-015 (Compliance Core, CAP-005).",
+  "events": [
+    {
+      "event_id": "EVT-159",
+      "name": "SarCaseOpened",
+      "source_service": "SVC-015",
+      "source_service_name": "Compliance Core",
+      "source_entity": "ENT-072",
+      "source_entity_name": "SarCase",
+      "trigger": "Customer submits SAR and identity is verified. SarCase created with status = received.",
+      "journey_phase": "PH-119",
+      "journey_phase_name": "SAR Submission and Identity Verification",
+      "capability_scope": "cross-capability",
+      "payload_schema": {
+        "sar_case_id": "string (UUID v4)",
+        "customer_id": "string (UUID v4)",
+        "received_at": "string (ISO 8601 UTC timestamp)",
+        "deadline_date": "string (ISO 8601 date)",
+        "request_channel": "string enum (digital | postal)",
+        "identity_verification_method": "string enum (sca | document_verification)"
+      },
+      "consumers": [
+        {"service": "SVC-014", "service_name": "KYC/AML Service", "action": "Intra-capability: extract KYC/AML records for the customer and provide to SVC-015 for SAR compilation."},
+        {"service": "SVC-001", "service_name": "Retail Banking Core", "action": "Cross-capability: extract account data, transaction history, and communications data; publish SAR data extract event."},
+        {"service": "SVC-053", "service_name": "Notifications Service", "action": "Send SAR acknowledgement to customer with case reference and 30-day deadline."},
+        {"service": "SVC-103", "service_name": "Audit & Logging Service", "action": "Write immutable SAR receipt record with received_at timestamp."}
+      ],
+      "ordering_guarantees": "Per-customer ordering via customer_id partition key on topic compliance.sar.",
+      "topic": "compliance.sar",
+      "data_classification": "PII",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "SAR receipt timestamp is ICO audit evidence — must be immutable to demonstrate 30-day compliance.",
+      "retention": "3 years",
+      "cloudevents_type": "uk.bank.compliance.sar_case.opened",
+      "governance_references": ["GOV-005-R01"],
+      "source_journeys": ["JRN-021"]
+    },
+    {
+      "event_id": "EVT-160",
+      "name": "SarCaseClosed",
+      "source_service": "SVC-015",
+      "source_service_name": "Compliance Core",
+      "source_entity": "ENT-072",
+      "source_entity_name": "SarCase",
+      "trigger": "SAR response pack dispatched to customer within statutory deadline. SarCase status set to closed.",
+      "journey_phase": "PH-122",
+      "journey_phase_name": "Response Delivery and Case Closure",
+      "capability_scope": "cross-capability",
+      "payload_schema": {
+        "sar_case_id": "string (UUID v4)",
+        "customer_id": "string (UUID v4)",
+        "dispatched_at": "string (ISO 8601 UTC timestamp)",
+        "days_to_close": "integer",
+        "response_download_link": "string — secure URL (expires 14 days)",
+        "response_download_expires_at": "string (ISO 8601 UTC timestamp)"
+      },
+      "consumers": [
+        {"service": "SVC-017", "service_name": "Digital Channels", "action": "Make secure download link available in customer's online banking portal."},
+        {"service": "SVC-053", "service_name": "Notifications Service", "action": "Send response delivery notification to customer with secure download link."},
+        {"service": "SVC-103", "service_name": "Audit & Logging Service", "action": "Write immutable SAR closure record including days_to_close for ICO SLA reporting."}
+      ],
+      "ordering_guarantees": "Per-case ordering. SarCaseClosed must follow SarCaseOpened for same sar_case_id.",
+      "topic": "compliance.sar",
+      "data_classification": "PII",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "SAR response dispatch timestamp is ICO audit evidence — immutable proof of compliance with 30-day deadline.",
+      "retention": "3 years",
+      "cloudevents_type": "uk.bank.compliance.sar_case.closed",
+      "governance_references": ["GOV-005-R01"],
+      "source_journeys": ["JRN-021"]
+    }
+  ]
+}

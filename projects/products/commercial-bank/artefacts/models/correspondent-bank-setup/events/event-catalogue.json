@@ -1,0 +1,79 @@
+{
+  "journey_id": "JRN-023",
+  "document_version": "0.1.0",
+  "status": "Draft",
+  "description": "Event catalogue for the Correspondent Bank Relationship Setup journey. Introduces 2 events: EVT-163 and EVT-164. Both events published by SVC-015 (Compliance Core, CAP-005).",
+  "events": [
+    {
+      "event_id": "EVT-163",
+      "name": "CorrespondentEddCompleted",
+      "source_service": "SVC-015",
+      "source_service_name": "Compliance Core",
+      "source_entity": "ENT-075",
+      "source_entity_name": "CorrespondentRelationship",
+      "trigger": "FATF R13 EDD completed with no sanctions hit. Senior Management approval obtained per MLR 2017 R34. CorrespondentRelationship status = approved.",
+      "journey_phase": "PH-128",
+      "journey_phase_name": "Senior Management Approval",
+      "capability_scope": "cross-capability",
+      "payload_schema": {
+        "relationship_id": "string (UUID v4)",
+        "correspondent_bank_name": "string",
+        "correspondent_bic": "string",
+        "correspondent_jurisdiction": "string (ISO 3166-1 alpha-2)",
+        "currency_corridor": "string",
+        "fatf_risk_rating": "string enum (standard | enhanced)",
+        "sm_approval_ref": "string",
+        "sm_approved_at": "string (ISO 8601 UTC timestamp)",
+        "edd_completed_at": "string (ISO 8601 UTC timestamp)"
+      },
+      "consumers": [
+        {"service": "SVC-014", "service_name": "KYC/AML Service", "action": "Intra-capability: set up ongoing AML monitoring for new correspondent relationship."},
+        {"service": "SVC-007", "service_name": "Treasury Services", "action": "Cross-capability: create nostro account for correspondent relationship."},
+        {"service": "SVC-010", "service_name": "International Payments", "action": "Cross-capability: register correspondent BIC in payment routing table; enable currency corridor."},
+        {"service": "SVC-103", "service_name": "Audit & Logging Service", "action": "Write immutable EDD and SM approval record (MLR 2017 R34 evidence)."}
+      ],
+      "ordering_guarantees": "Per-relationship ordering via relationship_id partition key on topic compliance.correspondent.",
+      "topic": "compliance.correspondent",
+      "data_classification": "Highly Confidential",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "EDD completion and SM approval record is MLR 2017 R34 audit evidence — immutable for FCA enforcement defence.",
+      "retention": "5 years",
+      "cloudevents_type": "uk.bank.compliance.correspondent_edd.completed",
+      "governance_references": ["GOV-005-R04"],
+      "source_journeys": ["JRN-023"]
+    },
+    {
+      "event_id": "EVT-164",
+      "name": "CorrespondentOnboarded",
+      "source_service": "SVC-015",
+      "source_service_name": "Compliance Core",
+      "source_entity": "ENT-075",
+      "source_entity_name": "CorrespondentRelationship",
+      "trigger": "Nostro account created in SVC-007, correspondent BIC registered in SVC-010, and test SWIFT message successfully exchanged. CorrespondentRelationship status = active.",
+      "journey_phase": "PH-129",
+      "journey_phase_name": "Nostro Account Setup and SWIFT Registration",
+      "capability_scope": "cross-capability",
+      "payload_schema": {
+        "relationship_id": "string (UUID v4)",
+        "correspondent_bank_name": "string",
+        "correspondent_bic": "string",
+        "currency_corridor": "string",
+        "nostro_account_id": "string (UUID v4)",
+        "annual_review_due_date": "string (ISO 8601 date)",
+        "onboarded_at": "string (ISO 8601 UTC timestamp)"
+      },
+      "consumers": [
+        {"service": "SVC-103", "service_name": "Audit & Logging Service", "action": "Write immutable correspondent onboarding record."}
+      ],
+      "ordering_guarantees": "Per-relationship ordering. CorrespondentOnboarded must follow CorrespondentEddCompleted for same relationship_id.",
+      "topic": "compliance.correspondent",
+      "data_classification": "Highly Confidential",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "Correspondent onboarding record is the definitive MLR 2017 R34 evidence that the relationship was properly established.",
+      "retention": "5 years",
+      "cloudevents_type": "uk.bank.compliance.correspondent.onboarded",
+      "governance_references": ["GOV-005-R04"],
+      "source_journeys": ["JRN-023"]
+    }
+  ]
+}

@@ -6,8 +6,8 @@
   "triggering_persona": "PER-053",
   "triggering_persona_name": "Treasury Dealer",
   "prerequisites": [
-    "BusinessCustomer record (ENT-B001) must exist with status = active (created in JRN-004)",
-    "BusinessAccount (ENT-B002) must be open, active, and have sufficient balance in the sell currency (or an approved FX facility)",
+    "BusinessCustomer record (ENT-079) must exist with status = active (created in JRN-004)",
+    "BusinessAccount (ENT-080) must be open, active, and have sufficient balance in the sell currency (or an approved FX facility)",
     "Business KYC/CDD current — BusinessKYCAssessment in-cycle (JRN-004)",
     "Client has been onboarded for FX trading with an executed FX master agreement (ISDA or simplified equivalent)",
     "Treasury Dealer (PER-053) is FCA-certified under SM&CR for dealing in investments as principal",

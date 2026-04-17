@@ -9,7 +9,7 @@ sequenceDiagram
     participant Fraud as SVC-013<br/>Fraud Detection
     participant Audit as SVC-103<br/>Audit & Logging
 
-    Note over Customer,Audit: PY-001 — Payment Initiation
+    Note over Customer,Audit: PH-147 — Payment Initiation
 
     Customer->>Channel: Enter payee sort code, account number, name, amount
     Channel->>DomPay: POST /cop/verify {payee_sort_code, payee_account_number, payee_name}
@@ -24,42 +24,42 @@ sequenceDiagram
     Note right of Retail: Validate: account active, balance OK,<br/>daily limit OK, SCA assertion valid.<br/>Create PaymentIntent (status: pending_screening).
     Retail-->>Channel: 202 Accepted {payment_intent_id, status: pending_screening, poll_url}
 
-    Retail->>EventBus: Publish PaymentIntentCreated (EVT-P01)
-    EventBus->>Audit: Write EVT-P01 to WORM audit log
+    Retail->>EventBus: Publish PaymentIntentCreated (EVT-179)
+    EventBus->>Audit: Write EVT-179 to WORM audit log
     Channel-->>Customer: Show "Processing your payment..." screen
 
-    Note over Customer,Audit: PY-002 — Pre-Execution Checks (concurrent, async)
+    Note over Customer,Audit: PH-148 — Pre-Execution Checks (concurrent, async)
 
     par Sanctions check (< 3s)
         EventBus->>Sanctions: Consume PaymentIntentCreated → run OFSI/UN/EU/OFAC screen
-        Sanctions->>EventBus: Publish SanctionsScreeningCompleted (EVT-P02) {outcome: clear}
-        EventBus->>Audit: Write EVT-P02 to WORM audit log
+        Sanctions->>EventBus: Publish SanctionsScreeningCompleted (EVT-180) {outcome: clear}
+        EventBus->>Audit: Write EVT-180 to WORM audit log
     and Fraud scoring (< 500ms)
         EventBus->>Fraud: Consume PaymentIntentCreated → run ML fraud scoring
-        Fraud->>EventBus: Publish FraudScoreCompleted (EVT-P03) {risk_level: low, fraud_score: 0.05}
-        EventBus->>Audit: Write EVT-P03 (risk_level only) to audit log
+        Fraud->>EventBus: Publish FraudScoreCompleted (EVT-181) {risk_level: low, fraud_score: 0.05}
+        EventBus->>Audit: Write EVT-181 (risk_level only) to audit log
     end
 
-    Note over Customer,Audit: PY-003 — Payment Decision
+    Note over Customer,Audit: PH-149 — Payment Decision
 
-    EventBus->>Retail: Consume EVT-P02 (clear) + EVT-P03 (low) — both received
+    EventBus->>Retail: Consume EVT-180 (clear) + EVT-181 (low) — both received
     Note right of Retail: Both checks clear → publish PaymentCleared.<br/>Update PaymentIntent.status = processing.
-    Retail->>EventBus: Publish PaymentCleared (EVT-P04)
-    EventBus->>Audit: Write EVT-P04 to audit log
+    Retail->>EventBus: Publish PaymentCleared (EVT-182)
+    EventBus->>Audit: Write EVT-182 to audit log
 
-    Note over Customer,Audit: PY-004 — FPS Execution
+    Note over Customer,Audit: PH-150 — FPS Execution
 
     EventBus->>DomPay: Consume PaymentCleared → construct ISO 20022 pacs.008
     Note right of DomPay: Submit pacs.008 to Vocalink FPS.<br/>Create PaymentExecution (ENT-009).
-    DomPay->>EventBus: Publish PaymentExecuted (EVT-P05) {fps_reference, settlement_status: accepted}
-    EventBus->>Audit: Write EVT-P05 to WORM audit log
+    DomPay->>EventBus: Publish PaymentExecuted (EVT-183) {fps_reference, settlement_status: accepted}
+    EventBus->>Audit: Write EVT-183 to WORM audit log
 
     EventBus->>Retail: Consume PaymentExecuted → debit account ledger
     Note right of Retail: Debit account. Update PaymentIntent.status = completed.<br/>Update Account.daily_payment_total.
-    Retail->>EventBus: Publish AccountDebited (EVT-P06)
-    EventBus->>Audit: Write EVT-P06 to WORM audit log
+    Retail->>EventBus: Publish AccountDebited (EVT-184)
+    EventBus->>Audit: Write EVT-184 to WORM audit log
 
-    Note over Customer,Audit: PY-005 — Confirmation
+    Note over Customer,Audit: PH-151 — Confirmation
 
     Channel->>Retail: GET /payments/{payment_intent_id} (polling)
     Retail-->>Channel: 200 OK {status: completed, fps_reference: "FPS20260415...", completed_at: "..."}

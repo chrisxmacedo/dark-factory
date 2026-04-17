@@ -13,14 +13,14 @@ sequenceDiagram
     Note over MLRO,NCA: PRE-CONDITION: Investigation complete, SAR prepared (happy path steps 1-19 complete)
 
     rect rgb(255, 248, 240)
-        Note over MLRO,KYC: SAR-PH-004 — Consent SAR Flagged
+        Note over MLRO,KYC: PH-155 — Consent SAR Flagged
         MLRO->>CC: Select 'consent SAR' — enter consent_transaction_ref
         CC->>KYC: PATCH /sars/{id} — consent_requested=true, consent_transaction_ref
         Note right of KYC: consent_status = awaiting_nca_response
     end
 
     rect rgb(255, 240, 240)
-        Note over MLRO,NCA: SAR-PH-005 — Consent SAR Submission
+        Note over MLRO,NCA: PH-156 — Consent SAR Submission
         CC->>KYC: POST /sars/{id}/submit
         KYC->>NCA: POST SAR payload (consent SAR flagged)
         NCA-->>KYC: 200 OK + nca_reference
@@ -34,7 +34,7 @@ sequenceDiagram
     end
 
     rect rgb(240, 240, 255)
-        Note over MLRO,NCA: SAR-PH-006 — NCA Moratorium Active (Days 1-7)
+        Note over MLRO,NCA: PH-157 — NCA Moratorium Active (Days 1-7)
         NCA-->>MLRO: Moratorium notice issued (out-of-band: SAR Online portal)
         MLRO->>CC: Record moratorium notice received
         CC->>KYC: POST /sars/{id}/consent-response<br/>{consent_outcome: moratorium_active, moratorium_expiry_date}
@@ -42,7 +42,7 @@ sequenceDiagram
     end
 
     rect rgb(240, 255, 240)
-        Note over MLRO,NCA: SAR-PH-006 — NCA Grants Consent (Within Moratorium)
+        Note over MLRO,NCA: PH-157 — NCA Grants Consent (Within Moratorium)
         NCA-->>MLRO: Consent granted (out-of-band: SAR Online)
         MLRO->>CC: Record NCA consent granted
         CC->>KYC: POST /sars/{id}/consent-response<br/>{consent_outcome: granted, nca_response_date, nca_response_reference}

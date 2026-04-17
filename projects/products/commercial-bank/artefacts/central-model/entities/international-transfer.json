@@ -17,14 +17,14 @@
     {
       "name": "business_customer_id",
       "type": "UUID",
-      "validation_rule": "Required. FK → BusinessCustomer.business_customer_id (ENT-B001). Immutable. PER-002 must be an authorised user on the linked BusinessAccount.",
+      "validation_rule": "Required. FK → BusinessCustomer.business_customer_id (ENT-079). Immutable. PER-002 must be an authorised user on the linked BusinessAccount.",
       "source": "PH-029",
       "governed_by": "GOV-005-R01"
     },
     {
       "name": "business_account_id",
       "type": "UUID",
-      "validation_rule": "Required. FK → BusinessAccount.business_account_id (ENT-B002). Originating debit account. Immutable.",
+      "validation_rule": "Required. FK → BusinessAccount.business_account_id (ENT-080). Originating debit account. Immutable.",
       "source": "PH-029",
       "governed_by": null
     },
@@ -158,12 +158,12 @@
       "description": "InternationalTransfer has one SWIFTMessage record, created at PH-032."
     },
     {
-      "target_entity": "ENT-B001",
+      "target_entity": "ENT-079",
       "type": "many-to-one",
       "description": "InternationalTransfer belongs to one BusinessCustomer via business_customer_id FK."
     },
     {
-      "target_entity": "ENT-B002",
+      "target_entity": "ENT-080",
       "type": "many-to-one",
       "description": "InternationalTransfer is debited from one BusinessAccount via business_account_id FK."
     }

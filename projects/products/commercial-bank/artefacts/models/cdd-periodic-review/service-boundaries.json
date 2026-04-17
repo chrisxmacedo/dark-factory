@@ -1,0 +1,128 @@
+{
+  "journey_id": "JRN-020",
+  "document_version": "0.1.0",
+  "status": "Draft",
+  "architectural_principle": "Cross-capability communication is exclusively async events. Within a capability, services communicate freely.",
+  "services": [
+    {
+      "service_id": "SVC-015",
+      "service_name": "Compliance Core Service",
+      "capability_id": "CAP-005",
+      "owned_entities": ["ENT-063"],
+      "published_events": ["EVT-142", "EVT-143", "EVT-144", "EVT-145", "EVT-146", "EVT-147"],
+      "consumed_events": [],
+      "consumed_apis": [],
+      "design_decisions": [
+        {
+          "id": "DD-SVC015-JRN020-01",
+          "decision": "SVC-015 owns CddReviewCase and orchestrates the review workflow. It calls SVC-014 internally (same capability) for identity verification and screening.",
+          "rationale": "Both SVC-015 and SVC-014 are within CAP-005 (Compliance). Internal synchronous calls are permitted within a capability boundary."
+        }
+      ]
+    },
+    {
+      "service_id": "SVC-014",
+      "service_name": "KYC/AML Service",
+      "capability_id": "CAP-005",
+      "owned_entities": ["ENT-064"],
+      "published_events": [],
+      "consumed_events": [
+        {
+          "event_id": "EVT-142",
+          "name": "CddReviewTriggered",
+          "provider_service_id": "SVC-015",
+          "purpose": "JRN-020: Pre-load existing KYC record for analyst review. Prepare screening inputs from current KycAssessment.",
+          "maps_to": "KycAssessment for client_id — pre-loaded into review case context"
+        }
+      ],
+      "consumed_apis": [],
+      "design_decisions": [
+        {
+          "id": "DD-SVC014-JRN020-01",
+          "decision": "SVC-014 consumes CddReviewTriggered to prepare the KYC context. It updates KycAssessment when CddReviewCompleted is received.",
+          "rationale": "SVC-014 is the authoritative owner of KycAssessment. It reacts to review outcomes to keep the current state current."
+        }
+      ]
+    },
+    {
+      "service_id": "SVC-005",
+      "service_name": "Commercial Banking Core",
+      "capability_id": "CAP-002",
+      "owned_entities": [],
+      "published_events": [],
+      "consumed_events": [
+        {
+          "event_id": "EVT-145",
+          "name": "CddRiskRatingChanged",
+          "provider_service_id": "SVC-015",
+          "purpose": "JRN-020: Update internal client risk flag in Commercial Banking systems. Adjust relationship exposure limits if risk_rating increased.",
+          "maps_to": "Internal client record: risk_classification field updated to new risk_rating"
+        },
+        {
+          "event_id": "EVT-146",
+          "name": "CddReviewCompleted",
+          "provider_service_id": "SVC-015",
+          "purpose": "JRN-020: Notify Relationship Manager of review outcome. Trigger offboarding workflow if decision = escalate_to_exit.",
+          "maps_to": "Internal client record: cdd_status, review_decision updated"
+        },
+        {
+          "event_id": "EVT-147",
+          "name": "CddExitEscalated",
+          "provider_service_id": "SVC-015",
+          "purpose": "JRN-020: Initiate client offboarding — close commercial accounts, close credit facilities, return funds.",
+          "maps_to": "Client offboarding workflow initiated; account deactivation scheduled"
+        }
+      ],
+      "consumed_apis": [],
+      "design_decisions": []
+    },
+    {
+      "service_id": "SVC-103",
+      "service_name": "Audit & Logging Service",
+      "capability_id": "CAP-006",
+      "owned_entities": [],
+      "published_events": [],
+      "consumed_events": [
+        {
+          "event_id": "EVT-142",
+          "name": "CddReviewTriggered",
+          "provider_service_id": "SVC-015",
+          "purpose": "JRN-020: Write immutable audit record of review trigger. MLR 2017 record-keeping.",
+          "maps_to": "AuditRecord entity_type=CddReviewCase action=triggered"
+        },
+        {
+          "event_id": "EVT-146",
+          "name": "CddReviewCompleted",
+          "provider_service_id": "SVC-015",
+          "purpose": "JRN-020: Write immutable audit record of review completion with decision. 7-year retention.",
+          "maps_to": "AuditRecord entity_type=CddReviewCase action=completed"
+        }
+      ],
+      "consumed_apis": [],
+      "design_decisions": []
+    }
+  ],
+  "cross_service_interaction_summary": [
+    {
+      "from_service": "SVC-015",
+      "to_service": "SVC-005",
+      "interaction_type": "async_event",
+      "events": ["EVT-145", "EVT-146", "EVT-147"],
+      "purpose": "CDD outcomes flow to Commercial Banking to update client risk status and trigger offboarding if required"
+    },
+    {
+      "from_service": "SVC-015",
+      "to_service": "SVC-014",
+      "interaction_type": "intra-capability",
+      "events": ["EVT-142 consumed by SVC-014"],
+      "purpose": "SVC-014 (within CAP-005) pre-loads KYC context on review trigger. Within-capability communication."
+    },
+    {
+      "from_service": "SVC-015",
+      "to_service": "SVC-103",
+      "interaction_type": "async_event",
+      "events": ["EVT-142", "EVT-146"],
+      "purpose": "Immutable audit logging for MLR 2017 record-keeping obligations"
+    }
+  ]
+}

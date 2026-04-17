@@ -1,0 +1,36 @@
+{
+  "diagram_id": "SEQ-JRN022-001",
+  "name": "Happy Path — PRA Annual Stress Test Exercise",
+  "journey_id": "JRN-022",
+  "scenario": "happy-path",
+  "description": "CRO initiates annual PRA stress test. Scenarios loaded into risk engine. Projections run and validated. Board approves. CRO confirms PRA submission via BEEDS portal.",
+  "participants": [
+    {"id": "CRO", "label": "PER-059 (Senior Manager — CRO)", "type": "actor"},
+    {"id": "Risk", "label": "SVC-012 (Risk Engine)", "type": "service"},
+    {"id": "EventBus", "label": "SVC-102 (Event Bus)", "type": "infrastructure"},
+    {"id": "Compliance", "label": "SVC-015 (Compliance Core)", "type": "service"},
+    {"id": "Audit", "label": "SVC-103 (Audit & Logging)", "type": "service"}
+  ],
+  "steps": [
+    {"step": 1, "from": "CRO", "to": "Risk", "type": "sync", "action": "POST /stress-tests {exercise_year: 2026, pra_scenario_version: ACS-2026-v1.0, scenario_type: severe_adverse, pra_deadline: 2026-07-31}", "phase": "PH-123"},
+    {"step": 2, "from": "Risk", "to": "Risk", "type": "internal", "action": "Create StressTestExercise (ENT-073) status=in_progress; load PRA scenarios into model parameters", "phase": "PH-123"},
+    {"step": 3, "from": "Risk", "to": "EventBus", "type": "async-publish", "action": "Publish StressTestExerciseStarted (EVT-161)", "phase": "PH-123"},
+    {"step": 4, "from": "EventBus", "to": "Compliance", "type": "async-consume", "action": "Consume EVT-161 → Create RegulatorySubmission (ENT-074) status=pending; deadline=2026-07-31", "phase": "PH-123"},
+    {"step": 5, "from": "EventBus", "to": "Audit", "type": "async-consume", "action": "Consume EVT-161 → Write immutable exercise start record", "phase": "PH-123"},
+    {"step": 6, "from": "Risk", "to": "CRO", "type": "sync-return", "action": "201 Created {exercise_id, status: in_progress}", "phase": "PH-123"},
+    {"step": 7, "from": "Risk", "to": "Risk", "type": "internal", "action": "Run credit risk projections (IFRS 9 ECL under stress) — batch job < 24h", "phase": "PH-124"},
+    {"step": 8, "from": "Risk", "to": "Risk", "type": "internal", "action": "Run market risk projections (FRTB stressed losses)", "phase": "PH-124"},
+    {"step": 9, "from": "Risk", "to": "Risk", "type": "internal", "action": "Run OpRisk Basel SA capital calculation", "phase": "PH-124"},
+    {"step": 10, "from": "Risk", "to": "Risk", "type": "internal", "action": "Compute projected stressed CET1 Y1/Y2/Y3; update StressTestExercise status=projections_complete", "phase": "PH-124"},
+    {"step": 11, "from": "CRO", "to": "Risk", "type": "sync", "action": "GET /stress-tests/{exercise_id} — review projections", "phase": "PH-124"},
+    {"step": 12, "from": "Risk", "to": "CRO", "type": "sync-return", "action": "200 OK {projected_cet1_y1: 12.4%, y2: 10.8%, y3: 11.2%, model_validation_sign_off_ref}", "phase": "PH-124"},
+    {"step": 13, "from": "CRO", "to": "Risk", "type": "sync", "action": "Board Risk Committee reviews projections; CRO obtains Board approval; PATCH status → approved_for_submission", "phase": "PH-125"},
+    {"step": 14, "from": "Risk", "to": "Risk", "type": "internal", "action": "Update StressTestExercise status=approved_for_submission; record board_approved_at, cro_attestation_ref", "phase": "PH-125"},
+    {"step": 15, "from": "CRO", "to": "Risk", "type": "sync", "action": "POST /stress-tests/{exercise_id}/confirm-submission {pra_submission_ref: BEEDS-2026-XXXX, cro_attestation_ref}", "phase": "PH-126"},
+    {"step": 16, "from": "Risk", "to": "Risk", "type": "internal", "action": "Update StressTestExercise status=submitted; record pra_submission_ref and submitted_at", "phase": "PH-126"},
+    {"step": 17, "from": "Risk", "to": "EventBus", "type": "async-publish", "action": "Publish StressTestSubmitted (EVT-162) {pra_submission_ref, stressed_cet1_trajectory}", "phase": "PH-126"},
+    {"step": 18, "from": "EventBus", "to": "Compliance", "type": "async-consume", "action": "Consume EVT-162 → Update RegulatorySubmission status=submitted; record submission_ref", "phase": "PH-126"},
+    {"step": 19, "from": "EventBus", "to": "Audit", "type": "async-consume", "action": "Consume EVT-162 → Write immutable PRA submission record", "phase": "PH-126"},
+    {"step": 20, "from": "Risk", "to": "CRO", "type": "sync-return", "action": "200 OK {status: submitted, pra_submission_ref}", "phase": "PH-126"}
+  ]
+}

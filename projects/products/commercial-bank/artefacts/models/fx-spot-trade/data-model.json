@@ -22,7 +22,7 @@
         {
           "name": "client_id",
           "type": "UUID",
-          "validation_rule": "Required. FK → BusinessCustomer.business_customer_id (ENT-B001, owned by SVC-005). Immutable. SVC-007 holds no local copy of BusinessCustomer data — this is a reference only.",
+          "validation_rule": "Required. FK → BusinessCustomer.business_customer_id (ENT-079, owned by SVC-005). Immutable. SVC-007 holds no local copy of BusinessCustomer data — this is a reference only.",
           "source": "PH-059",
           "governed_by": "GOV-005-R01"
         },
@@ -147,7 +147,7 @@
           "description": "FXTrade has one FXSettlement record created at PH-063."
         },
         {
-          "target_entity": "ENT-B001",
+          "target_entity": "ENT-079",
           "type": "many-to-one",
           "description": "FXTrade belongs to one BusinessCustomer via client_id FK. BusinessCustomer is owned by SVC-005 — SVC-007 holds no local copy."
         }
@@ -353,13 +353,13 @@
   ],
   "referenced_existing_entities": [
     {
-      "entity_id": "ENT-B001",
+      "entity_id": "ENT-079",
       "name": "BusinessCustomer",
       "owning_service": "SVC-005",
       "usage_in_journey": "PH-059: SVC-007 calls SVC-005 synchronously (same-capability) to validate BusinessCustomer.status = active before creating FXTrade. Reference via FXTrade.client_id FK. SVC-007 holds no local copy of BusinessCustomer fields."
     },
     {
-      "entity_id": "ENT-B002",
+      "entity_id": "ENT-080",
       "name": "BusinessAccount",
       "owning_service": "SVC-005",
       "usage_in_journey": "PH-061: SVC-007 calls SVC-005 to check sell-currency account balance before booking trade. PH-063: SVC-007 calls SVC-005 to debit sell-currency account and credit buy-currency account at settlement."

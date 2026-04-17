@@ -41,7 +41,7 @@
           "provider_service_name": "Domestic Payments Service",
           "call_pattern": "Synchronous (within-capability payment instruction at PH-021 drawdown)",
           "dependency_criticality": "hard",
-          "purpose": "SVC-005 instructs SVC-009 to execute the drawdown disbursement to the BusinessAccount (ENT-B002) via CHAPS (same-day for amounts above BACS threshold) or BACS. SVC-005 waits for settlement confirmation before publishing EVT-037 (LoanDrawnDown). NOTE: SVC-009 is CAP-003 — this is a cross-capability call. It is permitted via direct API because payment instruction is an imperative command (not a domain event notification) and requires synchronous settlement confirmation for the drawdown to be finalised."
+          "purpose": "SVC-005 instructs SVC-009 to execute the drawdown disbursement to the BusinessAccount (ENT-080) via CHAPS (same-day for amounts above BACS threshold) or BACS. SVC-005 waits for settlement confirmation before publishing EVT-037 (LoanDrawnDown). NOTE: SVC-009 is CAP-003 — this is a cross-capability call. It is permitted via direct API because payment instruction is an imperative command (not a domain event notification) and requires synchronous settlement confirmation for the drawdown to be finalised."
         },
         {
           "provider_service_id": "SVC-053",
@@ -69,7 +69,7 @@
         {
           "id": "DD-SVC005-JRN007-01",
           "decision": "Business Lending origination is NOT promoted to a separate service. It remains as a retained sub-capability within SVC-005.",
-          "rationale": "Business lending requires direct ledger access to BusinessCustomer (ENT-B001) and BusinessAccount (ENT-B002) for the drawdown disbursement and covenant monitoring against account activity. Extracting to a separate service would create a chatty intra-capability API dependency with no isolation benefit. The nCino lending origination workflow is embedded as a module within the SVC-005 commercial core implementation."
+          "rationale": "Business lending requires direct ledger access to BusinessCustomer (ENT-079) and BusinessAccount (ENT-080) for the drawdown disbursement and covenant monitoring against account activity. Extracting to a separate service would create a chatty intra-capability API dependency with no isolation benefit. The nCino lending origination workflow is embedded as a module within the SVC-005 commercial core implementation."
         },
         {
           "id": "DD-SVC005-JRN007-02",
@@ -135,7 +135,7 @@
       "capability_id": "CAP-003",
       "capability_name": "Payment Operations",
       "tier": "T2",
-      "role_in_journey": "Executes the loan drawdown disbursement payment (PH-021) from the bank's funding account to the borrower's BusinessAccount (ENT-B002). SVC-005 calls SVC-009 synchronously with a CHAPS or BACS payment instruction. SVC-009 is not involved in any other phase of JRN-007.",
+      "role_in_journey": "Executes the loan drawdown disbursement payment (PH-021) from the bank's funding account to the borrower's BusinessAccount (ENT-080). SVC-005 calls SVC-009 synchronously with a CHAPS or BACS payment instruction. SVC-009 is not involved in any other phase of JRN-007.",
       "owned_entities": [],
       "published_events": [],
       "consumed_events": [],

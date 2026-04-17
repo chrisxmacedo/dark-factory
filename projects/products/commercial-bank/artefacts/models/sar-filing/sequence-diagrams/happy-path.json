@@ -1,24 +1,45 @@
 {
   "diagram_id": "SEQ-JRN003-001",
   "journey_id": "JRN-003",
-  "name": "SAR Filing Happy Path — Automated Trigger to NCA Submission",
+  "name": "SAR Filing Happy Path \u2014 Automated Trigger to NCA Submission",
   "description": "End-to-end sequence for the JRN-003 happy path. Trigger: SanctionsHitDetected automated event received by SVC-014. MLRO investigates, decides to file, prepares and submits SAR to NCA within 5 business days. No consent regime required. Account restrictions applied post-filing.",
   "path_type": "happy_path",
   "version": "1.0.0",
   "status": "Draft",
   "participants": [
-    { "alias": "SVC014", "label": "SVC-014 KYC/AML Service" },
-    { "alias": "SVC015", "label": "SVC-015 Compliance Core (MLRO UI)" },
-    { "alias": "MLRO", "label": "PER-052 MLRO" },
-    { "alias": "SVC102", "label": "SVC-102 Event Bus" },
-    { "alias": "SVC001", "label": "SVC-001 Retail Banking Core" },
-    { "alias": "SVC103", "label": "SVC-103 Audit & Logging" },
-    { "alias": "NCA", "label": "NCA SAR Online" }
+    {
+      "alias": "SVC014",
+      "label": "SVC-014 KYC/AML Service"
+    },
+    {
+      "alias": "SVC015",
+      "label": "SVC-015 Compliance Core (MLRO UI)"
+    },
+    {
+      "alias": "MLRO",
+      "label": "PER-052 MLRO"
+    },
+    {
+      "alias": "SVC102",
+      "label": "SVC-102 Event Bus"
+    },
+    {
+      "alias": "SVC001",
+      "label": "SVC-001 Retail Banking Core"
+    },
+    {
+      "alias": "SVC103",
+      "label": "SVC-103 Audit & Logging"
+    },
+    {
+      "alias": "NCA",
+      "label": "NCA SAR Online"
+    }
   ],
   "steps": [
     {
       "step": 1,
-      "phase": "SAR-PH-001",
+      "phase": "PH-152",
       "from": "SVC102",
       "to": "SVC014",
       "type": "event",
@@ -27,16 +48,16 @@
     },
     {
       "step": 2,
-      "phase": "SAR-PH-001",
+      "phase": "PH-152",
       "from": "SVC014",
       "to": "SVC014",
       "type": "internal",
-      "label": "POST /investigations — create SARInvestigationRecord",
+      "label": "POST /investigations \u2014 create SARInvestigationRecord",
       "detail": "SVC-014 creates ENT-009: trigger_type=automated_event, status=open. investigation_id assigned."
     },
     {
       "step": 3,
-      "phase": "SAR-PH-001",
+      "phase": "PH-152",
       "from": "SVC014",
       "to": "SVC102",
       "type": "publish",
@@ -45,25 +66,25 @@
     },
     {
       "step": 4,
-      "phase": "SAR-PH-001",
+      "phase": "PH-152",
       "from": "SVC102",
       "to": "SVC103",
       "type": "event",
-      "label": "SARInvestigationOpened → SVC-103 WORM log",
+      "label": "SARInvestigationOpened \u2192 SVC-103 WORM log",
       "detail": "Audit log entry created. Immutable."
     },
     {
       "step": 5,
-      "phase": "SAR-PH-001",
+      "phase": "PH-152",
       "from": "SVC014",
       "to": "SVC015",
       "type": "notification",
       "label": "MLRO case management alert triggered",
-      "detail": "Secure internal notification sent to MLRO: new investigation opened. No email — internal case management system only."
+      "detail": "Secure internal notification sent to MLRO: new investigation opened. No email \u2014 internal case management system only."
     },
     {
       "step": 6,
-      "phase": "SAR-PH-002",
+      "phase": "PH-153",
       "from": "MLRO",
       "to": "SVC015",
       "type": "ui_action",
@@ -72,7 +93,7 @@
     },
     {
       "step": 7,
-      "phase": "SAR-PH-002",
+      "phase": "PH-153",
       "from": "SVC015",
       "to": "SVC014",
       "type": "sync_call",
@@ -81,25 +102,25 @@
     },
     {
       "step": 8,
-      "phase": "SAR-PH-002",
+      "phase": "PH-153",
       "from": "SVC015",
       "to": "SVC014",
       "type": "sync_call",
       "label": "GET /kyc/assessments/customer/{customer_id}",
-      "detail": "MLRO reviews KycAssessment (ENT-003) — sanctions result, PEP status, risk score, EDD history."
+      "detail": "MLRO reviews KycAssessment (ENT-003) \u2014 sanctions result, PEP status, risk score, EDD history."
     },
     {
       "step": 9,
-      "phase": "SAR-PH-002",
+      "phase": "PH-153",
       "from": "SVC015",
-      "to": "SVC001",
-      "type": "sync_call",
-      "label": "GET /accounts/{account_id}/transactions (date range)",
+      "to": "EVTBUS",
+      "type": "event-publish",
+      "label": "publish AccountRestrictionRequested event\n(async cross-capability: CAP-005 \u2192 CAP-001)",
       "detail": "MLRO reviews transaction history for relevant period. SVC-001 returns transaction list."
     },
     {
       "step": 10,
-      "phase": "SAR-PH-002",
+      "phase": "PH-153",
       "from": "MLRO",
       "to": "SVC015",
       "type": "ui_action",
@@ -108,16 +129,16 @@
     },
     {
       "step": 11,
-      "phase": "SAR-PH-002",
+      "phase": "PH-153",
       "from": "SVC015",
       "to": "SVC014",
       "type": "sync_call",
       "label": "POST /investigations/{id}/evidence (x N items)",
-      "detail": "Each evidence item appended to SARInvestigationRecord.evidence_items. WORM — immutable after addition."
+      "detail": "Each evidence item appended to SARInvestigationRecord.evidence_items. WORM \u2014 immutable after addition."
     },
     {
       "step": 12,
-      "phase": "SAR-PH-003",
+      "phase": "PH-154",
       "from": "MLRO",
       "to": "SVC015",
       "type": "ui_action",
@@ -126,16 +147,16 @@
     },
     {
       "step": 13,
-      "phase": "SAR-PH-003",
+      "phase": "PH-154",
       "from": "SVC015",
       "to": "SVC014",
       "type": "sync_call",
-      "label": "POST /sars — CreateSARRequest",
+      "label": "POST /sars \u2014 CreateSARRequest",
       "detail": "SVC-015 creates SuspiciousActivityReport (ENT-008): status=draft, mlro_decision=file_sar, mlro_decision_date=today. SLA clock starts."
     },
     {
       "step": 14,
-      "phase": "SAR-PH-003",
+      "phase": "PH-154",
       "from": "SVC014",
       "to": "SVC102",
       "type": "publish",
@@ -144,16 +165,16 @@
     },
     {
       "step": 15,
-      "phase": "SAR-PH-003",
+      "phase": "PH-154",
       "from": "SVC102",
       "to": "SVC103",
       "type": "event",
-      "label": "SARDecisionMade → SVC-103 WORM log",
+      "label": "SARDecisionMade \u2192 SVC-103 WORM log",
       "detail": "Decision immutably logged."
     },
     {
       "step": 16,
-      "phase": "SAR-PH-004",
+      "phase": "PH-155",
       "from": "MLRO",
       "to": "SVC015",
       "type": "ui_action",
@@ -162,16 +183,16 @@
     },
     {
       "step": 17,
-      "phase": "SAR-PH-004",
+      "phase": "PH-155",
       "from": "SVC015",
       "to": "SVC014",
       "type": "sync_call",
-      "label": "PATCH /sars/{sar_id} — UpdateSARRequest",
+      "label": "PATCH /sars/{sar_id} \u2014 UpdateSARRequest",
       "detail": "SAR fields updated: investigation_summary, transaction_details, account_details."
     },
     {
       "step": 18,
-      "phase": "SAR-PH-004",
+      "phase": "PH-155",
       "from": "MLRO",
       "to": "SVC015",
       "type": "ui_action",
@@ -180,16 +201,16 @@
     },
     {
       "step": 19,
-      "phase": "SAR-PH-004",
+      "phase": "PH-155",
       "from": "SVC015",
       "to": "SVC014",
       "type": "sync_call",
-      "label": "PATCH /sars/{sar_id} — status: ready_for_submission",
+      "label": "PATCH /sars/{sar_id} \u2014 status: ready_for_submission",
       "detail": "SAR status transitions to ready_for_submission."
     },
     {
       "step": 20,
-      "phase": "SAR-PH-005",
+      "phase": "PH-156",
       "from": "MLRO",
       "to": "SVC015",
       "type": "ui_action",
@@ -198,7 +219,7 @@
     },
     {
       "step": 21,
-      "phase": "SAR-PH-005",
+      "phase": "PH-156",
       "from": "SVC015",
       "to": "SVC014",
       "type": "sync_call",
@@ -207,16 +228,16 @@
     },
     {
       "step": 22,
-      "phase": "SAR-PH-005",
+      "phase": "PH-156",
       "from": "SVC014",
       "to": "NCA",
       "type": "sync_call",
-      "label": "POST NCA SAR Online API — submit SAR payload",
+      "label": "POST NCA SAR Online API \u2014 submit SAR payload",
       "detail": "SVC-014 assembles NCA SAR form from ENT-008 and ENT-001 data. Submits to NCA SAR Online API. Retry: 3 attempts, exponential backoff."
     },
     {
       "step": 23,
-      "phase": "SAR-PH-005",
+      "phase": "PH-156",
       "from": "NCA",
       "to": "SVC014",
       "type": "sync_response",
@@ -225,7 +246,7 @@
     },
     {
       "step": 24,
-      "phase": "SAR-PH-005",
+      "phase": "PH-156",
       "from": "SVC014",
       "to": "SVC102",
       "type": "publish",
@@ -234,7 +255,7 @@
     },
     {
       "step": 25,
-      "phase": "SAR-PH-005",
+      "phase": "PH-156",
       "from": "SVC102",
       "to": "SVC001",
       "type": "event",
@@ -243,16 +264,16 @@
     },
     {
       "step": 26,
-      "phase": "SAR-PH-005",
+      "phase": "PH-156",
       "from": "SVC102",
       "to": "SVC103",
       "type": "event",
-      "label": "SARFiled → SVC-103 WORM log",
+      "label": "SARFiled \u2192 SVC-103 WORM log",
       "detail": "Filing event immutably logged."
     },
     {
       "step": 27,
-      "phase": "SAR-PH-006",
+      "phase": "PH-157",
       "from": "SVC001",
       "to": "SVC001",
       "type": "internal",
@@ -261,7 +282,7 @@
     },
     {
       "step": 28,
-      "phase": "SAR-PH-006",
+      "phase": "PH-157",
       "from": "SVC001",
       "to": "SVC102",
       "type": "publish",
@@ -270,7 +291,7 @@
     },
     {
       "step": 29,
-      "phase": "SAR-PH-006",
+      "phase": "PH-157",
       "from": "SVC015",
       "to": "SVC014",
       "type": "sync_call",
@@ -285,10 +306,12 @@
     "outcome": "within_sla"
   },
   "tipping_off_controls_highlighted": [
-    "Step 24: SARFiled event payload contains only customer_id and restriction_required — no SAR narrative, no NCA reference",
-    "Step 25: SVC-001 receives no SAR detail — only the restriction signal",
+    "Step 24: SARFiled event payload contains only customer_id and restriction_required \u2014 no SAR narrative, no NCA reference",
+    "Step 25: SVC-001 receives no SAR detail \u2014 only the restriction signal",
     "Step 27: No customer notification is sent at any stage",
     "Step 21: tipping_off_review_confirmed = true is a mandatory prerequisite for submission"
   ],
-  "source_journeys": ["JRN-003"]
+  "source_journeys": [
+    "JRN-003"
+  ]
 }

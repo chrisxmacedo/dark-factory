@@ -1,0 +1,41 @@
+{
+  "journey_id": "JRN-023",
+  "document_version": "0.1.0",
+  "status": "Draft",
+  "participants": [
+    {
+      "persona_id": "PER-008",
+      "persona_name": "Correspondent Bank",
+      "phases": ["PH-127", "PH-129"],
+      "touchpoints": [
+        {"phase": "PH-127", "channel": "external", "action": "Provides KYC documentation and SWIFT KYC Registry profile for EDD assessment"},
+        {"phase": "PH-129", "channel": "swift_network", "action": "Exchanges test SWIFT MT202 message to confirm channel is live"}
+      ]
+    },
+    {
+      "persona_id": "PER-053",
+      "persona_name": "Treasury Dealer",
+      "phases": ["PH-127", "PH-129"],
+      "touchpoints": [
+        {"phase": "PH-127", "channel": "internal_systems", "action": "Identifies need for new currency corridor; initiates correspondent relationship onboarding"},
+        {"phase": "PH-129", "channel": "internal_systems", "action": "Creates nostro account in SVC-007; registers correspondent BIC in SVC-010 routing table"}
+      ]
+    },
+    {
+      "persona_id": "PER-052",
+      "persona_name": "Compliance Officer (MLRO)",
+      "phases": ["PH-127"],
+      "touchpoints": [
+        {"phase": "PH-127", "channel": "internal_systems", "action": "Conducts FATF R13 EDD; reviews sanctions screening results; compiles risk assessment"}
+      ]
+    },
+    {
+      "persona_id": "PER-059",
+      "persona_name": "Senior Manager (Head of Compliance / MLRO SMF)",
+      "phases": ["PH-128"],
+      "touchpoints": [
+        {"phase": "PH-128", "channel": "internal_systems", "action": "Reviews EDD documentation; approves correspondent relationship per MLR 2017 R34; records SMF attestation"}
+      ]
+    }
+  ]
+}

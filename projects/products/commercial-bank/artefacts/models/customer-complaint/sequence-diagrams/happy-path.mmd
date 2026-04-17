@@ -1,0 +1,44 @@
+sequenceDiagram
+    actor Customer as PER-001 (Customer)
+    participant Channel as SVC-017<br/>Digital Channels
+    participant Retail as SVC-001<br/>Retail Banking Core
+    participant EventBus as SVC-102<br/>Event Bus
+    participant Compliance as SVC-015<br/>Compliance Core
+    participant Notifications as SVC-053<br/>Notifications
+    participant Audit as SVC-103<br/>Audit & Logging
+    actor Agent as PER-062<br/>Customer Service Agent
+
+    Note over Customer,Audit: PH-098 — Complaint Receipt and Acknowledgement
+
+    Customer->>Channel: Navigate to Make a Complaint; enter subject, description, affected product
+    Channel->>Retail: POST /complaints {affected_product_type, complaint_type, subject, description}
+    Note right of Retail: Create ComplaintCase<br/>(status=received)<br/>complaint_reference=COMP-YYYYMMDD-NNNN
+    Retail-->>Channel: 201 Created {complaint_id, complaint_reference, acknowledgement_message}
+    Channel-->>Customer: "Complaint received. Reference: COMP-YYYYMMDD-NNNN. We will respond within 3 business days."
+    Retail->>EventBus: Publish ComplaintReceived (EVT-138)
+    EventBus->>Notifications: Consume EVT-138 → Dispatch acknowledgement notification to customer
+    EventBus->>Compliance: Consume EVT-138 → Increment DISP counter for product category
+    EventBus->>Audit: Consume EVT-138 → Write immutable audit record (DISP 1.9.1R)
+
+    Note over Customer,Audit: PH-099 — Complaint Triage and Assignment
+
+    Agent->>Channel: Open internal portal → review complaint queue → select complaint
+    Channel->>Retail: PATCH /complaints/{id} {category, severity: low, assigned_to, target_resolution_date}
+    Retail->>EventBus: Publish ComplaintTriaged (EVT-139) {regulated_flag: false}
+    EventBus->>Compliance: Consume EVT-139 → No enhanced monitoring required (regulated_flag=false)
+
+    Note over Customer,Audit: PH-100 — Investigation and Resolution
+
+    Agent->>Channel: Review account history and transactions → determine outcome: upheld, redress £25
+    Channel->>Retail: PATCH /complaints/{id} {outcome: upheld, redress_amount: 25.00, investigation_notes}
+    Retail->>EventBus: Publish ComplaintResolved (EVT-140) {outcome: upheld, redress_amount: "25.00"}
+    EventBus->>Compliance: Consume EVT-140 → Update DisCaseSummary: complaints_upheld++
+
+    Note over Customer,Audit: PH-101 — Response Communication and Closure
+
+    Agent->>Channel: Approve Summary Resolution Communication → dispatch
+    Channel->>Retail: POST /complaints/{id}/close {response_type: summary_resolution_communication}
+    Retail->>EventBus: Publish ComplaintClosed (EVT-141) {response_type: summary_resolution_communication, elapsed: 1 day}
+    EventBus->>Notifications: Consume EVT-141 → Dispatch Summary Resolution Communication to customer
+    EventBus->>Compliance: Consume EVT-141 → complaints_closed++; update median_resolution_days
+    EventBus->>Audit: Consume EVT-141 → Write immutable closure audit record

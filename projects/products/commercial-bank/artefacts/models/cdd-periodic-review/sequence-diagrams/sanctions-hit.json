@@ -1,0 +1,26 @@
+{
+  "diagram_id": "SEQ-JRN020-002",
+  "name": "Exception Path — Sanctions Hit Detected",
+  "journey_id": "JRN-020",
+  "scenario": "sanctions-hit",
+  "description": "Sanctions screening during CDD review returns a hit on a UBO. Account suspended. MLRO notified. OFSI notification workflow initiated. Relationship exit escalated.",
+  "participants": [
+    {"id": "Compliance", "label": "SVC-015 (Compliance Core)", "type": "service"},
+    {"id": "KYC", "label": "SVC-014 (KYC/AML Service)", "type": "service"},
+    {"id": "EventBus", "label": "SVC-102 (Event Bus)", "type": "infrastructure"},
+    {"id": "CommBanking", "label": "SVC-005 (Commercial Banking Core)", "type": "service"},
+    {"id": "Audit", "label": "SVC-103 (Audit & Logging)", "type": "service"},
+    {"id": "CompOfficer", "label": "PER-052 (Compliance Officer)", "type": "actor"}
+  ],
+  "steps": [
+    {"step": 1, "from": "KYC", "to": "KYC", "type": "internal", "action": "Sanctions screening returns OFSI hit on UBO", "phase": "PH-104"},
+    {"step": 2, "from": "KYC", "to": "Compliance", "type": "intra-capability", "action": "Screening result: sanctions_hit=true, sanctions_list=OFSI, hit_entity=UBO name", "phase": "PH-104"},
+    {"step": 3, "from": "Compliance", "to": "EventBus", "type": "async-publish", "action": "Publish CddSanctionsHitDetected (EVT-144) {hit_entity, sanctions_list: OFSI}", "phase": "PH-104"},
+    {"step": 4, "from": "EventBus", "to": "CommBanking", "type": "async-consume", "action": "Consume EVT-144 → Suspend client account pending MLRO review", "phase": "PH-104"},
+    {"step": 5, "from": "EventBus", "to": "Audit", "type": "async-consume", "action": "Consume EVT-144 → Write WORM audit record — OFSI compliance", "phase": "PH-104"},
+    {"step": 6, "from": "Compliance", "to": "CompOfficer", "type": "notification", "action": "Immediate alert: OFSI sanctions hit on client — MLRO action required within 14 days", "phase": "PH-104"},
+    {"step": 7, "from": "CompOfficer", "to": "Compliance", "type": "sync", "action": "Initiate OFSI notification workflow and relationship exit decision", "phase": "PH-105"},
+    {"step": 8, "from": "Compliance", "to": "EventBus", "type": "async-publish", "action": "Publish CddExitEscalated (EVT-147) {exit_reason: sanctions_hit, senior_manager_approval_id}", "phase": "PH-105"},
+    {"step": 9, "from": "EventBus", "to": "CommBanking", "type": "async-consume", "action": "Consume EVT-147 → Initiate client offboarding workflow", "phase": "PH-106"}
+  ]
+}

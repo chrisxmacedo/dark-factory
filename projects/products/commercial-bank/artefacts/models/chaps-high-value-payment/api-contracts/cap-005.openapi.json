@@ -6,7 +6,7 @@
     "version": "0.1.0 (JRN-028 — no new endpoints)",
     "x-capability": "CAP-005",
     "x-source-journey": "JRN-028",
-    "x-note": "No new CAP-005 API endpoints introduced by JRN-028. SVC-014 participates in JRN-028 via async event consumption only (EVT-108 consumed, EVT-P02 / EVT-006 published). Internal SVC-014 → SVC-051 call is intra-capability and not surfaced in the API contract."
+    "x-note": "No new CAP-005 API endpoints introduced by JRN-028. SVC-014 participates in JRN-028 via async event consumption only (EVT-108 consumed, EVT-180 / EVT-006 published). Internal SVC-014 → SVC-051 call is intra-capability and not surfaced in the API contract."
   },
   "servers": [
     { "url": "https://api.bank.internal/compliance/v1", "description": "Internal compliance API gateway" }

@@ -44,7 +44,7 @@
         {
           "name": "trigger_type",
           "type": "enum",
-          "validation_rule": "Required. Enum: realtime_block | customer_report. Immutable after creation. realtime_block: sourced from PaymentFraudBlocked (EVT-P08) consumption. customer_report: sourced from customer-initiated fraud report via CH-002 or CH-004.",
+          "validation_rule": "Required. Enum: realtime_block | customer_report. Immutable after creation. realtime_block: sourced from PaymentFraudBlocked (EVT-186) consumption. customer_report: sourced from customer-initiated fraud report via CH-002 or CH-004.",
           "source": "PH-064",
           "governed_by": null
         },

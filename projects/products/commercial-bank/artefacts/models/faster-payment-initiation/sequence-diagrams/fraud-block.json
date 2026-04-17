@@ -24,7 +24,7 @@
       "to": "Channel",
       "type": "sync",
       "action": "Enter payee details (new payee, amount £2,500 — unusually large for this account history)",
-      "phase": "PY-001"
+      "phase": "PH-147"
     },
     {
       "step": 2,
@@ -32,7 +32,7 @@
       "to": "DomesticPayments",
       "type": "sync",
       "action": "POST /cop/verify { payee_sort_code, payee_account_number, payee_name }",
-      "phase": "PY-001"
+      "phase": "PH-147"
     },
     {
       "step": 3,
@@ -40,7 +40,7 @@
       "to": "Channel",
       "type": "sync-return",
       "action": "200 OK { cop_result: 'no_match', risk_warning_required: true }",
-      "phase": "PY-001"
+      "phase": "PH-147"
     },
     {
       "step": 4,
@@ -48,7 +48,7 @@
       "to": "Customer",
       "type": "ui",
       "action": "Display PSR SD17 risk warning: 'Name does not match the account at the receiving bank. This could be a sign of fraud.' Show Confirm / Cancel buttons.",
-      "phase": "PY-001"
+      "phase": "PH-147"
     },
     {
       "step": 5,
@@ -56,7 +56,7 @@
       "to": "Channel",
       "type": "sync",
       "action": "Customer clicks 'I understand the risk and want to proceed' (explicit override confirmation)",
-      "phase": "PY-001",
+      "phase": "PH-147",
       "note": "Override timestamp and confirmation are recorded"
     },
     {
@@ -65,7 +65,7 @@
       "to": "Channel",
       "type": "sync",
       "action": "Complete SCA (biometric)",
-      "phase": "PY-001"
+      "phase": "PH-147"
     },
     {
       "step": 7,
@@ -73,7 +73,7 @@
       "to": "IAM",
       "type": "sync",
       "action": "POST /sca/validate { assertion, payee_sort_code, payee_account_number, amount }",
-      "phase": "PY-001"
+      "phase": "PH-147"
     },
     {
       "step": 8,
@@ -81,7 +81,7 @@
       "to": "Channel",
       "type": "sync-return",
       "action": "200 OK { sca_assertion_ref, valid: true }",
-      "phase": "PY-001"
+      "phase": "PH-147"
     },
     {
       "step": 9,
@@ -89,7 +89,7 @@
       "to": "RetailBanking",
       "type": "sync",
       "action": "POST /payments { account_id, amount: 2500.00, payee details, cop_result: no_match, cop_override_confirmed: true, cop_override_timestamp, sca_assertion_ref }",
-      "phase": "PY-001"
+      "phase": "PH-147"
     },
     {
       "step": 10,
@@ -97,16 +97,16 @@
       "to": "Channel",
       "type": "sync-return",
       "action": "202 Accepted { payment_intent_id, status: pending_screening }",
-      "phase": "PY-001"
+      "phase": "PH-147"
     },
     {
       "step": 11,
       "from": "RetailBanking",
       "to": "EventBus",
       "type": "async-publish",
-      "action": "Publish PaymentIntentCreated (EVT-P01) — includes cop_result: no_match, cop_override_confirmed: true",
-      "event_id": "EVT-P01",
-      "phase": "PY-001"
+      "action": "Publish PaymentIntentCreated (EVT-179) — includes cop_result: no_match, cop_override_confirmed: true",
+      "event_id": "EVT-179",
+      "phase": "PH-147"
     },
     {
       "step": 12,
@@ -114,7 +114,7 @@
       "to": "Customer",
       "type": "ui",
       "action": "Show 'Processing your payment...' screen",
-      "phase": "PY-002"
+      "phase": "PH-148"
     },
     {
       "step": 13,
@@ -122,7 +122,7 @@
       "to": "Sanctions",
       "type": "async-consume",
       "action": "Run sanctions screen → outcome: clear",
-      "phase": "PY-002",
+      "phase": "PH-148",
       "note": "Concurrent with step 14"
     },
     {
@@ -131,7 +131,7 @@
       "to": "Fraud",
       "type": "async-consume",
       "action": "Run fraud scoring — features: new payee + no_match CoP override + large amount vs account history",
-      "phase": "PY-002",
+      "phase": "PH-148",
       "note": "Concurrent with step 13. High fraud score generated."
     },
     {
@@ -139,43 +139,43 @@
       "from": "Sanctions",
       "to": "EventBus",
       "type": "async-publish",
-      "action": "Publish SanctionsScreeningCompleted (EVT-P02) { outcome: clear }",
-      "event_id": "EVT-P02",
-      "phase": "PY-002"
+      "action": "Publish SanctionsScreeningCompleted (EVT-180) { outcome: clear }",
+      "event_id": "EVT-180",
+      "phase": "PH-148"
     },
     {
       "step": 16,
       "from": "Fraud",
       "to": "EventBus",
       "type": "async-publish",
-      "action": "Publish FraudScoreCompleted (EVT-P03) { risk_level: block, fraud_score: 0.94, top_risk_features: [cop_no_match_override, unusual_amount_vs_history, new_payee] }",
-      "event_id": "EVT-P03",
-      "phase": "PY-002"
+      "action": "Publish FraudScoreCompleted (EVT-181) { risk_level: block, fraud_score: 0.94, top_risk_features: [cop_no_match_override, unusual_amount_vs_history, new_payee] }",
+      "event_id": "EVT-181",
+      "phase": "PH-148"
     },
     {
       "step": 17,
       "from": "EventBus",
       "to": "RetailBanking",
       "type": "async-consume",
-      "action": "Consume EVT-P02 (clear) and EVT-P03 (BLOCK). Decision: fraud block.",
-      "phase": "PY-003"
+      "action": "Consume EVT-180 (clear) and EVT-181 (BLOCK). Decision: fraud block.",
+      "phase": "PH-149"
     },
     {
       "step": 18,
       "from": "RetailBanking",
       "to": "EventBus",
       "type": "async-publish",
-      "action": "Publish PaymentFraudBlocked (EVT-P08) — update PaymentIntent.status = fraud_blocked",
-      "event_id": "EVT-P08",
-      "phase": "PY-003"
+      "action": "Publish PaymentFraudBlocked (EVT-186) — update PaymentIntent.status = fraud_blocked",
+      "event_id": "EVT-186",
+      "phase": "PH-149"
     },
     {
       "step": 19,
       "from": "EventBus",
       "to": "AuditLog",
       "type": "async-consume",
-      "action": "Write EVT-P08 to WORM audit log (risk_level, top_risk_features recorded; raw fraud_score not in SVC-103 log)",
-      "phase": "PY-003"
+      "action": "Write EVT-186 to WORM audit log (risk_level, top_risk_features recorded; raw fraud_score not in SVC-103 log)",
+      "phase": "PH-149"
     },
     {
       "step": 20,
@@ -183,7 +183,7 @@
       "to": "FraudPlatform",
       "type": "async-consume",
       "action": "Consume PaymentFraudBlocked → create fraud investigation case. Assign to PER-054 (Fraud Analyst).",
-      "phase": "PY-003"
+      "phase": "PH-149"
     },
     {
       "step": 21,
@@ -191,7 +191,7 @@
       "to": "FraudAnalyst",
       "type": "notification",
       "action": "Alert: New fraud block case — £2,500 payment to [payee]. risk_level: block. Top features: CoP no_match override, unusual amount.",
-      "phase": "PY-003"
+      "phase": "PH-149"
     },
     {
       "step": 22,
@@ -199,7 +199,7 @@
       "to": "RetailBanking",
       "type": "sync",
       "action": "GET /payments/{payment_intent_id} (polling)",
-      "phase": "PY-003"
+      "phase": "PH-149"
     },
     {
       "step": 23,
@@ -207,7 +207,7 @@
       "to": "Channel",
       "type": "sync-return",
       "action": "200 OK { status: fraud_blocked, failure_reason: generic_decline }",
-      "phase": "PY-003",
+      "phase": "PH-149",
       "note": "fraud_blocked status returned; failure_reason is generic_decline (fraud detail not disclosed to channel/customer)"
     },
     {
@@ -216,7 +216,7 @@
       "to": "Customer",
       "type": "ui",
       "action": "Display: 'We've blocked this payment for your security. If you authorised this payment, please call [fraud line]. No money has left your account.'",
-      "phase": "PY-003"
+      "phase": "PH-149"
     },
     {
       "step": 25,
@@ -224,7 +224,7 @@
       "to": "FraudPlatform",
       "type": "sync",
       "action": "(Out of band) Review case: full fraud score, model features, account history, device metadata. Determine true positive vs false positive.",
-      "phase": "PY-003 (exception handling)"
+      "phase": "PH-149 (exception handling)"
     }
   ],
   "outcome": "Payment blocked. Customer notified with generic message. Fraud Analyst investigates. If false positive, analyst may release — triggering PaymentCleared re-emission. If true positive, block confirmed and case closed.",

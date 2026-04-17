@@ -36,7 +36,7 @@
         "operationId": "createFraudCase",
         "tags": ["Fraud Cases"],
         "summary": "Create a new fraud case",
-        "description": "Creates a new FraudCase (ENT-043). Called by SVC-017 (Digital Channels) when PER-001 submits a fraud report via mobile app (CH-002), by Customer Service Agents via internal tools (CH-004 telephone reports), or automatically by SVC-013 internals when PaymentFraudBlocked (EVT-P08) is consumed. Publishes FraudCaseCreated event on success. Idempotency enforced on payment_intent_id — a second case creation for the same payment_intent_id within 24 hours returns the existing case with HTTP 200.",
+        "description": "Creates a new FraudCase (ENT-043). Called by SVC-017 (Digital Channels) when PER-001 submits a fraud report via mobile app (CH-002), by Customer Service Agents via internal tools (CH-004 telephone reports), or automatically by SVC-013 internals when PaymentFraudBlocked (EVT-186) is consumed. Publishes FraudCaseCreated event on success. Idempotency enforced on payment_intent_id — a second case creation for the same payment_intent_id within 24 hours returns the existing case with HTTP 200.",
         "x-required-role": "customer_service_agent OR fraud_analyst OR system (internal event-driven)",
         "x-sla": "P99 < 2000ms",
         "requestBody": {

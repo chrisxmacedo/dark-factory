@@ -1,0 +1,18 @@
+{
+  "journey_id": "JRN-022",
+  "document_version": "0.1.0",
+  "status": "Draft",
+  "participants": [
+    {
+      "persona_id": "PER-059",
+      "persona_name": "Senior Manager (CRO / CFO / Head of Regulatory Reporting)",
+      "phases": ["PH-123", "PH-124", "PH-125", "PH-126"],
+      "touchpoints": [
+        {"phase": "PH-123", "channel": "internal_systems", "action": "CRO triggers stress test exercise; loads PRA scenarios into risk engine"},
+        {"phase": "PH-124", "channel": "internal_systems", "action": "CRO reviews model projections; model validation team signs off outputs"},
+        {"phase": "PH-125", "channel": "internal_systems", "action": "CRO and CFO present to Board Risk Committee; obtain sign-off; CRO and CEO attest submission"},
+        {"phase": "PH-126", "channel": "regulatory_portal", "action": "Head of Regulatory Reporting submits data package to PRA via BEEDS portal; receives submission reference"}
+      ]
+    }
+  ]
+}

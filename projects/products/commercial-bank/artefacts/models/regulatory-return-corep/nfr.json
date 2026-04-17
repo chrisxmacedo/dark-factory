@@ -1,8 +1,208 @@
 {
   "journey_id": "JRN-017",
-  "document_version": "0.1.0",
+  "name": "Regulatory Return Submission (COREP Capital) — Non-Functional Requirements",
+  "description": "Per-phase NFRs for JRN-017. This is a batch-oriented, internally-facing regulatory reporting journey with quarterly cadence. NFRs reflect the operational reality of quarterly COREP submission at a UK mid-tier commercial bank, PRA submission deadlines (T+30 / T+42 working days), and SM&CR individual accountability requirements for regulatory return accuracy.",
+  "document_version": "1.0.0",
   "status": "Draft",
-  "per_phase_nfrs": [],
-  "cross_cutting_nfrs": [],
-  "regulatory_slas": []
+  "baseline_assumptions": {
+    "reporting_frequency": "Quarterly — aligned with CRR UK Part Eight reporting calendar. Quarter-end dates: 31 March, 30 June, 30 September, 31 December.",
+    "submission_deadline": "T+30 working days for solo returns; T+42 working days for consolidated returns. PRA RegData submission.",
+    "data_volume": "A mid-tier UK commercial bank with c. £20-50bn balance sheet. Credit risk: 50,000-200,000 exposure records. Market risk: 500-5,000 trading book positions. Operational risk: 200-1,000 loss events per quarter. Total COREP data points: approximately 5,000-15,000 cells across all templates.",
+    "important_business_service": "Regulatory reporting is not itself classified as an IBS under PRA SS1/21 (it is a governance process, not a customer-facing service). However, failure to submit on time has direct PRA supervisory consequences and potential Pillar 2 capital implications.",
+    "data_residency": "All regulatory return data must remain within the UK. No data processed in non-UK cloud regions."
+  },
+  "phases": [
+    {
+      "phase_id": "PH-088",
+      "phase_name": "Capital Data Extraction and RWA Calculation",
+      "nfr": {
+        "latency": {
+          "batch_completion_hours": 8,
+          "credit_risk_calculation_hours": 4,
+          "market_risk_calculation_hours": 2,
+          "operational_risk_calculation_hours": 1,
+          "notes": "This is a batch process, not a real-time API. Credit risk RWA calculation is the longest component due to the volume of exposure records (50,000-200,000) and the complexity of IRB/SA calculations. Total batch completion target of 8 hours allows the calculation to run overnight (T+1 quarter-end). Market risk calculation is faster due to fewer positions. Operational risk is a straightforward application of the Basel Standardised Approach."
+        },
+        "throughput": {
+          "quarterly_cycles_per_year": 4,
+          "concurrent_calculations": "Credit, market, and operational risk calculations may run in parallel once data extraction is complete",
+          "notes": "This is not a high-throughput system. The challenge is data completeness and accuracy, not volume or speed."
+        },
+        "availability": {
+          "target_percentage": 99.5,
+          "maximum_downtime_per_quarter_hours": 4,
+          "degraded_mode": "If SVC-012 is unavailable during the calculation window, the calculation is deferred to the next available window. Given the T+30 deadline, there is sufficient buffer (typically 15-20 working days before deadline) to accommodate short outages. If outage extends beyond 5 working days, submission deadline risk escalation is triggered.",
+          "notes": "Availability target is lower than customer-facing services because this is a quarterly batch process with multi-week submission windows. However, the T+30 deadline is a hard constraint — availability must be sufficient to complete the full pipeline within the submission window."
+        },
+        "security_classification": "privileged_internal",
+        "security_notes": "RWA calculation data includes aggregate exposure data, risk model outputs, and capital figures — all classified as confidential internal data. Access restricted to Risk team (CRO, risk analysts) and Regulatory Reporting team. No external access. mTLS between SVC-012 and source data systems. Calculation outputs logged to SVC-103 with full data lineage.",
+        "data_classification": {
+          "data_processed": ["credit_exposure_records", "trading_book_positions", "operational_loss_events", "risk_model_parameters", "rwa_calculation_outputs"],
+          "sensitivity": "HIGH — aggregate exposure data and capital figures are price-sensitive information. Premature disclosure could constitute market abuse under UK MAR if the bank is listed. Access controls enforce need-to-know within Risk and Finance functions.",
+          "retention": "RWA calculation inputs and outputs retained for 7 years per PRA record-keeping requirements and SM&CR evidence obligations.",
+          "data_residency": "UK only"
+        },
+        "regulatory_sla": {
+          "obligation": "No specific SLA for the calculation phase itself. However, the calculation must complete with sufficient time for consolidation, validation, sign-off, and submission within the T+30 deadline. Target: calculation complete by T+5 working days.",
+          "references": ["CRR UK Part Three (capital requirements calculation)", "PRA PS17/23 (Basel 3.1 UK implementation)", "PRA SS1/23 (model risk management)"]
+        }
+      }
+    },
+    {
+      "phase_id": "PH-089",
+      "phase_name": "Return Consolidation and Formatting",
+      "nfr": {
+        "latency": {
+          "consolidation_completion_hours": 16,
+          "automated_mapping_hours": 2,
+          "manual_classification_working_days": 3,
+          "notes": "Automated mapping of RWA data to XBRL taxonomy handles ~85% of data points in approximately 2 hours. The remaining ~15% require manual classification judgement by reporting analysts (e.g., specialised lending exposure classification, securitisation position mapping). Manual classification target: 3 working days. Total phase target: 5 working days (T+5 to T+10)."
+        },
+        "throughput": {
+          "notes": "Single return produced per quarter. No throughput concerns. The bottleneck is manual classification accuracy, not processing speed."
+        },
+        "availability": {
+          "target_percentage": 99.5,
+          "maximum_downtime_per_quarter_hours": 4,
+          "degraded_mode": "If SVC-015 is unavailable, manual spreadsheet-based consolidation is the fallback. This is slower but acceptable given the multi-week submission window.",
+          "notes": "Consolidation is not on a critical real-time path. The XBRL template engine within SVC-015 must be available during business hours for reporting analysts."
+        },
+        "security_classification": "privileged_internal",
+        "security_notes": "COREP return draft contains aggregate capital adequacy data. Pre-publication regulatory return data is highly sensitive — premature disclosure is a potential UK MAR violation for listed banks. Access restricted to Regulatory Reporting team and CFO/CRO. Draft return versions stored in access-controlled document management with audit logging.",
+        "data_classification": {
+          "data_processed": ["rwa_figures_by_risk_type", "own_funds_components", "leverage_ratio_data", "xbrl_taxonomy_mappings"],
+          "sensitivity": "HIGH — pre-submission regulatory return data is price-sensitive for listed banks. Draft versions must be access-controlled with audit trail.",
+          "retention": "All draft versions and manual classification decisions retained for 7 years.",
+          "data_residency": "UK only"
+        },
+        "regulatory_sla": {
+          "obligation": "No specific SLA for consolidation. Must complete within the T+30 submission window. Target: consolidation complete by T+10 working days.",
+          "references": ["CRR UK Part Eight (reporting format)", "PRA COREP reporting framework"]
+        }
+      }
+    },
+    {
+      "phase_id": "PH-090",
+      "phase_name": "Validation and Quality Assurance",
+      "nfr": {
+        "latency": {
+          "xbrl_validation_run_minutes": 30,
+          "variance_analysis_working_days": 2,
+          "gl_reconciliation_working_days": 2,
+          "independent_review_working_days": 3,
+          "notes": "XBRL validation is automated and completes within 30 minutes. Variance analysis requires manual review of material movements — 2 working days. GL reconciliation is a structured comparison between COREP own funds figures and audited balance sheet equity — 2 working days. Finance team independent review (2LoD): 3 working days. These activities can partially overlap. Total phase target: 5-7 working days (T+10 to T+17)."
+        },
+        "throughput": {
+          "notes": "Single return validated per quarter. Multiple validation iterations may be required if errors are found."
+        },
+        "availability": {
+          "target_percentage": 99.5,
+          "maximum_downtime_per_quarter_hours": 4,
+          "degraded_mode": "XBRL validation can be run using standalone validation tools if SVC-015 is unavailable. GL reconciliation can be performed manually against the general ledger system.",
+          "notes": "Validation must be completed before CFO sign-off. System availability during business hours is sufficient."
+        },
+        "security_classification": "privileged_internal",
+        "security_notes": "Validation results, variance explanations, and GL reconciliation evidence are retained in the WORM audit store (SVC-111) as SM&CR accountability evidence. All validation activities are logged with analyst identity, timestamp, and action taken. Variance explanations authored by CRO are particularly sensitive — they document the bank's understanding of capital movements.",
+        "data_classification": {
+          "data_processed": ["xbrl_validation_results", "variance_analysis_reports", "gl_reconciliation_evidence", "independent_review_notes"],
+          "sensitivity": "HIGH — validation evidence forms part of the PRA supervisory record. Variance explanations may be reviewed during PRA on-site inspections.",
+          "retention": "7 years — PRA record-keeping and SM&CR evidence retention.",
+          "data_residency": "UK only"
+        },
+        "regulatory_sla": {
+          "obligation": "PRA expects all XBRL validation rules to pass before submission. Material errors that pass validation but are subsequently identified constitute a reporting failure. GL reconciliation is a PRA supervisory expectation (referenced in PRA Dear CEO letters on regulatory reporting quality).",
+          "references": ["PRA COREP validation rules", "PRA supervisory expectations on regulatory return quality"]
+        }
+      }
+    },
+    {
+      "phase_id": "PH-091",
+      "phase_name": "CFO Sign-Off and Submission",
+      "nfr": {
+        "latency": {
+          "cfo_review_working_days": 2,
+          "submission_to_regdata_minutes": 15,
+          "pra_acknowledgement_hours": 24,
+          "notes": "CFO review and sign-off: 2 working days maximum. Actual RegData submission is an automated upload taking approximately 15 minutes. PRA acknowledgement receipt is typically within 24 hours but may take longer during peak reporting periods (multiple banks submitting simultaneously). Total phase target: 3 working days (T+17 to T+20)."
+        },
+        "throughput": {
+          "notes": "Single submission per quarter. RegData system capacity is managed by the PRA."
+        },
+        "availability": {
+          "target_percentage": 99.9,
+          "maximum_downtime_per_quarter_hours": 1,
+          "degraded_mode": "If PRA RegData is unavailable, the PRA supervisory contact team is notified. The PRA may accept email submission as a temporary fallback. SVC-015 submission module must have retry logic with exponential backoff.",
+          "notes": "Higher availability target for submission phase because this is the point of regulatory compliance. RegData unavailability is a PRA-side issue but the bank must evidence that it attempted submission on time."
+        },
+        "security_classification": "privileged_internal",
+        "security_notes": "CFO sign-off is recorded with electronic signature, timestamp, and attestation statement in the WORM audit store (SVC-111). This is SM&CR evidence — tamper-evident storage is mandatory. RegData submission credentials are service-account based, managed by IT Operations, and rotated quarterly. Submission confirmation and PRA acknowledgement receipt are immutably stored.",
+        "data_classification": {
+          "data_transmitted": ["corep_xbrl_return", "cfo_attestation_statement"],
+          "sensitivity": "HIGHEST — this is the official regulatory submission. The XBRL return contains the bank's capital adequacy position. Transmission to PRA RegData is over TLS. The CFO attestation is a legally significant document under SM&CR.",
+          "retention": "CFO attestation and submission evidence retained for 7 years minimum. WORM storage — not deletable within retention period.",
+          "data_residency": "UK only. RegData is a PRA-hosted UK system."
+        },
+        "regulatory_sla": {
+          "obligation": "T+30 working days from quarter-end for solo COREP submission. T+42 for consolidated. Late submission triggers automatic PRA supervisory engagement. The bank must evidence attempted submission before the deadline even if RegData is unavailable.",
+          "submission_deadline": "T+30 working days (solo); T+42 working days (consolidated)",
+          "references": ["CRR UK Part Eight submission deadlines", "SM&CR — CFO (SMF2) prescribed responsibility for regulatory returns"]
+        }
+      }
+    },
+    {
+      "phase_id": "PH-092",
+      "phase_name": "Post-Submission Monitoring and Restatement",
+      "nfr": {
+        "latency": {
+          "pra_query_response_working_days": 10,
+          "restatement_preparation_working_days": 10,
+          "notes": "PRA queries must be responded to within the PRA's prescribed response window (typically 10 working days but varies by query type). Restatement preparation: 10 working days from error identification to restated return submission. Proactive PRA notification of error: within 2 working days of identification."
+        },
+        "throughput": {
+          "notes": "Restatements are infrequent (target: zero per year). PRA queries: typically 0-2 per quarterly submission."
+        },
+        "availability": {
+          "target_percentage": 99.0,
+          "maximum_downtime_per_quarter_hours": 8,
+          "degraded_mode": "Post-submission monitoring is a low-intensity activity. SVC-015 must be available for PRA query response preparation but outages during monitoring periods are tolerable if they do not coincide with an active PRA query deadline.",
+          "notes": "Lowest availability requirement of all phases. Monitoring is primarily a governance activity."
+        },
+        "security_classification": "privileged_internal",
+        "security_notes": "Restatement documents, root cause analyses, and PRA query responses are highly sensitive — they document regulatory reporting failures. Access restricted to CFO, CRO, Head of Regulatory Reporting, and Legal. All documents stored in WORM audit store.",
+        "data_classification": {
+          "data_processed": ["pra_query_correspondence", "restatement_returns", "root_cause_analysis_documents", "remediation_plans"],
+          "sensitivity": "HIGHEST — restatement documentation evidences a regulatory reporting failure and is subject to PRA supervisory scrutiny. Root cause analyses may be requested by PRA during on-site inspections.",
+          "retention": "7 years minimum. Restatement records retained indefinitely if they relate to ongoing PRA supervisory action.",
+          "data_residency": "UK only"
+        },
+        "regulatory_sla": {
+          "obligation": "Restatement filed within 10 working days of material error identification. PRA notified proactively within 2 working days of error identification. PRA queries responded to within prescribed response window. SM&CR CFO accountability applies to restatement accuracy.",
+          "restatement_sla": "10 working days from error identification to restated return submission",
+          "pra_notification_sla": "2 working days from error identification to proactive PRA notification",
+          "references": ["PRA supervisory expectations for error correction", "SM&CR — CFO (SMF2) accountability"]
+        }
+      }
+    }
+  ],
+  "cross_cutting_nfrs": {
+    "end_to_end_journey_sla": {
+      "working_days": 20,
+      "description": "The full COREP reporting cycle (PH-088 through PH-091) should complete within 20 working days of quarter-end, leaving 10 working days of buffer before the T+30 deadline. This buffer accommodates validation failures requiring recalculation, CRO variance investigation, and CFO sign-off scheduling."
+    },
+    "audit_and_logging": {
+      "all_phases": "Every phase transition, calculation output, manual classification decision, validation result, variance explanation, sign-off action, and submission event must be logged to SVC-103 (Audit & Logging). Sign-off attestations, submission confirmations, and restatement documents must additionally be written to SVC-111 (WORM/immutable store).",
+      "retention_years": 7,
+      "regulatory_basis": ["CRR UK Part Eight record-keeping", "SM&CR evidence requirements", "PRA supervisory record-keeping expectations"]
+    },
+    "resilience_and_recovery": {
+      "rpo_hours": 1,
+      "rto_hours": 4,
+      "description": "Recovery Point Objective: maximum 1 hour of data loss for RWA calculation outputs (calculations can be re-run from source data). Recovery Time Objective: SVC-012 and SVC-015 restored within 4 hours. These targets are less aggressive than customer-facing services because the quarterly reporting cycle has multi-week windows.",
+      "references": ["PRA SS1/21 (not directly — regulatory reporting is not an IBS, but PRA supervisory expectations for timely reporting apply)"]
+    },
+    "data_protection_by_design": {
+      "description": "COREP data contains aggregate financial data, not individual customer PII. UK GDPR data minimisation applies to any personal data elements (e.g., exposure records that reference individual counterparty names in credit risk). Aggregate capital figures are not personal data but are commercially sensitive and potentially price-sensitive for listed banks.",
+      "references": ["UK GDPR Article 5 (data minimisation)", "UK MAR (market abuse — price-sensitive information controls for listed banks)"]
+    }
+  }
 }

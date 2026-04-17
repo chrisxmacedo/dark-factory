@@ -1,0 +1,148 @@
+{
+  "journey_id": "JRN-029",
+  "document_version": "0.1.0",
+  "status": "Draft",
+  "architectural_principle": "Cross-capability communication is exclusively async events. Within a capability, services communicate freely.",
+  "services": [
+    {
+      "service_id": "SVC-017",
+      "service_name": "Digital Channels",
+      "capability_id": "CAP-007",
+      "owned_entities": [],
+      "published_events": [],
+      "consumed_events": [
+        {
+          "event_id": "EVT-156",
+          "name": "VrpConsentGranted",
+          "provider_service_id": "SVC-009",
+          "purpose": "Update Open Banking API response to PISP with active consent_id and access token"
+        },
+        {
+          "event_id": "EVT-158",
+          "name": "VrpConsentRevoked",
+          "provider_service_id": "SVC-009",
+          "purpose": "Update consent management dashboard to reflect revoked status"
+        }
+      ],
+      "consumed_apis": [],
+      "design_decisions": [
+        "SVC-017 acts as Open Banking API gateway/channel for TPP interactions and customer consent portal. It does not own consent data — that is SVC-009's domain.",
+        "SVC-017 calls SVC-100 (IAM, same-capability platform service) for TPP token validation and customer SCA — intra-capability."
+      ]
+    },
+    {
+      "service_id": "SVC-009",
+      "service_name": "Domestic Payments",
+      "capability_id": "CAP-003",
+      "owned_entities": ["ENT-070", "ENT-071"],
+      "published_events": ["EVT-156", "EVT-157", "EVT-158"],
+      "consumed_events": [],
+      "consumed_apis": [],
+      "design_decisions": [
+        "SVC-009 owns VrpConsent (ENT-070) and VrpPayment (ENT-071) as payment domain entities.",
+        "SVC-009 receives VRP consent creation and payment execution requests from SVC-017 (Digital Channels) via internal sync calls — SVC-017 is the API surface (CAP-007 boundary), SVC-009 processes the domain logic (CAP-003 boundary).",
+        "SVC-009 calls SVC-013 (Fraud Detection, CAP-004) via async event pattern — publishes payment intent, receives fraud score result.",
+        "SVC-009 calls SVC-001 (Retail Banking Core, CAP-001) via EVT-157 for balance update on source account — async."
+      ]
+    },
+    {
+      "service_id": "SVC-013",
+      "service_name": "Fraud Detection",
+      "capability_id": "CAP-004",
+      "owned_entities": [],
+      "published_events": [],
+      "consumed_events": [
+        {
+          "event_id": "EVT-157",
+          "name": "VrpPaymentExecuted",
+          "provider_service_id": "SVC-009",
+          "purpose": "Post-execution fraud model update — train on VRP payment behaviour patterns"
+        }
+      ],
+      "consumed_apis": [],
+      "design_decisions": [
+        "Fraud scoring for VRP payments is a synchronous internal call from SVC-009 to SVC-013 within their respective capabilities — cross-capability boundary requires the request to flow via event. SVC-009 publishes a VrpPaymentFraudCheckRequested event (internal to PH-117 processing); SVC-013 responds with fraud score. This is modelled as a sync call within the payment execution flow for latency reasons per DD-029-02."
+      ]
+    },
+    {
+      "service_id": "SVC-001",
+      "service_name": "Retail Banking Core",
+      "capability_id": "CAP-001",
+      "owned_entities": [],
+      "published_events": [],
+      "consumed_events": [
+        {
+          "event_id": "EVT-157",
+          "name": "VrpPaymentExecuted",
+          "provider_service_id": "SVC-009",
+          "purpose": "Debit source account; update account transaction history"
+        }
+      ],
+      "consumed_apis": [],
+      "design_decisions": []
+    },
+    {
+      "service_id": "SVC-053",
+      "service_name": "Notifications",
+      "capability_id": "CAP-007",
+      "owned_entities": [],
+      "published_events": [],
+      "consumed_events": [
+        {
+          "event_id": "EVT-156",
+          "name": "VrpConsentGranted",
+          "provider_service_id": "SVC-009",
+          "purpose": "Send consent confirmation notification to customer"
+        },
+        {
+          "event_id": "EVT-157",
+          "name": "VrpPaymentExecuted",
+          "provider_service_id": "SVC-009",
+          "purpose": "Send payment confirmation notification to customer (optional per customer preferences)"
+        },
+        {
+          "event_id": "EVT-158",
+          "name": "VrpConsentRevoked",
+          "provider_service_id": "SVC-009",
+          "purpose": "Send revocation confirmation to customer and PISP webhook callback"
+        }
+      ],
+      "consumed_apis": [],
+      "design_decisions": []
+    },
+    {
+      "service_id": "SVC-103",
+      "service_name": "Audit & Logging",
+      "capability_id": "CAP-008",
+      "owned_entities": [],
+      "published_events": [],
+      "consumed_events": [
+        {
+          "event_id": "EVT-156",
+          "name": "VrpConsentGranted",
+          "provider_service_id": "SVC-009",
+          "purpose": "Write immutable consent grant record (SCA assertion ref, parameters, timestamp)"
+        },
+        {
+          "event_id": "EVT-157",
+          "name": "VrpPaymentExecuted",
+          "provider_service_id": "SVC-009",
+          "purpose": "Write immutable payment execution record"
+        },
+        {
+          "event_id": "EVT-158",
+          "name": "VrpConsentRevoked",
+          "provider_service_id": "SVC-009",
+          "purpose": "Write immutable consent revocation record"
+        }
+      ],
+      "consumed_apis": [],
+      "design_decisions": []
+    }
+  ],
+  "cross_service_interaction_summary": [
+    "SVC-017 (CAP-007) → SVC-009 (CAP-003): VRP consent creation and payment execution requests — internal sync via capability boundary (Channel → Capability API pattern)",
+    "SVC-009 (CAP-003) → SVC-013 (CAP-004): Fraud scoring for VRP payment — real-time inline call for latency reasons (within payment execution critical path)",
+    "SVC-009 (CAP-003) → EVT-156/157/158 → SVC-001 (CAP-001), SVC-053 (CAP-007), SVC-103 (CAP-008): All post-processing async via Event Bus"
+  ]
+}

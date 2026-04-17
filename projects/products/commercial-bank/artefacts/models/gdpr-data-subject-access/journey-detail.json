@@ -1,0 +1,110 @@
+{
+  "journey_id": "JRN-021",
+  "name": "GDPR Data Subject Access Request",
+  "status": "Draft",
+  "triggering_persona": "PER-001",
+  "capabilities_touched": ["CAP-001", "CAP-005", "CAP-007"],
+  "phases": [
+    {
+      "id": "PH-119",
+      "name": "SAR Submission and Identity Verification",
+      "description": "A personal customer submits a Subject Access Request (SAR) under UK GDPR Article 15 via the online banking portal or postal submission. For digital submissions, identity is verified via SCA. For postal submissions, the Compliance team performs document identity verification. A SAR case is created in the compliance workflow system. The 30-day statutory response clock starts from the date of receipt (UK GDPR Article 12(3)).",
+      "actors": ["PER-001 (Customer)", "SVC-017 (Digital Channels)", "SVC-100 (IAM)", "SVC-015 (Compliance Core)"],
+      "services": ["SVC-017", "SVC-100", "SVC-015"],
+      "governance_rules": ["GOV-005-R01"],
+      "entry_conditions": [
+        "Customer is an existing customer of the bank",
+        "Customer submits SAR with sufficient identifying information"
+      ],
+      "exit_conditions": [
+        "SarCase created with status = received; 30-day deadline set",
+        "Customer receives acknowledgement with case reference and deadline date",
+        "EVT-159 SarCaseOpened published"
+      ]
+    },
+    {
+      "id": "PH-120",
+      "name": "Data Extraction and Compilation",
+      "description": "The Compliance team (DPO function) initiates automated data extraction across all systems holding the customer's personal data: Retail Banking Core (account data, transaction history), KYC/AML records, communications archive. An automated extraction job queries each source system and compiles the data into a structured SAR response pack. Results are stored in the compliance system pending review.",
+      "actors": ["PER-052 (Compliance Officer)", "SVC-015 (Compliance Core)", "SVC-001 (Retail Banking Core)", "SVC-014 (KYC/AML)"],
+      "services": ["SVC-015", "SVC-001", "SVC-014"],
+      "governance_rules": ["GOV-005-R01", "GOV-005-R02"],
+      "entry_conditions": [
+        "SarCase in status = received",
+        "Identity verification completed"
+      ],
+      "exit_conditions": [
+        "All data sources queried; extraction complete",
+        "SarCase updated to status = under_review",
+        "Raw data pack compiled in compliance system"
+      ]
+    },
+    {
+      "id": "PH-121",
+      "name": "Legal Review and Redaction",
+      "description": "The DPO/legal team reviews the compiled data pack. Third-party data (other customers' account details, fraud investigation data protected under law enforcement exemption) is identified and redacted per UK GDPR Schedule 2 exemptions and FOIA. The reviewed and redacted pack is converted to an encrypted PDF. The team confirms no statutory extension (additional 2 months for complex requests, UK GDPR Article 12(3)) is required.",
+      "actors": ["PER-052 (Compliance Officer)", "SVC-015 (Compliance Core)"],
+      "services": ["SVC-015"],
+      "governance_rules": ["GOV-005-R02"],
+      "entry_conditions": [
+        "SarCase in status = under_review",
+        "Data extraction complete"
+      ],
+      "exit_conditions": [
+        "SarCase updated to status = response_ready",
+        "Encrypted PDF response pack prepared",
+        "Redaction log maintained for audit"
+      ]
+    },
+    {
+      "id": "PH-122",
+      "name": "Response Delivery and Case Closure",
+      "description": "The encrypted response pack is delivered to the customer via a secure download link (digital customers) or recorded post (postal requesters). The download link expires after 14 days. Customer confirms receipt. SarCase is closed. ICO notification log updated (no breach). If the 30-day deadline is approaching and the response is not ready, a holding notice is sent.",
+      "actors": ["PER-001 (Customer)", "SVC-017 (Digital Channels)", "SVC-015 (Compliance Core)", "SVC-053 (Notifications)"],
+      "services": ["SVC-017", "SVC-015", "SVC-053"],
+      "governance_rules": ["GOV-005-R01"],
+      "entry_conditions": [
+        "SarCase in status = response_ready",
+        "Within 30-day deadline from receipt date"
+      ],
+      "exit_conditions": [
+        "Response delivered to customer within 30-day statutory deadline",
+        "SarCase updated to status = closed",
+        "EVT-160 SarCaseClosed published",
+        "ICO notification log entry: no breach"
+      ]
+    }
+  ],
+  "paths": {
+    "happy_path": {
+      "description": "Customer submits SAR digitally → identity verified via SCA → automated data extraction → DPO review and redaction → encrypted PDF delivered within 30 days → case closed.",
+      "phases": ["PH-119", "PH-120", "PH-121", "PH-122"]
+    },
+    "alternative_paths": [
+      {
+        "id": "ALT-021-01",
+        "name": "Extension Request — Complex SAR",
+        "description": "SAR involves an unusually large volume of data or multiple contested redactions. DPO notifies customer of 2-month extension (UK GDPR Article 12(3)) within the initial 30-day window. SarCase extended deadline updated.",
+        "phases": ["PH-121", "PH-122"],
+        "diverges_at": "PH-121: Legal review determines complexity warrants extension"
+      }
+    ],
+    "exception_paths": [
+      {
+        "id": "EXC-021-01",
+        "name": "30-Day Deadline Breach",
+        "description": "SarCase approaches 30-day deadline without response dispatch. Automated alert sent to Head of Compliance. Holding notice sent to customer. ICO breach notification risk assessment triggered. SarCase escalated to senior management.",
+        "phases": ["PH-122"],
+        "diverges_at": "PH-122: Response not dispatched by day 28"
+      }
+    ]
+  },
+  "design_decisions": [
+    {
+      "id": "DD-021-01",
+      "decision": "SarCase is owned by SVC-015 (Compliance Core, CAP-005). Data extraction from SVC-001 and SVC-014 is performed via direct internal queries initiated by SVC-015 — these are intra-capability (SVC-014 and SVC-015 are both in CAP-005) and cross-capability (SVC-001 in CAP-001) via event-driven data extraction request.",
+      "rationale": "SAR is a compliance obligation; CAP-005 owns the case lifecycle. Source data systems (SVC-001) respond to data extraction events via EVT-159, returning data via their own event. This preserves data ownership while enabling compliance data access.",
+      "alternatives_considered": "SVC-015 calling SVC-001 synchronously — rejected as cross-capability sync API calls violate architectural rules."
+    }
+  ]
+}

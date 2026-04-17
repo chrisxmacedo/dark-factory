@@ -1,0 +1,156 @@
+{
+  "journey_id": "JRN-027",
+  "document_version": "0.1.0",
+  "status": "Draft",
+  "architectural_principle": "Cross-capability communication is exclusively async events. Within a capability, services communicate freely.",
+  "services": [
+    {
+      "service_id": "SVC-001",
+      "service_name": "Retail Banking Core",
+      "capability_id": "CAP-001",
+      "owned_entities": ["ENT-067", "ENT-068", "ENT-069"],
+      "published_events": ["EVT-152", "EVT-154", "EVT-155"],
+      "consumed_events": [
+        {
+          "event_id": "EVT-153",
+          "name": "CreditAssessmentCompleted",
+          "provider_service_id": "SVC-012",
+          "purpose": "JRN-027: Receive credit assessment outcome. If approved: create LoanOffer and present to customer. If referred: route to manual review. If declined: record decline reason.",
+          "maps_to": "LoanApplication: approval_decision, credit_score, risk_band, approved_apr, monthly_repayment"
+        }
+      ],
+      "consumed_apis": [],
+      "design_decisions": []
+    },
+    {
+      "service_id": "SVC-012",
+      "service_name": "Risk Engine Service",
+      "capability_id": "CAP-004",
+      "owned_entities": [],
+      "published_events": ["EVT-153"],
+      "consumed_events": [
+        {
+          "event_id": "EVT-152",
+          "name": "LoanApplicationSubmitted",
+          "provider_service_id": "SVC-001",
+          "purpose": "JRN-027: Trigger credit assessment. Run credit bureau check, DTI calculation, affordability stress test. Publish CreditAssessmentCompleted.",
+          "maps_to": "Credit assessment inputs: loan_amount, term_months, gross_monthly_income, monthly_committed_expenditure, customer_id for bureau lookup"
+        }
+      ],
+      "consumed_apis": [],
+      "design_decisions": [
+        {
+          "id": "DD-SVC012-JRN027-01",
+          "decision": "Credit assessment is triggered by consuming LoanApplicationSubmitted event — SVC-012 does not expose a synchronous API for credit assessment to SVC-001.",
+          "rationale": "Cross-capability communication must be async events. Credit assessment may take up to 30 seconds — an async pattern prevents SVC-001 from blocking on the assessment."
+        }
+      ]
+    },
+    {
+      "service_id": "SVC-014",
+      "service_name": "KYC/AML Service",
+      "capability_id": "CAP-005",
+      "owned_entities": [],
+      "published_events": [],
+      "consumed_events": [
+        {
+          "event_id": "EVT-152",
+          "name": "LoanApplicationSubmitted",
+          "provider_service_id": "SVC-001",
+          "purpose": "JRN-027: AML monitoring for loan origination — check for structuring risk, suspicious loan purpose patterns.",
+          "maps_to": "AML monitoring record: loan_amount, purpose flagged for transaction monitoring"
+        }
+      ],
+      "consumed_apis": [],
+      "design_decisions": []
+    },
+    {
+      "service_id": "SVC-015",
+      "service_name": "Compliance Core Service",
+      "capability_id": "CAP-005",
+      "owned_entities": [],
+      "published_events": [],
+      "consumed_events": [
+        {
+          "event_id": "EVT-154",
+          "name": "LoanAgreementExecuted",
+          "provider_service_id": "SVC-001",
+          "purpose": "JRN-027: Record consumer credit agreement for CONC regulatory reporting. Update consumer credit register.",
+          "maps_to": "Regulatory reporting dataset: new consumer credit agreement, APR, loan_amount, customer_id"
+        }
+      ],
+      "consumed_apis": [],
+      "design_decisions": []
+    },
+    {
+      "service_id": "SVC-009",
+      "service_name": "Domestic Payments Service",
+      "capability_id": "CAP-003",
+      "owned_entities": [],
+      "published_events": [],
+      "consumed_events": [
+        {
+          "event_id": "EVT-154",
+          "name": "LoanAgreementExecuted",
+          "provider_service_id": "SVC-001",
+          "purpose": "JRN-027: Initiate loan drawdown payment to customer's nominated account. Internal transfer or FPS.",
+          "maps_to": "Payment instruction: source=bank_lending_account, destination=customer_nominated_account, amount=loan_amount"
+        }
+      ],
+      "consumed_apis": [],
+      "design_decisions": []
+    },
+    {
+      "service_id": "SVC-053",
+      "service_name": "Notifications Service",
+      "capability_id": "CAP-007",
+      "owned_entities": [],
+      "published_events": [],
+      "consumed_events": [
+        {
+          "event_id": "EVT-155",
+          "name": "LoanDrawdownCompleted",
+          "provider_service_id": "SVC-001",
+          "purpose": "JRN-027: Dispatch disbursement confirmation to customer.",
+          "maps_to": "Notification template: loan_drawdown_confirmation"
+        }
+      ],
+      "consumed_apis": [],
+      "design_decisions": []
+    },
+    {
+      "service_id": "SVC-103",
+      "service_name": "Audit & Logging Service",
+      "capability_id": "CAP-006",
+      "owned_entities": [],
+      "published_events": [],
+      "consumed_events": [
+        {
+          "event_id": "EVT-154",
+          "name": "LoanAgreementExecuted",
+          "provider_service_id": "SVC-001",
+          "purpose": "JRN-027: Write immutable audit record of consumer credit agreement execution.",
+          "maps_to": "AuditRecord entity_type=LoanAgreement action=executed (6-year retention CCA)"
+        },
+        {
+          "event_id": "EVT-155",
+          "name": "LoanDrawdownCompleted",
+          "provider_service_id": "SVC-001",
+          "purpose": "JRN-027: Write immutable audit record of loan disbursement.",
+          "maps_to": "AuditRecord entity_type=LoanAccount action=drawdown_completed"
+        }
+      ],
+      "consumed_apis": [],
+      "design_decisions": []
+    }
+  ],
+  "cross_service_interaction_summary": [
+    {"from_service": "SVC-001", "to_service": "SVC-012", "interaction_type": "async_event", "events": ["EVT-152"], "purpose": "Trigger credit assessment in Risk Management capability"},
+    {"from_service": "SVC-012", "to_service": "SVC-001", "interaction_type": "async_event", "events": ["EVT-153"], "purpose": "Return credit assessment result to Retail Banking"},
+    {"from_service": "SVC-001", "to_service": "SVC-014", "interaction_type": "async_event", "events": ["EVT-152"], "purpose": "AML monitoring for loan origination"},
+    {"from_service": "SVC-001", "to_service": "SVC-015", "interaction_type": "async_event", "events": ["EVT-154"], "purpose": "Consumer credit regulatory reporting"},
+    {"from_service": "SVC-001", "to_service": "SVC-009", "interaction_type": "async_event", "events": ["EVT-154"], "purpose": "Initiate loan drawdown payment"},
+    {"from_service": "SVC-001", "to_service": "SVC-053", "interaction_type": "async_event", "events": ["EVT-155"], "purpose": "Customer disbursement notification"},
+    {"from_service": "SVC-001", "to_service": "SVC-103", "interaction_type": "async_event", "events": ["EVT-154", "EVT-155"], "purpose": "Immutable audit logging"}
+  ]
+}

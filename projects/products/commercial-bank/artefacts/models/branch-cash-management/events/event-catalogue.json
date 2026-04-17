@@ -1,0 +1,42 @@
+{
+  "journey_id": "JRN-025",
+  "document_version": "0.1.0",
+  "status": "Draft",
+  "description": "Event catalogue for Branch Cash Management journey. Introduces 1 event: EVT-166. Published by SVC-001 (Retail Banking Core, CAP-001).",
+  "events": [
+    {
+      "event_id": "EVT-166",
+      "name": "CashDepositAboveThreshold",
+      "source_service": "SVC-001",
+      "source_service_name": "Retail Banking Core",
+      "source_entity": "ENT-077",
+      "source_entity_name": "CashDepositTransaction",
+      "trigger": "Branch cash deposit received where amount exceeds £10,000 MLR 2017 Regulation 37 AML threshold.",
+      "journey_phase": "PH-134",
+      "journey_phase_name": "Cash Deposit Receipt and AML Threshold Reporting",
+      "capability_scope": "cross-capability",
+      "payload_schema": {
+        "transaction_id": "string (UUID v4)",
+        "customer_id": "string (UUID v4)",
+        "amount": "string (decimal as string, GBP)",
+        "branch_id": "string",
+        "staff_id": "string (UUID v4)",
+        "aml_report_ref": "string",
+        "transaction_timestamp": "string (ISO 8601 UTC timestamp)"
+      },
+      "consumers": [
+        {"service": "SVC-015", "service_name": "Compliance Core", "action": "Queue AML cash threshold report for MLRO review; assess for suspicious activity patterns."},
+        {"service": "SVC-103", "service_name": "Audit & Logging Service", "action": "Write immutable AML threshold breach record."}
+      ],
+      "ordering_guarantees": "Per-customer ordering via customer_id partition key on topic retail.transactions.",
+      "topic": "retail.transactions",
+      "data_classification": "PII + Financial",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "AML cash threshold report is an MLR 2017 regulatory record — immutable for FCA audit.",
+      "retention": "5 years",
+      "cloudevents_type": "uk.bank.retail.cash_deposit.above_threshold",
+      "governance_references": ["GOV-005-R06"],
+      "source_journeys": ["JRN-025"]
+    }
+  ]
+}

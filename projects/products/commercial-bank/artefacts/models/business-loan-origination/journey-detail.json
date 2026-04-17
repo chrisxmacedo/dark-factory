@@ -6,8 +6,8 @@
   "triggering_persona": "PER-002",
   "triggering_persona_name": "SME Business Owner / Director",
   "prerequisites": [
-    "BusinessCustomer record (ENT-B001) must exist with status = active (created in JRN-004)",
-    "BusinessAccount (ENT-B002) must be open and in good standing (JRN-004)",
+    "BusinessCustomer record (ENT-079) must exist with status = active (created in JRN-004)",
+    "BusinessAccount (ENT-080) must be open and in good standing (JRN-004)",
     "Business KYC/CDD current — BusinessKYCAssessment in-cycle (JRN-004). No new KYC required unless pKYC trigger fires.",
     "Relationship Manager (PER-050) assigned to the BusinessCustomer"
   ],
@@ -149,7 +149,7 @@
     {
       "id": "PH-021",
       "name": "Drawdown",
-      "description": "Customer requests drawdown of some or all of the approved facility. SVC-005 verifies all conditions precedent are met, creates a LoanAccount (ENT-020) for the facility, and instructs SVC-009 (Domestic Payments Service) to credit the drawdown amount to the customer's BusinessAccount (ENT-B002). CHAPS is used for same-day settlement for amounts above the BACS threshold. EVT-037 (LoanDrawnDown) and EVT-038 (LoanAccountOpened) are published. The LoanAccount is linked to the FacilityAgreement and begins accruing interest from the drawdown date.",
+      "description": "Customer requests drawdown of some or all of the approved facility. SVC-005 verifies all conditions precedent are met, creates a LoanAccount (ENT-020) for the facility, and instructs SVC-009 (Domestic Payments Service) to credit the drawdown amount to the customer's BusinessAccount (ENT-080). CHAPS is used for same-day settlement for amounts above the BACS threshold. EVT-037 (LoanDrawnDown) and EVT-038 (LoanAccountOpened) are published. The LoanAccount is linked to the FacilityAgreement and begins accruing interest from the drawdown date.",
       "actors": [
         "PER-002 (SME Business Owner / Director — initiates drawdown request)",
         "SVC-005 (Commercial Banking Core — creates LoanAccount, instructs payment)",
@@ -264,7 +264,7 @@
     {
       "id": "DD-JRN007-01",
       "decision": "Business Lending (CAP-002.02) is modelled as a RETAINED sub-capability within CAP-002 and implemented entirely within SVC-005 (Commercial Banking Core). There is no separate 'Business Lending Service'.",
-      "rationale": "Business lending is tightly coupled to the commercial customer ledger (ENT-B001, ENT-B002) and requires direct read access to customer financials, account behaviour, and existing facility records held in SVC-005. Promoting to a separate service would require cross-service API calls within the same capability domain, adding latency and complexity with no architectural benefit. The nCino lending origination workflow is embedded within the SVC-005 commercial core implementation."
+      "rationale": "Business lending is tightly coupled to the commercial customer ledger (ENT-079, ENT-080) and requires direct read access to customer financials, account behaviour, and existing facility records held in SVC-005. Promoting to a separate service would require cross-service API calls within the same capability domain, adding latency and complexity with no architectural benefit. The nCino lending origination workflow is embedded within the SVC-005 commercial core implementation."
     },
     {
       "id": "DD-JRN007-02",
@@ -278,7 +278,7 @@
     },
     {
       "id": "DD-JRN007-04",
-      "decision": "LoanAccount (ENT-020) is a distinct entity from BusinessAccount (ENT-B002). The loan is tracked in a separate account record linked via business_customer_id FK; the drawdown disbursement is a credit to the BusinessAccount via SVC-009.",
+      "decision": "LoanAccount (ENT-020) is a distinct entity from BusinessAccount (ENT-080). The loan is tracked in a separate account record linked via business_customer_id FK; the drawdown disbursement is a credit to the BusinessAccount via SVC-009.",
       "rationale": "A business may have multiple concurrent loan facilities alongside its current account. Conflating them would prevent multi-facility structures and complicate IFRS 9 staging (each facility requires independent ECL assessment). LoanAccount carries loan-specific fields (outstanding_balance, next_payment_date, status) that are not applicable to a transactional current account."
     },
     {

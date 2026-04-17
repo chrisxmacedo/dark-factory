@@ -1,22 +1,430 @@
 {
   "journey_id": "JRN-017",
-  "document_version": "0.1.0",
+  "name": "Regulatory Return Submission (COREP Capital) — Event Catalogue",
+  "document_version": "1.0.0",
+  "status": "Draft",
   "events": [
     {
       "event_id": "EVT-119",
-      "name": "",
-      "source_service": "",
-      "source_entity": "",
-      "trigger": "",
-      "journey_phase": "",
-      "payload_schema": {},
-      "consumers": [],
-      "ordering_guarantees": "",
-      "topic": "",
-      "data_classification": "",
+      "name": "CapitalDataExtractionRequested",
+      "source_service": "SVC-012",
+      "source_capability": "CAP-004",
+      "source_entity": "ENT-055",
+      "trigger": "Head of Regulatory Reporting initiates quarterly reporting cycle via internal tooling",
+      "journey_phase": "PH-088",
+      "payload_schema": {
+        "type": "object",
+        "properties": {
+          "package_id": {"type": "string", "format": "UUID"},
+          "reporting_period": {"type": "string", "example": "2026-Q1"},
+          "quarter_end_date": {"type": "string", "format": "date"},
+          "requested_by": {"type": "string"},
+          "requested_at": {"type": "string", "format": "date-time"}
+        },
+        "required": ["package_id", "reporting_period", "quarter_end_date", "requested_by", "requested_at"]
+      },
+      "derived_from": {
+        "entity": "ENT-055",
+        "fields_included": ["package_id", "reporting_period", "quarter_end_date"],
+        "fields_excluded": [],
+        "fields_masked": []
+      },
+      "consumers": ["SVC-103"],
+      "ordering_guarantees": "Published once per quarterly cycle. Must precede all RWA calculation events.",
+      "topic": "risk.capital.extraction",
+      "data_classification": "internal_confidential",
+      "worm_audit_pipeline": false,
+      "retention": "7 years",
+      "cloudevents_type": "com.bank.risk.capital-data-extraction-requested.v1"
+    },
+    {
+      "event_id": "EVT-120",
+      "name": "CreditRiskRWACalculated",
+      "source_service": "SVC-012",
+      "source_capability": "CAP-004",
+      "source_entity": "ENT-055",
+      "trigger": "Credit risk RWA calculation completes for the quarter",
+      "journey_phase": "PH-088",
+      "payload_schema": {
+        "type": "object",
+        "properties": {
+          "package_id": {"type": "string", "format": "UUID"},
+          "reporting_period": {"type": "string"},
+          "credit_risk_rwa": {"type": "number"},
+          "credit_risk_approach": {"type": "string", "enum": ["STANDARDISED", "IRB_FOUNDATION", "IRB_ADVANCED", "MIXED"]},
+          "output_floor_applied": {"type": "boolean"},
+          "output_floor_percentage": {"type": "number"},
+          "exposure_class_breakdown": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "exposure_class": {"type": "string"},
+                "rwa_amount": {"type": "number"},
+                "approach_used": {"type": "string"}
+              }
+            }
+          },
+          "calculated_at": {"type": "string", "format": "date-time"}
+        },
+        "required": ["package_id", "reporting_period", "credit_risk_rwa", "credit_risk_approach", "calculated_at"]
+      },
+      "derived_from": {
+        "entity": "ENT-055",
+        "fields_included": ["credit_risk_rwa", "credit_risk_approach", "output_floor_applied", "output_floor_percentage"],
+        "fields_excluded": ["data_lineage"],
+        "fields_masked": []
+      },
+      "consumers": ["SVC-103"],
+      "ordering_guarantees": "Published after CapitalDataExtractionRequested. Must precede CapitalDataPackageAssembled.",
+      "topic": "risk.capital.credit-risk-rwa",
+      "data_classification": "internal_confidential",
       "worm_audit_pipeline": true,
-      "retention": "",
-      "cloudevents_type": ""
+      "retention": "7 years",
+      "cloudevents_type": "com.bank.risk.credit-risk-rwa-calculated.v1"
+    },
+    {
+      "event_id": "EVT-121",
+      "name": "MarketRiskRWACalculated",
+      "source_service": "SVC-012",
+      "source_capability": "CAP-004",
+      "source_entity": "ENT-055",
+      "trigger": "Market risk RWA calculation completes for the quarter",
+      "journey_phase": "PH-088",
+      "payload_schema": {
+        "type": "object",
+        "properties": {
+          "package_id": {"type": "string", "format": "UUID"},
+          "reporting_period": {"type": "string"},
+          "market_risk_rwa": {"type": "number"},
+          "approach": {"type": "string", "enum": ["FRTB_SA", "FRTB_IMA"]},
+          "desk_breakdown": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "desk_name": {"type": "string"},
+                "risk_factor": {"type": "string"},
+                "rwa_amount": {"type": "number"}
+              }
+            }
+          },
+          "calculated_at": {"type": "string", "format": "date-time"}
+        },
+        "required": ["package_id", "reporting_period", "market_risk_rwa", "approach", "calculated_at"]
+      },
+      "derived_from": {
+        "entity": "ENT-055",
+        "fields_included": ["market_risk_rwa"],
+        "fields_excluded": ["data_lineage"],
+        "fields_masked": []
+      },
+      "consumers": ["SVC-103"],
+      "ordering_guarantees": "Published after CapitalDataExtractionRequested. Must precede CapitalDataPackageAssembled.",
+      "topic": "risk.capital.market-risk-rwa",
+      "data_classification": "internal_confidential",
+      "worm_audit_pipeline": true,
+      "retention": "7 years",
+      "cloudevents_type": "com.bank.risk.market-risk-rwa-calculated.v1"
+    },
+    {
+      "event_id": "EVT-122",
+      "name": "OperationalRiskRWACalculated",
+      "source_service": "SVC-012",
+      "source_capability": "CAP-004",
+      "source_entity": "ENT-055",
+      "trigger": "Operational risk capital calculation completes for the quarter",
+      "journey_phase": "PH-088",
+      "payload_schema": {
+        "type": "object",
+        "properties": {
+          "package_id": {"type": "string", "format": "UUID"},
+          "reporting_period": {"type": "string"},
+          "operational_risk_capital": {"type": "number"},
+          "approach": {"type": "string", "enum": ["BASEL_SA"]},
+          "business_line_breakdown": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "business_line": {"type": "string"},
+                "capital_amount": {"type": "number"}
+              }
+            }
+          },
+          "calculated_at": {"type": "string", "format": "date-time"}
+        },
+        "required": ["package_id", "reporting_period", "operational_risk_capital", "approach", "calculated_at"]
+      },
+      "derived_from": {
+        "entity": "ENT-055",
+        "fields_included": ["operational_risk_capital"],
+        "fields_excluded": ["data_lineage"],
+        "fields_masked": []
+      },
+      "consumers": ["SVC-103"],
+      "ordering_guarantees": "Published after CapitalDataExtractionRequested. Must precede CapitalDataPackageAssembled.",
+      "topic": "risk.capital.operational-risk-rwa",
+      "data_classification": "internal_confidential",
+      "worm_audit_pipeline": true,
+      "retention": "7 years",
+      "cloudevents_type": "com.bank.risk.operational-risk-rwa-calculated.v1"
+    },
+    {
+      "event_id": "EVT-123",
+      "name": "CapitalDataPackageAssembled",
+      "source_service": "SVC-012",
+      "source_capability": "CAP-004",
+      "source_entity": "ENT-055",
+      "trigger": "All three risk type calculations complete and are assembled into the aggregate package",
+      "journey_phase": "PH-088",
+      "payload_schema": {
+        "type": "object",
+        "properties": {
+          "package_id": {"type": "string", "format": "UUID"},
+          "reporting_period": {"type": "string"},
+          "quarter_end_date": {"type": "string", "format": "date"},
+          "credit_risk_rwa": {"type": "number"},
+          "credit_risk_approach": {"type": "string"},
+          "output_floor_applied": {"type": "boolean"},
+          "output_floor_percentage": {"type": "number"},
+          "market_risk_rwa": {"type": "number"},
+          "operational_risk_capital": {"type": "number"},
+          "total_rwa": {"type": "number"},
+          "data_lineage": {
+            "type": "object",
+            "properties": {
+              "loan_book_extract_id": {"type": "string"},
+              "trading_book_extract_id": {"type": "string"},
+              "op_loss_extract_id": {"type": "string"},
+              "extraction_timestamp": {"type": "string", "format": "date-time"}
+            }
+          },
+          "assembled_at": {"type": "string", "format": "date-time"}
+        },
+        "required": ["package_id", "reporting_period", "quarter_end_date", "credit_risk_rwa", "market_risk_rwa", "operational_risk_capital", "total_rwa", "assembled_at"]
+      },
+      "derived_from": {
+        "entity": "ENT-055",
+        "fields_included": ["package_id", "reporting_period", "quarter_end_date", "credit_risk_rwa", "credit_risk_approach", "output_floor_applied", "output_floor_percentage", "market_risk_rwa", "operational_risk_capital", "total_rwa", "data_lineage"],
+        "fields_excluded": ["status"],
+        "fields_masked": []
+      },
+      "consumers": ["SVC-015", "SVC-103"],
+      "ordering_guarantees": "Published once per cycle after all RWA calculation events. This is the primary cross-capability handover event — consumed by CAP-005 Compliance Core Service to begin COREP consolidation.",
+      "topic": "risk.capital.package-assembled",
+      "data_classification": "internal_confidential",
+      "worm_audit_pipeline": true,
+      "retention": "7 years",
+      "cloudevents_type": "com.bank.risk.capital-data-package-assembled.v1"
+    },
+    {
+      "event_id": "EVT-124",
+      "name": "COREPReturnDraftGenerated",
+      "source_service": "SVC-015",
+      "source_capability": "CAP-005",
+      "source_entity": "ENT-056",
+      "trigger": "COREP return consolidation and XBRL template population complete",
+      "journey_phase": "PH-089",
+      "payload_schema": {
+        "type": "object",
+        "properties": {
+          "return_id": {"type": "string", "format": "UUID"},
+          "reporting_period": {"type": "string"},
+          "return_type": {"type": "string", "enum": ["SOLO", "CONSOLIDATED"]},
+          "xbrl_taxonomy_version": {"type": "string"},
+          "templates_populated": {"type": "integer"},
+          "manual_classifications_count": {"type": "integer"},
+          "generated_at": {"type": "string", "format": "date-time"}
+        },
+        "required": ["return_id", "reporting_period", "return_type", "generated_at"]
+      },
+      "derived_from": {
+        "entity": "ENT-056",
+        "fields_included": ["return_id", "reporting_period", "return_type", "xbrl_taxonomy_version"],
+        "fields_excluded": ["own_funds_cet1", "own_funds_at1", "own_funds_t2", "total_own_funds", "total_rwa", "cet1_ratio", "leverage_ratio"],
+        "fields_masked": []
+      },
+      "consumers": ["SVC-103"],
+      "ordering_guarantees": "Published after CapitalDataPackageAssembled is consumed and consolidation completes.",
+      "topic": "compliance.corep.draft-generated",
+      "data_classification": "internal_confidential",
+      "worm_audit_pipeline": false,
+      "retention": "7 years",
+      "cloudevents_type": "com.bank.compliance.corep-return-draft-generated.v1"
+    },
+    {
+      "event_id": "EVT-125",
+      "name": "COREPValidationCompleted",
+      "source_service": "SVC-015",
+      "source_capability": "CAP-005",
+      "source_entity": "ENT-057",
+      "trigger": "Multi-layer validation process completes",
+      "journey_phase": "PH-090",
+      "payload_schema": {
+        "type": "object",
+        "properties": {
+          "validation_id": {"type": "string", "format": "UUID"},
+          "return_id": {"type": "string"},
+          "reporting_period": {"type": "string"},
+          "overall_outcome": {"type": "string", "enum": ["PASS", "PASS_WITH_EXCEPTIONS", "FAIL"]},
+          "xbrl_validation_outcome": {"type": "string", "enum": ["PASS", "FAIL"]},
+          "xbrl_error_count": {"type": "integer"},
+          "gl_reconciliation_status": {"type": "string", "enum": ["RECONCILED", "UNRECONCILED", "RECONCILED_WITH_EXCEPTIONS"]},
+          "material_variances_count": {"type": "integer"},
+          "validated_at": {"type": "string", "format": "date-time"}
+        },
+        "required": ["validation_id", "return_id", "reporting_period", "overall_outcome", "validated_at"]
+      },
+      "derived_from": {
+        "entity": "ENT-057",
+        "fields_included": ["validation_id", "return_id", "xbrl_validation_outcome", "xbrl_error_count", "gl_reconciliation_status", "overall_outcome"],
+        "fields_excluded": ["xbrl_errors", "variance_analysis", "gl_reconciliation_differences", "independent_review"],
+        "fields_masked": []
+      },
+      "consumers": ["SVC-103"],
+      "ordering_guarantees": "Published after COREPReturnDraftGenerated. Must precede COREPReturnApproved.",
+      "topic": "compliance.corep.validation-completed",
+      "data_classification": "internal_confidential",
+      "worm_audit_pipeline": true,
+      "retention": "7 years",
+      "cloudevents_type": "com.bank.compliance.corep-validation-completed.v1"
+    },
+    {
+      "event_id": "EVT-126",
+      "name": "COREPReturnApproved",
+      "source_service": "SVC-015",
+      "source_capability": "CAP-005",
+      "source_entity": "ENT-056",
+      "trigger": "CFO (SMF2) records formal sign-off and attestation",
+      "journey_phase": "PH-091",
+      "payload_schema": {
+        "type": "object",
+        "properties": {
+          "return_id": {"type": "string"},
+          "reporting_period": {"type": "string"},
+          "signoff_id": {"type": "string"},
+          "signer_identity": {"type": "string"},
+          "signed_at": {"type": "string", "format": "date-time"},
+          "worm_reference": {"type": "string"}
+        },
+        "required": ["return_id", "reporting_period", "signoff_id", "signer_identity", "signed_at", "worm_reference"]
+      },
+      "derived_from": {
+        "entity": "ENT-056",
+        "fields_included": ["return_id", "reporting_period", "cfo_signoff.signoff_id", "cfo_signoff.signer_identity", "cfo_signoff.signed_at", "cfo_signoff.worm_reference"],
+        "fields_excluded": ["own_funds_cet1", "total_rwa", "cet1_ratio", "attestation_statement"],
+        "fields_masked": []
+      },
+      "consumers": ["SVC-103"],
+      "ordering_guarantees": "Published after COREPValidationCompleted with PASS outcome. Must precede COREPReturnSubmitted.",
+      "topic": "compliance.corep.return-approved",
+      "data_classification": "internal_confidential",
+      "worm_audit_pipeline": true,
+      "retention": "7 years",
+      "cloudevents_type": "com.bank.compliance.corep-return-approved.v1"
+    },
+    {
+      "event_id": "EVT-127",
+      "name": "COREPReturnSubmitted",
+      "source_service": "SVC-015",
+      "source_capability": "CAP-005",
+      "source_entity": "ENT-056",
+      "trigger": "COREP return submitted to PRA via RegData",
+      "journey_phase": "PH-091",
+      "payload_schema": {
+        "type": "object",
+        "properties": {
+          "return_id": {"type": "string"},
+          "reporting_period": {"type": "string"},
+          "return_type": {"type": "string", "enum": ["SOLO", "CONSOLIDATED"]},
+          "pra_submission_reference": {"type": "string"},
+          "submitted_at": {"type": "string", "format": "date-time"},
+          "submission_deadline": {"type": "string", "format": "date"},
+          "days_before_deadline": {"type": "integer"}
+        },
+        "required": ["return_id", "reporting_period", "pra_submission_reference", "submitted_at"]
+      },
+      "derived_from": {
+        "entity": "ENT-056",
+        "fields_included": ["return_id", "reporting_period", "return_type", "pra_submission_reference", "submission_deadline"],
+        "fields_excluded": ["own_funds_cet1", "total_rwa", "cet1_ratio", "templates"],
+        "fields_masked": []
+      },
+      "consumers": ["SVC-103"],
+      "ordering_guarantees": "Published after COREPReturnApproved. Must precede COREPReturnAcknowledged.",
+      "topic": "compliance.corep.return-submitted",
+      "data_classification": "internal_confidential",
+      "worm_audit_pipeline": true,
+      "retention": "7 years",
+      "cloudevents_type": "com.bank.compliance.corep-return-submitted.v1"
+    },
+    {
+      "event_id": "EVT-128",
+      "name": "COREPReturnAcknowledged",
+      "source_service": "SVC-015",
+      "source_capability": "CAP-005",
+      "source_entity": "ENT-056",
+      "trigger": "PRA RegData system acknowledges receipt of the submitted COREP return",
+      "journey_phase": "PH-091",
+      "payload_schema": {
+        "type": "object",
+        "properties": {
+          "return_id": {"type": "string"},
+          "reporting_period": {"type": "string"},
+          "pra_submission_reference": {"type": "string"},
+          "pra_acknowledgement_timestamp": {"type": "string", "format": "date-time"}
+        },
+        "required": ["return_id", "reporting_period", "pra_submission_reference", "pra_acknowledgement_timestamp"]
+      },
+      "derived_from": {
+        "entity": "ENT-056",
+        "fields_included": ["return_id", "reporting_period", "pra_submission_reference", "pra_acknowledgement_timestamp"],
+        "fields_excluded": [],
+        "fields_masked": []
+      },
+      "consumers": ["SVC-103"],
+      "ordering_guarantees": "Published after COREPReturnSubmitted. Final event in the happy path.",
+      "topic": "compliance.corep.return-acknowledged",
+      "data_classification": "internal_confidential",
+      "worm_audit_pipeline": true,
+      "retention": "7 years",
+      "cloudevents_type": "com.bank.compliance.corep-return-acknowledged.v1"
+    },
+    {
+      "event_id": "EVT-129",
+      "name": "COREPRestatementTriggered",
+      "source_service": "SVC-015",
+      "source_capability": "CAP-005",
+      "source_entity": "ENT-058",
+      "trigger": "Material error identified in a submitted COREP return; restatement process initiated",
+      "journey_phase": "PH-092",
+      "payload_schema": {
+        "type": "object",
+        "properties": {
+          "restatement_id": {"type": "string", "format": "UUID"},
+          "original_return_id": {"type": "string"},
+          "reporting_period": {"type": "string"},
+          "error_source": {"type": "string", "enum": ["INTERNAL_QA", "PRA_QUERY", "SUBSEQUENT_PERIOD_RECONCILIATION", "EXTERNAL_AUDIT"]},
+          "error_description": {"type": "string"},
+          "affected_templates": {"type": "array", "items": {"type": "string"}},
+          "triggered_at": {"type": "string", "format": "date-time"}
+        },
+        "required": ["restatement_id", "original_return_id", "reporting_period", "error_source", "error_description", "triggered_at"]
+      },
+      "derived_from": {
+        "entity": "ENT-058",
+        "fields_included": ["restatement_id", "original_return_id", "error_source", "error_description", "affected_templates"],
+        "fields_excluded": ["root_cause_analysis", "remediation_plan"],
+        "fields_masked": []
+      },
+      "consumers": ["SVC-103"],
+      "ordering_guarantees": "Published only in exception path EX-017-001. Published after COREPReturnAcknowledged.",
+      "topic": "compliance.corep.restatement-triggered",
+      "data_classification": "internal_confidential",
+      "worm_audit_pipeline": true,
+      "retention": "7 years",
+      "cloudevents_type": "com.bank.compliance.corep-restatement-triggered.v1"
     }
   ]
 }

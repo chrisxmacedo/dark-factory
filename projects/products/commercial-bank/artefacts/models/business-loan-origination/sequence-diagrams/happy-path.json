@@ -2,18 +2,42 @@
   "diagram_id": "SEQ-JRN007-01",
   "journey_id": "JRN-007",
   "path": "happy_path",
-  "title": "JRN-007 Happy Path: SME Term Loan — Enquiry to Drawdown",
+  "title": "JRN-007 Happy Path: SME Term Loan \u2014 Enquiry to Drawdown",
   "description": "Full happy-path flow from initial RM conversation through credit assessment, committee approval, facility agreement execution, and CHAPS drawdown to the business account. Credit assessment request and completion cross the CAP-002/CAP-004 boundary via async events only. Drawdown disbursement crosses CAP-002/CAP-003 via synchronous payment API.",
   "document_version": "1.0.0",
   "participants": [
-    { "id": "PER002", "label": "PER-002\nBusiness Owner" },
-    { "id": "PER050", "label": "PER-050\nRelationship Manager" },
-    { "id": "PER056", "label": "PER-056\nCredit Analyst" },
-    { "id": "SVC005", "label": "SVC-005\nCommercial Banking Core\n(CAP-002)" },
-    { "id": "SVC102", "label": "SVC-102\nEvent Bus" },
-    { "id": "SVC012", "label": "SVC-012\nRisk Engine\n(CAP-004)" },
-    { "id": "SVC009", "label": "SVC-009\nDomestic Payments\n(CAP-003)" },
-    { "id": "SVC053", "label": "SVC-053\nNotification Service" }
+    {
+      "id": "PER002",
+      "label": "PER-002\nBusiness Owner"
+    },
+    {
+      "id": "PER050",
+      "label": "PER-050\nRelationship Manager"
+    },
+    {
+      "id": "PER056",
+      "label": "PER-056\nCredit Analyst"
+    },
+    {
+      "id": "SVC005",
+      "label": "SVC-005\nCommercial Banking Core\n(CAP-002)"
+    },
+    {
+      "id": "SVC102",
+      "label": "SVC-102\nEvent Bus"
+    },
+    {
+      "id": "SVC012",
+      "label": "SVC-012\nRisk Engine\n(CAP-004)"
+    },
+    {
+      "id": "SVC009",
+      "label": "SVC-009\nDomestic Payments\n(CAP-003)"
+    },
+    {
+      "id": "SVC053",
+      "label": "SVC-053\nNotification Service"
+    }
   ],
   "steps": [
     {
@@ -36,7 +60,7 @@
       "from": "PER050",
       "to": "SVC005",
       "type": "sync",
-      "label": "Reads BusinessCustomer (ENT-B001)\nand BusinessAccount (ENT-B002) profile"
+      "label": "Reads BusinessCustomer (ENT-079)\nand BusinessAccount (ENT-080) profile"
     },
     {
       "step": 4,
@@ -98,7 +122,7 @@
       "from": "SVC005",
       "to": "SVC102",
       "type": "async",
-      "label": "EVT-032: CreditAssessmentRequested\ntopic: commercial.credit-assessments\n[CROSS-CAPABILITY: CAP-002 → CAP-004]"
+      "label": "EVT-032: CreditAssessmentRequested\ntopic: commercial.credit-assessments\n[CROSS-CAPABILITY: CAP-002 \u2192 CAP-004]"
     },
     {
       "step": 12,
@@ -114,7 +138,7 @@
       "from": "SVC102",
       "to": "SVC053",
       "type": "async",
-      "label": "Delivers EVT-031\n→ SVC-053 sends acknowledgement\nto PER-002"
+      "label": "Delivers EVT-031\n\u2192 SVC-053 sends acknowledgement\nto PER-002"
     },
     {
       "step": 14,
@@ -144,7 +168,7 @@
       "from": "SVC012",
       "to": "SVC102",
       "type": "async",
-      "label": "EVT-033: CreditAssessmentCompleted\ntopic: commercial.credit-assessments\n[CROSS-CAPABILITY: CAP-004 → CAP-002]"
+      "label": "EVT-033: CreditAssessmentCompleted\ntopic: commercial.credit-assessments\n[CROSS-CAPABILITY: CAP-004 \u2192 CAP-002]"
     },
     {
       "step": 18,
@@ -160,7 +184,7 @@
       "from": "SVC005",
       "to": "SVC005",
       "type": "internal",
-      "label": "Stores assessment_id reference\nRoutes to Credit Analyst queue\nrisk_rating=4 → RM authority path"
+      "label": "Stores assessment_id reference\nRoutes to Credit Analyst queue\nrisk_rating=4 \u2192 RM authority path"
     },
     {
       "step": 20,
@@ -190,7 +214,7 @@
       "step": 23,
       "phase": "PH-019",
       "type": "note",
-      "description": "PH-019: Underwriting (within RM authority — no committee required for this amount)"
+      "description": "PH-019: Underwriting (within RM authority \u2014 no committee required for this amount)"
     },
     {
       "step": 24,
@@ -222,7 +246,7 @@
       "from": "SVC102",
       "to": "SVC053",
       "type": "async",
-      "label": "Delivers EVT-034\n→ SVC-053 sends approval letter\nwith APRC disclosure to PER-002"
+      "label": "Delivers EVT-034\n\u2192 SVC-053 sends approval letter\nwith APRC disclosure to PER-002"
     },
     {
       "step": 28,
@@ -268,7 +292,7 @@
       "from": "SVC005",
       "to": "SVC005",
       "type": "internal",
-      "label": "Updates FacilityAgreement.signed_date\nAll CP satisfied → all_conditions_precedent_satisfied = true\nUpdates LoanApplication.status = facility_agreed"
+      "label": "Updates FacilityAgreement.signed_date\nAll CP satisfied \u2192 all_conditions_precedent_satisfied = true\nUpdates LoanApplication.status = facility_agreed"
     },
     {
       "step": 34,
@@ -298,15 +322,15 @@
       "from": "SVC005",
       "to": "SVC005",
       "type": "internal",
-      "label": "Validates: FacilityAgreed ✓,\nall CPs satisfied ✓,\namount <= facility ✓,\nCHAPS cut-off check ✓"
+      "label": "Validates: FacilityAgreed \u2713,\nall CPs satisfied \u2713,\namount <= facility \u2713,\nCHAPS cut-off check \u2713"
     },
     {
       "step": 38,
       "phase": "PH-021",
       "from": "SVC005",
-      "to": "SVC009",
-      "type": "sync",
-      "label": "CHAPS payment instruction\n(sync — awaits settlement confirmation)\n[CROSS-CAPABILITY: CAP-002 → CAP-003]"
+      "to": "EVTBUS",
+      "type": "event-publish",
+      "label": "publish DrawdownPaymentRequested event via Event Bus\n(async cross-capability: CAP-002 \u2192 CAP-003)"
     },
     {
       "step": 39,
@@ -314,15 +338,15 @@
       "from": "SVC009",
       "to": "SVC009",
       "type": "internal",
-      "label": "Executes CHAPS payment\nto BusinessAccount (ENT-B002)\nBank of England RT2 settlement"
+      "label": "Executes CHAPS payment\nto BusinessAccount (ENT-080)\nBank of England RT2 settlement"
     },
     {
       "step": 40,
       "phase": "PH-021",
-      "from": "SVC009",
+      "from": "EVTBUS",
       "to": "SVC005",
-      "type": "return",
-      "label": "Settlement confirmed\n{settlement_reference, settlement_date}"
+      "type": "event-publish",
+      "label": "deliver DrawdownPaymentCompleted event\n{settlement_reference, settlement_date}"
     },
     {
       "step": 41,
@@ -362,7 +386,7 @@
       "from": "SVC102",
       "to": "SVC012",
       "type": "async",
-      "label": "Delivers EVT-037 + EVT-038\n→ SVC-012 updates RWA + IFRS 9 ECL register\n[CROSS-CAPABILITY: CAP-002 events → CAP-004]"
+      "label": "Delivers EVT-037 + EVT-038\n\u2192 SVC-012 updates RWA + IFRS 9 ECL register\n[CROSS-CAPABILITY: CAP-002 events \u2192 CAP-004]"
     },
     {
       "step": 46,
@@ -370,13 +394,13 @@
       "from": "SVC102",
       "to": "SVC053",
       "type": "async",
-      "label": "Delivers EVT-037\n→ SVC-053 sends drawdown confirmation\nletter to PER-002"
+      "label": "Delivers EVT-037\n\u2192 SVC-053 sends drawdown confirmation\nletter to PER-002"
     },
     {
       "step": 47,
       "phase": "PH-022",
       "type": "note",
-      "description": "PH-022: Ongoing Monitoring (first quarterly covenant test — all pass)"
+      "description": "PH-022: Ongoing Monitoring (first quarterly covenant test \u2014 all pass)"
     },
     {
       "step": 48,
@@ -384,7 +408,7 @@
       "from": "SVC102",
       "to": "SVC005",
       "type": "async",
-      "label": "Delivers EVT-038\n→ SVC-005 activates covenant schedule\nCreates ENT-021 records (not_yet_tested)"
+      "label": "Delivers EVT-038\n\u2192 SVC-005 activates covenant schedule\nCreates ENT-021 records (not_yet_tested)"
     },
     {
       "step": 49,
@@ -400,7 +424,7 @@
       "from": "SVC005",
       "to": "SVC005",
       "type": "internal",
-      "label": "Calculates covenant values:\nDSCR_actual=1.45 >= 1.25 ✓\nLeverage_actual=2.3 <= 3.0 ✓\nUpdates ENT-021 compliance_status=compliant"
+      "label": "Calculates covenant values:\nDSCR_actual=1.45 >= 1.25 \u2713\nLeverage_actual=2.3 <= 3.0 \u2713\nUpdates ENT-021 compliance_status=compliant"
     },
     {
       "step": 51,

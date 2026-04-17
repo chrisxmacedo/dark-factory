@@ -11,7 +11,7 @@ sequenceDiagram
     participant FraudPlatform as INTL-003<br/>Fraud Ops Platform
     participant Audit as SVC-103<br/>Audit & Logging
 
-    Note over Customer,Audit: PY-001 — Payment Initiation (CoP no_match)
+    Note over Customer,Audit: PH-147 — Payment Initiation (CoP no_match)
 
     Customer->>Channel: Enter payee details (new payee, £2,500 — unusual amount)
     Channel->>DomPay: POST /cop/verify {payee_sort_code, payee_account_number, payee_name}
@@ -26,29 +26,29 @@ sequenceDiagram
     Channel->>Retail: POST /payments {amount: 2500.00, cop_result: no_match,<br/>cop_override_confirmed: true, cop_override_timestamp, sca_assertion_ref}
     Note right of Retail: Balance OK, limit OK. Create PaymentIntent<br/>(status: pending_screening, cop_override recorded).
     Retail-->>Channel: 202 Accepted {payment_intent_id, status: pending_screening}
-    Retail->>EventBus: Publish PaymentIntentCreated (EVT-P01) — includes cop_override_confirmed: true
-    EventBus->>Audit: Write EVT-P01 to WORM audit log
+    Retail->>EventBus: Publish PaymentIntentCreated (EVT-179) — includes cop_override_confirmed: true
+    EventBus->>Audit: Write EVT-179 to WORM audit log
     Channel-->>Customer: Show "Processing your payment..." screen
 
-    Note over Customer,Audit: PY-002 — Pre-Execution Checks (concurrent, async)
+    Note over Customer,Audit: PH-148 — Pre-Execution Checks (concurrent, async)
 
     par Sanctions (clear)
         EventBus->>Sanctions: Consume PaymentIntentCreated → run sanctions screen
-        Sanctions->>EventBus: Publish SanctionsScreeningCompleted (EVT-P02) {outcome: clear}
+        Sanctions->>EventBus: Publish SanctionsScreeningCompleted (EVT-180) {outcome: clear}
     and Fraud scoring (BLOCK)
         EventBus->>Fraud: Consume PaymentIntentCreated → run ML fraud scoring
         Note right of Fraud: High score: new payee + CoP no_match override<br/>+ amount 5x account average
-        Fraud->>EventBus: Publish FraudScoreCompleted (EVT-P03)<br/>{risk_level: block, fraud_score: 0.94,<br/>top_risk_features: [cop_no_match_override,<br/>unusual_amount_vs_history, new_payee]}
+        Fraud->>EventBus: Publish FraudScoreCompleted (EVT-181)<br/>{risk_level: block, fraud_score: 0.94,<br/>top_risk_features: [cop_no_match_override,<br/>unusual_amount_vs_history, new_payee]}
     end
 
-    EventBus->>Audit: Write EVT-P02 and EVT-P03 (risk_level only) to audit log
+    EventBus->>Audit: Write EVT-180 and EVT-181 (risk_level only) to audit log
 
-    Note over Customer,Audit: PY-003 — Payment Decision (FRAUD BLOCK)
+    Note over Customer,Audit: PH-149 — Payment Decision (FRAUD BLOCK)
 
-    EventBus->>Retail: Consume EVT-P02 (clear) + EVT-P03 (BLOCK)
+    EventBus->>Retail: Consume EVT-180 (clear) + EVT-181 (BLOCK)
     Note right of Retail: Decision: FRAUD BLOCK.<br/>Update PaymentIntent.status = fraud_blocked.<br/>No account debit.
-    Retail->>EventBus: Publish PaymentFraudBlocked (EVT-P08)<br/>{risk_level: block, top_risk_features, payment_intent_id}
-    EventBus->>Audit: Write EVT-P08 to WORM audit log
+    Retail->>EventBus: Publish PaymentFraudBlocked (EVT-186)<br/>{risk_level: block, top_risk_features, payment_intent_id}
+    EventBus->>Audit: Write EVT-186 to WORM audit log
 
     EventBus->>FraudPlatform: Consume PaymentFraudBlocked → create investigation case
     FraudPlatform->>FraudAnalyst: 🚨 Case alert: £2,500 blocked — CoP override + high fraud score

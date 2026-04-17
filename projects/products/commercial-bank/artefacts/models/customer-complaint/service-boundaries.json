@@ -1,0 +1,135 @@
+{
+  "journey_id": "JRN-019",
+  "document_version": "0.1.0",
+  "status": "Draft",
+  "architectural_principle": "Cross-capability communication is exclusively async events. Within a capability, services communicate freely.",
+  "services": [
+    {
+      "service_id": "SVC-001",
+      "service_name": "Retail Banking Core",
+      "capability_id": "CAP-001",
+      "owned_entities": ["ENT-061"],
+      "published_events": ["EVT-138", "EVT-139", "EVT-140", "EVT-141"],
+      "consumed_events": [],
+      "consumed_apis": [],
+      "design_decisions": [
+        {
+          "id": "DD-SVC001-JRN019-01",
+          "decision": "SVC-001 owns the ComplaintCase entity and the full complaint lifecycle",
+          "rationale": "Complaints are a retail banking customer service function. SVC-001 holds all necessary customer and account data for investigation."
+        }
+      ]
+    },
+    {
+      "service_id": "SVC-015",
+      "service_name": "Compliance Core Service",
+      "capability_id": "CAP-005",
+      "owned_entities": ["ENT-062"],
+      "published_events": [],
+      "consumed_events": [
+        {
+          "event_id": "EVT-138",
+          "name": "ComplaintReceived",
+          "provider_service_id": "SVC-001",
+          "purpose": "JRN-019: Increment DISP complaint counter for the relevant product category. Initialise reporting tracking.",
+          "maps_to": "DisCaseSummary.complaints_received increment for product_category"
+        },
+        {
+          "event_id": "EVT-140",
+          "name": "ComplaintResolved",
+          "provider_service_id": "SVC-001",
+          "purpose": "JRN-019: Record outcome (upheld/rejected) and redress amount in DISP reporting dataset.",
+          "maps_to": "DisCaseSummary.complaints_upheld or complaints_rejected increment"
+        },
+        {
+          "event_id": "EVT-141",
+          "name": "ComplaintClosed",
+          "provider_service_id": "SVC-001",
+          "purpose": "JRN-019: Update DISP half-yearly reporting dataset with closure timestamp and resolution days.",
+          "maps_to": "DisCaseSummary.complaints_closed increment; median_resolution_days recalculation"
+        }
+      ],
+      "consumed_apis": [],
+      "design_decisions": [
+        {
+          "id": "DD-SVC015-JRN019-01",
+          "decision": "SVC-015 consumes complaint events for DISP reporting — it does not participate in the complaint resolution workflow",
+          "rationale": "Compliance's role in complaint handling is regulatory reporting and oversight, not resolution management. Event-driven consumption keeps the capabilities independent."
+        }
+      ]
+    },
+    {
+      "service_id": "SVC-053",
+      "service_name": "Notifications Service",
+      "capability_id": "CAP-007",
+      "owned_entities": [],
+      "published_events": [],
+      "consumed_events": [
+        {
+          "event_id": "EVT-138",
+          "name": "ComplaintReceived",
+          "provider_service_id": "SVC-001",
+          "purpose": "JRN-019: Dispatch acknowledgement notification to customer with complaint reference and regulatory timeline.",
+          "maps_to": "Notification template: complaint_acknowledgement"
+        },
+        {
+          "event_id": "EVT-141",
+          "name": "ComplaintClosed",
+          "provider_service_id": "SVC-001",
+          "purpose": "JRN-019: Dispatch resolution communication (SRC or Final Response Letter) to customer.",
+          "maps_to": "Notification template: complaint_summary_resolution or complaint_final_response"
+        }
+      ],
+      "consumed_apis": [],
+      "design_decisions": []
+    },
+    {
+      "service_id": "SVC-103",
+      "service_name": "Audit & Logging Service",
+      "capability_id": "CAP-006",
+      "owned_entities": [],
+      "published_events": [],
+      "consumed_events": [
+        {
+          "event_id": "EVT-138",
+          "name": "ComplaintReceived",
+          "provider_service_id": "SVC-001",
+          "purpose": "JRN-019: Write immutable audit record of complaint receipt. DISP 1.9.1R 3-year retention.",
+          "maps_to": "AuditRecord with entity_type = ComplaintCase, action = received"
+        },
+        {
+          "event_id": "EVT-141",
+          "name": "ComplaintClosed",
+          "provider_service_id": "SVC-001",
+          "purpose": "JRN-019: Write immutable audit record of complaint closure with full lifecycle summary.",
+          "maps_to": "AuditRecord with entity_type = ComplaintCase, action = closed"
+        }
+      ],
+      "consumed_apis": [],
+      "design_decisions": []
+    }
+  ],
+  "cross_service_interaction_summary": [
+    {
+      "from_service": "SVC-001",
+      "to_service": "SVC-015",
+      "interaction_type": "async_event",
+      "events": ["EVT-138", "EVT-140", "EVT-141"],
+      "purpose": "DISP regulatory reporting — compliance tracks complaint statistics for FCA half-yearly submission"
+    },
+    {
+      "from_service": "SVC-001",
+      "to_service": "SVC-053",
+      "interaction_type": "async_event",
+      "events": ["EVT-138", "EVT-141"],
+      "purpose": "Customer notifications — acknowledgement and resolution communication"
+    },
+    {
+      "from_service": "SVC-001",
+      "to_service": "SVC-103",
+      "interaction_type": "async_event",
+      "events": ["EVT-138", "EVT-141"],
+      "purpose": "Immutable audit logging for DISP record retention compliance"
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+sequenceDiagram
+    actor TPP as PER-006 (PISP)
+    actor Customer as PER-001 (Customer)
+    participant Channel as SVC-017<br/>Digital Channels
+    participant IAM as SVC-100<br/>IAM
+    participant DomPay as SVC-009<br/>Domestic Payments
+    participant Fraud as SVC-013<br/>Fraud Detection
+    participant EventBus as SVC-102<br/>Event Bus
+    participant Retail as SVC-001<br/>Retail Banking Core
+    participant Notifications as SVC-053<br/>Notifications
+    participant Audit as SVC-103<br/>Audit & Logging
+
+    Note over TPP,Audit: PH-115 — VRP Consent Request
+
+    TPP->>Channel: POST /consents {payee, max_single: £500, max_monthly: £500, category: subscription, valid_to: 2027-04-15}
+    Channel->>IAM: POST /token/validate {tpp_access_token, scope: vrp:consent}
+    IAM-->>Channel: {valid: true, tpp_client_id}
+    Channel->>DomPay: Create VrpConsent {params}
+    Note right of DomPay: Create VrpConsent (status=pending_authorisation)
+    DomPay-->>Channel: consent_id, redirect_uri
+    Channel-->>TPP: 201 Created {consent_id, redirect_uri}
+
+    Note over TPP,Audit: PH-116 — Customer Authentication and Consent Authorisation
+
+    TPP->>Customer: Redirect to bank VRP consent portal
+    Customer->>Channel: Complete SCA (biometric)
+    Channel->>IAM: POST /sca/validate {assertion}
+    IAM-->>Channel: {valid: true}
+    Channel-->>Customer: Display consent parameters: max £500/payment, £500/month, subscription, expires 2027-04-15
+    Customer->>Channel: Confirm consent grant
+    Channel->>DomPay: Activate VrpConsent {consent_id, sca_assertion_ref}
+    Note right of DomPay: Update VrpConsent status=active
+    DomPay->>EventBus: Publish VrpConsentGranted (EVT-156)
+    EventBus->>Notifications: Consume EVT-156 → Send consent confirmation to customer
+    EventBus->>Audit: Consume EVT-156 → Write immutable consent grant record
+    DomPay-->>Channel: consent active; authorisation_code
+    Channel-->>TPP: Redirect to redirect_uri with authorisation_code
+
+    Note over TPP,Audit: PH-117 — VRP Payment Execution
+
+    TPP->>Channel: POST /consents/{consent_id}/payments {amount: 49.99, end_to_end_id}
+    Channel->>IAM: POST /token/validate {tpp_access_token, scope: vrp:payment}
+    IAM-->>Channel: {valid: true}
+    Channel->>DomPay: Process VRP payment {consent_id, amount: 49.99}
+    Note right of DomPay: Validate: £49.99 ≤ max_single £500 ✓<br/>monthly_aggregate £49.99 ≤ £500 ✓<br/>consent active ✓
+    DomPay->>Fraud: Score VRP payment (inline)
+    Fraud-->>DomPay: fraud_score: 0.12 (below threshold)
+    Note right of DomPay: Execute FPS; create VrpPayment status=executed<br/>increment current_month_aggregate to £49.99
+    DomPay->>EventBus: Publish VrpPaymentExecuted (EVT-157)
+    EventBus->>Retail: Consume EVT-157 → Debit source account; record transaction
+    EventBus->>Notifications: Consume EVT-157 → Send payment confirmation to customer
+    EventBus->>Audit: Consume EVT-157 → Write payment audit record
+    DomPay-->>Channel: vrp_payment_id, fps_end_to_end_id, status: executed
+    Channel-->>TPP: 201 Created {vrp_payment_id, fps_end_to_end_id, executed_at}

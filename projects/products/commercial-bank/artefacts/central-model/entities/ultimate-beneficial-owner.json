@@ -1,5 +1,5 @@
 {
-  "entity_id": "ENT-B003",
+  "entity_id": "ENT-081",
   "name": "UltimateBeneficialOwner",
   "description": "Records the identity and verification status of each natural person identified as a beneficial owner of a BusinessCustomer under MLR 2017 Regulation 5 — natural persons with >25% direct or indirect ownership of shares, voting rights, or right to appoint/remove majority of directors. Where no natural person meets the threshold, the senior managing official(s) are recorded as UBO of last resort (MLR 2017 Regulation 5(4)). Each UBO record links to the SVC-050 IdentityVerification record once identity is verified. This entity is the bank's audit trail for UBO identification compliance under MLR 2017 Regulation 40.",
   "owning_service": "SVC-005",
@@ -103,7 +103,7 @@
   ],
   "relationships": [
     {
-      "target_entity": "ENT-B001",
+      "target_entity": "ENT-079",
       "type": "many-to-one",
       "description": "UltimateBeneficialOwner belongs to one BusinessCustomer."
     }
@@ -117,7 +117,7 @@
     {
       "id": "DD-ENTB003-02",
       "decision": "UltimateBeneficialOwner does not reference ENT-001 (Customer) even where the UBO is also a retail customer.",
-      "rationale": "Retail and commercial are separate capability domains. FK from ENT-B003 to ENT-001 would couple CAP-002 to CAP-001. Identity correlation is performed by a separate identity resolution service at query time."
+      "rationale": "Retail and commercial are separate capability domains. FK from ENT-081 to ENT-001 would couple CAP-002 to CAP-001. Identity correlation is performed by a separate identity resolution service at query time."
     }
   ],
   "source_journeys": ["JRN-004"]

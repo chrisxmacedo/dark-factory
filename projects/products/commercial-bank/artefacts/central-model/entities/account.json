@@ -110,7 +110,7 @@
     {
       "name": "last_payment_date",
       "type": "date",
-      "validation_rule": "Optional. ISO 8601 (YYYY-MM-DD). Updated by SVC-001 when AccountDebited (EVT-P06) is published following a successful Faster Payment. Used to determine whether daily_payment_total should be reset (resets at UTC midnight). Null before the first payment.",
+      "validation_rule": "Optional. ISO 8601 (YYYY-MM-DD). Updated by SVC-001 when AccountDebited (EVT-184) is published following a successful Faster Payment. Used to determine whether daily_payment_total should be reset (resets at UTC midnight). Null before the first payment.",
       "source": "PY-004",
       "governed_by": null,
       "added_by_journey": "JRN-002",

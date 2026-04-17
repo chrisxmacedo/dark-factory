@@ -1,7 +1,7 @@
 {
   "journey_id": "JRN-004",
   "name": "Business Current Account Opening — Participant Interaction",
-  "description": "Defines, for each phase of JRN-004, what each participant can see (data projection), what actions they can take (entitlements), and what communications they receive (notifications). Covers: PER-002 (Business Customer — primary applicant), PER-050 (Relationship Manager — complex structures and EDD assisted path), PER-052 (MLRO — EDD referrals and sanctions hits). Note: directors and UBOs who are not the primary applicant receive secure verification invitations; their interaction is limited to BPH-004 (Identity Verification) only.",
+  "description": "Defines, for each phase of JRN-004, what each participant can see (data projection), what actions they can take (entitlements), and what communications they receive (notifications). Covers: PER-002 (Business Customer — primary applicant), PER-050 (Relationship Manager — complex structures and EDD assisted path), PER-052 (MLRO — EDD referrals and sanctions hits). Note: directors and UBOs who are not the primary applicant receive secure verification invitations; their interaction is limited to PH-142 (Identity Verification) only.",
   "participants": [
     {
       "persona_id": "PER-002",
@@ -10,7 +10,7 @@
       "channels": ["CH-001", "CH-002"],
       "phases": [
         {
-          "phase_id": "BPH-001",
+          "phase_id": "PH-139",
           "phase_name": "Application Initiation",
           "projection": {
             "description": "Business applicant sees the business account opening application form. Required fields: legal entity type, company name, Companies House registration number, registered address, trading address (if different), trading name (if applicable), SIC codes. Applicant selects account type.",
@@ -59,7 +59,7 @@
           ]
         },
         {
-          "phase_id": "BPH-002",
+          "phase_id": "PH-140",
           "phase_name": "Companies House Verification",
           "projection": {
             "description": "The applicant sees confirmation that the Companies House lookup has completed successfully, along with the verified company details retrieved. Any discrepancies are surfaced for the applicant to confirm or correct.",
@@ -72,7 +72,7 @@
               "SIC codes (for applicant confirmation)"
             ],
             "data_fields_masked": [
-              "Director names (shown on confirmation screen in BPH-003, not during CH lookup)"
+              "Director names (shown on confirmation screen in PH-141, not during CH lookup)"
             ],
             "data_not_visible": [
               "Full PSC filing data",
@@ -107,7 +107,7 @@
           ]
         },
         {
-          "phase_id": "BPH-003",
+          "phase_id": "PH-141",
           "phase_name": "Director and UBO Identification",
           "projection": {
             "description": "The applicant sees the list of directors and Persons with Significant Control (PSCs) retrieved from Companies House. They are asked to confirm the list is complete, declare any additional beneficial owners not appearing in the PSC register, and confirm ownership percentages for each UBO.",
@@ -155,7 +155,7 @@
           ]
         },
         {
-          "phase_id": "BPH-004",
+          "phase_id": "PH-142",
           "phase_name": "Identity Verification",
           "projection": {
             "description": "The primary applicant sees a real-time dashboard showing the identity verification status for each director and UBO. Their own verification can be completed immediately in-app. Others receive email invitations.",
@@ -209,7 +209,7 @@
           ]
         },
         {
-          "phase_id": "BPH-005",
+          "phase_id": "PH-143",
           "phase_name": "KYC/CDD Assessment",
           "projection": {
             "description": "The primary applicant sees a 'compliance checks in progress' holding screen. They are not shown any detail of the specific checks being performed (tipping-off prevention).",
@@ -254,7 +254,7 @@
           ]
         },
         {
-          "phase_id": "BPH-006",
+          "phase_id": "PH-144",
           "phase_name": "Account Decision",
           "projection": {
             "description": "The primary applicant receives the account decision outcome.",
@@ -299,7 +299,7 @@
           ]
         },
         {
-          "phase_id": "BPH-007",
+          "phase_id": "PH-145",
           "phase_name": "Account Provisioning",
           "projection": {
             "description": "The primary applicant sees the account details confirmation screen as the account is being provisioned.",
@@ -338,7 +338,7 @@
           ]
         },
         {
-          "phase_id": "BPH-008",
+          "phase_id": "PH-146",
           "phase_name": "Digital Channel Activation",
           "projection": {
             "description": "The primary applicant sets up business banking portal credentials and biometric SCA. The business portal welcome dashboard shows account details, payment capabilities, and an onboarding checklist.",
@@ -388,7 +388,7 @@
       "description": "Relationship Manager (RM) has read access to the full application state in the commercial banking CRM. The RM can assist PER-002 with complex applications, facilitate UBO documentation gathering for EDD, and progress referred applications. The RM cannot override CDD/KYC compliance outcomes — only MLRO can.",
       "phases": [
         {
-          "phase_id": "BPH-001",
+          "phase_id": "PH-139",
           "phase_name": "Application Initiation (RM-Assisted Path)",
           "projection": {
             "description": "RM can view and pre-populate the business account application on behalf of PER-002 in the commercial banking CRM.",
@@ -422,7 +422,7 @@
           ]
         },
         {
-          "phase_id": "BPH-005_EDD",
+          "phase_id": "PH-143_EDD",
           "phase_name": "EDD Review (Alternate Path AP-B001)",
           "projection": {
             "description": "RM is assigned EDD cases to facilitate document gathering from PER-002.",
@@ -459,7 +459,7 @@
           ]
         },
         {
-          "phase_id": "BPH-006",
+          "phase_id": "PH-144",
           "phase_name": "Account Decision (Referred Applications)",
           "projection": {
             "description": "RM can view referred application cases and provide their recommendation to the decision engine or to MLRO.",
@@ -504,7 +504,7 @@
       "description": "MLRO has full read access to all CDD/KYC data, PEP/sanctions screening results, and EDD case files. The MLRO is the sole decision-maker for EDD approvals, sanctions-hit resolutions, and UBO identification exceptions. The MLRO has personal accountability under POCA 2002 and MLR 2017 SMF17.",
       "phases": [
         {
-          "phase_id": "BPH-005_EDD",
+          "phase_id": "PH-143_EDD",
           "phase_name": "EDD Review and Sign-Off",
           "projection": {
             "description": "MLRO has full visibility of all compliance data for the case.",

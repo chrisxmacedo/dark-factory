@@ -1,0 +1,175 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Open Banking VRP API",
+    "description": "Variable Recurring Payment (VRP) consent and payment API exposed by SVC-017 (Digital Channels) for JRN-029. Implements the FCA cVRP scheme. Consumed by registered PISPs (PER-006). Authentication via OAuth 2.0 with vrp:consent and vrp:payment scopes.",
+    "version": "1.0.0",
+    "x-service-id": "SVC-017",
+    "x-capability-id": "CAP-007",
+    "x-journey-ids": ["JRN-029"]
+  },
+  "servers": [{"url": "https://api.bank.internal/open-banking/vrp/v1", "description": "Open Banking VRP API — internal production"}],
+  "security": [{"BearerAuth": []}],
+  "paths": {
+    "/consents": {
+      "post": {
+        "operationId": "createVrpConsent",
+        "summary": "Create a new VRP consent request",
+        "description": "PISP submits VRP consent request with parameters. Creates VrpConsent (status=pending_authorisation). Returns consent_id and redirect_uri for customer authentication. SVC-009 owns the consent record; SVC-017 is the API surface.",
+        "tags": ["VRP Consent"],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CreateConsentRequest"}}}},
+        "responses": {
+          "201": {"description": "Consent created — pending customer authorisation", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ConsentInitiationResponse"}}}},
+          "400": {"description": "Validation error — invalid consent parameters"},
+          "401": {"description": "Unauthenticated — invalid or missing PISP token"},
+          "403": {"description": "PISP does not hold vrp:consent scope"}
+        }
+      }
+    },
+    "/consents/{consent_id}": {
+      "get": {
+        "operationId": "getVrpConsent",
+        "summary": "Get VRP consent status and parameters",
+        "description": "Returns current consent status. Used by PISP to confirm authorisation and by customer dashboard to display active consents.",
+        "tags": ["VRP Consent"],
+        "parameters": [{"name": "consent_id", "in": "path", "required": true, "schema": {"type": "string", "format": "uuid"}}],
+        "responses": {
+          "200": {"description": "Consent detail", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ConsentDetail"}}}},
+          "404": {"description": "Consent not found"}
+        }
+      },
+      "delete": {
+        "operationId": "deleteVrpConsent",
+        "summary": "Delete (revoke) a VRP consent",
+        "description": "PISP or customer (via bank portal) revokes a VRP consent. Updates status to revoked. Publishes VrpConsentRevoked (EVT-158). All subsequent VRP payments against this consent will be rejected.",
+        "tags": ["VRP Consent"],
+        "parameters": [{"name": "consent_id", "in": "path", "required": true, "schema": {"type": "string", "format": "uuid"}}],
+        "responses": {
+          "204": {"description": "Consent revoked"},
+          "404": {"description": "Consent not found"},
+          "409": {"description": "Consent already revoked or expired"}
+        }
+      }
+    },
+    "/consents/{consent_id}/payments": {
+      "post": {
+        "operationId": "submitVrpPayment",
+        "summary": "Submit a VRP payment instruction",
+        "description": "PISP submits a payment instruction referencing an active VRP consent. Bank validates amount against consent parameters, performs fraud scoring, and executes as a Faster Payment. No per-payment SCA required if consent is active and parameters are within limits. Publishes VrpPaymentExecuted (EVT-157).",
+        "tags": ["VRP Payments"],
+        "parameters": [{"name": "consent_id", "in": "path", "required": true, "schema": {"type": "string", "format": "uuid"}}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/VrpPaymentRequest"}}}},
+        "responses": {
+          "201": {"description": "Payment executed", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/VrpPaymentResponse"}}}},
+          "422": {"description": "Payment rejected — consent parameter breach, insufficient funds, consent expired/revoked", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PaymentRejectionResponse"}}}},
+          "401": {"description": "Unauthenticated"},
+          "404": {"description": "Consent not found"}
+        }
+      }
+    },
+    "/consents/{consent_id}/payments/{vrp_payment_id}": {
+      "get": {
+        "operationId": "getVrpPayment",
+        "summary": "Get VRP payment status",
+        "description": "Returns the status and details of a specific VRP payment.",
+        "tags": ["VRP Payments"],
+        "parameters": [
+          {"name": "consent_id", "in": "path", "required": true, "schema": {"type": "string", "format": "uuid"}},
+          {"name": "vrp_payment_id", "in": "path", "required": true, "schema": {"type": "string", "format": "uuid"}}
+        ],
+        "responses": {
+          "200": {"description": "Payment detail", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/VrpPaymentDetail"}}}},
+          "404": {"description": "Payment not found"}
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CreateConsentRequest": {
+        "type": "object",
+        "required": ["payee_name", "payee_sort_code", "payee_account_number", "max_single_payment_amount", "max_monthly_aggregate_amount", "payment_category", "valid_to"],
+        "properties": {
+          "payee_name": {"type": "string"},
+          "payee_sort_code": {"type": "string", "pattern": "^[0-9]{6}$"},
+          "payee_account_number": {"type": "string", "pattern": "^[0-9]{8}$"},
+          "max_single_payment_amount": {"type": "number", "minimum": 0.01, "maximum": 50000, "description": "Maximum per-payment amount (GBP)"},
+          "max_monthly_aggregate_amount": {"type": "number", "minimum": 0.01, "description": "Maximum aggregate per calendar month (GBP)"},
+          "payment_category": {"type": "string", "enum": ["subscription", "bill_payment", "top_up", "other"]},
+          "valid_to": {"type": "string", "format": "date", "description": "Consent expiry date — maximum 12 months from today"}
+        }
+      },
+      "ConsentInitiationResponse": {
+        "type": "object",
+        "properties": {
+          "consent_id": {"type": "string", "format": "uuid"},
+          "status": {"type": "string", "enum": ["pending_authorisation"]},
+          "redirect_uri": {"type": "string", "description": "URL to redirect customer for SCA and consent confirmation"},
+          "expires_at": {"type": "string", "format": "date-time", "description": "Pending authorisation expires if not confirmed within 10 minutes"}
+        }
+      },
+      "ConsentDetail": {
+        "type": "object",
+        "properties": {
+          "consent_id": {"type": "string", "format": "uuid"},
+          "status": {"type": "string", "enum": ["pending_authorisation", "active", "revoked", "expired"]},
+          "tpp_name": {"type": "string"},
+          "payee_name": {"type": "string"},
+          "max_single_payment_amount": {"type": "string"},
+          "max_monthly_aggregate_amount": {"type": "string"},
+          "current_month_aggregate": {"type": "string", "description": "Running total payments this calendar month"},
+          "payment_category": {"type": "string"},
+          "valid_from": {"type": "string", "format": "date"},
+          "valid_to": {"type": "string", "format": "date"},
+          "granted_at": {"type": "string", "format": "date-time", "nullable": true},
+          "revoked_at": {"type": "string", "format": "date-time", "nullable": true}
+        }
+      },
+      "VrpPaymentRequest": {
+        "type": "object",
+        "required": ["amount", "end_to_end_id"],
+        "properties": {
+          "amount": {"type": "number", "minimum": 0.01, "description": "Payment amount (GBP) — must be within consent max_single_payment_amount"},
+          "reference": {"type": "string", "maxLength": 18, "nullable": true, "description": "Beneficiary reference"},
+          "end_to_end_id": {"type": "string", "description": "PISP-provided end-to-end ID for idempotency"}
+        }
+      },
+      "VrpPaymentResponse": {
+        "type": "object",
+        "properties": {
+          "vrp_payment_id": {"type": "string", "format": "uuid"},
+          "consent_id": {"type": "string", "format": "uuid"},
+          "amount": {"type": "string"},
+          "fps_end_to_end_id": {"type": "string"},
+          "status": {"type": "string", "enum": ["executed"]},
+          "executed_at": {"type": "string", "format": "date-time"}
+        }
+      },
+      "VrpPaymentDetail": {
+        "type": "object",
+        "properties": {
+          "vrp_payment_id": {"type": "string", "format": "uuid"},
+          "consent_id": {"type": "string", "format": "uuid"},
+          "amount": {"type": "string"},
+          "reference": {"type": "string", "nullable": true},
+          "fps_end_to_end_id": {"type": "string"},
+          "status": {"type": "string"},
+          "reject_reason": {"type": "string", "nullable": true},
+          "initiated_at": {"type": "string", "format": "date-time"},
+          "executed_at": {"type": "string", "format": "date-time", "nullable": true}
+        }
+      },
+      "PaymentRejectionResponse": {
+        "type": "object",
+        "properties": {
+          "reason": {"type": "string", "enum": ["consent_parameter_breach", "insufficient_funds", "consent_expired", "consent_revoked", "fraud_held"]},
+          "detail": {"type": "string"},
+          "remaining_monthly_allowance": {"type": "string", "nullable": true, "description": "Populated if reason = consent_parameter_breach (monthly aggregate)"}
+        }
+      }
+    },
+    "securitySchemes": {
+      "BearerAuth": {"type": "http", "scheme": "bearer", "bearerFormat": "JWT"}
+    }
+  }
+}

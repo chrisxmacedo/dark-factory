@@ -1,0 +1,22 @@
+
+==================================================
+Syncing central model: customer-complaint (JRN-019)
+==================================================
+
+[Entities]
+  [92mCREATED[0m: complaint-case.json
+  [92mCREATED[0m: dis-case-summary.json
+
+[Events]
+  [92mADDED[0m: 4 events to central catalogue as jrn19_events
+
+[Service Map]
+  [92mEXTENDED[0m: SVC-001 with JRN-019 additions
+  [92mEXTENDED[0m: SVC-015 with JRN-019 additions
+  [92mEXTENDED[0m: SVC-053 with JRN-019 additions
+  [92mEXTENDED[0m: SVC-103 with JRN-019 additions
+
+==================================================
+Sync complete: 2 entities, 4 events, 4 service updates
+==================================================
+

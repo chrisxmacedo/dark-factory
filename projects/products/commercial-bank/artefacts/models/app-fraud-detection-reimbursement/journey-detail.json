@@ -21,7 +21,7 @@
     "sub_flow_1": {
       "name": "Real-time Detection",
       "description": "Fraud scoring during JRN-002 (Faster Payment Initiation) is the prevention layer. JRN-005 sub-flow 1 picks up when a payment is blocked by SVC-013 (fraud_risk_level = block) OR when a customer reports fraud after the fact. No financial loss occurs on the real-time block path — the case is created for pattern learning and ML model feedback.",
-      "trigger_events": ["PaymentFraudBlocked (EVT-P08)", "FraudCaseCreated (customer_report trigger)"],
+      "trigger_events": ["PaymentFraudBlocked (EVT-186)", "FraudCaseCreated (customer_report trigger)"],
       "primary_outcome": "Payment blocked — no loss. Fraud case opened for analyst review and ML pattern feedback."
     },
     "sub_flow_2": {
@@ -35,12 +35,12 @@
     {
       "phase_id": "PH-064",
       "phase_name": "Fraud Alert Trigger",
-      "description": "The fraud journey is initiated by one of two triggers: (1) Real-time block — SVC-013 publishes PaymentFraudBlocked (EVT-P08) during JRN-002 execution. The payment is prevented; no funds leave the account. SVC-013 creates a draft FraudCase with trigger_type = realtime_block. (2) Customer report — PER-001 contacts the bank via mobile app (CH-002) or telephone (CH-004) to report they believe they have been victim of APP fraud. Customer Service Agent (PER-056) logs the report; SVC-013 creates a FraudCase with trigger_type = customer_report.",
+      "description": "The fraud journey is initiated by one of two triggers: (1) Real-time block — SVC-013 publishes PaymentFraudBlocked (EVT-186) during JRN-002 execution. The payment is prevented; no funds leave the account. SVC-013 creates a draft FraudCase with trigger_type = realtime_block. (2) Customer report — PER-001 contacts the bank via mobile app (CH-002) or telephone (CH-004) to report they believe they have been victim of APP fraud. Customer Service Agent (PER-056) logs the report; SVC-013 creates a FraudCase with trigger_type = customer_report.",
       "trigger_conditions": [
         {
           "trigger_id": "TR-001",
           "name": "Real-time Block",
-          "source_event": "PaymentFraudBlocked (EVT-P08)",
+          "source_event": "PaymentFraudBlocked (EVT-186)",
           "source_service": "SVC-001",
           "description": "SVC-013 scored the payment as fraud_risk_level = block during JRN-002. SVC-001 published PaymentFraudBlocked. SVC-013 consumes this event and creates a FraudCase for pattern learning and analyst review.",
           "loss_amount": 0,

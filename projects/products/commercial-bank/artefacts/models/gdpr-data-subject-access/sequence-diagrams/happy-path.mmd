@@ -1,0 +1,44 @@
+sequenceDiagram
+    actor Customer as PER-001 (Customer)
+    participant Channel as SVC-017<br/>Digital Channels
+    participant IAM as SVC-100<br/>IAM
+    participant Compliance as SVC-015<br/>Compliance Core
+    participant KYC as SVC-014<br/>KYC/AML
+    participant EventBus as SVC-102<br/>Event Bus
+    participant Retail as SVC-001<br/>Retail Banking Core
+    participant Notifications as SVC-053<br/>Notifications
+    participant Audit as SVC-103<br/>Audit & Logging
+
+    Note over Customer,Audit: PH-119 — SAR Submission and Identity Verification
+
+    Customer->>Channel: Submit SAR via online banking portal + complete SCA
+    Channel->>IAM: POST /sca/validate {assertion}
+    IAM-->>Channel: {valid: true}
+    Channel->>Compliance: POST /sar {sca_assertion_ref}
+    Note right of Compliance: Create SarCase (status=received)<br/>deadline_date = today + 30 days
+    Compliance->>EventBus: Publish SarCaseOpened (EVT-159)
+    EventBus->>Notifications: Consume EVT-159 → Send acknowledgement: case ref, 30-day deadline
+    EventBus->>Audit: Consume EVT-159 → Write immutable SAR receipt record
+    Compliance-->>Channel: 201 Created {sar_case_id, deadline_date}
+    Channel-->>Customer: Display SAR confirmation: case reference, deadline
+
+    Note over Customer,Audit: PH-120 — Data Extraction and Compilation
+
+    EventBus->>KYC: Consume EVT-159 → Extract KYC/AML records (intra-CAP-005)
+    KYC->>Compliance: Return KYC data extract (intra-capability)
+    EventBus->>Retail: Consume EVT-159 → Extract account data and transaction history
+    Retail->>EventBus: Publish SarDataExtractReady (internal) → data to SVC-015
+    Note right of Compliance: Compile full data pack<br/>Update SarCase status=under_review
+
+    Note over Customer,Audit: PH-121 — Legal Review and Redaction
+
+    Note right of Compliance: DPO review; apply Schedule 2 exemptions<br/>Redact third-party data; generate encrypted PDF<br/>Update SarCase status=response_ready
+
+    Note over Customer,Audit: PH-122 — Response Delivery and Case Closure
+
+    Compliance->>EventBus: Publish SarCaseClosed (EVT-160)
+    EventBus->>Channel: Consume EVT-160 → Make download link available in portal
+    EventBus->>Notifications: Consume EVT-160 → Send response ready notification with secure link
+    EventBus->>Audit: Consume EVT-160 → Write immutable closure record (days_to_close)
+    Customer->>Channel: Download encrypted response pack via secure link
+    Channel-->>Customer: Deliver encrypted PDF response pack (within 30-day deadline)

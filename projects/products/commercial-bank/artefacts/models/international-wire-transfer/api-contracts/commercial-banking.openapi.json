@@ -1,0 +1,290 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Commercial Banking API — International Wire Transfer Extension",
+    "description": "Commercial Banking capability (CAP-002) API surface as consumed by the JRN-009 International Wire Transfer journey. SVC-005 (Commercial Banking Core) owns BusinessCustomer (ENT-079) and BusinessAccount (ENT-080). For JRN-009, the channel calls CAP-002 to validate account eligibility and retrieve account details before initiating a transfer. Account debit is performed by SVC-005 asynchronously upon consuming EVT-054 (SWIFTMessageSent) — it is not a synchronous API call from SVC-010. This contract documents the CAP-002 endpoints touched by this journey; the full CAP-002 API surface is defined across all journeys that introduce CAP-002 endpoints (JRN-004, JRN-013, JRN-014, JRN-009).",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Commercial Banking Core Team",
+      "email": "commercial-banking-api@bank.internal"
+    },
+    "x-service-id": "SVC-005",
+    "x-capability-id": "CAP-002",
+    "x-journey-ids": ["JRN-004", "JRN-009"],
+    "x-is-new-service": false,
+    "x-jrn009-note": "JRN-009 does not introduce new API endpoints to CAP-002. SVC-005 participates in the international wire transfer lifecycle exclusively via async event consumption (EVT-054 SWIFTMessageSent). The endpoints documented here are the existing CAP-002 API surface that the channel (CH-003) calls to validate business account eligibility and retrieve account details before initiating a transfer via CAP-003."
+  },
+  "servers": [
+    {
+      "url": "https://api.bank.internal/commercial-banking/v1",
+      "description": "Internal API gateway — channel-to-capability"
+    }
+  ],
+  "security": [
+    {
+      "oauth2": ["accounts:read", "accounts:write"]
+    }
+  ],
+  "x-event-driven-responsibilities": {
+    "publishes": [],
+    "consumes": [
+      "EVT-054 SWIFTMessageSent (from SVC-010, CAP-003) — SVC-005 consumes this event to debit BusinessAccount.balance by InternationalTransfer.gbp_equivalent. Idempotent on transfer_id. Cross-capability async consumption — not a synchronous API call."
+    ]
+  },
+  "paths": {
+    "/business-accounts/{account_id}": {
+      "get": {
+        "operationId": "getBusinessAccount",
+        "summary": "Get business account details and current balance",
+        "description": "Returns the BusinessAccount (ENT-080) for the authenticated business customer. Used by the channel during JRN-009 to: (1) validate the account is active and eligible to send international transfers; (2) display the current cleared balance to the corporate user before initiating the transfer; (3) confirm the account currency for FX routing decisions. The channel calls this endpoint before the corporate user enters transfer details.",
+        "tags": ["Business Accounts"],
+        "security": [{"oauth2": ["accounts:read"]}],
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "description": "BusinessAccount identifier (UUID v4)",
+            "schema": {"type": "string", "format": "uuid"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Business account details",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/BusinessAccountResponse"},
+                "example": {
+                  "account_id": "7f3a1b2c-4d5e-6f7a-8b9c-0d1e2f3a4b5c",
+                  "business_customer_id": "9a8b7c6d-5e4f-3210-abcd-ef9876543210",
+                  "account_number": "12345678",
+                  "sort_code": "400040",
+                  "iban": "GB29NWBK60161331926819",
+                  "currency": "GBP",
+                  "account_type": "business_current",
+                  "status": "active",
+                  "cleared_balance": "250000.00",
+                  "available_balance": "248500.00",
+                  "international_transfer_enabled": true,
+                  "international_transfer_daily_limit": "500000.00",
+                  "international_transfer_daily_used": "0.00"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Account does not belong to the authenticated business customer",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorResponse"}}}
+          },
+          "404": {
+            "description": "Account not found",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorResponse"}}}
+          },
+          "401": {
+            "description": "Unauthorised",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorResponse"}}}
+          }
+        }
+      }
+    },
+    "/business-accounts/{account_id}/transactions": {
+      "get": {
+        "operationId": "listBusinessAccountTransactions",
+        "summary": "List business account transactions",
+        "description": "Returns a paginated list of transactions for the business account. Used by the channel in JRN-009 to display completed international transfer debits in the account transaction history. International wire transfer debits appear with transaction_type = international_transfer and include the SWIFT gpi UETR as an external reference.",
+        "tags": ["Business Accounts"],
+        "security": [{"oauth2": ["accounts:read"]}],
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string", "format": "uuid"}
+          },
+          {
+            "name": "from_date",
+            "in": "query",
+            "required": false,
+            "schema": {"type": "string", "format": "date"}
+          },
+          {
+            "name": "to_date",
+            "in": "query",
+            "required": false,
+            "schema": {"type": "string", "format": "date"}
+          },
+          {
+            "name": "transaction_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["international_transfer", "domestic_transfer", "fps", "chaps", "direct_debit", "card", "fee"]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {"type": "integer", "minimum": 1, "maximum": 100, "default": 20}
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {"type": "string"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated transaction list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "transactions": {
+                      "type": "array",
+                      "items": {"$ref": "#/components/schemas/AccountTransaction"}
+                    },
+                    "next_cursor": {"type": "string", "nullable": true},
+                    "total_count": {"type": "integer"}
+                  }
+                }
+              }
+            }
+          },
+          "401": {"description": "Unauthorised", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorResponse"}}}}
+        }
+      }
+    },
+    "/business-customers/{customer_id}": {
+      "get": {
+        "operationId": "getBusinessCustomer",
+        "summary": "Get business customer profile",
+        "description": "Returns the BusinessCustomer (ENT-079) record for the authenticated session. Used during JRN-009 to retrieve the business customer's KYC status and international transfer eligibility. Only business customers with an active account and completed KYB/CDD can initiate international transfers.",
+        "tags": ["Business Customers"],
+        "security": [{"oauth2": ["accounts:read"]}],
+        "parameters": [
+          {
+            "name": "customer_id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string", "format": "uuid"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Business customer profile",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/BusinessCustomerResponse"},
+                "example": {
+                  "business_customer_id": "9a8b7c6d-5e4f-3210-abcd-ef9876543210",
+                  "legal_name": "Acme Trading Ltd",
+                  "companies_house_number": "12345678",
+                  "kyb_status": "cleared",
+                  "cdd_tier": "standard",
+                  "international_transfer_eligible": true,
+                  "restricted": false
+                }
+              }
+            }
+          },
+          "403": {"description": "Customer does not match authenticated session", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorResponse"}}}},
+          "404": {"description": "Customer not found", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorResponse"}}}}
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "oauth2": {
+        "type": "oauth2",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "https://iam.bank.internal/oauth2/authorize",
+            "tokenUrl": "https://iam.bank.internal/oauth2/token",
+            "scopes": {
+              "accounts:read": "Read business account details and transactions",
+              "accounts:write": "Update business account (reserved — not used in JRN-009 via this API)"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "BusinessAccountResponse": {
+        "type": "object",
+        "properties": {
+          "account_id": {"type": "string", "format": "uuid"},
+          "business_customer_id": {"type": "string", "format": "uuid"},
+          "account_number": {"type": "string", "description": "8-digit UK account number"},
+          "sort_code": {"type": "string", "description": "6-digit UK sort code"},
+          "iban": {"type": "string", "description": "GB IBAN for the account"},
+          "currency": {"type": "string", "description": "Account base currency — always GBP for UK business current accounts"},
+          "account_type": {"type": "string", "enum": ["business_current", "business_savings", "client_account"]},
+          "status": {"type": "string", "enum": ["active", "dormant", "restricted", "closed"]},
+          "cleared_balance": {"type": "string", "description": "Cleared balance as decimal string in GBP"},
+          "available_balance": {"type": "string", "description": "Available balance (cleared balance minus any holds) as decimal string in GBP"},
+          "international_transfer_enabled": {"type": "boolean", "description": "Whether the account is enabled for international transfers"},
+          "international_transfer_daily_limit": {"type": "string", "nullable": true, "description": "Single-day international transfer limit in GBP equivalent"},
+          "international_transfer_daily_used": {"type": "string", "description": "Amount of daily limit consumed today in GBP equivalent"}
+        }
+      },
+      "BusinessCustomerResponse": {
+        "type": "object",
+        "properties": {
+          "business_customer_id": {"type": "string", "format": "uuid"},
+          "legal_name": {"type": "string"},
+          "companies_house_number": {"type": "string", "nullable": true},
+          "kyb_status": {"type": "string", "enum": ["cleared", "pending", "referred", "declined"]},
+          "cdd_tier": {"type": "string", "enum": ["simplified", "standard", "enhanced"]},
+          "international_transfer_eligible": {"type": "boolean", "description": "True if KYB cleared and international transfer product enabled"},
+          "restricted": {"type": "boolean", "description": "True if account is subject to a SARFiled restriction (EVT-016 SARFiled consumed). Channel displays generic 'contact us' message — restriction reason must not be disclosed."}
+        }
+      },
+      "AccountTransaction": {
+        "type": "object",
+        "properties": {
+          "transaction_id": {"type": "string", "format": "uuid"},
+          "account_id": {"type": "string", "format": "uuid"},
+          "transaction_type": {
+            "type": "string",
+            "enum": ["international_transfer", "domestic_transfer", "fps", "chaps", "direct_debit", "card", "fee", "interest", "other"]
+          },
+          "direction": {"type": "string", "enum": ["debit", "credit"]},
+          "amount": {"type": "string", "description": "Transaction amount in account currency (GBP)"},
+          "currency": {"type": "string"},
+          "description": {"type": "string"},
+          "counterparty_name": {"type": "string", "nullable": true},
+          "counterparty_iban": {"type": "string", "nullable": true},
+          "payment_reference": {"type": "string", "nullable": true},
+          "external_reference": {"type": "string", "nullable": true, "description": "For international_transfer: the SWIFT gpi UETR. For FPS: the FPS end-to-end reference."},
+          "value_date": {"type": "string", "format": "date"},
+          "posted_at": {"type": "string", "format": "date-time"}
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": ["error_code", "message"],
+        "properties": {
+          "error_code": {"type": "string"},
+          "message": {"type": "string"},
+          "field_errors": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "type": "object",
+              "properties": {
+                "field": {"type": "string"},
+                "message": {"type": "string"}
+              }
+            }
+          },
+          "correlation_id": {"type": "string", "format": "uuid"}
+        }
+      }
+    }
+  }
+}

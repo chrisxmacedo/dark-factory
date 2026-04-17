@@ -1,0 +1,98 @@
+{
+  "journey_id": "JRN-020",
+  "document_version": "0.1.0",
+  "status": "Draft",
+  "participants": [
+    {
+      "persona_id": "PER-052",
+      "persona_name": "Compliance Officer (MLRO)",
+      "channel": ["CH-005 (Internal Portal)"],
+      "phases": [
+        {
+          "phase_id": "PH-102",
+          "projection": ["Review queue: triggered CDD reviews, due dates, risk tiers, trigger reasons", "Client summary: entity name, risk_rating, last review date, relationship manager"],
+          "entitlements": ["View review queue", "Assign review to analyst", "Set review priority", "Override review schedule"],
+          "notifications": ["Alert: CDD review triggered (scheduled or event-driven)", "Alert: high-risk client review triggered — immediate attention"],
+          "data_visibility_rules": "Can view all CDD review cases. Full client KYC record accessible."
+        },
+        {
+          "phase_id": "PH-104",
+          "projection": ["Risk assessment summary: screening results, PEP flags, adverse media hits, calculated risk_rating", "EDD checklist if high-risk flagged"],
+          "entitlements": ["View screening results", "Override risk_rating (with documented rationale)", "Approve EDD requirement"],
+          "notifications": ["Alert: sanctions hit detected — immediate action required (EX-001)"],
+          "data_visibility_rules": "Full screening results accessible including PEP matches. Adverse media content accessible."
+        },
+        {
+          "phase_id": "PH-105",
+          "projection": ["Full review case: documents, screening results, EDD findings, risk rating", "Decision controls: continue | continue_with_edd | escalate_to_exit | suspend_account", "Approval routing if escalate_to_exit selected"],
+          "entitlements": ["Record review decision", "Set next_review_date", "Initiate Senior Manager approval workflow for exit decisions"],
+          "notifications": ["Confirmation: CddReviewCompleted event published"],
+          "data_visibility_rules": "Full case details. Decision rationale is mandatory for all outcomes — audit trail."
+        }
+      ]
+    },
+    {
+      "persona_id": "PER-058",
+      "persona_name": "Operations Staff (KYC Analyst)",
+      "channel": ["CH-005 (Internal Portal)"],
+      "phases": [
+        {
+          "phase_id": "PH-103",
+          "projection": ["Document checklist with required items for entity_type and risk_tier", "Prior CDD documents for comparison", "UBO structure chart editor"],
+          "entitlements": ["Send document request to client", "Record received documents", "Verify document authenticity", "Update UBO ownership structure"],
+          "notifications": ["Alert: document due date approaching (3 days before)", "Alert: document due date exceeded (EX-002)"],
+          "data_visibility_rules": "Can view and edit documents for assigned CDD cases. Cannot view cases assigned to other analysts without supervisor access."
+        },
+        {
+          "phase_id": "PH-104",
+          "projection": ["Screening results from SVC-014", "Historical screening comparison (what changed from last review)"],
+          "entitlements": ["View screening results", "Add analyst notes to screening results", "Request additional EDD documents"],
+          "notifications": ["Alert: screening complete — results available for review"],
+          "data_visibility_rules": "Screening results visible. PEP details available. Sanctions hit details flagged to PER-052 immediately."
+        }
+      ]
+    },
+    {
+      "persona_id": "PER-003",
+      "persona_name": "Corporate Client",
+      "channel": ["CH-007 (Secure Client Portal)"],
+      "phases": [
+        {
+          "phase_id": "PH-103",
+          "projection": ["Document request: list of required items with descriptions and guidance", "Secure document upload interface", "Progress indicator: submitted / under review / verified"],
+          "entitlements": ["View document request checklist", "Upload documents securely", "View document submission status"],
+          "notifications": ["Email/portal notification: document request received with checklist and 14-day deadline", "Reminder: 3 days before deadline", "Confirmation: documents received and under review"],
+          "data_visibility_rules": "Client sees only their own document requests. Cannot see internal risk assessment or screening results."
+        }
+      ]
+    },
+    {
+      "persona_id": "PER-050",
+      "persona_name": "Relationship Manager",
+      "channel": ["CH-005 (Internal Portal)"],
+      "phases": [
+        {
+          "phase_id": "PH-106",
+          "projection": ["Review outcome summary: decision (continue / enhanced monitoring / exit)", "Action items: updated engagement plan, client notification requirements if exit"],
+          "entitlements": ["View review outcome for own portfolio clients", "Log client contact made re: outcome", "Initiate offboarding workflow if exit decision"],
+          "notifications": ["Alert: CDD review completed for portfolio client — review outcome", "Alert: exit escalation — client offboarding required (EX-003)"],
+          "data_visibility_rules": "Can see review outcome and decision. Cannot see detailed screening results or investigation notes — compliance boundary."
+        }
+      ]
+    },
+    {
+      "persona_id": "PER-059",
+      "persona_name": "Senior Manager (SMF)",
+      "channel": ["CH-005 (Internal Portal)"],
+      "phases": [
+        {
+          "phase_id": "PH-105",
+          "projection": ["Exit escalation summary: client identity, reason for exit, compliance recommendation, financial impact"],
+          "entitlements": ["Approve or reject relationship exit decision"],
+          "notifications": ["Alert: Senior Manager approval required for client relationship exit"],
+          "data_visibility_rules": "Summary level visibility for exit decisions. Full case accessible if required."
+        }
+      ]
+    }
+  ]
+}

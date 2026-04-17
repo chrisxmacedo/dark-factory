@@ -6,8 +6,8 @@
   "triggering_persona": "PER-002",
   "triggering_persona_name": "SME Business Owner / Director",
   "prerequisites": [
-    "BusinessCustomer record (ENT-B001) must exist with status = active (created in JRN-004)",
-    "BusinessAccount (ENT-B002) must be open and in good standing (JRN-004)",
+    "BusinessCustomer record (ENT-079) must exist with status = active (created in JRN-004)",
+    "BusinessAccount (ENT-080) must be open and in good standing (JRN-004)",
     "Business KYC/CDD current — BusinessKYCAssessment in-cycle (JRN-004). pKYC refresh triggered automatically if LC beneficiary or goods category is new risk typology",
     "Approved trade finance facility or undrawn headroom on commercial credit facility sufficient to cover LC face value plus bank charges",
     "Relationship Manager (PER-050) assigned to the BusinessCustomer"
@@ -192,7 +192,7 @@
     {
       "id": "PH-058",
       "name": "Settlement",
-      "description": "On compliant document presentation (or discrepant presentation with applicant waiver), SVC-006 initiates LC settlement. For a sight LC: SVC-006 calls SVC-005 directly (same-capability within CAP-002) to debit the applicant's BusinessAccount (ENT-B002) or draw on the trade finance facility. SVC-006 publishes an async event to SVC-010 (International Payments, CAP-003) which transmits SWIFT MT202 (General Financial Institution Transfer) or MT910 reimbursement instruction to the advising/reimbursing bank for payment to the beneficiary. For a usance (deferred payment) LC, the maturity date is determined from the usance period and payment is scheduled accordingly. LetterOfCredit.status transitions to settled. EVT-081 (LCSettled) is published. If the LC expires without a compliant presentation, LetterOfCredit.status transitions to expired and EVT-082 (LCExpired) is published.",
+      "description": "On compliant document presentation (or discrepant presentation with applicant waiver), SVC-006 initiates LC settlement. For a sight LC: SVC-006 calls SVC-005 directly (same-capability within CAP-002) to debit the applicant's BusinessAccount (ENT-080) or draw on the trade finance facility. SVC-006 publishes an async event to SVC-010 (International Payments, CAP-003) which transmits SWIFT MT202 (General Financial Institution Transfer) or MT910 reimbursement instruction to the advising/reimbursing bank for payment to the beneficiary. For a usance (deferred payment) LC, the maturity date is determined from the usance period and payment is scheduled accordingly. LetterOfCredit.status transitions to settled. EVT-081 (LCSettled) is published. If the LC expires without a compliant presentation, LetterOfCredit.status transitions to expired and EVT-082 (LCExpired) is published.",
       "actors": [
         "SVC-006 (Trade Finance Service — initiates settlement instruction, updates LC status)",
         "SVC-005 (Commercial Banking Core — debits applicant BusinessAccount or facility — same-capability)",
@@ -297,8 +297,8 @@
     },
     {
       "id": "DD-JRN013-03",
-      "decision": "SVC-006 maintains its own LetterOfCredit (ENT-036), LCAmendment (ENT-037), TradeDocument (ENT-038), and DocumentExamination (ENT-039) entities. It references BusinessCustomer (ENT-B001) and BusinessAccount (ENT-B002) by foreign key only — no local copies of those entities.",
-      "rationale": "Service ownership principle: each entity is owned by exactly one service. LetterOfCredit and related trade finance entities are exclusively owned by SVC-006 (Trade Finance Service). Customer and account entities remain exclusively owned by SVC-005. SVC-006 reads ENT-B001 and ENT-B002 via same-capability API (no cross-capability data join). This is identical to the pattern used by SVC-002 (Mortgage Service) referencing ENT-001 (Customer) from SVC-001."
+      "decision": "SVC-006 maintains its own LetterOfCredit (ENT-036), LCAmendment (ENT-037), TradeDocument (ENT-038), and DocumentExamination (ENT-039) entities. It references BusinessCustomer (ENT-079) and BusinessAccount (ENT-080) by foreign key only — no local copies of those entities.",
+      "rationale": "Service ownership principle: each entity is owned by exactly one service. LetterOfCredit and related trade finance entities are exclusively owned by SVC-006 (Trade Finance Service). Customer and account entities remain exclusively owned by SVC-005. SVC-006 reads ENT-079 and ENT-080 via same-capability API (no cross-capability data join). This is identical to the pattern used by SVC-002 (Mortgage Service) referencing ENT-001 (Customer) from SVC-001."
     },
     {
       "id": "DD-JRN013-04",

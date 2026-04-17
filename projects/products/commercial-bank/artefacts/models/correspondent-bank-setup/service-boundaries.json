@@ -1,0 +1,108 @@
+{
+  "journey_id": "JRN-023",
+  "document_version": "0.1.0",
+  "status": "Draft",
+  "architectural_principle": "Cross-capability communication is exclusively async events. Within a capability, services communicate freely.",
+  "services": [
+    {
+      "service_id": "SVC-015",
+      "service_name": "Compliance Core",
+      "capability_id": "CAP-005",
+      "owned_entities": ["ENT-075"],
+      "published_events": ["EVT-163", "EVT-164"],
+      "consumed_events": [],
+      "consumed_apis": [],
+      "design_decisions": [
+        "SVC-015 owns CorrespondentRelationship (ENT-075) as the MLR 2017 R34 compliance record.",
+        "SVC-015 calls SVC-014 (intra-CAP-005) for sanctions screening of correspondent bank.",
+        "SVC-015 publishes EVT-163 (CorrespondentEddCompleted) which triggers SVC-007 and SVC-010 to set up the nostro account and routing.",
+        "SVC-015 publishes EVT-164 (CorrespondentOnboarded) after nostro account and SWIFT channel are confirmed."
+      ]
+    },
+    {
+      "service_id": "SVC-014",
+      "service_name": "KYC/AML Service",
+      "capability_id": "CAP-005",
+      "owned_entities": [],
+      "published_events": [],
+      "consumed_events": [
+        {
+          "event_id": "EVT-163",
+          "name": "CorrespondentEddCompleted",
+          "provider_service_id": "SVC-015",
+          "purpose": "Intra-capability: set up ongoing AML monitoring for the new correspondent relationship"
+        }
+      ],
+      "consumed_apis": [],
+      "design_decisions": [
+        "SVC-014 sanctions screening of the correspondent bank entity is an intra-capability call (SVC-014 and SVC-015 are both in CAP-005)."
+      ]
+    },
+    {
+      "service_id": "SVC-007",
+      "service_name": "Treasury Services",
+      "capability_id": "CAP-002",
+      "owned_entities": [],
+      "published_events": [],
+      "consumed_events": [
+        {
+          "event_id": "EVT-163",
+          "name": "CorrespondentEddCompleted",
+          "provider_service_id": "SVC-015",
+          "purpose": "Create nostro account for the new correspondent relationship. Provision account with initial funding."
+        }
+      ],
+      "consumed_apis": [],
+      "design_decisions": [
+        "SVC-007 (CAP-002) creates the nostro account asynchronously after EVT-163 confirms EDD is complete and Senior Management has approved."
+      ]
+    },
+    {
+      "service_id": "SVC-010",
+      "service_name": "International Payments",
+      "capability_id": "CAP-003",
+      "owned_entities": [],
+      "published_events": [],
+      "consumed_events": [
+        {
+          "event_id": "EVT-163",
+          "name": "CorrespondentEddCompleted",
+          "provider_service_id": "SVC-015",
+          "purpose": "Register correspondent BIC in payment routing table. Enable the new currency corridor for international payments."
+        }
+      ],
+      "consumed_apis": [],
+      "design_decisions": [
+        "SVC-010 (CAP-003) registers the SWIFT BIC and enables the currency corridor asynchronously after EDD approval event."
+      ]
+    },
+    {
+      "service_id": "SVC-103",
+      "service_name": "Audit & Logging",
+      "capability_id": "CAP-008",
+      "owned_entities": [],
+      "published_events": [],
+      "consumed_events": [
+        {
+          "event_id": "EVT-163",
+          "name": "CorrespondentEddCompleted",
+          "provider_service_id": "SVC-015",
+          "purpose": "Write immutable EDD completion record with SM approval attestation ref"
+        },
+        {
+          "event_id": "EVT-164",
+          "name": "CorrespondentOnboarded",
+          "provider_service_id": "SVC-015",
+          "purpose": "Write immutable onboarding record"
+        }
+      ],
+      "consumed_apis": [],
+      "design_decisions": []
+    }
+  ],
+  "cross_service_interaction_summary": [
+    "SVC-015 (CAP-005) ↔ SVC-014 (CAP-005): Intra-capability sanctions screening",
+    "SVC-015 (CAP-005) → EVT-163 → SVC-007 (CAP-002), SVC-010 (CAP-003): Cross-capability nostro account and routing setup after EDD approval",
+    "SVC-015 (CAP-005) → EVT-164 → SVC-103 (CAP-008): Onboarding audit record"
+  ]
+}

@@ -66,7 +66,7 @@
   ],
   "reused_events": [
     {
-      "event_id": "EVT-P02",
+      "event_id": "EVT-180",
       "name": "SanctionsScreeningCompleted",
       "source_service": "SVC-051",
       "note": "Reused from JRN-002 (FPS Faster Payment). Extended to cover CHAPS payment sanctions screening. source_journeys updated in central model."

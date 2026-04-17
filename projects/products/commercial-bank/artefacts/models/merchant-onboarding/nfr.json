@@ -1,0 +1,74 @@
+{
+  "journey_id": "JRN-018",
+  "name": "Merchant Onboarding — Non-Functional Requirements",
+  "document_version": "1.0.0",
+  "status": "Draft",
+  "baseline_assumptions": {
+    "peak_volume": "A mid-tier UK commercial bank processing c. 50-100 new merchant applications per week. Peak following merchant acquisition campaigns: 200/week.",
+    "onboarding_timeline": "Target: 5-10 working days application to go-live for standard merchants. High-risk MCC: 10-15 working days.",
+    "data_residency": "All merchant data stored in UK. PCI DSS cardholder data never stored by the bank — handled by acquiring processor."
+  },
+  "phases": [
+    {
+      "phase_id": "PH-093",
+      "phase_name": "Merchant Application and KYC",
+      "nfr": {
+        "latency": {"p50_ms": 500, "p95_ms": 2000, "p99_ms": 5000, "notes": "Application form submission is sub-second. KYC/AML screening involves external vendor calls (ComplyAdvantage, Companies House API) — 2-5s typical."},
+        "throughput": {"peak_applications_per_week": 200, "notes": "Much lower throughput than retail journeys. Bottleneck is manual UBO verification, not system capacity."},
+        "availability": {"target_percentage": 99.9, "degraded_mode": "If KYC vendor unavailable, application queued for up to 4 hours."},
+        "security_classification": "authenticated_customer",
+        "data_classification": {"pii_collected": ["company_name", "registration_number", "director_names", "director_dob", "ubo_details", "trading_address"], "sensitivity": "HIGH — corporate and director personal data under UK GDPR and MLR 2017.", "retention": "5 years post-relationship per MLR 2017.", "data_residency": "UK only"},
+        "regulatory_sla": {"obligation": "CDD must be completed before business relationship established (MLR 2017 Reg 27). Sanctions screening real-time (GOV-005-R02).", "references": ["MLR 2017 Regulation 27", "GOV-005-R02"]}
+      }
+    },
+    {
+      "phase_id": "PH-094",
+      "phase_name": "Credit Risk and Chargeback Assessment",
+      "nfr": {
+        "latency": {"credit_assessment_working_days": 2, "notes": "Credit assessment involves Companies House data retrieval, credit bureau checks on directors, and MCC risk profile analysis. Automated for standard MCCs; manual review for high-risk MCCs."},
+        "availability": {"target_percentage": 99.5, "degraded_mode": "If credit bureau unavailable, assessment deferred with merchant notification."},
+        "security_classification": "privileged_internal",
+        "data_classification": {"data_processed": ["company_filed_accounts", "director_credit_scores", "mcc_chargeback_risk_profile", "reserve_percentage", "processing_limit"], "sensitivity": "HIGH — credit assessment data. Director credit bureau data is personal data.", "retention": "7 years.", "data_residency": "UK only"},
+        "regulatory_sla": {"obligation": "No specific regulatory SLA. Bank policy: credit assessment complete within 2 working days of KYC clearance.", "references": ["PRA credit risk expectations"]}
+      }
+    },
+    {
+      "phase_id": "PH-095",
+      "phase_name": "PCI DSS Compliance Assessment",
+      "nfr": {
+        "latency": {"assessment_working_days": 3, "notes": "PCI DSS level determination is instant (based on volume). SAQ review takes 1-3 working days. ROC review for Level 1 merchants may take longer."},
+        "availability": {"target_percentage": 99.5, "degraded_mode": "PCI DSS assessment is a document review process; system unavailability has limited impact."},
+        "security_classification": "privileged_internal",
+        "data_classification": {"data_processed": ["pci_dss_level", "saq_type", "saq_responses", "roc_summary", "compliance_status"], "sensitivity": "MEDIUM — PCI DSS compliance data. Not personal data but commercially sensitive.", "retention": "Duration of merchant relationship plus 3 years per scheme rules.", "data_residency": "UK only"},
+        "regulatory_sla": {"obligation": "PCI DSS v4.0 compliance mandatory before processing live transactions. 90-day provisional acceptance permitted for new merchants.", "references": ["PCI DSS v4.0", "Visa/Mastercard acquirer compliance programme"]}
+      }
+    },
+    {
+      "phase_id": "PH-096",
+      "phase_name": "Merchant Approval and Scheme Registration",
+      "nfr": {
+        "latency": {"approval_working_days": 1, "scheme_registration_working_days": 2, "notes": "Approval is a manual review step (1 working day). Scheme registration with Visa/Mastercard takes 1-2 working days via the acquiring processor."},
+        "availability": {"target_percentage": 99.5, "degraded_mode": "Scheme registration depends on Visa/Mastercard availability. Bank retries automatically."},
+        "security_classification": "privileged_internal",
+        "data_classification": {"data_processed": ["approval_decision", "visa_mid", "mastercard_mid", "scheme_registration_status"], "sensitivity": "HIGH — MID assignments are scheme-confidential.", "retention": "Duration of merchant relationship plus 7 years.", "data_residency": "UK only"},
+        "regulatory_sla": {"obligation": "No specific regulatory SLA. Visa/Mastercard scheme rules require registration before live processing.", "references": ["Visa Operating Regulations", "Mastercard Standards"]}
+      }
+    },
+    {
+      "phase_id": "PH-097",
+      "phase_name": "Terminal Provisioning and Go-Live",
+      "nfr": {
+        "latency": {"terminal_delivery_working_days": 5, "api_credentials_working_days": 1, "notes": "Physical terminal delivery: 3-5 working days. API credentials for e-commerce: 1 working day."},
+        "availability": {"target_percentage": 99.9, "degraded_mode": "Terminal provisioning system must be available during business hours. Go-live confirmation is automated."},
+        "security_classification": "authenticated_customer",
+        "data_classification": {"data_processed": ["terminal_id", "terminal_configuration", "settlement_account", "pricing_plan", "api_credentials"], "sensitivity": "HIGH — API credentials and settlement account details are sensitive.", "retention": "Duration of merchant relationship plus 7 years.", "data_residency": "UK only"},
+        "regulatory_sla": {"obligation": "PSR MR22/1.7 requires transparent pricing disclosure before go-live. Interchange++ pricing must itemise interchange, scheme fees, and acquirer margin.", "references": ["PSR MR22/1.7", "PSR Card Acquiring Market Review remedies"]}
+      }
+    }
+  ],
+  "cross_cutting_nfrs": {
+    "end_to_end_journey_sla": {"working_days": 10, "description": "Standard merchant onboarding: application to go-live within 10 working days. High-risk MCC: 15 working days."},
+    "audit_and_logging": {"all_phases": "All decisions logged to SVC-103. Approval decisions and scheme registrations logged to SVC-111 WORM store.", "retention_years": 7, "regulatory_basis": ["MLR 2017", "PCI DSS", "Visa/Mastercard scheme rules"]},
+    "resilience_and_recovery": {"rpo_hours": 1, "rto_hours": 4, "description": "RPO 1 hour, RTO 4 hours. Merchant onboarding is not an IBS but is revenue-critical."}
+  }
+}

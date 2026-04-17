@@ -1,11 +1,17 @@
 {
   "entity_id": "ENT-017",
   "name": "LoanApplication",
-  "description": "The formal SME term loan application record created by SVC-005 (Commercial Banking Core) in PH-017 (JRN-007). Serves as the aggregate root for the business loan origination workflow — CreditAssessment (ENT-018, owned by SVC-012), FacilityAgreement (ENT-019), and LoanAccount (ENT-020) all carry an application_id FK. Transitions through status states as the origination workflow progresses from submitted through to drawn_down or declined.",
+  "description": "The formal SME term loan application record created by SVC-005 (Commercial Banking Core) in PH-017 (JRN-007). Serves as the aggregate root for the business loan origination workflow \u2014 CreditAssessment (ENT-018, owned by SVC-012), FacilityAgreement (ENT-019), and LoanAccount (ENT-020) all carry an application_id FK. Transitions through status states as the origination workflow progresses from submitted through to drawn_down or declined.",
   "owning_service": "SVC-005",
   "owning_capability": "CAP-002 (Commercial Banking)",
   "aggregate_root": true,
-  "reachable_from_phases": ["PH-017", "PH-018", "PH-019", "PH-020", "PH-021"],
+  "reachable_from_phases": [
+    "PH-017",
+    "PH-018",
+    "PH-019",
+    "PH-020",
+    "PH-021"
+  ],
   "fields": [
     {
       "name": "application_id",
@@ -17,28 +23,28 @@
     {
       "name": "business_customer_id",
       "type": "UUID",
-      "validation_rule": "Required. FK → ENT-B001 (BusinessCustomer.business_customer_id). Immutable after creation. Must reference an active BusinessCustomer.",
+      "validation_rule": "Required. FK \u2192 ENT-079 (BusinessCustomer.business_customer_id). Immutable after creation. Must reference an active BusinessCustomer.",
       "source": "PH-017",
       "governed_by": null
     },
     {
       "name": "requested_amount",
       "type": "decimal",
-      "validation_rule": "Required. Positive decimal, max 2 dp (GBP). Minimum £10,000.",
+      "validation_rule": "Required. Positive decimal, max 2 dp (GBP). Minimum \u00a310,000.",
       "source": "PH-017",
       "governed_by": "GOV-002-R05"
     },
     {
       "name": "term_months",
       "type": "integer",
-      "validation_rule": "Required. Positive integer. Range: 12–120 months.",
+      "validation_rule": "Required. Positive integer. Range: 12\u2013120 months.",
       "source": "PH-017",
       "governed_by": null
     },
     {
       "name": "purpose",
       "type": "string",
-      "validation_rule": "Required. 10–1000 characters. Loan purpose description.",
+      "validation_rule": "Required. 10\u20131000 characters. Loan purpose description.",
       "source": "PH-017",
       "governed_by": "GOV-002-R05"
     },
@@ -59,7 +65,7 @@
     {
       "name": "relationship_manager_id",
       "type": "UUID",
-      "validation_rule": "Required. FK → Staff.staff_id for originating RM.",
+      "validation_rule": "Required. FK \u2192 Staff.staff_id for originating RM.",
       "source": "PH-016",
       "governed_by": null
     },
@@ -80,7 +86,7 @@
   ],
   "relationships": [
     {
-      "target_entity": "ENT-B001",
+      "target_entity": "ENT-079",
       "type": "many-to-one",
       "description": "LoanApplication belongs to one BusinessCustomer via business_customer_id FK."
     },
@@ -102,5 +108,8 @@
       "rationale": "Basel 3.1 IRB LGD estimates require security type at time of assessment. ENT-018 cannot be populated correctly without this field."
     }
   ],
-  "source_journeys": ["JRN-007"]
+  "source_journeys": [
+    "JRN-007",
+    "JRN-027"
+  ]
 }

@@ -22,7 +22,7 @@
       "to": "Channel",
       "type": "sync",
       "action": "Navigate to Make Payment; enter payee sort code, account number, name, amount",
-      "phase": "PY-001"
+      "phase": "PH-147"
     },
     {
       "step": 2,
@@ -30,7 +30,7 @@
       "to": "DomesticPayments",
       "type": "sync",
       "action": "POST /cop/verify { payee_sort_code, payee_account_number, payee_name }",
-      "phase": "PY-001"
+      "phase": "PH-147"
     },
     {
       "step": 3,
@@ -38,7 +38,7 @@
       "to": "Channel",
       "type": "sync-return",
       "action": "200 OK { cop_result: 'match', risk_warning_required: false }",
-      "phase": "PY-001"
+      "phase": "PH-147"
     },
     {
       "step": 4,
@@ -46,7 +46,7 @@
       "to": "Customer",
       "type": "ui",
       "action": "Display CoP result: 'Payee name verified ✓'. Prompt customer to complete SCA.",
-      "phase": "PY-001"
+      "phase": "PH-147"
     },
     {
       "step": 5,
@@ -54,7 +54,7 @@
       "to": "Channel",
       "type": "sync",
       "action": "Complete SCA (biometric or TOTP) — dynamic linking to payee + amount",
-      "phase": "PY-001"
+      "phase": "PH-147"
     },
     {
       "step": 6,
@@ -62,7 +62,7 @@
       "to": "IAM",
       "type": "sync",
       "action": "POST /sca/validate { assertion, payee_sort_code, payee_account_number, amount }",
-      "phase": "PY-001"
+      "phase": "PH-147"
     },
     {
       "step": 7,
@@ -70,7 +70,7 @@
       "to": "Channel",
       "type": "sync-return",
       "action": "200 OK { sca_assertion_ref: 'uuid', valid: true }",
-      "phase": "PY-001"
+      "phase": "PH-147"
     },
     {
       "step": 8,
@@ -78,7 +78,7 @@
       "to": "RetailBanking",
       "type": "sync",
       "action": "POST /payments { account_id, amount, payee details, cop_result: match, sca_assertion_ref }",
-      "phase": "PY-001",
+      "phase": "PH-147",
       "note": "Single channel → capability API call. SVC-001 validates balance, daily limit, and SCA assertion."
     },
     {
@@ -87,16 +87,16 @@
       "to": "Channel",
       "type": "sync-return",
       "action": "202 Accepted { payment_intent_id, status: pending_screening, poll_url }",
-      "phase": "PY-001"
+      "phase": "PH-147"
     },
     {
       "step": 10,
       "from": "RetailBanking",
       "to": "EventBus",
       "type": "async-publish",
-      "action": "Publish PaymentIntentCreated (EVT-P01)",
-      "event_id": "EVT-P01",
-      "phase": "PY-001"
+      "action": "Publish PaymentIntentCreated (EVT-179)",
+      "event_id": "EVT-179",
+      "phase": "PH-147"
     },
     {
       "step": 11,
@@ -104,7 +104,7 @@
       "to": "Customer",
       "type": "ui",
       "action": "Show 'Processing your payment...' progress screen",
-      "phase": "PY-002"
+      "phase": "PH-148"
     },
     {
       "step": 12,
@@ -112,8 +112,8 @@
       "to": "Sanctions",
       "type": "async-consume",
       "action": "Consume PaymentIntentCreated → run OFSI/UN/EU/OFAC sanctions screen on payee",
-      "event_id": "EVT-P01",
-      "phase": "PY-002",
+      "event_id": "EVT-179",
+      "phase": "PH-148",
       "note": "Concurrent with step 13"
     },
     {
@@ -122,8 +122,8 @@
       "to": "Fraud",
       "type": "async-consume",
       "action": "Consume PaymentIntentCreated → run ML fraud scoring",
-      "event_id": "EVT-P01",
-      "phase": "PY-002",
+      "event_id": "EVT-179",
+      "phase": "PH-148",
       "note": "Concurrent with step 12"
     },
     {
@@ -131,9 +131,9 @@
       "from": "Sanctions",
       "to": "EventBus",
       "type": "async-publish",
-      "action": "Publish SanctionsScreeningCompleted (EVT-P02) { outcome: 'clear' }",
-      "event_id": "EVT-P02",
-      "phase": "PY-002",
+      "action": "Publish SanctionsScreeningCompleted (EVT-180) { outcome: 'clear' }",
+      "event_id": "EVT-180",
+      "phase": "PH-148",
       "timing": "< 3 seconds from PaymentIntentCreated"
     },
     {
@@ -141,9 +141,9 @@
       "from": "Fraud",
       "to": "EventBus",
       "type": "async-publish",
-      "action": "Publish FraudScoreCompleted (EVT-P03) { risk_level: 'low', fraud_score: 0.05 }",
-      "event_id": "EVT-P03",
-      "phase": "PY-002",
+      "action": "Publish FraudScoreCompleted (EVT-181) { risk_level: 'low', fraud_score: 0.05 }",
+      "event_id": "EVT-181",
+      "phase": "PH-148",
       "timing": "< 500ms from PaymentIntentCreated"
     },
     {
@@ -152,16 +152,16 @@
       "to": "RetailBanking",
       "type": "async-consume",
       "action": "Consume SanctionsScreeningCompleted (clear) and FraudScoreCompleted (low) — both received",
-      "phase": "PY-003"
+      "phase": "PH-149"
     },
     {
       "step": 17,
       "from": "RetailBanking",
       "to": "EventBus",
       "type": "async-publish",
-      "action": "Publish PaymentCleared (EVT-P04) — update PaymentIntent.status = processing",
-      "event_id": "EVT-P04",
-      "phase": "PY-003"
+      "action": "Publish PaymentCleared (EVT-182) — update PaymentIntent.status = processing",
+      "event_id": "EVT-182",
+      "phase": "PH-149"
     },
     {
       "step": 18,
@@ -169,16 +169,16 @@
       "to": "DomesticPayments",
       "type": "async-consume",
       "action": "Consume PaymentCleared → construct ISO 20022 pacs.008 → submit to Vocalink FPS",
-      "phase": "PY-004"
+      "phase": "PH-150"
     },
     {
       "step": 19,
       "from": "DomesticPayments",
       "to": "EventBus",
       "type": "async-publish",
-      "action": "Publish PaymentExecuted (EVT-P05) { fps_reference: 'FPS20260415...', settlement_status: accepted }",
-      "event_id": "EVT-P05",
-      "phase": "PY-004"
+      "action": "Publish PaymentExecuted (EVT-183) { fps_reference: 'FPS20260415...', settlement_status: accepted }",
+      "event_id": "EVT-183",
+      "phase": "PH-150"
     },
     {
       "step": 20,
@@ -186,16 +186,16 @@
       "to": "RetailBanking",
       "type": "async-consume",
       "action": "Consume PaymentExecuted → debit account ledger → update PaymentIntent.status = completed",
-      "phase": "PY-004"
+      "phase": "PH-150"
     },
     {
       "step": 21,
       "from": "RetailBanking",
       "to": "EventBus",
       "type": "async-publish",
-      "action": "Publish AccountDebited (EVT-P06)",
-      "event_id": "EVT-P06",
-      "phase": "PY-004"
+      "action": "Publish AccountDebited (EVT-184)",
+      "event_id": "EVT-184",
+      "phase": "PH-150"
     },
     {
       "step": 22,
@@ -203,7 +203,7 @@
       "to": "RetailBanking",
       "type": "sync",
       "action": "GET /payments/{payment_intent_id} (polling)",
-      "phase": "PY-005"
+      "phase": "PH-151"
     },
     {
       "step": 23,
@@ -211,7 +211,7 @@
       "to": "Channel",
       "type": "sync-return",
       "action": "200 OK { status: completed, fps_reference: '...', completed_at: '...' }",
-      "phase": "PY-005"
+      "phase": "PH-151"
     },
     {
       "step": 24,
@@ -219,7 +219,7 @@
       "to": "Customer",
       "type": "ui",
       "action": "Display payment confirmation: payee name, amount, FPS reference, timestamp",
-      "phase": "PY-005"
+      "phase": "PH-151"
     }
   ],
   "total_elapsed_target": "< 15 seconds from step 8 (POST /payments) to step 24 (confirmation render)"

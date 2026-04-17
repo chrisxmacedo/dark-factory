@@ -1,0 +1,39 @@
+{
+  "journey_id": "JRN-018",
+  "diagram_id": "SEQ-JRN018-001",
+  "name": "Merchant Onboarding — Happy Path",
+  "phases_covered": ["PH-093", "PH-094", "PH-095", "PH-096", "PH-097"],
+  "participants": [
+    {"id": "MERCHANT", "type": "persona", "name": "Merchant (PER-007)", "channel": "CH-001"},
+    {"id": "STAFF", "type": "persona", "name": "Bank Staff (PER-059)", "channel": "CH-005"},
+    {"id": "CH_001", "type": "channel", "name": "Web Portal (CH-001)"},
+    {"id": "CH_005", "type": "channel", "name": "Internal Tooling (CH-005)"},
+    {"id": "CAP_002", "type": "capability_api", "name": "CAP-002 Commercial Banking API"},
+    {"id": "CAP_005", "type": "capability_api", "name": "CAP-005 Compliance & Regulatory API"},
+    {"id": "CAP_003", "type": "capability_api", "name": "CAP-003 Payment Operations API"},
+    {"id": "EB", "type": "platform", "name": "Event Bus"},
+    {"id": "SVC_103", "type": "platform", "name": "Audit & Logging"}
+  ],
+  "steps": [
+    {"step": 1, "phase": "PH-093", "from": "MERCHANT", "to": "CH_001", "action": "Submit merchant application", "type": "user_action"},
+    {"step": 2, "phase": "PH-093", "from": "CH_001", "to": "CAP_002", "action": "POST /merchant-applications", "type": "sync_request"},
+    {"step": 3, "phase": "PH-093", "from": "CAP_002", "to": "CH_001", "action": "201 Created — application_id", "type": "sync_response"},
+    {"step": 4, "phase": "PH-093", "from": "CAP_002", "to": "EB", "action": "Publish MerchantApplicationSubmitted (EVT-130)", "type": "async_event"},
+    {"step": 5, "phase": "PH-093", "from": "EB", "to": "CAP_005", "action": "Deliver MerchantApplicationSubmitted (EVT-130)", "type": "async_event", "note": "Cross-capability: CAP-002 -> CAP-005"},
+    {"step": 6, "phase": "PH-093", "from": "CAP_005", "to": "EB", "action": "Publish MerchantKYCCompleted (EVT-131) — CLEAR", "type": "async_event"},
+    {"step": 7, "phase": "PH-093", "from": "EB", "to": "CAP_002", "action": "Deliver MerchantKYCCompleted (EVT-131)", "type": "async_event", "note": "Cross-capability: CAP-005 -> CAP-002"},
+    {"step": 8, "phase": "PH-094", "from": "CAP_002", "to": "SVC_103", "action": "Log credit assessment start", "type": "platform_call"},
+    {"step": 9, "phase": "PH-094", "from": "CAP_002", "to": "EB", "action": "Publish MerchantCreditAssessmentCompleted (EVT-132) — APPROVED", "type": "async_event"},
+    {"step": 10, "phase": "PH-095", "from": "MERCHANT", "to": "CH_001", "action": "Submit PCI DSS SAQ", "type": "user_action"},
+    {"step": 11, "phase": "PH-095", "from": "CH_001", "to": "CAP_002", "action": "Submit SAQ for assessment", "type": "sync_request"},
+    {"step": 12, "phase": "PH-095", "from": "CAP_002", "to": "EB", "action": "Publish PCIDSSAssessmentCompleted (EVT-133) — COMPLIANT", "type": "async_event"},
+    {"step": 13, "phase": "PH-096", "from": "STAFF", "to": "CH_005", "action": "Approve merchant", "type": "user_action"},
+    {"step": 14, "phase": "PH-096", "from": "CH_005", "to": "CAP_002", "action": "POST /merchant-applications/{id}/approve", "type": "sync_request"},
+    {"step": 15, "phase": "PH-096", "from": "CAP_002", "to": "EB", "action": "Publish MerchantApproved (EVT-134)", "type": "async_event"},
+    {"step": 16, "phase": "PH-096", "from": "EB", "to": "CAP_003", "action": "Deliver MerchantApproved (EVT-134)", "type": "async_event", "note": "Cross-capability: CAP-002 -> CAP-003"},
+    {"step": 17, "phase": "PH-096", "from": "CAP_003", "to": "EB", "action": "Publish MerchantSchemeRegistered (EVT-136) — Visa + Mastercard MIDs", "type": "async_event"},
+    {"step": 18, "phase": "PH-096", "from": "EB", "to": "CAP_002", "action": "Deliver MerchantSchemeRegistered (EVT-136)", "type": "async_event", "note": "Cross-capability: CAP-003 -> CAP-002"},
+    {"step": 19, "phase": "PH-097", "from": "CAP_002", "to": "EB", "action": "Publish MerchantTerminalProvisioned (EVT-135)", "type": "async_event"},
+    {"step": 20, "phase": "PH-097", "from": "CAP_002", "to": "EB", "action": "Publish MerchantLive (EVT-137)", "type": "async_event", "note": "After successful test transaction"}
+  ]
+}

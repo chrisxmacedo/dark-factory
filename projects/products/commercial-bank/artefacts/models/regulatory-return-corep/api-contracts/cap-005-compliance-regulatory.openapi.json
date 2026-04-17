@@ -1,0 +1,421 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Compliance & Regulatory Capability API — COREP Return Extensions",
+    "version": "1.0.0",
+    "description": "API surface for the Compliance & Regulatory capability (CAP-005) relevant to the COREP regulatory return journey (JRN-017). This API is consumed by internal tooling channels (CH-005) for managing the COREP return lifecycle — consolidation, validation, sign-off, submission, and post-submission monitoring."
+  },
+  "servers": [
+    {
+      "url": "https://api.internal.bank.example/compliance-regulatory/v1",
+      "description": "Internal API — not externally accessible"
+    }
+  ],
+  "paths": {
+    "/corep-returns": {
+      "get": {
+        "operationId": "listCOREPReturns",
+        "summary": "List COREP returns",
+        "description": "Returns a list of COREP returns filtered by reporting period and status. Used by the Head of Regulatory Reporting and CFO to track return progress.",
+        "tags": ["COREP Returns"],
+        "parameters": [
+          {
+            "name": "reporting_period",
+            "in": "query",
+            "required": false,
+            "schema": {"type": "string", "example": "2026-Q1"}
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {"type": "string", "enum": ["DRAFT", "VALIDATING", "VALIDATED", "VALIDATION_FAILED", "AWAITING_SIGNOFF", "APPROVED", "SUBMITTED", "ACKNOWLEDGED", "RESTATEMENT_REQUIRED", "RESTATED"]}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of COREP returns",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {"$ref": "#/components/schemas/COREPReturnSummary"}
+                }
+              }
+            }
+          },
+          "401": {"description": "Unauthorized"},
+          "403": {"description": "Forbidden"}
+        },
+        "security": [{"internalMTLS": []}]
+      }
+    },
+    "/corep-returns/{return_id}": {
+      "get": {
+        "operationId": "getCOREPReturn",
+        "summary": "Get COREP return detail",
+        "description": "Returns the full detail of a COREP return including template population status, own funds figures, capital ratios, and CFO sign-off status.",
+        "tags": ["COREP Returns"],
+        "parameters": [
+          {
+            "name": "return_id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "COREP return detail",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/COREPReturn"},
+                "example": {
+                  "return_id": "cr-2026-q1-001",
+                  "reporting_period": "2026-Q1",
+                  "return_type": "SOLO",
+                  "xbrl_taxonomy_version": "3.2.1",
+                  "own_funds_cet1": 3200000000.00,
+                  "own_funds_at1": 400000000.00,
+                  "own_funds_t2": 600000000.00,
+                  "total_own_funds": 4200000000.00,
+                  "total_rwa": 18500000000.00,
+                  "cet1_ratio": 17.30,
+                  "leverage_ratio": 5.20,
+                  "status": "AWAITING_SIGNOFF",
+                  "submission_deadline": "2026-05-15"
+                }
+              }
+            }
+          },
+          "404": {"description": "COREP return not found"},
+          "401": {"description": "Unauthorized"},
+          "403": {"description": "Forbidden"}
+        },
+        "security": [{"internalMTLS": []}]
+      }
+    },
+    "/corep-returns/{return_id}/validate": {
+      "post": {
+        "operationId": "triggerCOREPValidation",
+        "summary": "Trigger COREP return validation",
+        "description": "Initiates the multi-layer validation process: XBRL validation, variance analysis, GL reconciliation. Publishes COREPValidationCompleted event on completion.",
+        "tags": ["COREP Returns"],
+        "parameters": [
+          {
+            "name": "return_id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string"}
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Validation initiated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "validation_id": {"type": "string"},
+                    "status": {"type": "string", "enum": ["VALIDATING"]}
+                  }
+                }
+              }
+            }
+          },
+          "409": {"description": "Validation already in progress"},
+          "404": {"description": "COREP return not found"},
+          "401": {"description": "Unauthorized"},
+          "403": {"description": "Forbidden"}
+        },
+        "security": [{"internalMTLS": []}]
+      }
+    },
+    "/corep-returns/{return_id}/validations": {
+      "get": {
+        "operationId": "listValidationResults",
+        "summary": "List validation results for a COREP return",
+        "description": "Returns all validation runs for a given return, including XBRL errors, variance analysis, and GL reconciliation status.",
+        "tags": ["COREP Returns"],
+        "parameters": [
+          {
+            "name": "return_id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of validation results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {"$ref": "#/components/schemas/ValidationResult"}
+                }
+              }
+            }
+          },
+          "404": {"description": "COREP return not found"},
+          "401": {"description": "Unauthorized"},
+          "403": {"description": "Forbidden"}
+        },
+        "security": [{"internalMTLS": []}]
+      }
+    },
+    "/corep-returns/{return_id}/signoff": {
+      "post": {
+        "operationId": "recordCFOSignoff",
+        "summary": "Record CFO sign-off on COREP return",
+        "description": "Records the CFO's formal attestation and sign-off on the COREP return. Publishes COREPReturnApproved event. The sign-off is immutably stored in the WORM audit store (SVC-111). Only the designated CFO (SMF2) may execute this action.",
+        "tags": ["COREP Returns"],
+        "parameters": [
+          {
+            "name": "return_id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string"}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "signer_identity": {"type": "string", "description": "SM&CR identifier of the CFO (SMF2)"},
+                  "attestation_statement": {"type": "string", "description": "The attestation text", "example": "I confirm that this COREP submission is accurate and complete to the best of my knowledge."}
+                },
+                "required": ["signer_identity", "attestation_statement"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sign-off recorded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "signoff_id": {"type": "string"},
+                    "worm_reference": {"type": "string"},
+                    "signed_at": {"type": "string", "format": "date-time"}
+                  }
+                }
+              }
+            }
+          },
+          "400": {"description": "Return is not in AWAITING_SIGNOFF status"},
+          "403": {"description": "Forbidden — caller is not the designated CFO (SMF2)"},
+          "404": {"description": "COREP return not found"},
+          "401": {"description": "Unauthorized"}
+        },
+        "security": [{"internalMTLS": []}]
+      }
+    },
+    "/corep-returns/{return_id}/submit": {
+      "post": {
+        "operationId": "submitCOREPReturn",
+        "summary": "Submit COREP return to PRA RegData",
+        "description": "Submits the approved COREP return to the PRA via the RegData electronic submission system. Publishes COREPReturnSubmitted event. Requires prior CFO sign-off.",
+        "tags": ["COREP Returns"],
+        "parameters": [
+          {
+            "name": "return_id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Submission completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "pra_submission_reference": {"type": "string"},
+                    "submitted_at": {"type": "string", "format": "date-time"},
+                    "status": {"type": "string", "enum": ["SUBMITTED"]}
+                  }
+                }
+              }
+            }
+          },
+          "400": {"description": "Return is not in APPROVED status (CFO sign-off required first)"},
+          "502": {"description": "PRA RegData system unavailable — submission queued for retry"},
+          "404": {"description": "COREP return not found"},
+          "401": {"description": "Unauthorized"},
+          "403": {"description": "Forbidden"}
+        },
+        "security": [{"internalMTLS": []}]
+      }
+    },
+    "/corep-returns/{return_id}/restatements": {
+      "get": {
+        "operationId": "listRestatements",
+        "summary": "List restatements for a COREP return",
+        "tags": ["Restatements"],
+        "parameters": [
+          {
+            "name": "return_id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of restatements",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {"$ref": "#/components/schemas/Restatement"}
+                }
+              }
+            }
+          },
+          "404": {"description": "COREP return not found"},
+          "401": {"description": "Unauthorized"},
+          "403": {"description": "Forbidden"}
+        },
+        "security": [{"internalMTLS": []}]
+      },
+      "post": {
+        "operationId": "initiateRestatement",
+        "summary": "Initiate a restatement for a submitted COREP return",
+        "description": "Creates a restatement record and triggers the restatement workflow. Publishes COREPRestatementTriggered event. CFO is automatically notified.",
+        "tags": ["Restatements"],
+        "parameters": [
+          {
+            "name": "return_id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string"}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "error_source": {"type": "string", "enum": ["INTERNAL_QA", "PRA_QUERY", "SUBSEQUENT_PERIOD_RECONCILIATION", "EXTERNAL_AUDIT"]},
+                  "error_description": {"type": "string"},
+                  "affected_templates": {"type": "array", "items": {"type": "string"}},
+                  "initiated_by": {"type": "string"}
+                },
+                "required": ["error_source", "error_description", "affected_templates", "initiated_by"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Restatement initiated",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/Restatement"}
+              }
+            }
+          },
+          "400": {"description": "Return has not been submitted — cannot restate a non-submitted return"},
+          "404": {"description": "COREP return not found"},
+          "401": {"description": "Unauthorized"},
+          "403": {"description": "Forbidden"}
+        },
+        "security": [{"internalMTLS": []}]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "COREPReturnSummary": {
+        "type": "object",
+        "properties": {
+          "return_id": {"type": "string"},
+          "reporting_period": {"type": "string"},
+          "return_type": {"type": "string"},
+          "status": {"type": "string"},
+          "submission_deadline": {"type": "string", "format": "date"},
+          "created_at": {"type": "string", "format": "date-time"}
+        }
+      },
+      "COREPReturn": {
+        "type": "object",
+        "properties": {
+          "return_id": {"type": "string"},
+          "reporting_period": {"type": "string"},
+          "return_type": {"type": "string"},
+          "xbrl_taxonomy_version": {"type": "string"},
+          "capital_data_package_id": {"type": "string"},
+          "own_funds_cet1": {"type": "number"},
+          "own_funds_at1": {"type": "number"},
+          "own_funds_t2": {"type": "number"},
+          "total_own_funds": {"type": "number"},
+          "total_rwa": {"type": "number"},
+          "cet1_ratio": {"type": "number"},
+          "leverage_ratio": {"type": "number"},
+          "status": {"type": "string"},
+          "submission_deadline": {"type": "string", "format": "date"},
+          "pra_submission_reference": {"type": "string"},
+          "cfo_signoff": {"$ref": "#/components/schemas/CFOSignoff"},
+          "created_at": {"type": "string", "format": "date-time"},
+          "updated_at": {"type": "string", "format": "date-time"}
+        }
+      },
+      "CFOSignoff": {
+        "type": "object",
+        "properties": {
+          "signoff_id": {"type": "string"},
+          "signer_identity": {"type": "string"},
+          "attestation_statement": {"type": "string"},
+          "signed_at": {"type": "string", "format": "date-time"},
+          "worm_reference": {"type": "string"}
+        }
+      },
+      "ValidationResult": {
+        "type": "object",
+        "properties": {
+          "validation_id": {"type": "string"},
+          "return_id": {"type": "string"},
+          "validation_timestamp": {"type": "string", "format": "date-time"},
+          "xbrl_validation_outcome": {"type": "string", "enum": ["PASS", "FAIL"]},
+          "xbrl_error_count": {"type": "integer"},
+          "gl_reconciliation_status": {"type": "string", "enum": ["RECONCILED", "UNRECONCILED", "RECONCILED_WITH_EXCEPTIONS"]},
+          "overall_outcome": {"type": "string", "enum": ["PASS", "PASS_WITH_EXCEPTIONS", "FAIL"]}
+        }
+      },
+      "Restatement": {
+        "type": "object",
+        "properties": {
+          "restatement_id": {"type": "string"},
+          "original_return_id": {"type": "string"},
+          "restated_return_id": {"type": "string"},
+          "error_identified_date": {"type": "string", "format": "date"},
+          "error_source": {"type": "string"},
+          "error_description": {"type": "string"},
+          "affected_templates": {"type": "array", "items": {"type": "string"}},
+          "root_cause_analysis": {"type": "string"},
+          "remediation_plan": {"type": "string"},
+          "pra_notified_date": {"type": "string", "format": "date"},
+          "status": {"type": "string", "enum": ["IDENTIFIED", "INVESTIGATING", "CORRECTING", "REVALIDATING", "AWAITING_SIGNOFF", "SUBMITTED", "CLOSED"]}
+        }
+      }
+    },
+    "securitySchemes": {
+      "internalMTLS": {
+        "type": "mutualTLS",
+        "description": "Internal service-to-service authentication via mutual TLS"
+      }
+    }
+  }
+}

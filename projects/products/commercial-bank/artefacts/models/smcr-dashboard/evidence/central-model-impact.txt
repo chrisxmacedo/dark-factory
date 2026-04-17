@@ -1,0 +1,19 @@
+Central Model Impact Assessment — JRN-024 SM&CR Dashboard and Accountability Review
+Generated: 2026-04-15
+
+ENTITIES
+  smscr-review.json — CREATED (ENT-076, owned by SVC-015)
+
+EVENTS
+  EVT-165 SmscrReviewCompleted — ADDED to central catalogue
+
+SERVICE MAP
+  SVC-015  Compliance Core — extended (SM&CR review owner)
+  SVC-103  Audit & Logging — extended (consumer of EVT-165)
+
+CROSS-JOURNEY IMPACT
+  No existing event IDs modified or reassigned.
+  No existing entity schemas modified.
+  Single-capability journey — minimal cross-journey impact.
+
+VERDICT: No breaking changes. All additions are net-new. Safe to proceed.

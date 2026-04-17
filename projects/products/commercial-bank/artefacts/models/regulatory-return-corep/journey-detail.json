@@ -1,28 +1,265 @@
 {
   "journey_id": "JRN-017",
-  "name": "",
-  "status": "Draft",
-  "triggering_persona": "",
-  "capabilities_touched": [],
+  "name": "Regulatory Return Submission (COREP Capital)",
+  "description": "The bank's Regulatory Reporting team produces, validates, and submits a COREP capital adequacy return to the PRA on the prescribed quarterly schedule. This exercises the Regulatory Reporting sub-capability (CAP-005.02) and requires data inputs from the Risk Management capability (CAP-004). The CFO (SMF2) holds personal accountability for the accuracy of the submission under CRR UK Part Eight. The journey spans two capabilities: Risk Management (CAP-004) produces capital calculations and risk-weighted asset figures, and Compliance & Regulatory (CAP-005) consolidates, validates, formats, and submits the return via the PRA's RegData system.",
+  "triggering_persona": "PER-059",
+  "capabilities_touched": ["CAP-004", "CAP-005"],
+  "sub_capabilities_involved": [
+    "CAP-004.01",
+    "CAP-004.02",
+    "CAP-005.02"
+  ],
+  "domain_events_published": [
+    "CapitalDataExtractionRequested",
+    "CreditRiskRWACalculated",
+    "MarketRiskRWACalculated",
+    "OperationalRiskRWACalculated",
+    "CapitalDataPackageAssembled",
+    "COREPReturnDraftGenerated",
+    "COREPValidationCompleted",
+    "COREPReturnApproved",
+    "COREPReturnSubmitted",
+    "COREPReturnAcknowledged",
+    "COREPRestatementTriggered"
+  ],
+  "channels_involved": ["CH-005"],
+  "services_involved": [
+    "SVC-012",
+    "SVC-015",
+    "SVC-103",
+    "SVC-111"
+  ],
   "phases": [
     {
       "id": "PH-088",
-      "name": "",
-      "description": "",
-      "actors": [],
-      "services": [],
-      "governance_rules": [],
-      "entry_conditions": [],
-      "exit_conditions": []
+      "name": "Capital Data Extraction and RWA Calculation",
+      "description": "The quarterly COREP reporting cycle begins with the Risk Engine Service (SVC-012) extracting position and exposure data from the bank's loan book, trading book, and operational loss databases as at the quarter-end reporting date. Credit risk RWAs are calculated under the Standardised Approach (or IRB where PRA-approved) per CRR UK Articles 111-141. Market risk RWAs are calculated under the FRTB Standardised Approach (Sensitivity-Based Approach) per PRA PS17/23 Basel 3.1 implementation. Operational risk capital is calculated under the Basel Standardised Approach. Output floor calculations are applied where the bank uses IRB (50% floor rising to 72.5% by 2030). Each risk type publishes a domain event with its RWA figure and supporting data lineage.",
+      "actors": ["PER-059"],
+      "channels": ["CH-005"],
+      "services": ["SVC-012", "SVC-103"],
+      "governance_rules": [
+        "GOV-004-R01",
+        "GOV-004-R03"
+      ],
+      "governance_notes": "CRR UK Part Three governs capital requirement calculations. PRA PS17/23 sets the UK Basel 3.1 implementation timeline — FRTB SA mandatory from 1 January 2026. PRA SS1/23 requires all models used in capital calculation to be inventoried, tiered, and validated by an independent model validation function. Data lineage from source system to RWA output must be auditable for PRA on-site inspection. The CRO (SMF4) is accountable for the accuracy of risk calculations under SM&CR.",
+      "entry_conditions": [
+        "Quarter-end date has passed (T+0)",
+        "Source systems (loan book, trading book, operational loss database) have completed end-of-day processing for the quarter-end date",
+        "Data quality checks on source systems have passed (completeness, reconciliation to GL)",
+        "Reporting calendar trigger received from the Compliance Core Service (SVC-015)"
+      ],
+      "exit_conditions": [
+        "Credit risk RWA calculated and CreditRiskRWACalculated event published with data lineage",
+        "Market risk RWA calculated and MarketRiskRWACalculated event published",
+        "Operational risk capital calculated and OperationalRiskRWACalculated event published",
+        "Output floor calculation applied where relevant",
+        "All RWA figures reconciled to prior quarter within expected variance tolerance (±5% without documented explanation)",
+        "CapitalDataPackageAssembled event published with consolidated RWA figures"
+      ],
+      "exit_conditions_failure": [
+        "Source data extraction fails — data quality alert raised to IT Operations and Finance; manual data sourcing fallback initiated",
+        "RWA calculation produces figures outside variance tolerance — CRO review required before proceeding",
+        "Model used in calculation has expired validation — GOV-004-R01 breach; calculation paused until Model Risk team reviews"
+      ]
+    },
+    {
+      "id": "PH-089",
+      "name": "Return Consolidation and Formatting",
+      "description": "The Compliance Core Service (SVC-015) receives the CapitalDataPackageAssembled event and consolidates the RWA figures from credit, market, and operational risk into the COREP XBRL template structure. The return covers: CA1 (Own Funds), CA2 (Own Funds Requirements), CR SA (Credit Risk — Standardised Approach), CR IRB (if applicable), MKR SA (Market Risk — Standardised), and OR (Operational Risk). The Regulatory Reporting team maps each data point to the correct XBRL taxonomy element per the PRA's COREP reporting framework. Automated mapping rules handle ~85% of data points; the remaining ~15% require manual classification judgement (e.g., specialised lending exposures, securitisation positions). A COREPReturnDraftGenerated event is published when the draft return is ready for validation.",
+      "actors": ["PER-059"],
+      "channels": ["CH-005"],
+      "services": ["SVC-015", "SVC-103"],
+      "governance_rules": [
+        "GOV-005-R05"
+      ],
+      "governance_notes": "CRR UK Part Eight requires the reporting format to comply with PRA regulatory reporting standards. The PRA's modernising regulatory returns programme (CP4/24) may introduce new data standards — reporting templates must be version-controlled and updatable. GOV-005-R05 (FCA/PRA digital regulatory reporting) signals direction of travel toward machine-readable, near-real-time data delivery. Manual classification judgements must be documented with rationale for audit trail purposes.",
+      "entry_conditions": [
+        "CapitalDataPackageAssembled event received with credit, market, and operational risk RWA figures",
+        "COREP XBRL taxonomy template for the current reporting period is loaded and version-confirmed",
+        "Prior quarter submission available for variance analysis"
+      ],
+      "exit_conditions": [
+        "All COREP template cells populated with calculated or manually classified values",
+        "No unmapped data points remaining",
+        "Manual classification decisions documented with rationale",
+        "COREPReturnDraftGenerated event published",
+        "Draft return stored in version-controlled document management for review"
+      ],
+      "exit_conditions_failure": [
+        "XBRL taxonomy version mismatch — PRA has updated templates mid-cycle; Regulatory Reporting team must obtain updated taxonomy before proceeding",
+        "Data mapping produces incomplete cells (>2% unmapped) — escalated to CRO and CFO for decision on whether to proceed with known gaps or delay submission"
+      ]
+    },
+    {
+      "id": "PH-090",
+      "name": "Validation and Quality Assurance",
+      "description": "The draft COREP return undergoes a multi-layer validation process. Layer 1: Automated XBRL validation rules (PRA-prescribed cross-checks between template cells — e.g., total own funds = CET1 + AT1 + T2; total RWA = credit + market + operational). Layer 2: Variance analysis against prior quarter and prior year submissions — material variances (>10% movement) require documented explanation. Layer 3: Reconciliation to the bank's general ledger — own funds figures must reconcile to audited balance sheet equity. Layer 4: Independent review by the Finance team (2LoD review) — the CFO's team reviews the return for accuracy before sign-off. A COREPValidationCompleted event is published with the validation outcome (pass, pass with exceptions, fail).",
+      "actors": ["PER-059"],
+      "channels": ["CH-005"],
+      "services": ["SVC-015", "SVC-012", "SVC-103", "SVC-111"],
+      "governance_rules": [
+        "GOV-004-R01",
+        "GOV-005-R05"
+      ],
+      "governance_notes": "PRA expects regulatory returns to be accurate and submitted on time. Material errors in COREP submissions result in PRA supervisory intervention and potential Pillar 2 capital add-ons. The CFO (SMF2) holds personal accountability for the accuracy of financial and regulatory returns under SM&CR. All validation exceptions must be documented in an immutable audit trail (SVC-111) as they may be reviewed during PRA on-site inspections. GL reconciliation is a mandatory step — PRA Dear CEO letters have cited failures to reconcile regulatory returns to audited financials.",
+      "entry_conditions": [
+        "COREPReturnDraftGenerated event received",
+        "Draft COREP return available in document management system",
+        "Prior quarter and prior year submissions available for variance analysis",
+        "General ledger quarter-end closing is complete"
+      ],
+      "exit_conditions": [
+        "All XBRL validation rules pass (zero errors)",
+        "Material variance explanations documented for all movements >10%",
+        "GL reconciliation completed with zero unreconciled differences (or documented and approved exceptions)",
+        "Finance team independent review completed and approved",
+        "COREPValidationCompleted event published with outcome: PASS",
+        "Return ready for CFO sign-off"
+      ],
+      "exit_conditions_failure": [
+        "XBRL validation errors detected — return to PH-089 for correction and re-consolidation",
+        "Material unexplained variances — CRO and CFO joint review required; may require return to PH-088 for recalculation",
+        "GL reconciliation breaks — Finance team investigates; submission may be delayed",
+        "COREPValidationCompleted event published with outcome: FAIL; blocked from proceeding to sign-off"
+      ]
+    },
+    {
+      "id": "PH-091",
+      "name": "CFO Sign-Off and Submission",
+      "description": "The CFO (SMF2) reviews the validated COREP return, the validation report (including any exceptions), variance explanations, and GL reconciliation evidence. The CFO provides formal sign-off attesting to the accuracy and completeness of the submission. On sign-off, the Compliance Core Service (SVC-015) submits the COREP return to the PRA via the RegData electronic submission system. A COREPReturnSubmitted event is published. The PRA issues an acknowledgement receipt which is recorded. If the PRA subsequently queries any data point, the bank must respond within the PRA's prescribed response window.",
+      "actors": ["PER-059"],
+      "channels": ["CH-005"],
+      "services": ["SVC-015", "SVC-103", "SVC-111"],
+      "governance_rules": [
+        "GOV-005-R04",
+        "GOV-005-R05"
+      ],
+      "governance_notes": "SM&CR prescribed responsibility: the CFO (SMF2) is the designated senior manager accountable for the accuracy and timeliness of regulatory returns. CRR UK Part Eight prescribes submission deadlines — quarterly COREP is due T+30 working days after the quarter-end date (or T+42 for consolidated returns). Late submission triggers automatic PRA supervisory engagement. The CFO sign-off is an individual accountability act — it cannot be delegated below board level. The sign-off record must be retained in the WORM audit store (SVC-111) for SM&CR evidence purposes.",
+      "entry_conditions": [
+        "COREPValidationCompleted event with outcome PASS received",
+        "Validated COREP return, variance report, and GL reconciliation evidence available for CFO review",
+        "Submission deadline has not passed (T+30 working days post quarter-end)"
+      ],
+      "exit_conditions": [
+        "CFO formal sign-off recorded in audit trail (SVC-111)",
+        "COREPReturnApproved event published",
+        "COREP return submitted to PRA via RegData",
+        "COREPReturnSubmitted event published with PRA submission reference",
+        "PRA acknowledgement receipt received and recorded",
+        "COREPReturnAcknowledged event published"
+      ],
+      "exit_conditions_failure": [
+        "CFO refuses sign-off due to unresolved data quality concerns — return to PH-090 for further validation or PH-088 for recalculation",
+        "RegData submission system unavailable — submission queued; PRA notified of potential delay per PRA supervisory contact protocol",
+        "Submission deadline at risk — CFO and CRO escalation to Board Risk Committee; PRA supervisory contact initiated proactively"
+      ]
+    },
+    {
+      "id": "PH-092",
+      "name": "Post-Submission Monitoring and Restatement",
+      "description": "After submission, the Regulatory Reporting team monitors for PRA queries, supervisory feedback, and any internal discovery of errors that would require a restatement. If a material error is identified post-submission, the bank must file a restatement with the PRA, including a root cause analysis and remediation plan. The CFO must be notified of any restatement. The post-submission monitoring period runs until the next quarter's submission, at which point the cycle repeats. Restatements are tracked as compliance incidents in the Compliance Core Service (SVC-015) and logged in the WORM audit store.",
+      "actors": ["PER-059"],
+      "channels": ["CH-005"],
+      "services": ["SVC-015", "SVC-103", "SVC-111"],
+      "governance_rules": [
+        "GOV-005-R04",
+        "GOV-005-R05"
+      ],
+      "governance_notes": "PRA expects banks to proactively identify and correct errors in regulatory returns. A material restatement triggers PRA supervisory engagement and may result in Pillar 2A capital add-ons for regulatory reporting risk. Under SM&CR, the CFO's accountability includes the accuracy of restatements. The root cause analysis must assess whether the error indicates a systemic weakness in the reporting process — if so, a remediation programme must be established. Repeated restatements in the same template area may trigger PRA s166 Skilled Person review.",
+      "entry_conditions": [
+        "COREPReturnAcknowledged event received",
+        "Submission confirmed in PRA RegData system"
+      ],
+      "exit_conditions": [
+        "No PRA queries received within the monitoring period — monitoring period closes at next quarter submission",
+        "All PRA queries responded to within prescribed response windows",
+        "No material errors identified internally — no restatement required",
+        "Journey cycle complete; next quarter's cycle begins at PH-088"
+      ],
+      "exit_conditions_failure": [
+        "Material error identified internally — COREPRestatementTriggered event published; restatement process initiated with CFO notification",
+        "PRA query identifies a data quality concern — investigation initiated; response prepared within PRA deadline",
+        "Restatement required — root cause analysis and remediation plan documented; Board Risk Committee notified"
+      ]
     }
   ],
   "paths": {
     "happy_path": {
-      "description": "",
-      "phases": []
+      "description": "The quarterly COREP reporting cycle proceeds without data quality issues or validation failures. Risk Engine Service calculates RWAs, Compliance Core Service consolidates and formats the return, automated and manual validation passes cleanly, the CFO signs off, and the return is submitted to the PRA via RegData within the T+30 deadline. PRA acknowledges receipt without queries. No restatement required.",
+      "phases": ["PH-088", "PH-089", "PH-090", "PH-091", "PH-092"],
+      "estimated_duration": "15–25 working days from quarter-end to submission (within T+30 deadline)"
     },
-    "alternative_paths": [],
-    "exception_paths": []
+    "alternative_paths": [
+      {
+        "id": "AP-017-001",
+        "name": "Variance Investigation and CRO Review",
+        "description": "During validation (PH-090), material variances are detected between the current quarter and prior quarter COREP figures (>10% movement in a template area). The CRO reviews the variance analysis and determines whether the movement reflects genuine business activity (e.g., large loan origination, trading book position change, operational loss event) or a data quality issue. If genuine, the CRO documents the explanation and the return proceeds. If a data quality issue is identified, the return is sent back to PH-088 for recalculation.",
+        "trigger": "Material variance detected during PH-090 validation (>10% quarter-on-quarter movement in any COREP template area)",
+        "additional_actors": ["PER-059"],
+        "phases_modified": ["PH-090", "PH-088"],
+        "regulatory_basis": "PRA supervisory expectation that material movements in regulatory returns are documented and explainable. PRA Dear CEO letters have cited inadequate variance analysis as a governance weakness.",
+        "sla": "CRO variance review completed within 3 working days to maintain submission timeline"
+      },
+      {
+        "id": "AP-017-002",
+        "name": "Consolidated Return Preparation",
+        "description": "For banks required to submit consolidated COREP returns (parent company plus subsidiaries), additional data consolidation steps are required. Subsidiary risk data is sourced from subsidiary risk engines, intercompany eliminations are applied, and minority interest adjustments are made per CRR UK Articles 11-24 (scope of consolidation). The consolidated return has a longer submission deadline (T+42 working days) and requires additional CFO sign-off covering the consolidation adjustments.",
+        "trigger": "Bank is required to submit on a consolidated basis under CRR UK Part One Title II",
+        "additional_actors": ["PER-059"],
+        "phases_modified": ["PH-088", "PH-089", "PH-090", "PH-091"],
+        "regulatory_basis": "CRR UK Articles 11-24 scope of consolidation; T+42 working day deadline for consolidated returns",
+        "sla": "T+42 working days from quarter-end for consolidated return submission"
+      }
+    ],
+    "exception_paths": [
+      {
+        "id": "EX-017-001",
+        "name": "Restatement Required — Material Error Post-Submission",
+        "description": "A material error is identified in the submitted COREP return, either through internal quality assurance, PRA query, or subsequent period reconciliation. The CFO is notified immediately. The Regulatory Reporting team prepares a restated return with the corrected figures, a root cause analysis documenting how the error occurred, and a remediation plan to prevent recurrence. The restatement is submitted to the PRA with an accompanying cover letter from the CFO. The PRA supervisory team is notified proactively before the restatement is filed.",
+        "trigger": "Material error identified in submitted COREP return (internal discovery or PRA query)",
+        "additional_actors": ["PER-059"],
+        "regulatory_basis": "PRA supervisory expectation for proactive error correction; SM&CR CFO accountability for regulatory return accuracy; potential Pillar 2A add-on for persistent reporting errors",
+        "sla": "Restatement filed within 10 working days of error identification; PRA notified within 2 working days"
+      },
+      {
+        "id": "EX-017-002",
+        "name": "Submission Deadline Breach",
+        "description": "The COREP return cannot be submitted by the T+30 (or T+42 for consolidated) deadline due to data quality issues, validation failures, or system unavailability. The CFO and CRO are notified immediately. The PRA supervisory contact is informed proactively with an expected submission date. Late submission triggers automatic PRA supervisory engagement and may result in Pillar 2 consequences. A root cause analysis and remediation plan are prepared.",
+        "trigger": "Submission deadline at risk with fewer than 3 working days remaining and return not yet validated",
+        "additional_actors": ["PER-059"],
+        "regulatory_basis": "CRR UK Part Eight submission deadlines; PRA supervisory protocol for late returns; SM&CR CFO accountability",
+        "sla": "PRA notified of expected delay at least 2 working days before deadline; submission completed as soon as practicable"
+      },
+      {
+        "id": "EX-017-003",
+        "name": "Model Validation Expired — Capital Calculation Blocked",
+        "description": "During PH-088, the Risk Engine Service identifies that a model used in the capital calculation (e.g., IRB PD model, FRTB SA sensitivity model) has an expired validation under PRA SS1/23 requirements. GOV-004-R01 prohibits use of models with expired validation for regulatory capital purposes. The calculation is paused and the Model Risk team is notified to perform an expedited validation review. If the model cannot be revalidated in time, the bank falls back to a more conservative calculation methodology (e.g., Standardised Approach instead of IRB) for the affected exposure class.",
+        "trigger": "Model validation status check during PH-088 returns EXPIRED for a material model",
+        "additional_actors": ["PER-059"],
+        "regulatory_basis": "PRA SS1/23 Model Risk Management Principles — models must have current validation before use in capital calculations; GOV-004-R01",
+        "sla": "Model Risk team expedited review within 5 working days; fallback calculation methodology applied if validation cannot be completed within submission timeline"
+      }
+    ]
   },
-  "design_decisions": []
+  "design_decisions": [
+    {
+      "id": "DD-JRN017-001",
+      "decision": "Cross-capability data flow from Risk Management (CAP-004) to Compliance & Regulatory (CAP-005) is exclusively via domain events, not synchronous API calls",
+      "rationale": "The architecture specification mandates that cross-capability communication is exclusively asynchronous events. The RWA calculation outputs (CreditRiskRWACalculated, MarketRiskRWACalculated, OperationalRiskRWACalculated) are published by CAP-004's Risk Engine Service and consumed by CAP-005's Compliance Core Service. This ensures the capital calculation and regulatory reporting capabilities are independently deployable and their operational rhythms (batch risk calculation vs. scheduled reporting) do not create temporal coupling.",
+      "alternatives_considered": [
+        "Synchronous API call from SVC-015 to SVC-012 to pull RWA data on demand",
+        "Shared database between Risk and Compliance for capital figures"
+      ],
+      "rejected_because": "Synchronous cross-capability calls violate the architecture specification. A shared database creates data ownership ambiguity and coupling between two capabilities with different deployment and scaling requirements."
+    },
+    {
+      "id": "DD-JRN017-002",
+      "decision": "CFO sign-off is a manual gate within the Compliance Core Service (SVC-015), not an automated approval",
+      "rationale": "SM&CR prescribed responsibility means the CFO (SMF2) must personally attest to the accuracy of the regulatory return. This is a regulatory requirement that cannot be automated. The sign-off is recorded as an immutable audit event in SVC-111 with the CFO's identity, timestamp, and attestation statement. The system enforces that no submission can proceed without a recorded CFO sign-off event.",
+      "alternatives_considered": [
+        "Automated approval if all validation checks pass"
+      ],
+      "rejected_because": "SM&CR individual accountability cannot be satisfied by automated approval. The PRA expects a designated senior manager to have reviewed and attested to the submission."
+    }
+  ]
 }

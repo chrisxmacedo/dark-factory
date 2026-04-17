@@ -1,13 +1,89 @@
 {
   "journey_id": "JRN-017",
-  "document_version": "0.1.0",
+  "name": "Regulatory Return Submission (COREP Capital) — Service Boundaries",
+  "document_version": "1.0.0",
   "status": "Draft",
   "architectural_principle": "Cross-capability communication is exclusively async events. Within a capability, services communicate freely.",
   "services": [
     {
-      "service_id": "",
-      "service_name": "",
-      "capability_id": "",
+      "service_id": "SVC-012",
+      "service_name": "Risk Engine Service",
+      "capability_id": "CAP-004",
+      "description": "Performs capital calculation — credit risk RWA (SA/IRB), market risk RWA (FRTB SA), and operational risk capital (Basel SA). Extracts position data from source systems, applies regulatory calculation methodologies, and produces the CapitalDataPackage entity. This is the computational core of the Risk Management capability for regulatory capital purposes.",
+      "owned_entities": ["ENT-055"],
+      "published_events": [
+        "EVT-119",
+        "EVT-120",
+        "EVT-121",
+        "EVT-122",
+        "EVT-123"
+      ],
+      "consumed_events": [],
+      "consumed_apis": [],
+      "design_decisions": [
+        {
+          "decision": "SVC-012 publishes individual RWA calculation events per risk type before publishing the aggregate CapitalDataPackageAssembled event",
+          "rationale": "Publishing individual events (CreditRiskRWACalculated, MarketRiskRWACalculated, OperationalRiskRWACalculated) provides granular auditability and allows parallel monitoring of each calculation. The aggregate event is the handover trigger to CAP-005."
+        }
+      ]
+    },
+    {
+      "service_id": "SVC-015",
+      "service_name": "Compliance Core Service",
+      "capability_id": "CAP-005",
+      "description": "Receives the CapitalDataPackage via domain event from CAP-004, consolidates data into COREP XBRL templates, manages the validation workflow (XBRL validation, variance analysis, GL reconciliation, independent review), manages CFO sign-off, and submits the return to PRA RegData. Owns the COREPReturn, ValidationResult, and Restatement entities.",
+      "owned_entities": ["ENT-056", "ENT-057", "ENT-058"],
+      "published_events": [
+        "EVT-124",
+        "EVT-125",
+        "EVT-126",
+        "EVT-127",
+        "EVT-128",
+        "EVT-129"
+      ],
+      "consumed_events": [
+        {
+          "event_id": "EVT-123",
+          "name": "CapitalDataPackageAssembled",
+          "source_service": "SVC-012",
+          "source_capability": "CAP-004",
+          "maps_to": {
+            "target_entity": "ENT-056",
+            "field_mappings": [
+              {"source_field": "package_id", "target_field": "capital_data_package_id"},
+              {"source_field": "reporting_period", "target_field": "reporting_period"},
+              {"source_field": "total_rwa", "target_field": "total_rwa"},
+              {"source_field": "credit_risk_rwa", "target_field": "templates[CR_SA].populated_data"},
+              {"source_field": "market_risk_rwa", "target_field": "templates[MKR_SA].populated_data"},
+              {"source_field": "operational_risk_capital", "target_field": "templates[OR].populated_data"}
+            ]
+          }
+        }
+      ],
+      "consumed_apis": [],
+      "design_decisions": [
+        {
+          "decision": "SVC-015 consumes the CapitalDataPackageAssembled event from CAP-004 rather than pulling data via synchronous API",
+          "rationale": "Cross-capability communication must be exclusively async events per the architecture specification. SVC-015 receives the RWA data, creates its own representation (COREPReturn entity), and proceeds with consolidation independently."
+        }
+      ]
+    },
+    {
+      "service_id": "SVC-103",
+      "service_name": "Audit & Logging",
+      "capability_id": "PLATFORM",
+      "description": "Platform service providing audit logging for all journey phases. Every calculation, classification decision, validation result, sign-off, and submission event is logged for regulatory audit trail purposes.",
+      "owned_entities": [],
+      "published_events": [],
+      "consumed_events": [],
+      "consumed_apis": [],
+      "design_decisions": []
+    },
+    {
+      "service_id": "SVC-111",
+      "service_name": "WORM Audit Store",
+      "capability_id": "PLATFORM",
+      "description": "Platform service providing immutable, tamper-evident storage for regulatory evidence. CFO sign-off attestations, submission confirmations, restatement records, and PRA acknowledgement receipts are stored in WORM format with 7-year minimum retention.",
       "owned_entities": [],
       "published_events": [],
       "consumed_events": [],
@@ -15,5 +91,39 @@
       "design_decisions": []
     }
   ],
-  "cross_service_interaction_summary": []
+  "cross_service_interaction_summary": [
+    {
+      "from_service": "SVC-012",
+      "from_capability": "CAP-004",
+      "to_service": "SVC-015",
+      "to_capability": "CAP-005",
+      "interaction_type": "async_event",
+      "event": "EVT-123 (CapitalDataPackageAssembled)",
+      "description": "Risk Engine Service publishes the assembled capital data package. Compliance Core Service consumes it to begin COREP return consolidation. This is the primary cross-capability data flow in this journey."
+    },
+    {
+      "from_service": "SVC-012",
+      "from_capability": "CAP-004",
+      "to_service": "SVC-103",
+      "to_capability": "PLATFORM",
+      "interaction_type": "platform_call",
+      "description": "Risk Engine Service logs all calculation events and data lineage to the audit log."
+    },
+    {
+      "from_service": "SVC-015",
+      "from_capability": "CAP-005",
+      "to_service": "SVC-103",
+      "to_capability": "PLATFORM",
+      "interaction_type": "platform_call",
+      "description": "Compliance Core Service logs all consolidation, validation, sign-off, and submission events to the audit log."
+    },
+    {
+      "from_service": "SVC-015",
+      "from_capability": "CAP-005",
+      "to_service": "SVC-111",
+      "to_capability": "PLATFORM",
+      "interaction_type": "platform_call",
+      "description": "Compliance Core Service writes CFO attestations, submission confirmations, and restatement records to the WORM audit store."
+    }
+  ]
 }

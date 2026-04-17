@@ -43,7 +43,7 @@
       "post": {
         "operationId": "createBusinessApplication",
         "summary": "Start business account opening application",
-        "description": "Creates a new BusinessApplicationRecord and BusinessCustomer prospect record for a business current account opening request. Triggers Companies House API lookup (async if CH API is slow). Publishes BusinessApplicationStarted domain event to the event bus (SVC-102) on successful creation. Performs preliminary eligibility checks: entity type supported, company number format valid, deduplication against existing active business accounts.\n\nPhase: BPH-001 (Application Initiation)\nGovernance: GOV-005-R01, GOV-002-R03, MLR 2017 Regulation 28.",
+        "description": "Creates a new BusinessApplicationRecord and BusinessCustomer prospect record for a business current account opening request. Triggers Companies House API lookup (async if CH API is slow). Publishes BusinessApplicationStarted domain event to the event bus (SVC-102) on successful creation. Performs preliminary eligibility checks: entity type supported, company number format valid, deduplication against existing active business accounts.\n\nPhase: PH-139 (Application Initiation)\nGovernance: GOV-005-R01, GOV-002-R03, MLR 2017 Regulation 28.",
         "tags": ["Business Applications"],
         "requestBody": {
           "required": true,
@@ -105,7 +105,7 @@
                   "business_customer_id": "b8e7d6c5-3a2b-4c5d-6e7f-8a9b0c1d2e3f",
                   "application_ref": "BCA-2025-00421",
                   "status": "in_progress",
-                  "current_phase": "BPH-002",
+                  "current_phase": "PH-140",
                   "companies_house_verification_status": "pending",
                   "created_at": "2025-06-15T09:23:11Z",
                   "estimated_completion_business_days": "3-5"
@@ -177,7 +177,7 @@
                   "business_customer_id": "b8e7d6c5-3a2b-4c5d-6e7f-8a9b0c1d2e3f",
                   "application_ref": "BCA-2025-00421",
                   "status": "in_progress",
-                  "current_phase": "BPH-004",
+                  "current_phase": "PH-142",
                   "companies_house_verification": {
                     "status": "verified",
                     "legal_name": "Example Tech Solutions Ltd",
@@ -231,7 +231,7 @@
       "post": {
         "operationId": "createBusinessAccount",
         "summary": "Provision a business current account",
-        "description": "Creates a BusinessAccount entity for an approved business application. Allocates a business sort code and account number from the commercial banking range. Writes the multi-signatory configuration (authorised users, payment approval threshold, payment rails). Promotes BusinessCustomer.status from 'prospect' to 'active'. Publishes BusinessAccountOpened and BusinessAccountProvisioned domain events. This endpoint is called internally by the SVC-005 decision engine after receiving BusinessKYCCleared — it is NOT called directly by SVC-017 or external services.\n\nPhase: BPH-007 (Account Provisioning)\nGovernance: GOV-002-R06, GOV-005-R01.\nIdempotency: Requests with the same application_id return the existing BusinessAccount — no duplicate accounts created.",
+        "description": "Creates a BusinessAccount entity for an approved business application. Allocates a business sort code and account number from the commercial banking range. Writes the multi-signatory configuration (authorised users, payment approval threshold, payment rails). Promotes BusinessCustomer.status from 'prospect' to 'active'. Publishes BusinessAccountOpened and BusinessAccountProvisioned domain events. This endpoint is called internally by the SVC-005 decision engine after receiving BusinessKYCCleared — it is NOT called directly by SVC-017 or external services.\n\nPhase: PH-145 (Account Provisioning)\nGovernance: GOV-002-R06, GOV-005-R01.\nIdempotency: Requests with the same application_id return the existing BusinessAccount — no duplicate accounts created.",
         "tags": ["Business Accounts"],
         "requestBody": {
           "required": true,
@@ -342,7 +342,7 @@
       "get": {
         "operationId": "getBusinessAccount",
         "summary": "Retrieve business account details",
-        "description": "Returns business account details including sort code, account number, IBAN, BIC, account status, payment approval configuration, and authorised user count. Does not return the full authorised_users array — use GET /business-accounts/{id}/authorised-users for the full list.\n\nPhase: BPH-007 onwards.",
+        "description": "Returns business account details including sort code, account number, IBAN, BIC, account status, payment approval configuration, and authorised user count. Does not return the full authorised_users array — use GET /business-accounts/{id}/authorised-users for the full list.\n\nPhase: PH-145 onwards.",
         "tags": ["Business Accounts"],
         "parameters": [
           {
@@ -490,7 +490,7 @@
           },
           "current_phase": {
             "type": "string",
-            "enum": ["BPH-001", "BPH-002", "BPH-003", "BPH-004", "BPH-005", "BPH-006", "BPH-007", "BPH-008", "AP-B001"]
+            "enum": ["PH-139", "PH-140", "PH-141", "PH-142", "PH-143", "PH-144", "PH-145", "PH-146", "AP-B001"]
           },
           "companies_house_verification_status": {
             "type": "string",

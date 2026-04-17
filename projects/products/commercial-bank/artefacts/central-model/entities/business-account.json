@@ -1,5 +1,5 @@
 {
-  "entity_id": "ENT-B002",
+  "entity_id": "ENT-080",
   "name": "BusinessAccount",
   "description": "The business current account entity. Created by SVC-005 (Commercial Banking Core) in BPH-007 upon an approved BusinessApplicationDecisionMade event. The central financial entity in the commercial ledger — analogous to ENT-004 (Account) in the retail domain but owned by CAP-002 and carrying commercial-specific extensions: multi-signatory configuration, payment approval threshold, and business payment rail access. A limited company's BusinessAccount is generally not FSCS-eligible; a sole trader's may be.",
   "owning_service": "SVC-005",
@@ -109,7 +109,7 @@
   ],
   "relationships": [
     {
-      "target_entity": "ENT-B001",
+      "target_entity": "ENT-079",
       "type": "many-to-one",
       "description": "BusinessAccount belongs to one BusinessCustomer via business_customer_id FK."
     }

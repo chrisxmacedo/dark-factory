@@ -3,7 +3,10 @@
   "name": "KycAssessment",
   "description": "Customer Due Diligence (CDD) record produced by the KYC/AML Service (SVC-014) and Sanctions Screening Service (SVC-051) in PH-003. Represents the complete CDD assessment for this customer at onboarding, including PEP screening, sanctions screening, adverse media screening, and risk tier assignment. This entity is the foundation for ongoing perpetual KYC (pKYC) monitoring throughout the customer relationship.",
   "owning_service": "SVC-014",
-  "reachable_from_phases": ["PH-003", "PH-004"],
+  "reachable_from_phases": [
+    "PH-003",
+    "PH-004"
+  ],
   "aggregate_root": false,
   "fields": [
     {
@@ -16,14 +19,14 @@
     {
       "name": "customer_id",
       "type": "UUID",
-      "validation_rule": "Required. FK → Customer.customer_id. Immutable after creation.",
+      "validation_rule": "Required. FK \u2192 Customer.customer_id. Immutable after creation.",
       "source": "PH-003",
       "governed_by": null
     },
     {
       "name": "risk_score",
       "type": "integer",
-      "validation_rule": "Required. 0–100 (inclusive). Produced by the automated risk scoring algorithm in SVC-014. Higher scores indicate higher risk. Score bands map to risk_category: 0–30 = simplified; 31–60 = standard; 61–100 = enhanced. Score is based on identity, occupation, source of funds, country of residence, PEP status, and adverse media results.",
+      "validation_rule": "Required. 0\u2013100 (inclusive). Produced by the automated risk scoring algorithm in SVC-014. Higher scores indicate higher risk. Score bands map to risk_category: 0\u201330 = simplified; 31\u201360 = standard; 61\u2013100 = enhanced. Score is based on identity, occupation, source of funds, country of residence, PEP status, and adverse media results.",
       "source": "PH-003",
       "governed_by": "GOV-005-R01",
       "transparency_note": "Risk score is not surfaced to PER-001 (masked per participant-interaction.json PH-003 data_fields_masked). Internal regulatory data. Accessible to PER-052 (Compliance Officer) via case management system."
@@ -38,23 +41,23 @@
     {
       "name": "pep_screening_result",
       "type": "object",
-      "validation_rule": "Required. Object containing: status (enum: clear | match | pending_review), match_detail (string, null if clear — contains name, position, country, data source if match), data_source (string — e.g. ComplyAdvantage, Refinitiv World-Check), screened_at (ISO 8601 UTC timestamp). A 'match' result sets edd_required = true and raises KYCReferralRaised event.",
+      "validation_rule": "Required. Object containing: status (enum: clear | match | pending_review), match_detail (string, null if clear \u2014 contains name, position, country, data source if match), data_source (string \u2014 e.g. ComplyAdvantage, Refinitiv World-Check), screened_at (ISO 8601 UTC timestamp). A 'match' result sets edd_required = true and raises KYCReferralRaised event.",
       "source": "PH-003",
       "governed_by": "GOV-005-R01",
-      "transparency_note": "PEP match detail is sensitive regulatory data. Access restricted to PER-052 only. Not surfaced to PER-001, PER-056, or PER-060. Tipping-off prohibition (POCA 2002 s333A) applies — PEP screening results must never be disclosed to the subject."
+      "transparency_note": "PEP match detail is sensitive regulatory data. Access restricted to PER-052 only. Not surfaced to PER-001, PER-056, or PER-060. Tipping-off prohibition (POCA 2002 s333A) applies \u2014 PEP screening results must never be disclosed to the subject."
     },
     {
       "name": "sanctions_screening_result",
       "type": "object",
-      "validation_rule": "Required. Object containing: status (enum: clear | blocked | pending_review), match_detail (string, null if clear — contains list name, match confidence percentage, beneficial ownership chain detail if applicable), lists_checked (array of strings: OFSI | OFAC | UN | EU), screened_at (ISO 8601 UTC timestamp). A 'blocked' status immediately raises SanctionsHitDetected event and triggers EX-002. Must complete within 3,000ms hard limit (nfr.json PH-003 sanctions_screening_hard_limit_ms).",
+      "validation_rule": "Required. Object containing: status (enum: clear | blocked | pending_review), match_detail (string, null if clear \u2014 contains list name, match confidence percentage, beneficial ownership chain detail if applicable), lists_checked (array of strings: OFSI | OFAC | UN | EU), screened_at (ISO 8601 UTC timestamp). A 'blocked' status immediately raises SanctionsHitDetected event and triggers EX-002. Must complete within 3,000ms hard limit (nfr.json PH-003 sanctions_screening_hard_limit_ms).",
       "source": "PH-003",
       "governed_by": "GOV-005-R02",
-      "transparency_note": "Sanctions result is the highest-sensitivity regulatory field in this entity. Access restricted to MLRO (PER-052) only. Tipping-off prohibition (POCA 2002 s333A) strictly applies. The customer receives no indication of a sanctions match — only a standard decline message."
+      "transparency_note": "Sanctions result is the highest-sensitivity regulatory field in this entity. Access restricted to MLRO (PER-052) only. Tipping-off prohibition (POCA 2002 s333A) strictly applies. The customer receives no indication of a sanctions match \u2014 only a standard decline message."
     },
     {
       "name": "adverse_media_result",
       "type": "object",
-      "validation_rule": "Required. Object containing: status (enum: clear | flagged | pending_review), summary (string, null if clear — automated summary of negative news items), severity (enum: none | low | medium | high), screened_at (ISO 8601 UTC timestamp). 'high' severity contributes to elevated risk_score and may trigger EDD.",
+      "validation_rule": "Required. Object containing: status (enum: clear | flagged | pending_review), summary (string, null if clear \u2014 automated summary of negative news items), severity (enum: none | low | medium | high), screened_at (ISO 8601 UTC timestamp). 'high' severity contributes to elevated risk_score and may trigger EDD.",
       "source": "PH-003",
       "governed_by": "GOV-005-R01"
     },
@@ -96,7 +99,7 @@
     {
       "name": "mlro_sign_off_by",
       "type": "UUID",
-      "validation_rule": "Conditional. Required when mlro_referral = true and assessment_outcome = approved. FK → Staff.staff_id for PER-052. Must reference a staff member with MLRO role.",
+      "validation_rule": "Conditional. Required when mlro_referral = true and assessment_outcome = approved. FK \u2192 Staff.staff_id for PER-052. Must reference a staff member with MLRO role.",
       "source": "PH-004",
       "governed_by": "GOV-005-R06"
     },
@@ -127,5 +130,8 @@
       "rationale": "Consistent with the service-boundaries.json design: SVC-051 publishes a synchronous screening decision; SVC-014 is the persistence owner. This avoids distributed ownership of a single CDD record and keeps the MLRO audit trail unified in SVC-014."
     }
   ],
-  "source_journeys": ["JRN-001"]
+  "source_journeys": [
+    "JRN-001",
+    "JRN-020"
+  ]
 }

@@ -345,7 +345,7 @@
         {
           "id": "DD-ENT053-01",
           "decision": "CHAPSPaymentIntent is a separate entity from ENT-008 (PaymentIntent, FPS).",
-          "rationale": "ENT-008 was designed around FPS initiation (PaymentIntentCreated EVT-P01 → SVC-013 fraud scoring → SVC-051 sanctions). CHAPS initiation has a different orchestration: CoP check first, then sanctions, then SCA at authorisation. Different state machine and different required fields. Extending ENT-008 would require making the FPS-specific fields nullable for CHAPS and vice versa."
+          "rationale": "ENT-008 was designed around FPS initiation (PaymentIntentCreated EVT-179 → SVC-013 fraud scoring → SVC-051 sanctions). CHAPS initiation has a different orchestration: CoP check first, then sanctions, then SCA at authorisation. Different state machine and different required fields. Extending ENT-008 would require making the FPS-specific fields nullable for CHAPS and vice versa."
         }
       ]
     }

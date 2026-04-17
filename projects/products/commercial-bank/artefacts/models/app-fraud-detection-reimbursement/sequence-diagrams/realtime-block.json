@@ -2,7 +2,7 @@
   "diagram_id": "SEQ-005-002",
   "diagram_name": "Real-time Block \u2014 Sub-flow 1",
   "journey_id": "JRN-005",
-  "description": "JRN-005 sub-flow 1 picks up where JRN-002 left off. The fraud scoring engine (SVC-013) produced fraud_risk_level=block during the payment initiation. SVC-001 published PaymentFraudBlocked (EVT-P08). No funds left the customer account. SVC-013 consumes EVT-P08, creates a FraudCase for analyst review and ML pattern learning. No reimbursement required. Case closed with FraudPatternDetected event fed back to the ML model.",
+  "description": "JRN-005 sub-flow 1 picks up where JRN-002 left off. The fraud scoring engine (SVC-013) produced fraud_risk_level=block during the payment initiation. SVC-001 published PaymentFraudBlocked (EVT-186). No funds left the customer account. SVC-013 consumes EVT-186, creates a FraudCase for analyst review and ML pattern learning. No reimbursement required. Case closed with FraudPatternDetected event fed back to the ML model.",
   "path_reference": "Alternative path AP-001 (journey-detail.json)",
   "participants": [
     {
@@ -40,7 +40,7 @@
   ],
   "context": {
     "prior_journey": "JRN-002 (Faster Payment Initiation) \u2014 Steps PY-001 through PY-002",
-    "entry_point": "PaymentFraudBlocked (EVT-P08) published by SVC-001 after SVC-013 returned fraud_risk_level=block on the FraudScoreCompleted event"
+    "entry_point": "PaymentFraudBlocked (EVT-186) published by SVC-001 after SVC-013 returned fraud_risk_level=block on the FraudScoreCompleted event"
   },
   "steps": [
     {
@@ -49,7 +49,7 @@
       "from": "SVC013",
       "to": "SVC001",
       "type": "event-publish",
-      "label": "Publish FraudScoreCompleted (EVT-P03): fraud_score=0.96, fraud_risk_level=block",
+      "label": "Publish FraudScoreCompleted (EVT-181): fraud_score=0.96, fraud_risk_level=block",
       "note": "This occurs during JRN-002 payment processing. fraud_risk_level=block means the ML model has high confidence this is fraud."
     },
     {
@@ -58,7 +58,7 @@
       "from": "SVC001",
       "to": "SVC001",
       "type": "internal",
-      "label": "Evaluate FraudScoreCompleted. fraud_risk_level=block. Transition PaymentIntent.status=fraud_blocked. Publish PaymentFraudBlocked (EVT-P08)"
+      "label": "Evaluate FraudScoreCompleted. fraud_risk_level=block. Transition PaymentIntent.status=fraud_blocked. Publish PaymentFraudBlocked (EVT-186)"
     },
     {
       "step": 3,
@@ -83,7 +83,7 @@
       "from": "SVC013",
       "to": "SVC013",
       "type": "event-consume",
-      "label": "Consume PaymentFraudBlocked (EVT-P08). Create FraudCase (trigger_type=realtime_block, total_loss_amount=0.00, status=open). Publish FraudCaseCreated (EVT-090)"
+      "label": "Consume PaymentFraudBlocked (EVT-186). Create FraudCase (trigger_type=realtime_block, total_loss_amount=0.00, status=open). Publish FraudCaseCreated (EVT-090)"
     },
     {
       "step": 6,

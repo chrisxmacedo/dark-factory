@@ -1,0 +1,17 @@
+{
+  "journey_id": "JRN-024",
+  "document_version": "0.1.0",
+  "status": "Draft",
+  "participants": [
+    {
+      "persona_id": "PER-059",
+      "persona_name": "Senior Manager (Head of Compliance — SMF16)",
+      "phases": ["PH-131", "PH-132", "PH-133"],
+      "touchpoints": [
+        {"phase": "PH-131", "channel": "internal_systems", "action": "Review conduct monitoring report; confirm no unresolved surveillance alerts"},
+        {"phase": "PH-132", "channel": "internal_systems", "action": "Review accountability map; identify role changes; initiate FCA register updates as required"},
+        {"phase": "PH-133", "channel": "internal_systems", "action": "Approve Board Compliance Report section; close review; record SMF16 attestation"}
+      ]
+    }
+  ]
+}

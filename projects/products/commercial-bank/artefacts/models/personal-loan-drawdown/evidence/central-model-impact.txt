@@ -1,0 +1,32 @@
+Central Model Impact Assessment — JRN-027 Personal Loan Application and Drawdown
+Generated: 2026-04-15
+
+ENTITIES
+  loan-application.json  — UPDATED (JRN-027 added; ENT-067 existed as stub)
+  loan-agreement.json    — CREATED (ENT-068, owned by SVC-001)
+  loan-account.json      — UPDATED (JRN-027 added; ENT-069 existed as stub)
+
+EVENTS
+  EVT-152 LoanApplicationSubmitted     — ADDED to central catalogue
+  EVT-153 CreditAssessmentCompleted    — ADDED to central catalogue (source: SVC-012, CAP-004)
+  EVT-154 LoanAgreementExecuted        — ADDED to central catalogue
+  EVT-155 LoanDrawdownCompleted        — ADDED to central catalogue
+
+SERVICE MAP
+  SVC-001  Retail Banking Core          — extended with lending endpoints and events
+  SVC-009  Domestic Payments            — extended (consumer of EVT-154 for loan drawdown)
+  SVC-012  Risk Engine                  — extended (publisher of EVT-153)
+  SVC-014  KYC/AML                      — extended (consumer of EVT-152 for AML monitoring)
+  SVC-015  Compliance Core              — extended (consumer of EVT-154 for CONC reporting)
+  SVC-053  Notifications                — extended (consumer of EVT-155)
+  SVC-103  Audit & Logging              — extended (consumer of EVT-154/155)
+
+CROSS-JOURNEY IMPACT
+  No existing event IDs modified or reassigned.
+  No existing entity schemas modified.
+  EVT-153 published by SVC-012 (CAP-004) — only cross-capability event in this journey produced
+  by a non-CAP-001 service. No impact on other journeys consuming SVC-012 outputs.
+  SVC-009 previously appeared in faster-payment-initiation (JRN-006 et al.); drawdown use case
+  adds a new consumer pattern (loan disbursement) with no schema conflict.
+
+VERDICT: No breaking changes. All additions are net-new. Safe to proceed.

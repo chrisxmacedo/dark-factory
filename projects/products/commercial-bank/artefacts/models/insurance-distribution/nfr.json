@@ -1,0 +1,58 @@
+{
+  "journey_id": "JRN-030",
+  "document_version": "0.1.0",
+  "status": "Draft",
+  "per_phase_nfrs": [
+    {
+      "phase_id": "PH-136",
+      "phase_name": "Target Market Assessment and Fair Value Check",
+      "latency": {"target_market_assessment_p95": "< 500ms", "ipid_presentation_p95": "< 1,000ms"},
+      "availability": "99.9%",
+      "security": {"data_classification": "PII — customer profile, age, insurance eligibility", "access_control": "Authenticated customer session", "audit": "Target market assessment result and fair value check logged with timestamp (FCA PROD evidence)"}
+    },
+    {
+      "phase_id": "PH-137",
+      "phase_name": "Customer Acceptance and Policy Binding",
+      "latency": {"policy_binding_p95": "< 5,000ms (includes external underwriter API call)"},
+      "availability": "99.5% — external underwriter API dependency",
+      "security": {"data_classification": "PII + Financial — policy data, premium", "access_control": "SCA for high-value commitments; IPID acknowledgement timestamp serves as evidence of informed consent", "audit": "Policy binding with underwriter_policy_ref logged immutably"}
+    },
+    {
+      "phase_id": "PH-138",
+      "phase_name": "Account Fee Update and Consumer Duty Recording",
+      "latency": {"account_update_p95": "< 2,000ms"},
+      "availability": "99.9%",
+      "security": {"data_classification": "Financial — account product type, fee", "access_control": "System-initiated account update post policy binding", "audit": "Consumer Duty evidence trail saved with all assessment results"}
+    }
+  ],
+  "cross_cutting_nfrs": [
+    {
+      "id": "XNFR-JRN030-01",
+      "name": "Insurance Policy Record Retention",
+      "requirement": "InsurancePolicy records (including Consumer Duty evidence, target market assessment, IPID acknowledgement) retained for minimum 6 years after policy end date.",
+      "rationale": "FCA ICOBS record retention requirements; Consumer Duty evidence for FCA review; limitation period for mis-selling claims."
+    },
+    {
+      "id": "XNFR-JRN030-02",
+      "name": "Consumer Duty Evidence — Mandatory",
+      "requirement": "Every insurance distribution must have a documented Consumer Duty evidence trail: target market assessment result, fair value assessment result, IPID acknowledgement timestamp, and policy binding confirmation.",
+      "rationale": "FCA PROD 4 (insurance product oversight) requires documented evidence that the product was distributed to customers within the target market and provides fair value."
+    }
+  ],
+  "regulatory_slas": [
+    {
+      "id": "REG-SLA-JRN030-01",
+      "name": "ICOBS — IPID Before Conclusion of Contract",
+      "requirement": "The IPID (Insurance Product Information Document) must be provided to the customer before the insurance contract is concluded.",
+      "source": "ICOBS 6B, Insurance Distribution Directive Article 20",
+      "breach_consequence": "Contract may be voidable; FCA enforcement; reputational damage (PPI mis-selling history)"
+    },
+    {
+      "id": "REG-SLA-JRN030-02",
+      "name": "FCA PROD — Target Market Assessment",
+      "requirement": "Insurance products must only be distributed to customers within the defined target market. Target market assessment must be documented.",
+      "source": "FCA PROD 4 (Product and Distribution rules)",
+      "breach_consequence": "FCA enforcement; potential product intervention order; customer redress obligation"
+    }
+  ]
+}

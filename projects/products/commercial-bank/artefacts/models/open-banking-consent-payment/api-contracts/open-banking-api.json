@@ -243,7 +243,7 @@
         "method": "POST",
         "path": "/payments",
         "phase": "PH-038",
-        "summary": "SVC-017 initiates payment. SVC-001 validates consent state, account balance, and daily limit. Atomically creates ENT-008 and consumes ENT-030. Publishes EVT-P01 and EVT-061.",
+        "summary": "SVC-017 initiates payment. SVC-001 validates consent state, account balance, and daily limit. Atomically creates ENT-008 and consumes ENT-030. Publishes EVT-179 and EVT-061.",
         "request_body": {
           "consent_id": "string (UUID v4)",
           "amount": "decimal",

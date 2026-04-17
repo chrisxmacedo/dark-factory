@@ -1,0 +1,58 @@
+{
+  "diagram_id": "SEQ-JRN019-002",
+  "name": "Exception Path — 8-Week Deadline Breach",
+  "journey_id": "JRN-019",
+  "scenario": "deadline-breach",
+  "description": "Complaint not resolved within 8 weeks. A Holding Response is dispatched to the customer granting immediate FOS referral rights. Compliance incident raised.",
+  "participants": [
+    {"id": "Agent", "label": "PER-062 (Customer Service Agent)", "type": "actor"},
+    {"id": "Channel", "label": "SVC-017 (Digital Channels)", "type": "service"},
+    {"id": "RetailBanking", "label": "SVC-001 (Retail Banking Core)", "type": "service"},
+    {"id": "EventBus", "label": "SVC-102 (Event Bus)", "type": "infrastructure"},
+    {"id": "Compliance", "label": "SVC-015 (Compliance Core)", "type": "service"},
+    {"id": "Notifications", "label": "SVC-053 (Notifications)", "type": "service"},
+    {"id": "ComplianceOfficer", "label": "PER-052 (Compliance Officer)", "type": "actor"}
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "from": "RetailBanking",
+      "to": "RetailBanking",
+      "type": "internal",
+      "action": "Scheduled job detects ComplaintCase with target_resolution_date exceeded and status != closed",
+      "phase": "PH-100"
+    },
+    {
+      "step": 2,
+      "from": "RetailBanking",
+      "to": "EventBus",
+      "type": "async-publish",
+      "action": "Publish ComplaintClosed (EVT-141) { response_type: holding_response, outcome: null }",
+      "phase": "PH-101"
+    },
+    {
+      "step": 3,
+      "from": "EventBus",
+      "to": "Notifications",
+      "type": "async-consume",
+      "action": "Consume EVT-141 → Dispatch Holding Response: apology, immediate FOS referral right, FOS contact details",
+      "phase": "PH-101"
+    },
+    {
+      "step": 4,
+      "from": "EventBus",
+      "to": "Compliance",
+      "type": "async-consume",
+      "action": "Consume EVT-141 → Detect response_type=holding_response → Raise DISP SLA breach incident",
+      "phase": "PH-101"
+    },
+    {
+      "step": 5,
+      "from": "Compliance",
+      "to": "ComplianceOfficer",
+      "type": "notification",
+      "action": "Alert: DISP 8-week SLA breach for COMP-YYYYMMDD-NNNN. Immediate escalation required.",
+      "phase": "PH-101"
+    }
+  ]
+}

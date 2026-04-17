@@ -22,14 +22,14 @@
         {
           "name": "business_customer_id",
           "type": "UUID",
-          "validation_rule": "Required. FK → BusinessCustomer.business_customer_id (ENT-B001). Immutable. PER-002 must be an authorised user on the linked BusinessAccount.",
+          "validation_rule": "Required. FK → BusinessCustomer.business_customer_id (ENT-079). Immutable. PER-002 must be an authorised user on the linked BusinessAccount.",
           "source": "PH-029",
           "governed_by": "GOV-005-R01"
         },
         {
           "name": "business_account_id",
           "type": "UUID",
-          "validation_rule": "Required. FK → BusinessAccount.business_account_id (ENT-B002). Originating account. Immutable.",
+          "validation_rule": "Required. FK → BusinessAccount.business_account_id (ENT-080). Originating account. Immutable.",
           "source": "PH-029",
           "governed_by": null
         },
@@ -163,12 +163,12 @@
           "description": "InternationalTransfer has one SWIFTMessage record, created at PH-032."
         },
         {
-          "target_entity": "ENT-B001",
+          "target_entity": "ENT-079",
           "type": "many-to-one",
           "description": "InternationalTransfer belongs to one BusinessCustomer via business_customer_id."
         },
         {
-          "target_entity": "ENT-B002",
+          "target_entity": "ENT-080",
           "type": "many-to-one",
           "description": "InternationalTransfer is debited from one BusinessAccount via business_account_id."
         }
@@ -434,16 +434,16 @@
   ],
   "referenced_existing_entities": [
     {
-      "entity_id": "ENT-B001",
+      "entity_id": "ENT-079",
       "name": "BusinessCustomer",
       "owning_service": "SVC-005",
-      "usage_in_journey": "PER-002 (Corporate Client) must be an authorised user on a BusinessAccount belonging to this BusinessCustomer. SVC-010 validates business_customer_id at PH-029 initiation. The business_customer_id is stored on ENT-026 (InternationalTransfer) for audit and FATF travel rule originator identification. SVC-010 never writes to ENT-B001."
+      "usage_in_journey": "PER-002 (Corporate Client) must be an authorised user on a BusinessAccount belonging to this BusinessCustomer. SVC-010 validates business_customer_id at PH-029 initiation. The business_customer_id is stored on ENT-026 (InternationalTransfer) for audit and FATF travel rule originator identification. SVC-010 never writes to ENT-079."
     },
     {
-      "entity_id": "ENT-B002",
+      "entity_id": "ENT-080",
       "name": "BusinessAccount",
       "owning_service": "SVC-005",
-      "usage_in_journey": "The originating account for the international transfer. SVC-010 checks account status = active, available balance >= gbp_equivalent, and daily limit at PH-029. SVC-005 (CAP-002) owns the debit operation — SVC-010 triggers debit via async event (EVT-054 consumption). SVC-010 reads BusinessAccount.payment_approval_threshold to determine dual-authorisation requirement. SVC-010 never writes directly to ENT-B002."
+      "usage_in_journey": "The originating account for the international transfer. SVC-010 checks account status = active, available balance >= gbp_equivalent, and daily limit at PH-029. SVC-005 (CAP-002) owns the debit operation — SVC-010 triggers debit via async event (EVT-054 consumption). SVC-010 reads BusinessAccount.payment_approval_threshold to determine dual-authorisation requirement. SVC-010 never writes directly to ENT-080."
     }
   ],
   "entity_extensions": []

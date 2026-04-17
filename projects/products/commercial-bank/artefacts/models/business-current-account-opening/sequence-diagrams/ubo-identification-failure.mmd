@@ -15,7 +15,7 @@ sequenceDiagram
     participant SVC053 as SVC-053<br/>Notifications
 
     rect rgb(230, 245, 255)
-        Note over PER002,SVC005: BPH-001 + BPH-002 — Application + Companies House (Day 1)
+        Note over PER002,SVC005: PH-139 + PH-140 — Application + Companies House (Day 1)
         PER002->>SVC017: Submit application (Holdco Ventures Ltd, company: 99887766)
         SVC017->>SVC005: POST /business-applications
         SVC005->>EB: publish BusinessApplicationStarted
@@ -27,7 +27,7 @@ sequenceDiagram
     end
 
     rect rgb(255, 230, 220)
-        Note over PER002,PER052: BPH-003 — UBO Identification Failure (EX-B004, Day 1)
+        Note over PER002,PER052: PH-141 — UBO Identification Failure (EX-B004, Day 1)
         SVC017-->>PER002: Prompt: "One of your registered beneficial owners is<br/>a company (Holdco International BV). We need to<br/>identify the natural persons behind it."
         PER002->>SVC017: Cannot provide UBO details online — requests RM assistance
         SVC005->>EB: publish UBOIdentificationException<br/>{ exception_type: corporate_psc_look_through_required,<br/>corporate_psc: Holdco International BV, jurisdiction: NL }
@@ -52,9 +52,9 @@ sequenceDiagram
     end
 
     rect rgb(245, 230, 255)
-        Note over SVC053,PER002: Journey Resumes — BPH-004 Identity Verification (Days 4-6)
+        Note over SVC053,PER002: Journey Resumes — PH-142 Identity Verification (Days 4-6)
         SVC053-->>PER002: In-app: "Beneficial owners identified. Identity<br/>verification links sent to Jan and Marieke van den Berg."
         Note over SVC053: Verification invitations dispatched to<br/>Jan van den Berg + Marieke van den Berg (email)
         Note over SVC005: Alice Pemberton (director) also requires verification
-        Note over SVC005: Journey continues: BPH-004 → BPH-005 → BPH-006 → BPH-007 → BPH-008<br/>via normal happy path (not shown here)<br/>Total elapsed: ~6-8 business days
+        Note over SVC005: Journey continues: PH-142 → PH-143 → PH-144 → PH-145 → PH-146<br/>via normal happy path (not shown here)<br/>Total elapsed: ~6-8 business days
     end

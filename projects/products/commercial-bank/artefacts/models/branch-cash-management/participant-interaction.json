@@ -1,0 +1,25 @@
+{
+  "journey_id": "JRN-025",
+  "document_version": "0.1.0",
+  "status": "Draft",
+  "participants": [
+    {
+      "persona_id": "PER-001",
+      "persona_name": "Personal Customer",
+      "phases": ["PH-134", "PH-135"],
+      "touchpoints": [
+        {"phase": "PH-134", "channel": "branch", "action": "Present cash for deposit at branch counter; provide identity documentation"},
+        {"phase": "PH-135", "channel": "branch", "action": "Receive deposit receipt confirming account credit"}
+      ]
+    },
+    {
+      "persona_id": "PER-056",
+      "persona_name": "Branch Staff",
+      "phases": ["PH-134", "PH-135"],
+      "touchpoints": [
+        {"phase": "PH-134", "channel": "internal_systems", "action": "Verify customer identity; count and verify cash via machine; submit deposit transaction; note AML threshold report generated"},
+        {"phase": "PH-135", "channel": "internal_systems", "action": "Issue receipt; reconcile vault at close of business; prepare surplus for repatriation"}
+      ]
+    }
+  ]
+}

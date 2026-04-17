@@ -17,7 +17,7 @@
           "event_id": "EVT-111",
           "name": "CHAPSPaymentSettled",
           "provider_service_id": "SVC-009",
-          "purpose": "JRN-028 PH-081→PH-082: SVC-001 debits ENT-004 (Account) by the settled amount. Updates CHAPSPaymentIntent (ENT-053) status to completed. Publishes AccountDebited (EVT-P06 CHAPS variant). Updates Account.chaps_daily_total. Idempotent on chaps_execution_id.",
+          "purpose": "JRN-028 PH-081→PH-082: SVC-001 debits ENT-004 (Account) by the settled amount. Updates CHAPSPaymentIntent (ENT-053) status to completed. Publishes AccountDebited (EVT-184 CHAPS variant). Updates Account.chaps_daily_total. Idempotent on chaps_execution_id.",
           "maps_to": {
             "entity": "ENT-053",
             "field_mappings": [
@@ -83,7 +83,7 @@
           }
         },
         {
-          "event_id": "EVT-P02",
+          "event_id": "EVT-180",
           "name": "SanctionsScreeningCompleted",
           "provider_service_id": "SVC-051",
           "purpose": "JRN-028 PH-079: SVC-009 (acting as orchestrator for CHAPS flow) receives sanctions result. If clear: publishes CHAPSCoPCheckCompleted → allows PH-080 to proceed. If hit: publishes SanctionsHitDetected (EVT-006).",
@@ -171,7 +171,7 @@
           "provider_service_name": "Sanctions Screening Service",
           "call_pattern": "Synchronous (blocking, hard limit 3,000ms — GOV-005-R02)",
           "dependency_criticality": "hard",
-          "purpose": "Screens beneficiary name and account details against OFSI/UN/EU sanctions lists. Result published as EVT-P02 (SanctionsScreeningCompleted) or EVT-006 (SanctionsHitDetected)."
+          "purpose": "Screens beneficiary name and account details against OFSI/UN/EU sanctions lists. Result published as EVT-180 (SanctionsScreeningCompleted) or EVT-006 (SanctionsHitDetected)."
         }
       ],
       "design_decisions": [

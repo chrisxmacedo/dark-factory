@@ -1,0 +1,26 @@
+Central Model Impact Assessment — JRN-022 Annual Stress Test Participation (PRA)
+Generated: 2026-04-15
+
+ENTITIES
+  stress-test-exercise.json   — CREATED (ENT-073, owned by SVC-012)
+  regulatory-submission.json  — CREATED (ENT-074, owned by SVC-015)
+
+EVENTS
+  EVT-161 StressTestExerciseStarted — ADDED to central catalogue
+  EVT-162 StressTestSubmitted       — ADDED to central catalogue
+
+SERVICE MAP
+  SVC-012  Risk Engine     — extended (stress test exercise owner, CAP-004)
+  SVC-015  Compliance Core — extended (regulatory submission tracker, CAP-005)
+  SVC-103  Audit & Logging — extended (consumer of both events)
+
+CROSS-JOURNEY IMPACT
+  No existing event IDs modified or reassigned.
+  No existing entity schemas modified.
+  ENT-074 (RegulatorySubmission) is designed as a reusable entity for future regulatory
+  submission journeys (ICAAP, RMAR, PRA returns). This is a net-positive addition to the
+  central model. No conflict with existing entities.
+  SVC-012 previously published EVT-023 (CreditCheckCompleted) in JRN-006 and EVT-153 in
+  JRN-027. EVT-161/162 are on topic risk.stress-testing — separate topic, no conflict.
+
+VERDICT: No breaking changes. ENT-074 is a reusable addition. Safe to proceed.

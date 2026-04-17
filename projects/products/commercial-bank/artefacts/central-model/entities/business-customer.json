@@ -1,5 +1,5 @@
 {
-  "entity_id": "ENT-B001",
+  "entity_id": "ENT-079",
   "name": "BusinessCustomer",
   "description": "Commercial banking aggregate root for a legal entity customer. Created by SVC-005 (Commercial Banking Core) at BPH-001 as a prospect record and promoted to 'active' at BPH-007 (Account Provisioning) once a BusinessAccount is opened. This is the foundational entity consumed by all downstream commercial journeys (JRN-007, JRN-013, JRN-014, JRN-023). IMPORTANT: This entity is SEPARATE from ENT-001 (Customer, owned by CAP-001/SVC-001). Commercial Banking (CAP-002) owns BusinessCustomer; Retail Banking (CAP-001) owns Customer. There is no shared FK relationship between the two — they are independent aggregate roots in separate capability domains.",
   "owning_service": "SVC-005",
@@ -122,22 +122,22 @@
   ],
   "relationships": [
     {
-      "target_entity": "ENT-B002",
+      "target_entity": "ENT-080",
       "type": "one-to-many",
       "description": "BusinessCustomer may hold multiple BusinessAccount records."
     },
     {
-      "target_entity": "ENT-B003",
+      "target_entity": "ENT-081",
       "type": "one-to-many",
       "description": "BusinessCustomer has one or more UltimateBeneficialOwner records (MLR 2017 Regulation 5)."
     },
     {
-      "target_entity": "ENT-B004",
+      "target_entity": "ENT-082",
       "type": "one-to-many",
       "description": "BusinessCustomer has one or more DirectorRecord entries."
     },
     {
-      "target_entity": "ENT-B005",
+      "target_entity": "ENT-083",
       "type": "one-to-one",
       "description": "BusinessCustomer has one BusinessKycAssessment record per CDD cycle."
     }
@@ -146,7 +146,7 @@
     {
       "id": "DD-ENTB001-01",
       "decision": "BusinessCustomer is a completely separate entity from ENT-001 (Customer). No FK relationship exists between them.",
-      "rationale": "Commercial banking and retail banking are separate capability domains. ENT-001 is owned by CAP-001/SVC-001; ENT-B001 is owned by CAP-002/SVC-005. Merging them would couple unrelated capabilities and make CDD governance unclear."
+      "rationale": "Commercial banking and retail banking are separate capability domains. ENT-001 is owned by CAP-001/SVC-001; ENT-079 is owned by CAP-002/SVC-005. Merging them would couple unrelated capabilities and make CDD governance unclear."
     },
     {
       "id": "DD-ENTB001-02",

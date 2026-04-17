@@ -1,0 +1,86 @@
+{
+  "id": "ENT-076",
+  "name": "SmscrReview",
+  "description": "A quarterly SM&CR conduct monitoring and accountability review record. Tracks the review lifecycle, findings, and Board reporting. Owned by SVC-015 (Compliance Core, CAP-005).",
+  "owning_service": "SVC-015",
+  "fields": [
+    {
+      "name": "review_id",
+      "type": "UUID",
+      "nullable": false,
+      "description": "Unique identifier for this SM&CR review"
+    },
+    {
+      "name": "review_quarter",
+      "type": "string",
+      "nullable": false,
+      "description": "Quarter covered (e.g. Q1-2026)"
+    },
+    {
+      "name": "triggered_by",
+      "type": "UUID",
+      "nullable": false,
+      "description": "FK to PER-059 who triggered the review"
+    },
+    {
+      "name": "status",
+      "type": "string",
+      "nullable": false,
+      "description": "in_progress | closed | breach_notified"
+    },
+    {
+      "name": "conduct_alerts_count",
+      "type": "integer",
+      "nullable": false,
+      "description": "Number of conduct alerts identified by surveillance scan"
+    },
+    {
+      "name": "training_completion_rate",
+      "type": "decimal",
+      "nullable": false,
+      "description": "Percentage of staff completing required FCA conduct training"
+    },
+    {
+      "name": "accountability_changes_count",
+      "type": "integer",
+      "nullable": false,
+      "description": "Number of accountability map changes since last review"
+    },
+    {
+      "name": "fca_register_updates_required",
+      "type": "boolean",
+      "nullable": false,
+      "description": "Whether FCA register updates were required"
+    },
+    {
+      "name": "breach_notification_ref",
+      "type": "string",
+      "nullable": true,
+      "description": "FCA breach notification reference (if status = breach_notified)"
+    },
+    {
+      "name": "smf16_attestation_ref",
+      "type": "string",
+      "nullable": true,
+      "description": "Head of Compliance attestation reference for review sign-off"
+    },
+    {
+      "name": "closed_at",
+      "type": "timestamp",
+      "nullable": true,
+      "description": "UTC timestamp when review was closed"
+    },
+    {
+      "name": "created_at",
+      "type": "timestamp",
+      "nullable": false
+    }
+  ],
+  "relationships": [],
+  "design_decisions": [
+    "SmscrReview is a simple governance record. No cross-capability dependencies needed."
+  ],
+  "source_journeys": [
+    "JRN-024"
+  ]
+}

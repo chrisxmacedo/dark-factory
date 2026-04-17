@@ -10,6 +10,7 @@
       "name": "KYC/AML Service",
       "capability_domain": "CAP-005 (Compliance & Regulatory)",
       "role_in_journey": "PRIMARY OWNER — orchestrates the entire SAR filing workflow. Owns all SAR entities and events. Enforces tipping-off prohibition at service level.",
+      "owned_entities": ["ENT-010", "ENT-011"],
       "owned_entities_added_by_jrn003": [
         {
           "entity_id": "ENT-010",

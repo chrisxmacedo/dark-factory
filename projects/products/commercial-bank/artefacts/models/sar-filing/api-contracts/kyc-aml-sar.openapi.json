@@ -47,7 +47,7 @@
         "operationId": "createSAR",
         "tags": ["sars"],
         "summary": "Create a SAR (MLRO filing decision)",
-        "description": "Creates a new SuspiciousActivityReport entity. Called by SVC-015 (Compliance Core) when PER-052 records a decision to file (file_sar or file_defensive_sar) in SAR-PH-003. Returns the created SAR with status = draft. Simultaneously links the SAR to the source SARInvestigationRecord.",
+        "description": "Creates a new SuspiciousActivityReport entity. Called by SVC-015 (Compliance Core) when PER-052 records a decision to file (file_sar or file_defensive_sar) in PH-154. Returns the created SAR with status = draft. Simultaneously links the SAR to the source SARInvestigationRecord.",
         "x-auth-required-roles": ["MLRO", "DEPUTY_MLRO"],
         "x-audit": "All calls logged to SVC-103 with MLRO identity and timestamp",
         "requestBody": {
@@ -154,7 +154,7 @@
         "operationId": "updateSAR",
         "tags": ["sars"],
         "summary": "Update SAR fields (preparation phase)",
-        "description": "Updates mutable fields of a SuspiciousActivityReport during SAR preparation (SAR-PH-004). Only fields in the 'draft' or 'ready_for_submission' status may be updated. Once status = 'filed', no field updates are permitted (WORM constraint). Supports partial updates — only include fields to be changed.",
+        "description": "Updates mutable fields of a SuspiciousActivityReport during SAR preparation (PH-155). Only fields in the 'draft' or 'ready_for_submission' status may be updated. Once status = 'filed', no field updates are permitted (WORM constraint). Supports partial updates — only include fields to be changed.",
         "x-auth-required-roles": ["MLRO", "DEPUTY_MLRO"],
         "x-audit": "All field changes logged with before/after value hash",
         "parameters": [
@@ -295,7 +295,7 @@
         "operationId": "recordConsentResponse",
         "tags": ["sars"],
         "summary": "Record NCA consent response",
-        "description": "Records the NCA's response to a consent SAR. Used in SAR-PH-006 when NCA grants consent, refuses consent, or issues a moratorium notice. Updates SuspiciousActivityReport.consent_status and moratorium_expiry_date (if applicable). Publishes SARConsentGranted (EVT-018) on grant. If NCA refuses consent, transaction hold remains indefinitely until MLRO manually closes.",
+        "description": "Records the NCA's response to a consent SAR. Used in PH-157 when NCA grants consent, refuses consent, or issues a moratorium notice. Updates SuspiciousActivityReport.consent_status and moratorium_expiry_date (if applicable). Publishes SARConsentGranted (EVT-018) on grant. If NCA refuses consent, transaction hold remains indefinitely until MLRO manually closes.",
         "x-auth-required-roles": ["MLRO", "DEPUTY_MLRO"],
         "x-audit": "All consent responses logged with MLRO identity and NCA source document reference",
         "parameters": [
@@ -455,7 +455,7 @@
         "operationId": "addEvidenceItem",
         "tags": ["investigations"],
         "summary": "Add evidence item to investigation",
-        "description": "Appends a new evidence item to SARInvestigationRecord.evidence_items. Evidence items are WORM — once added they cannot be modified or deleted. Called during SAR-PH-002 (MLRO Investigation).",
+        "description": "Appends a new evidence item to SARInvestigationRecord.evidence_items. Evidence items are WORM — once added they cannot be modified or deleted. Called during PH-153 (MLRO Investigation).",
         "x-auth-required-roles": ["MLRO", "DEPUTY_MLRO"],
         "x-audit": "Evidence addition logged with MLRO identity and timestamp",
         "parameters": [

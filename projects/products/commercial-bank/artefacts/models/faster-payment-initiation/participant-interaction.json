@@ -11,7 +11,7 @@
       "channel_access": ["CH-001 (Web Portal)", "CH-002 (Mobile App)"],
       "touchpoints": [
         {
-          "phase_id": "PY-001",
+          "phase_id": "PH-147",
           "phase_name": "Payment Initiation",
           "interaction_type": "active",
           "description": "Customer enters payment details (payee sort code, account number, name, amount, reference), views CoP result, and completes SCA.",
@@ -36,7 +36,7 @@
           ]
         },
         {
-          "phase_id": "PY-002",
+          "phase_id": "PH-148",
           "phase_name": "Pre-Execution Checks",
           "interaction_type": "passive",
           "description": "Customer waits on confirmation screen while async checks run. No customer action required.",
@@ -52,7 +52,7 @@
           ]
         },
         {
-          "phase_id": "PY-003",
+          "phase_id": "PH-149",
           "phase_name": "Payment Decision",
           "interaction_type": "passive (or terminal if declined)",
           "description": "Customer learns whether payment is approved or declined. Declined payments show a generic message.",
@@ -82,7 +82,7 @@
           ]
         },
         {
-          "phase_id": "PY-004",
+          "phase_id": "PH-150",
           "phase_name": "FPS Execution",
           "interaction_type": "passive",
           "description": "Customer waits on confirmation screen while FPS submission occurs. Status updates visible via polling.",
@@ -96,7 +96,7 @@
           ]
         },
         {
-          "phase_id": "PY-005",
+          "phase_id": "PH-151",
           "phase_name": "Confirmation",
           "interaction_type": "active (review)",
           "description": "Customer views final confirmation screen and may download or share payment details.",
@@ -143,7 +143,7 @@
       "channel_access": ["Internal Fraud Operations Platform (INTL-003)"],
       "touchpoints": [
         {
-          "phase_id": "PY-003 (exception path EX-002)",
+          "phase_id": "PH-149 (exception path EX-002)",
           "phase_name": "Fraud Block Investigation",
           "interaction_type": "active (exception handling)",
           "description": "Fraud Analyst receives a case alert when SVC-001 publishes PaymentFraudBlocked. Reviews the fraud score, transaction details, customer profile, and device/behavioural signals to determine if the block is a true positive or false positive.",
@@ -182,7 +182,7 @@
       "channel_access": ["Financial Crime Platform (INTL-001)", "Secure email for OFSI reporting"],
       "touchpoints": [
         {
-          "phase_id": "PY-003 (exception path EX-001)",
+          "phase_id": "PH-149 (exception path EX-001)",
           "phase_name": "Sanctions Hit Review",
           "interaction_type": "active (exception handling)",
           "description": "MLRO receives immediate alert when SanctionsScreeningCompleted returns outcome = hit. Reviews the match details against the OFSI Consolidated List. Determines whether the match is a false positive (name collision) or a true sanctions target. If true positive, must report to OFSI within 14 days. Account freeze may be warranted (Account.status = frozen).",

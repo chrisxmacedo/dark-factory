@@ -1,0 +1,192 @@
+{
+  "id": "ENT-063",
+  "name": "CddReviewCase",
+  "description": "A CDD periodic or event-triggered review record for a corporate client. Tracks the full lifecycle from trigger to archival. Owned by SVC-015 (Compliance Core Service). The primary audit trail for MLR 2017 periodic review obligations.",
+  "owning_service": "SVC-015",
+  "fields": [
+    {
+      "name": "review_id",
+      "type": "UUID",
+      "required": true,
+      "description": "Primary key"
+    },
+    {
+      "name": "client_id",
+      "type": "UUID",
+      "required": true,
+      "description": "FK \u2192 corporate client entity (ENT-002 or equivalent corporate entity)"
+    },
+    {
+      "name": "review_type",
+      "type": "enum",
+      "required": true,
+      "enum_values": [
+        "periodic",
+        "event_triggered"
+      ],
+      "description": "Whether review was scheduled or event-triggered"
+    },
+    {
+      "name": "trigger_reason",
+      "type": "string",
+      "required": true,
+      "max_length": 500,
+      "description": "Reason for review (scheduled cycle / UBO change / adverse media / sanctions update / transaction anomaly)"
+    },
+    {
+      "name": "risk_tier",
+      "type": "enum",
+      "required": true,
+      "enum_values": [
+        "low",
+        "medium",
+        "high",
+        "pep"
+      ],
+      "description": "Client risk tier at time of trigger \u2014 determines review frequency and EDD requirements"
+    },
+    {
+      "name": "due_date",
+      "type": "date",
+      "required": true,
+      "description": "Date by which review must be completed"
+    },
+    {
+      "name": "status",
+      "type": "enum",
+      "required": true,
+      "enum_values": [
+        "triggered",
+        "assigned",
+        "documents_requested",
+        "documents_under_review",
+        "documents_verified",
+        "risk_assessed",
+        "decision_made",
+        "archived"
+      ],
+      "description": "Current lifecycle status"
+    },
+    {
+      "name": "assigned_to",
+      "type": "UUID",
+      "required": false,
+      "description": "FK \u2192 KYC analyst assigned to this review"
+    },
+    {
+      "name": "documents_received",
+      "type": "array",
+      "required": true,
+      "description": "List of documents received: [{document_type, received_at, verified, verified_by, verified_at}]"
+    },
+    {
+      "name": "ubo_structure",
+      "type": "object",
+      "required": false,
+      "description": "Beneficial ownership structure: [{ubo_name, dob, nationality, ownership_percentage, verification_status}]"
+    },
+    {
+      "name": "screening_results",
+      "type": "object",
+      "required": false,
+      "description": "Aggregated screening results: {sanctions_hit, pep_match, adverse_media_hit, screening_timestamp, screener_ref}"
+    },
+    {
+      "name": "risk_rating",
+      "type": "enum",
+      "required": false,
+      "enum_values": [
+        "low",
+        "medium",
+        "high",
+        "pep"
+      ],
+      "description": "Updated risk rating following assessment \u2014 may differ from risk_tier at trigger"
+    },
+    {
+      "name": "risk_rating_changed",
+      "type": "boolean",
+      "required": false,
+      "description": "True if risk_rating differs from prior KycAssessment.risk_rating"
+    },
+    {
+      "name": "edd_required",
+      "type": "boolean",
+      "required": true,
+      "default": false,
+      "description": "True if Enhanced Due Diligence required"
+    },
+    {
+      "name": "review_decision",
+      "type": "enum",
+      "required": false,
+      "enum_values": [
+        "continue",
+        "continue_with_edd",
+        "escalate_to_exit",
+        "suspend_account"
+      ],
+      "description": "Final decision by PER-052"
+    },
+    {
+      "name": "decision_rationale",
+      "type": "string",
+      "required": false,
+      "max_length": 5000,
+      "description": "Mandatory rationale for the review decision \u2014 audit trail"
+    },
+    {
+      "name": "senior_manager_approval_id",
+      "type": "UUID",
+      "required": false,
+      "description": "FK \u2192 approval record if exit decision required PER-059 approval"
+    },
+    {
+      "name": "next_review_date",
+      "type": "date",
+      "required": false,
+      "description": "Scheduled date for next CDD review, set at decision"
+    },
+    {
+      "name": "triggered_at",
+      "type": "timestamp",
+      "required": true,
+      "description": "Timestamp when review was triggered"
+    },
+    {
+      "name": "assigned_at",
+      "type": "timestamp",
+      "required": false,
+      "description": "Timestamp when assigned to analyst"
+    },
+    {
+      "name": "decision_made_at",
+      "type": "timestamp",
+      "required": false,
+      "description": "Timestamp when review decision was recorded"
+    },
+    {
+      "name": "archived_at",
+      "type": "timestamp",
+      "required": false,
+      "description": "Timestamp when case was archived"
+    }
+  ],
+  "relationships": [
+    {
+      "related_entity": "ENT-064",
+      "relationship_type": "one_to_one",
+      "description": "CddReviewCase updates KycAssessment upon completion"
+    }
+  ],
+  "design_decisions": [
+    {
+      "id": "DD-ENT063-01",
+      "decision": "CddReviewCase is separate from KycAssessment \u2014 each review creates a new case while KycAssessment holds the current state.",
+      "rationale": "KycAssessment is the current view; CddReviewCase is the historical audit trail. Separating them allows multiple reviews to be recorded while maintaining a clean current-state entity. Required by MLR 2017 record-keeping obligations."
+    }
+  ],
+  "source_journeys": [
+    "JRN-020"
+  ]
+}

@@ -12,7 +12,7 @@ sequenceDiagram
     rect rgb(230, 245, 255)
         Note over PER002,SVC005: PH-016: Loan Enquiry
         PER002->>PER050: Discusses requirements (purpose, amount, term, security)
-        PER050->>SVC005: Reads BusinessCustomer (ENT-B001) + BusinessAccount profile
+        PER050->>SVC005: Reads BusinessCustomer (ENT-079) + BusinessAccount profile
         SVC005-->>PER050: Customer profile and existing facility data
         PER050->>PER002: Issues indicative terms letter (non-binding)
     end
@@ -62,7 +62,7 @@ sequenceDiagram
         Note over PER002,SVC053: PH-021: Drawdown
         PER002->>SVC005: POST /loan-applications/{id}/drawdown<br/>{drawdown_instruction_id, drawdown_amount: 500000,<br/>destination_account_id, payment_rail: chaps}
         SVC005->>SVC005: Validates: FacilityAgreed ✓, all CPs ✓, amount ≤ facility ✓, CHAPS cut-off ✓
-        SVC005->>SVC009: CHAPS payment instruction (sync) [CROSS-CAPABILITY ▶ CAP-003]<br/>Credit 500,000 to BusinessAccount (ENT-B002)
+        SVC005->>SVC009: CHAPS payment instruction (sync) [CROSS-CAPABILITY ▶ CAP-003]<br/>Credit 500,000 to BusinessAccount (ENT-080)
         SVC009->>SVC009: Executes CHAPS via Bank of England RT2
         SVC009-->>SVC005: Settlement confirmed {settlement_reference}
         SVC005->>SVC005: Creates ENT-020 (LoanAccount)<br/>outstanding_balance=500000, status=active

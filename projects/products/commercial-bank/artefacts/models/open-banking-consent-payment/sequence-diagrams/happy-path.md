@@ -165,7 +165,7 @@ SVC-001      →  SVC-001    : BEGIN TRANSACTION
                              Update ENT-030 status=consumed, consumed_at=now,
                              open_banking_payment_id=<payment_intent_id>
                              COMMIT TRANSACTION
-SVC-001      →  SVC-103    : Publish EVT-P01 PaymentIntentCreated [ASYNC]
+SVC-001      →  SVC-103    : Publish EVT-179 PaymentIntentCreated [ASYNC]
 SVC-001      →  SVC-103    : Publish EVT-061 OpenBankingPaymentInitiated [ASYNC]
 SVC-103      →  SVC-053    : Route EVT-061 → Notification Service
 SVC-053      →  Customer   : Push: "Your Open Banking payment of £150.00 to Jane Smith is being processed"
@@ -185,33 +185,33 @@ SVC-017      →  TPP        : 201 Created
 ## PH-039: Payment Execution (JRN-002 event-driven pattern reused)
 
 ```
-NOTE: EVT-P01 consumed concurrently by SVC-051 and SVC-013 (parallel fan-out)
+NOTE: EVT-179 consumed concurrently by SVC-051 and SVC-013 (parallel fan-out)
 
-SVC-103      →  SVC-051    : Route EVT-P01 PaymentIntentCreated
-SVC-103      →  SVC-013    : Route EVT-P01 PaymentIntentCreated
+SVC-103      →  SVC-051    : Route EVT-179 PaymentIntentCreated
+SVC-103      →  SVC-013    : Route EVT-179 PaymentIntentCreated
 
 --- Concurrent ---
 SVC-051      →  SVC-051    : Sanctions screen payee (OFSI, UN, EU, OFAC lists)
                              [Result: clear]
-SVC-051      →  SVC-103    : Publish EVT-P02 SanctionsScreeningCompleted
+SVC-051      →  SVC-103    : Publish EVT-180 SanctionsScreeningCompleted
                              {payment_intent_id, outcome=clear}
 
 SVC-013      →  SVC-013    : ML fraud scoring (features include tpp_id, consent_id,
                               payee, amount, customer behaviour)
                              [Result: risk_level=low]
-SVC-013      →  SVC-103    : Publish EVT-P03 FraudScoreCompleted
+SVC-013      →  SVC-103    : Publish EVT-181 FraudScoreCompleted
                              {payment_intent_id, risk_level=low}
 --- End Concurrent ---
 
-SVC-103      →  SVC-001    : Route EVT-P02 (outcome=clear)
-SVC-103      →  SVC-001    : Route EVT-P03 (risk_level=low)
+SVC-103      →  SVC-001    : Route EVT-180 (outcome=clear)
+SVC-103      →  SVC-001    : Route EVT-181 (risk_level=low)
 SVC-001      →  SVC-001    : Both results received — PaymentIntent status=pending_screening
                              Both clear: Update PaymentIntent status=processing
-SVC-001      →  SVC-103    : Publish EVT-P04 PaymentCleared
+SVC-001      →  SVC-103    : Publish EVT-182 PaymentCleared
                              {payment_intent_id, account_id, amount=150.00,
                               payee_sort_code, payee_account_number}
 
-SVC-103      →  SVC-009    : Route EVT-P04 PaymentCleared
+SVC-103      →  SVC-009    : Route EVT-182 PaymentCleared
 SVC-009      →  SVC-009    : Create ENT-009 PaymentExecution
                              {execution_id=<UUID>, payment_intent_id,
                               status=fps_submitted}
@@ -223,15 +223,15 @@ SVC-009      →  Vocalink    : Submit pacs.008 to FPS
 Vocalink     →  SVC-009    : pacs.002 ACCP (Accepted)
                              {FpsReference=<FPS_REF>, TxSts=ACCP}
 SVC-009      →  SVC-009    : Update ENT-009 status=settled, fps_reference=<FPS_REF>
-SVC-009      →  SVC-103    : Publish EVT-P05 PaymentExecuted
+SVC-009      →  SVC-103    : Publish EVT-183 PaymentExecuted
                              {payment_intent_id, execution_id,
                               fps_reference=<FPS_REF>, settled_at}
 
-SVC-103      →  SVC-001    : Route EVT-P05 PaymentExecuted
+SVC-103      →  SVC-001    : Route EVT-183 PaymentExecuted
 SVC-001      →  SVC-001    : Atomic debit: Account.available_balance -= 150.00
                              Update Account.daily_payment_total
                              Update PaymentIntent.status=completed, completed_at=now
-SVC-001      →  SVC-103    : Publish EVT-P06 AccountDebited [ASYNC]
+SVC-001      →  SVC-103    : Publish EVT-184 AccountDebited [ASYNC]
 SVC-001      →  SVC-103    : Publish EVT-062 OpenBankingPaymentCompleted [ASYNC]
                              {payment_intent_id, consent_id, tpp_id,
                               fps_reference=<FPS_REF>, amount=150.00,
@@ -275,4 +275,4 @@ SVC-017      →  TPP        : 200 OK
 
 4. **Dynamic linking** — SCA at PH-037 binds the customer's authentication to the specific amount (£150.00) and payee account (20-00-00/12345678). Any deviation is a mandatory rejection.
 
-5. **Fraud/sanctions non-disclosure** — EVT-P07/P08 failure reasons are mapped to generic OBIE error codes before being returned to the TPP in EVT-063.
+5. **Fraud/sanctions non-disclosure** — EVT-185/P08 failure reasons are mapped to generic OBIE error codes before being returned to the TPP in EVT-063.

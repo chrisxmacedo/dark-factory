@@ -1,0 +1,45 @@
+
+============================================================
+Validating: annual-stress-test
+============================================================
+
+[1] Required files
+  [92mOK[0m: journey-detail.json
+  [92mOK[0m: participant-interaction.json
+  [92mOK[0m: nfr.json
+  [92mOK[0m: data-model.json
+  [92mOK[0m: service-boundaries.json
+  [92mOK[0m: events/event-catalogue.json
+  [92mOK[0m: API contracts: 1 files
+  [92mOK[0m: Sequence diagram pairs: 1
+
+[2] ID format compliance
+  [92mOK[0m: Phase IDs: 4 phases, all PH-NNN
+  [92mOK[0m: Entity IDs: 2 entities, all ENT-NNN
+  [92mOK[0m: Event IDs: 2 events, all EVT-NNN
+
+[3] Format compliance (strict)
+  [92mOK[0m: No annotated IDs in service-boundaries
+
+[4] Entity ownership
+  [92mOK[0m: All 2 entities have owners
+
+[5] Cross-capability communication rules
+  [92mOK[0m: No cross-capability synchronous API calls detected
+
+[6] Central model — events
+  [92mOK[0m: All 2 events found in central catalogue
+
+[7] Central model — entities
+  [92mOK[0m: StressTestExercise → stress-test-exercise.json
+  [92mOK[0m: RegulatorySubmission → regulatory-submission.json
+
+[8] Central model — service map
+  [92mOK[0m: SVC-012 in service map
+  [92mOK[0m: SVC-015 in service map
+  [92mOK[0m: SVC-103 in service map
+
+============================================================
+[92mPASSED[0m: All checks clean
+============================================================
+

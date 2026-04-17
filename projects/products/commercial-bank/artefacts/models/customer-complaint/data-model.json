@@ -1,0 +1,92 @@
+{
+  "journey_id": "JRN-019",
+  "document_version": "0.1.0",
+  "status": "Draft",
+  "new_entities": [
+    {
+      "id": "ENT-061",
+      "name": "ComplaintCase",
+      "description": "A customer complaint record capturing the full lifecycle from receipt to closure. Owned by SVC-001 (Retail Banking Core). The canonical record for all DISP regulatory reporting obligations.",
+      "owning_service": "SVC-001",
+      "fields": [
+        {"name": "complaint_id", "type": "UUID", "required": true, "description": "Primary key — globally unique complaint identifier"},
+        {"name": "complaint_reference", "type": "string", "required": true, "description": "Human-readable reference: COMP-YYYYMMDD-NNNN. Issued to customer at receipt."},
+        {"name": "customer_id", "type": "UUID", "required": true, "description": "FK → Customer (ENT-001)"},
+        {"name": "affected_account_id", "type": "UUID", "required": false, "description": "FK → Account record of the affected product"},
+        {"name": "affected_product_type", "type": "enum", "required": true, "enum_values": ["current_account", "savings", "mortgage", "personal_loan", "credit_card", "payment", "insurance", "other"], "description": "Product category the complaint relates to"},
+        {"name": "complaint_type", "type": "enum", "required": true, "enum_values": ["conduct", "service", "product", "fraud", "pricing", "other"], "description": "Nature of the complaint"},
+        {"name": "subject", "type": "string", "required": true, "max_length": 200, "description": "Brief complaint subject line"},
+        {"name": "description", "type": "string", "required": true, "max_length": 5000, "description": "Full complaint description provided by customer"},
+        {"name": "desired_outcome", "type": "string", "required": false, "max_length": 1000, "description": "Customer's stated desired resolution"},
+        {"name": "channel_received", "type": "enum", "required": true, "enum_values": ["web", "mobile", "branch", "phone", "post", "email"], "description": "Channel through which complaint was submitted"},
+        {"name": "status", "type": "enum", "required": true, "enum_values": ["received", "in_triage", "triaged", "under_investigation", "resolved_pending_redress", "resolved", "closed", "fos_referred"], "description": "Current lifecycle status"},
+        {"name": "severity", "type": "enum", "required": false, "enum_values": ["low", "medium", "high", "critical"], "description": "Assigned at triage"},
+        {"name": "assigned_to", "type": "UUID", "required": false, "description": "FK → internal staff member (PER-062) or escalation queue ID"},
+        {"name": "category", "type": "string", "required": false, "max_length": 100, "description": "Detailed categorisation code used for DISP reporting (e.g. 'general_insurance_protection', 'payment_account')"},
+        {"name": "target_resolution_date", "type": "date", "required": false, "description": "Target date for resolution — set at triage. 3 business days for simple, 8 weeks maximum."},
+        {"name": "outcome", "type": "enum", "required": false, "enum_values": ["upheld", "partially_upheld", "rejected", "withdrawn"], "description": "Resolution decision — set at PH-100"},
+        {"name": "redress_amount", "type": "decimal(12,2)", "required": false, "description": "Financial redress amount in GBP if applicable. Zero for non-financial remedies."},
+        {"name": "redress_payment_id", "type": "UUID", "required": false, "description": "FK → payment instruction for redress if applicable"},
+        {"name": "investigation_notes", "type": "string", "required": false, "max_length": 10000, "description": "Internal investigation notes — not visible to customer"},
+        {"name": "root_cause_analysis", "type": "string", "required": false, "max_length": 5000, "description": "Root cause analysis for systemic complaints — required for Consumer Duty obligations"},
+        {"name": "regulated_flag", "type": "boolean", "required": true, "default": false, "description": "True if complaint involves a regulated product or conduct concern requiring compliance oversight"},
+        {"name": "fos_referred", "type": "boolean", "required": true, "default": false, "description": "True if customer has referred to FOS"},
+        {"name": "fos_case_reference", "type": "string", "required": false, "description": "FOS case reference number if fos_referred = true"},
+        {"name": "response_type", "type": "enum", "required": false, "enum_values": ["summary_resolution_communication", "final_response_letter", "holding_response"], "description": "Type of regulatory response issued — determined by elapsed time"},
+        {"name": "response_sent_at", "type": "timestamp", "required": false, "description": "Timestamp when resolution communication was dispatched to customer"},
+        {"name": "received_at", "type": "timestamp", "required": true, "description": "Timestamp when complaint was received"},
+        {"name": "triaged_at", "type": "timestamp", "required": false, "description": "Timestamp when triage was completed"},
+        {"name": "resolved_at", "type": "timestamp", "required": false, "description": "Timestamp when resolution decision was made"},
+        {"name": "closed_at", "type": "timestamp", "required": false, "description": "Timestamp when complaint was closed"}
+      ],
+      "relationships": [
+        {"related_entity": "ENT-001", "relationship_type": "many_to_one", "description": "Many ComplaintCases may exist for one Customer"},
+        {"related_entity": "ENT-062", "relationship_type": "many_to_one", "description": "Many ComplaintCases may relate to one DisCaseSummary (DISP aggregation)"}
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-ENT061-01",
+          "decision": "ComplaintCase is owned by SVC-001 (Retail Banking Core) rather than a dedicated complaint management service.",
+          "rationale": "At current complaint volumes, a dedicated service adds operational complexity without benefit. SVC-001 already holds the customer relationship data needed for investigation. This can be promoted to a separate service if complaint volumes or regulatory complexity justify it.",
+          "alternatives_considered": ["Dedicated complaint management service"],
+          "rejected_because": "Over-engineering for current scale. Promotion criteria: if complaint handling requires distinct staff tooling, separate data lifecycle, or crosses multiple capabilities with equal ownership."
+        }
+      ]
+    },
+    {
+      "id": "ENT-062",
+      "name": "DisCaseSummary",
+      "description": "Aggregated DISP regulatory reporting record — a half-yearly snapshot of complaint volumes, outcomes, and categories per product type. Owned by SVC-015 (Compliance Core). Used for FCA DISP 1.10 reporting.",
+      "owning_service": "SVC-015",
+      "fields": [
+        {"name": "summary_id", "type": "UUID", "required": true, "description": "Primary key"},
+        {"name": "reporting_period_start", "type": "date", "required": true, "description": "Start of half-yearly reporting period (1 Jan or 1 Jul)"},
+        {"name": "reporting_period_end", "type": "date", "required": true, "description": "End of half-yearly reporting period (30 Jun or 31 Dec)"},
+        {"name": "product_category", "type": "string", "required": true, "description": "FCA-defined product category for DISP reporting"},
+        {"name": "complaints_received", "type": "integer", "required": true, "description": "Total complaints received in period for this product category"},
+        {"name": "complaints_closed", "type": "integer", "required": true, "description": "Total complaints closed in period"},
+        {"name": "complaints_upheld", "type": "integer", "required": true, "description": "Total complaints upheld or partially upheld"},
+        {"name": "complaints_rejected", "type": "integer", "required": true, "description": "Total complaints rejected"},
+        {"name": "complaints_referred_to_fos", "type": "integer", "required": true, "description": "Total complaints referred to FOS"},
+        {"name": "median_resolution_days", "type": "decimal(5,2)", "required": true, "description": "Median calendar days from receipt to close"},
+        {"name": "sla_breach_count", "type": "integer", "required": true, "description": "Count of complaints exceeding 8-week DISP SLA"},
+        {"name": "submitted_to_fca", "type": "boolean", "required": true, "default": false, "description": "True when DISP report has been submitted to FCA"},
+        {"name": "submitted_at", "type": "timestamp", "required": false, "description": "Timestamp of FCA submission"},
+        {"name": "created_at", "type": "timestamp", "required": true, "description": "Timestamp when this summary was generated"}
+      ],
+      "relationships": [
+        {"related_entity": "ENT-061", "relationship_type": "one_to_many", "description": "One DisCaseSummary aggregates many ComplaintCases for a reporting period"}
+      ],
+      "design_decisions": []
+    }
+  ],
+  "referenced_existing_entities": [
+    {
+      "entity_id": "ENT-001",
+      "entity_name": "Customer",
+      "referenced_in_fields": ["ComplaintCase.customer_id"],
+      "usage": "ComplaintCase references the Customer entity for identity and account context during investigation"
+    }
+  ],
+  "entity_extensions": []
+}

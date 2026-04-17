@@ -11,7 +11,7 @@
   },
   "phases": [
     {
-      "phase_id": "BPH-001",
+      "phase_id": "PH-139",
       "phase_name": "Application Initiation",
       "nfr": {
         "latency": {
@@ -29,7 +29,7 @@
         "availability": {
           "target_percentage": 99.95,
           "maximum_downtime_per_year_minutes": 263,
-          "degraded_mode": "If SVC-017 is degraded, static form capture with async submission. Eligibility check deferred to BPH-002.",
+          "degraded_mode": "If SVC-017 is degraded, static form capture with async submission. Eligibility check deferred to PH-140.",
           "planned_maintenance_window": "02:00–04:00 UTC Sundays"
         },
         "security_classification": "pre_authenticated",
@@ -48,7 +48,7 @@
       }
     },
     {
-      "phase_id": "BPH-002",
+      "phase_id": "PH-140",
       "phase_name": "Companies House Verification",
       "nfr": {
         "latency": {
@@ -93,7 +93,7 @@
       }
     },
     {
-      "phase_id": "BPH-003",
+      "phase_id": "PH-141",
       "phase_name": "Director and UBO Identification",
       "nfr": {
         "latency": {
@@ -110,7 +110,7 @@
         "availability": {
           "target_percentage": 99.95,
           "maximum_downtime_per_year_minutes": 263,
-          "degraded_mode": "UBO identification data can be cached from the BPH-002 CH API response — if SVC-005 is partially degraded, the UI can still render and capture the UBO list; entity creation is queued for when the service recovers.",
+          "degraded_mode": "UBO identification data can be cached from the PH-140 CH API response — if SVC-005 is partially degraded, the UI can still render and capture the UBO list; entity creation is queued for when the service recovers.",
           "planned_maintenance_window": "02:00–04:00 UTC Sundays"
         },
         "security_classification": "authenticated",
@@ -129,14 +129,14 @@
       }
     },
     {
-      "phase_id": "BPH-004",
+      "phase_id": "PH-142",
       "phase_name": "Identity Verification",
       "nfr": {
         "latency": {
           "p50_ms": 4000,
           "p95_ms": 10000,
           "p99_ms": 20000,
-          "notes": "Per-individual identity verification latency mirrors JRN-001 PH-002 (Onfido/Jumio biometric + document check: 2–5 seconds vendor SLA). However, the total elapsed time for BPH-004 is measured in business days (not seconds) because multiple individuals must each independently complete their verification asynchronously. System latency per verification event is the same as JRN-001 PH-002; the phase SLA is 1–3 business days for all verifications to complete."
+          "notes": "Per-individual identity verification latency mirrors JRN-001 PH-002 (Onfido/Jumio biometric + document check: 2–5 seconds vendor SLA). However, the total elapsed time for PH-142 is measured in business days (not seconds) because multiple individuals must each independently complete their verification asynchronously. System latency per verification event is the same as JRN-001 PH-002; the phase SLA is 1–3 business days for all verifications to complete."
         },
         "phase_completion_sla": {
           "target_business_days": 3,
@@ -169,7 +169,7 @@
       }
     },
     {
-      "phase_id": "BPH-005",
+      "phase_id": "PH-143",
       "phase_name": "KYC/CDD Assessment",
       "nfr": {
         "latency": {
@@ -210,7 +210,7 @@
       }
     },
     {
-      "phase_id": "BPH-006",
+      "phase_id": "PH-144",
       "phase_name": "Account Decision",
       "nfr": {
         "latency": {
@@ -240,7 +240,7 @@
       }
     },
     {
-      "phase_id": "BPH-007",
+      "phase_id": "PH-145",
       "phase_name": "Account Provisioning",
       "nfr": {
         "latency": {
@@ -273,7 +273,7 @@
       }
     },
     {
-      "phase_id": "BPH-008",
+      "phase_id": "PH-146",
       "phase_name": "Digital Channel Activation",
       "nfr": {
         "latency": {
@@ -305,19 +305,19 @@
     "standard_cdd_happy_path": {
       "target_business_days": "3–5",
       "breakdown": {
-        "BPH-001_to_BPH-002": "Same day (automated, minutes)",
-        "BPH-003": "Same day (applicant-driven, target <2 hours)",
-        "BPH-004": "1–2 business days (directors/UBOs complete individual verifications)",
-        "BPH-005": "Same day as last verification (automated CDD screening, target <30 minutes)",
-        "BPH-006_to_BPH-008": "Same day as CDD clearance (automated decisioning and provisioning)"
+        "PH-139_to_PH-140": "Same day (automated, minutes)",
+        "PH-141": "Same day (applicant-driven, target <2 hours)",
+        "PH-142": "1–2 business days (directors/UBOs complete individual verifications)",
+        "PH-143": "Same day as last verification (automated CDD screening, target <30 minutes)",
+        "PH-144_to_PH-146": "Same day as CDD clearance (automated decisioning and provisioning)"
       }
     },
     "edd_path": {
       "target_business_days": 10,
       "breakdown": {
-        "BPH-001_to_BPH-005": "1–3 business days",
+        "PH-139_to_PH-143": "1–3 business days",
         "EDD_review": "Up to 7 business days (MLRO review, document gathering)",
-        "BPH-006_to_BPH-008": "Same day as EDD clearance"
+        "PH-144_to_PH-146": "Same day as EDD clearance"
       }
     }
   }

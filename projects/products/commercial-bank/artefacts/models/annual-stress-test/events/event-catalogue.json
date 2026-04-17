@@ -1,0 +1,76 @@
+{
+  "journey_id": "JRN-022",
+  "document_version": "0.1.0",
+  "status": "Draft",
+  "description": "Event catalogue for the Annual PRA Stress Test journey. Introduces 2 events: EVT-161 and EVT-162. Both events published by SVC-012 (Risk Engine, CAP-004).",
+  "events": [
+    {
+      "event_id": "EVT-161",
+      "name": "StressTestExerciseStarted",
+      "source_service": "SVC-012",
+      "source_service_name": "Risk Engine",
+      "source_entity": "ENT-073",
+      "source_entity_name": "StressTestExercise",
+      "trigger": "CRO triggers stress test exercise and PRA scenarios are loaded into risk engine. StressTestExercise created with status = in_progress.",
+      "journey_phase": "PH-123",
+      "journey_phase_name": "Scenario Loading and Model Initialisation",
+      "capability_scope": "cross-capability",
+      "payload_schema": {
+        "exercise_id": "string (UUID v4)",
+        "exercise_year": "integer",
+        "pra_scenario_version": "string",
+        "scenario_type": "string enum (severe_adverse | adverse | baseline)",
+        "pra_deadline": "string (ISO 8601 date)",
+        "triggered_by": "string (UUID v4 — PER-059 reference)",
+        "scenarios_loaded_at": "string (ISO 8601 UTC timestamp)"
+      },
+      "consumers": [
+        {"service": "SVC-015", "service_name": "Compliance Core", "action": "Create RegulatorySubmission tracking record (ENT-074) for this stress test exercise."},
+        {"service": "SVC-103", "service_name": "Audit & Logging Service", "action": "Write immutable stress test exercise start record."}
+      ],
+      "ordering_guarantees": "Per-exercise ordering via exercise_id partition key on topic risk.stress-testing.",
+      "topic": "risk.stress-testing",
+      "data_classification": "Highly Confidential",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "Stress test exercise start with PRA scenario version is a regulatory audit record — immutable for PRA supervisory review.",
+      "retention": "7 years",
+      "cloudevents_type": "uk.bank.risk.stress_test_exercise.started",
+      "governance_references": ["GOV-004-R01"],
+      "source_journeys": ["JRN-022"]
+    },
+    {
+      "event_id": "EVT-162",
+      "name": "StressTestSubmitted",
+      "source_service": "SVC-012",
+      "source_service_name": "Risk Engine",
+      "source_entity": "ENT-073",
+      "source_entity_name": "StressTestExercise",
+      "trigger": "CRO confirms PRA submission via BEEDS portal. StressTestExercise updated with pra_submission_ref and status = submitted.",
+      "journey_phase": "PH-126",
+      "journey_phase_name": "PRA Submission and Feedback",
+      "capability_scope": "cross-capability",
+      "payload_schema": {
+        "exercise_id": "string (UUID v4)",
+        "exercise_year": "integer",
+        "pra_submission_ref": "string — PRA BEEDS confirmation reference",
+        "submitted_at": "string (ISO 8601 UTC timestamp)",
+        "projected_stressed_cet1_y1": "string (decimal as string, %)",
+        "projected_stressed_cet1_y2": "string (decimal as string, %)",
+        "projected_stressed_cet1_y3": "string (decimal as string, %)"
+      },
+      "consumers": [
+        {"service": "SVC-015", "service_name": "Compliance Core", "action": "Update RegulatorySubmission status = submitted; record pra_submission_ref and submitted_at."},
+        {"service": "SVC-103", "service_name": "Audit & Logging Service", "action": "Write immutable PRA submission record with submission reference and stressed CET1 trajectory."}
+      ],
+      "ordering_guarantees": "Per-exercise ordering. StressTestSubmitted must follow StressTestExerciseStarted for same exercise_id.",
+      "topic": "risk.stress-testing",
+      "data_classification": "Highly Confidential",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "PRA submission record with stressed capital ratios and submission reference is a regulatory audit record — immutable.",
+      "retention": "7 years",
+      "cloudevents_type": "uk.bank.risk.stress_test_exercise.submitted",
+      "governance_references": ["GOV-004-R01", "GOV-005-R03"],
+      "source_journeys": ["JRN-022"]
+    }
+  ]
+}

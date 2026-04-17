@@ -89,7 +89,7 @@
       "capability_id": "CAP-002",
       "capability_name": "Commercial Banking",
       "tier": "T2",
-      "role_in_journey": "Owns BusinessAccount (ENT-B002) and BusinessCustomer (ENT-B001). Executes the account debit on the originating BusinessAccount when SVC-010 publishes SWIFTMessageSent (EVT-054) — cross-capability async consumption. Publishes an intra-CAP-002 event (BusinessAccountDebited) that is not a JRN-009 journey event. No new entities or events introduced to SVC-005 by JRN-009.",
+      "role_in_journey": "Owns BusinessAccount (ENT-080) and BusinessCustomer (ENT-079). Executes the account debit on the originating BusinessAccount when SVC-010 publishes SWIFTMessageSent (EVT-054) — cross-capability async consumption. Publishes an intra-CAP-002 event (BusinessAccountDebited) that is not a JRN-009 journey event. No new entities or events introduced to SVC-005 by JRN-009.",
       "owned_entities": [],
       "published_events": [],
       "consumed_events": [

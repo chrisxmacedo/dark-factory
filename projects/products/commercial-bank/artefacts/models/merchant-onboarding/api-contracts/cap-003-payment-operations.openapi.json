@@ -1,0 +1,9 @@
+{
+  "openapi": "3.1.0",
+  "info": {"title": "Payment Operations Capability API — Scheme Registration Extensions", "version": "1.0.0", "description": "API surface for CAP-003 relevant to JRN-018. Scheme registration is triggered via domain events (MerchantApproved), not via this API. This API provides status lookup for internal tooling."},
+  "paths": {
+    "/scheme-registrations/{application_id}": {
+      "get": {"operationId": "getSchemeRegistrationStatus", "summary": "Get scheme registration status for a merchant", "tags": ["Scheme Registration"], "parameters": [{"name": "application_id", "in": "path", "required": true, "schema": {"type": "string"}}], "responses": {"200": {"description": "Registration status for Visa and Mastercard", "content": {"application/json": {"schema": {"type": "object", "properties": {"visa_status": {"type": "string"}, "visa_mid": {"type": "string"}, "mastercard_status": {"type": "string"}, "mastercard_mid": {"type": "string"}}}}}}, "404": {"description": "Registration not found"}}}
+    }
+  }
+}

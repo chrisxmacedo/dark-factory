@@ -1,0 +1,27 @@
+Central Model Impact Assessment — JRN-023 Correspondent Bank Relationship Setup
+Generated: 2026-04-15
+
+ENTITIES
+  correspondent-relationship.json — CREATED (ENT-075, owned by SVC-015)
+
+EVENTS
+  EVT-163 CorrespondentEddCompleted — ADDED to central catalogue
+  EVT-164 CorrespondentOnboarded    — ADDED to central catalogue
+
+SERVICE MAP
+  SVC-015  Compliance Core          — extended (correspondent relationship owner)
+  SVC-014  KYC/AML Service          — extended (intra-capability sanctions screening + AML monitoring)
+  SVC-007  Treasury Services        — extended (nostro account creation consumer)
+  SVC-010  International Payments   — extended (BIC registration and corridor enablement)
+  SVC-103  Audit & Logging          — extended (consumer of EVT-163/164)
+
+CROSS-JOURNEY IMPACT
+  No existing event IDs modified or reassigned.
+  No existing entity schemas modified.
+  EVT-164 (CorrespondentOnboarded) is a net-new domain event referenced in the journey inventory
+  description as a required event. Future JRN-010 (international payments) may consume this event
+  to dynamically update available currency corridors — no conflict.
+  SVC-007 previously appeared in FX Spot Trade (JRN) journeys. Nostro account creation adds a
+  new use case to SVC-007 with no schema conflict.
+
+VERDICT: No breaking changes. All additions are net-new. Safe to proceed.

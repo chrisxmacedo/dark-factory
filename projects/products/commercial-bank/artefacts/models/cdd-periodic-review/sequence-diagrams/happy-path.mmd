@@ -1,0 +1,46 @@
+sequenceDiagram
+    participant Compliance as SVC-015<br/>Compliance Core
+    participant KYC as SVC-014<br/>KYC/AML
+    participant Channel as SVC-017<br/>Digital Channels
+    participant EventBus as SVC-102<br/>Event Bus
+    participant CommBank as SVC-005<br/>Commercial Banking Core
+    participant Audit as SVC-103<br/>Audit & Logging
+    actor CompOfficer as PER-052<br/>Compliance Officer
+    actor Analyst as PER-058<br/>KYC Analyst
+    actor Client as PER-003<br/>Corporate Client
+
+    Note over Compliance,Audit: PH-102 — Review Trigger and Scheduling
+
+    Note right of Compliance: Scheduled job: review_due_date reached.<br/>Create CddReviewCase (status=triggered).
+    Compliance->>EventBus: Publish CddReviewTriggered (EVT-142)
+    EventBus->>KYC: Consume EVT-142 → Pre-load KycAssessment for analyst
+    EventBus->>Audit: Consume EVT-142 → Write trigger audit record
+    CompOfficer->>Channel: GET /cdd-reviews?status=triggered → assign to PER-058
+    Channel->>Compliance: PATCH /cdd-reviews/{id} {assigned_to: PER-058}
+
+    Note over Compliance,Audit: PH-103 — KYC Document Collection and Verification
+
+    Analyst->>Channel: Send document request to corporate client
+    Channel->>Compliance: PATCH /cdd-reviews/{id} {status: documents_requested}
+    Client->>Channel: Upload documents (certificate of incorporation, accounts, UBO declarations)
+    Analyst->>Channel: Verify documents → PATCH /cdd-reviews/{id} {documents_received, ubo_structure}
+    Compliance->>KYC: Run UBO identity verification (intra-capability call)
+    KYC-->>Compliance: All UBOs verified
+
+    Note over Compliance,Audit: PH-104 — Risk Scoring and Screening
+
+    KYC->>KYC: Run sanctions + PEP + adverse media screening on all UBOs and corporate entity
+    KYC-->>Compliance: Screening results: clear — risk_rating=medium (unchanged)
+    Compliance->>Channel: Update CddReviewCase {screening_results, risk_rating: medium, status: risk_assessed}
+
+    Note over Compliance,Audit: PH-105 — Review Decision and Approval
+
+    CompOfficer->>Channel: POST /cdd-reviews/{id}/decision {review_decision: continue, rationale, next_review_date}
+    Channel->>Compliance: POST /cdd-reviews/{id}/decision {review_decision: continue}
+    Compliance->>EventBus: Publish CddReviewCompleted (EVT-146) {decision: continue, next_review_date}
+
+    Note over Compliance,Audit: PH-106 — Outcome Communication and Record Update
+
+    EventBus->>KYC: Consume EVT-146 → Update KycAssessment: last_reviewed_at, next_review_date
+    EventBus->>CommBank: Consume EVT-146 → Update internal client record: cdd_status=current
+    EventBus->>Audit: Consume EVT-146 → Write immutable closure audit record (7-year retention)

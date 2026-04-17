@@ -47,7 +47,7 @@
   },
   "phases": [
     {
-      "id": "BPH-001",
+      "id": "PH-139",
       "name": "Application Initiation",
       "description": "The business applicant (PER-002) initiates account opening via the web portal (CH-001) or mobile app (CH-002). Business registration details are collected: legal entity type, company name, Companies House registration number, registered address, trading address (if different), trading name (if applicable), SIC codes, and incorporation date. The applicant selects the account type (standard business current account, multi-currency account). A preliminary eligibility check confirms the entity type is supported (limited company, LLP, partnership, sole trader — each has a different subsequent path). BusinessApplicationStarted domain event is published and a provisional application reference is assigned.",
       "actors": ["PER-002"],
@@ -65,7 +65,7 @@
         "Business registration details submitted",
         "Preliminary eligibility check passed",
         "BusinessApplicationStarted event published with application_ref assigned",
-        "Customer progresses to Companies House verification (BPH-002)"
+        "Customer progresses to Companies House verification (PH-140)"
       ],
       "exit_conditions_failure": [
         "Dormant company detected — exception path EX-B001 (dormant company review)",
@@ -91,7 +91,7 @@
       ]
     },
     {
-      "id": "BPH-002",
+      "id": "PH-140",
       "name": "Companies House Verification",
       "description": "SVC-005 (Commercial Banking Core) calls the Companies House API to retrieve and validate the company record. The lookup returns: registered company name, company number, company status (active/dissolved/dormant), company type, registered address, incorporation date, SIC codes, current appointed directors (officer list), and Persons with Significant Control (PSC) filings — which constitute the starting point for UBO identification. The API response is reconciled against the applicant-provided data. Any discrepancies (name mismatch, dormant status, mismatched address) trigger exception handling. CompaniesHouseVerified event is published on successful validation.",
       "actors": ["PER-002"],
@@ -110,7 +110,7 @@
         "Registered company name and address reconciled with applicant-provided data",
         "Director list and PSC list extracted and stored in DirectorRecord and initial UBO staging",
         "CompaniesHouseVerified event published",
-        "Application progresses to BPH-003 Director/UBO Identification"
+        "Application progresses to PH-141 Director/UBO Identification"
       ],
       "exit_conditions_failure": [
         "Companies House API returns company status = dissolved or liquidation — decline EX-B002",
@@ -120,9 +120,9 @@
       ]
     },
     {
-      "id": "BPH-003",
+      "id": "PH-141",
       "name": "Director and UBO Identification",
-      "description": "SVC-005 constructs the complete ownership and control structure of the entity using the Companies House PSC data and director list retrieved in BPH-002. MLR 2017 Regulation 5 defines beneficial owner for a body corporate as any natural person who: (a) holds, directly or indirectly, more than 25% of shares; (b) holds, directly or indirectly, more than 25% of voting rights; or (c) holds the right to appoint or remove a majority of directors. All such natural persons must be identified as UBOs. Additionally, all current appointed directors must be identified as DirectorRecords regardless of ownership percentage (they may be PEPs or sanctions matches). Where the PSC is itself a legal entity (corporate UBO), the bank must 'look through' to identify the natural persons behind that entity. The applicant is prompted to confirm the UBO list, declare any additional beneficial owners not listed in Companies House filings, and provide details for each UBO. UBOIdentified events are published for each confirmed UBO.",
+      "description": "SVC-005 constructs the complete ownership and control structure of the entity using the Companies House PSC data and director list retrieved in PH-140. MLR 2017 Regulation 5 defines beneficial owner for a body corporate as any natural person who: (a) holds, directly or indirectly, more than 25% of shares; (b) holds, directly or indirectly, more than 25% of voting rights; or (c) holds the right to appoint or remove a majority of directors. All such natural persons must be identified as UBOs. Additionally, all current appointed directors must be identified as DirectorRecords regardless of ownership percentage (they may be PEPs or sanctions matches). Where the PSC is itself a legal entity (corporate UBO), the bank must 'look through' to identify the natural persons behind that entity. The applicant is prompted to confirm the UBO list, declare any additional beneficial owners not listed in Companies House filings, and provide details for each UBO. UBOIdentified events are published for each confirmed UBO.",
       "actors": ["PER-002", "PER-050"],
       "channels": ["CH-001", "CH-002"],
       "services": ["SVC-005", "SVC-017", "SVC-103"],
@@ -137,7 +137,7 @@
         "All UBOs (natural persons with >25% ownership/control) identified and UltimateBeneficialOwner entities created",
         "UBO ownership percentages confirmed and sum reconciles with entity structure",
         "UBOIdentified event published for each UBO",
-        "Application progresses to BPH-004 Identity Verification"
+        "Application progresses to PH-142 Identity Verification"
       ],
       "exit_conditions_failure": [
         "UBO cannot be identified (opaque structure, nominee arrangements) — EX-B004 (MLRO referral for enhanced UBO investigation)",
@@ -146,9 +146,9 @@
       ]
     },
     {
-      "id": "BPH-004",
+      "id": "PH-142",
       "name": "Identity Verification",
-      "description": "Each identified director and UBO must undergo individual identity verification via SVC-050 (Customer Onboarding Service). The primary applicant (PER-002) completes identity verification during the online journey. Each additional director and UBO receives a secure digital invitation link to complete their identity verification independently (document capture + biometric liveness check via Onfido/Jumio). Address verification is required for each individual. The system tracks verification status per individual — account processing cannot proceed until all required verifications are complete. Where a director or UBO is already a verified personal customer of the bank, a match against existing IdentityVerification records may satisfy the requirement (with MLRO approval). DirectorVerified events are published for each successful verification. All individual verifications must be complete before BPH-005.",
+      "description": "Each identified director and UBO must undergo individual identity verification via SVC-050 (Customer Onboarding Service). The primary applicant (PER-002) completes identity verification during the online journey. Each additional director and UBO receives a secure digital invitation link to complete their identity verification independently (document capture + biometric liveness check via Onfido/Jumio). Address verification is required for each individual. The system tracks verification status per individual — account processing cannot proceed until all required verifications are complete. Where a director or UBO is already a verified personal customer of the bank, a match against existing IdentityVerification records may satisfy the requirement (with MLRO approval). DirectorVerified events are published for each successful verification. All individual verifications must be complete before PH-143.",
       "actors": ["PER-002"],
       "channels": ["CH-001", "CH-002", "CH-004"],
       "services": ["SVC-050", "SVC-005", "SVC-017", "SVC-103"],
@@ -162,7 +162,7 @@
       "exit_conditions": [
         "All directors and UBOs have IdentityVerification records with outcome = pass",
         "DirectorVerified events published for all individuals",
-        "Application progresses to BPH-005 KYC/CDD Assessment"
+        "Application progresses to PH-143 KYC/CDD Assessment"
       ],
       "exit_conditions_failure": [
         "Director or UBO identity verification fails after retries — application suspended; PER-050 RM intervention required",
@@ -171,7 +171,7 @@
       ]
     },
     {
-      "id": "BPH-005",
+      "id": "PH-143",
       "name": "KYC/CDD Assessment",
       "description": "SVC-014 (KYC/AML Service) performs a two-tier CDD assessment: (1) Company-level CDD — PEP/sanctions screening on the company name and registration number, adverse media screening on the company, sector risk assessment (SIC code risk scoring), jurisdictional risk (country of incorporation, trading countries), and company status review. (2) Individual-level CDD — PEP/sanctions/adverse media screening for each verified director and UBO individually. A BusinessKycAssessment entity is created for the company, referencing individual director and UBO assessment results. Risk scoring incorporates: company structure complexity, UBO jurisdiction risk, director PEP status, sector risk, adverse media findings, and source of business funds. EDD is triggered if: any director or UBO is a PEP; the company is incorporated in or operates in a high-risk jurisdiction (FATF list, HM Treasury designated countries); the company structure is complex with multiple holding layers; or the company risk score exceeds the EDD threshold. BusinessKYCCleared event is published on successful standard CDD completion.",
       "actors": ["PER-052"],
@@ -188,18 +188,18 @@
         "BusinessKycAssessment created with risk_category assigned",
         "All individual director/UBO CDD screening results recorded",
         "BusinessKYCCleared event published (or BusinessKYCReferralRaised if EDD required)",
-        "Application progresses to BPH-006 Account Decision"
+        "Application progresses to PH-144 Account Decision"
       ],
       "exit_conditions_failure": [
         "Sanctions hit on company, director, or UBO — BusinessSanctionsHitDetected event; application immediately blocked (EX-B006)",
         "EDD required — BusinessKYCReferralRaised event; application referred to MLRO (AP-B001)",
-        "Risk score exceeds decline threshold — application declined at BPH-006"
+        "Risk score exceeds decline threshold — application declined at PH-144"
       ]
     },
     {
-      "id": "BPH-006",
+      "id": "PH-144",
       "name": "Account Decision",
-      "description": "SVC-005 (Commercial Banking Core) receives the BusinessKYCCleared event and runs the automated business account decision engine. Decision inputs: Companies House verification outcome, all UBO identity verification outcomes, BusinessKycAssessment risk_category, sector risk, company age (incorporation_date), company status. Decision outcomes: Approved (standard CDD, all checks passed), Referred (manual RM review — borderline risk, complex structure), Declined (risk exceeds threshold, unresolvable ownership ambiguity, sanctions-adjacent concerns). BusinessApplicationDecisionMade event is published with the decision outcome. Approved applications immediately trigger BPH-007 Account Provisioning. PER-050 (Relationship Manager) is notified of referred applications and must resolve within 5 business days.",
+      "description": "SVC-005 (Commercial Banking Core) receives the BusinessKYCCleared event and runs the automated business account decision engine. Decision inputs: Companies House verification outcome, all UBO identity verification outcomes, BusinessKycAssessment risk_category, sector risk, company age (incorporation_date), company status. Decision outcomes: Approved (standard CDD, all checks passed), Referred (manual RM review — borderline risk, complex structure), Declined (risk exceeds threshold, unresolvable ownership ambiguity, sanctions-adjacent concerns). BusinessApplicationDecisionMade event is published with the decision outcome. Approved applications immediately trigger PH-145 Account Provisioning. PER-050 (Relationship Manager) is notified of referred applications and must resolve within 5 business days.",
       "actors": ["PER-002", "PER-050"],
       "channels": ["CH-001", "CH-002"],
       "services": ["SVC-005", "SVC-017", "SVC-103", "SVC-111"],
@@ -211,7 +211,7 @@
       ],
       "exit_conditions": [
         "BusinessApplicationDecisionMade event published",
-        "Approved: progresses to BPH-007 Account Provisioning",
+        "Approved: progresses to PH-145 Account Provisioning",
         "Referred: enters AP-B001 RM review path",
         "Declined: application closed; decline notification dispatched to PER-002"
       ],
@@ -221,7 +221,7 @@
       ]
     },
     {
-      "id": "BPH-007",
+      "id": "PH-145",
       "name": "Account Provisioning",
       "description": "SVC-005 (Commercial Banking Core) creates the BusinessAccount entity. Business account number and sort code are allocated from the bank's commercial banking range. Multi-signatory configuration is applied based on the authorised signatories declared by PER-002 during application. Payment approval workflow rules are configured: single-authoriser vs dual-authorisation for payments above a configurable threshold. BACS, Faster Payments, and CHAPS access are enabled. The BusinessCustomer aggregate root is promoted from 'prospect' to 'active'. FSCS eligibility is assessed (business accounts are eligible if the business meets FSCS eligible depositor criteria — sole traders and small partnerships only; limited companies generally not eligible). BusinessAccountOpened and BusinessAccountProvisioned events are published. Companies House data is cross-referenced to the BusinessCustomer entity.",
       "actors": ["PER-002"],
@@ -238,7 +238,7 @@
         "BusinessCustomer.status promoted to active",
         "BusinessAccountOpened event published",
         "BusinessAccountProvisioned event published",
-        "Application progresses to BPH-008 Digital Channel Activation"
+        "Application progresses to PH-146 Digital Channel Activation"
       ],
       "exit_conditions_failure": [
         "Account number/sort code allocation failure — EX-B007 (IT Operations escalation)",
@@ -246,7 +246,7 @@
       ]
     },
     {
-      "id": "BPH-008",
+      "id": "PH-146",
       "name": "Digital Channel Activation",
       "description": "SVC-017 (Digital Channels) enrolls the business customer in the business online banking portal. The primary applicant (PER-002) sets up their personal credentials and biometric SCA (FIDO2/WebAuthn) for the business portal. Each additional authorised user declared in multi-signatory configuration receives a secure portal invitation. User roles are provisioned according to the authorised_users configuration on BusinessAccount (e.g. sole payment authoriser, payment initiator only, view-only finance controller). The business portal displays: account number, sort code, IBAN, BIC, multi-signatory payment workflow configuration, and a welcome onboarding checklist. BusinessDigitalChannelActivated event is published on completion.",
       "actors": ["PER-002"],
@@ -312,7 +312,7 @@
     {
       "id": "AP-B001",
       "name": "Enhanced Due Diligence (EDD) Review",
-      "description": "Triggered when: (1) any director or UBO is identified as a PEP; (2) company operates in or is incorporated in a high-risk jurisdiction (FATF grey/black list or HM Treasury designated high-risk third country); (3) complex corporate ownership structure requiring look-through; (4) company risk score exceeds EDD threshold. PER-052 (MLRO) is assigned the case. PER-050 (Relationship Manager) contacts PER-002 to gather EDD evidence: source of business funds, source of UBO wealth, corporate ownership chart, board resolution confirming authorised signatories. MLRO must sign off the EDD assessment before the application proceeds to BPH-006. SLA: 10 business days for EDD completion."
+      "description": "Triggered when: (1) any director or UBO is identified as a PEP; (2) company operates in or is incorporated in a high-risk jurisdiction (FATF grey/black list or HM Treasury designated high-risk third country); (3) complex corporate ownership structure requiring look-through; (4) company risk score exceeds EDD threshold. PER-052 (MLRO) is assigned the case. PER-050 (Relationship Manager) contacts PER-002 to gather EDD evidence: source of business funds, source of UBO wealth, corporate ownership chart, board resolution confirming authorised signatories. MLRO must sign off the EDD assessment before the application proceeds to PH-144. SLA: 10 business days for EDD completion."
     },
     {
       "id": "AP-B002",

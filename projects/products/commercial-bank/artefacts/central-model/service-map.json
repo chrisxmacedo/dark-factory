@@ -116,66 +116,66 @@
       "capability_domain": "CAP-002 (Commercial Banking)",
       "tier": "T2",
       "owned_entities": [
-        "ENT-B001",
-        "ENT-B002",
-        "ENT-B003",
-        "ENT-B004"
+        "ENT-079",
+        "ENT-080",
+        "ENT-081",
+        "ENT-082"
       ],
       "published_events": [
-        "EVT-B001",
-        "EVT-B002",
-        "EVT-B003",
-        "EVT-B005_gate",
-        "EVT-B006",
-        "EVT-B007"
+        "EVT-168",
+        "EVT-169",
+        "EVT-170",
+        "EVT-172_gate",
+        "EVT-175",
+        "EVT-176"
       ],
       "published_events_detail": [
         {
-          "event_id": "EVT-B001",
+          "event_id": "EVT-168",
           "name": "BusinessApplicationStarted"
         },
         {
-          "event_id": "EVT-B002",
+          "event_id": "EVT-169",
           "name": "CompaniesHouseVerified"
         },
         {
-          "event_id": "EVT-B003",
+          "event_id": "EVT-170",
           "name": "UBOIdentified"
         },
         {
-          "event_id": "EVT-B006",
+          "event_id": "EVT-175",
           "name": "BusinessApplicationDecisionMade"
         },
         {
-          "event_id": "EVT-B007",
+          "event_id": "EVT-176",
           "name": "BusinessAccountOpened"
         },
         {
-          "event_id": "EVT-B008",
+          "event_id": "EVT-177",
           "name": "BusinessAccountProvisioned"
         }
       ],
       "consumed_events": [
         {
-          "event_id": "EVT-B004",
+          "event_id": "EVT-171",
           "name": "DirectorVerified",
           "provider_service_id": "SVC-050",
           "purpose": "SVC-005 updates DirectorRecord.verification_status and UltimateBeneficialOwner.verification_status. Tracks completeness of all required individual verifications before BPH-005 CDD assessment can proceed."
         },
         {
-          "event_id": "EVT-B005",
+          "event_id": "EVT-172",
           "name": "BusinessKYCCleared",
           "provider_service_id": "SVC-014",
           "purpose": "Gates BPH-006 account decision. SVC-005 will not run the decision engine without BusinessKYCCleared (MLR 2017 Regulation 28 compliance gate)."
         },
         {
-          "event_id": "EVT-B005R",
+          "event_id": "EVT-173",
           "name": "BusinessKYCReferralRaised",
           "provider_service_id": "SVC-014",
           "purpose": "Transitions BusinessApplicationRecord.status to 'referred'. Suspends account decisioning pending MLRO/EDD resolution."
         },
         {
-          "event_id": "EVT-B005S",
+          "event_id": "EVT-174",
           "name": "BusinessSanctionsHitDetected",
           "provider_service_id": "SVC-014",
           "purpose": "Immediately blocks the application. Transitions status to 'blocked'. No further processing until MLRO resolution."
@@ -364,11 +364,11 @@
         "EVT-009",
         "EVT-010",
         "EVT-019",
-        "EVT-P01",
-        "EVT-P04",
-        "EVT-P06",
-        "EVT-P07",
-        "EVT-P08",
+        "EVT-179",
+        "EVT-182",
+        "EVT-184",
+        "EVT-185",
+        "EVT-186",
         "EVT-094",
         "EVT-058",
         "EVT-059",
@@ -485,19 +485,19 @@
       ],
       "jrn002_consumed_events": [
         {
-          "event_id": "EVT-P02",
+          "event_id": "EVT-180",
           "name": "SanctionsScreeningCompleted",
           "provider_service_id": "SVC-051",
-          "purpose": "Evaluates sanctions outcome for PaymentIntent. If clear and EVT-P03 also clear: publishes PaymentCleared. If hit: publishes PaymentFailed with reason = sanctions_review and alerts MLRO."
+          "purpose": "Evaluates sanctions outcome for PaymentIntent. If clear and EVT-181 also clear: publishes PaymentCleared. If hit: publishes PaymentFailed with reason = sanctions_review and alerts MLRO."
         },
         {
-          "event_id": "EVT-P03",
+          "event_id": "EVT-181",
           "name": "FraudScoreCompleted",
           "provider_service_id": "SVC-013",
-          "purpose": "Evaluates fraud risk level. If block: publishes PaymentFraudBlocked. If non-block and EVT-P02 also clear: publishes PaymentCleared."
+          "purpose": "Evaluates fraud risk level. If block: publishes PaymentFraudBlocked. If non-block and EVT-180 also clear: publishes PaymentCleared."
         },
         {
-          "event_id": "EVT-P05",
+          "event_id": "EVT-183",
           "name": "PaymentExecuted",
           "provider_service_id": "SVC-009",
           "purpose": "Triggers account ledger debit by payment amount. Updates PaymentIntent.status = completed. Updates Account.daily_payment_total. Publishes AccountDebited."
@@ -589,9 +589,9 @@
           "PATCH /open-banking-consents/{consent_id}"
         ],
         "new_consumed_events": [
-          "EVT-P02 (SanctionsScreeningCompleted) \u2014 already consumed for JRN-002; extended to handle OB-initiated payments via origination_channel = open_banking flag on PaymentIntent. Clear + EVT-P03 non-block: publish PaymentCleared and subsequently EVT-062 on completion. Hit: publish EVT-P07 and EVT-063.",
-          "EVT-P03 (FraudScoreCompleted) \u2014 already consumed for JRN-002; extended to handle OB-initiated payments. Non-block + EVT-P02 clear: publish EVT-P04. Block: publish EVT-P08 and EVT-063.",
-          "EVT-P05 (PaymentExecuted) \u2014 already consumed for JRN-002; on completion of OB-initiated payment, additionally publishes EVT-062 (OpenBankingPaymentCompleted)."
+          "EVT-180 (SanctionsScreeningCompleted) \u2014 already consumed for JRN-002; extended to handle OB-initiated payments via origination_channel = open_banking flag on PaymentIntent. Clear + EVT-181 non-block: publish PaymentCleared and subsequently EVT-062 on completion. Hit: publish EVT-185 and EVT-063.",
+          "EVT-181 (FraudScoreCompleted) \u2014 already consumed for JRN-002; extended to handle OB-initiated payments. Non-block + EVT-180 clear: publish EVT-182. Block: publish EVT-186 and EVT-063.",
+          "EVT-183 (PaymentExecuted) \u2014 already consumed for JRN-002; on completion of OB-initiated payment, additionally publishes EVT-062 (OpenBankingPaymentCompleted)."
         ],
         "new_api_consumed": "SVC-100 token introspection \u2014 SVC-001 calls SVC-100 to validate TPP access tokens on each POST /payments call for OB-initiated payments.",
         "entity_extension": "ENT-008 (PaymentIntent) extended with three new fields: consent_id (FK to ENT-030), origination_channel (enum: direct | open_banking), tpp_id (FK to ENT-031). See data-model.json entity_extensions."
@@ -664,7 +664,7 @@
         "ENT-003",
         "ENT-010",
         "ENT-011",
-        "ENT-B005"
+        "ENT-083"
       ],
       "published_events": [
         "EVT-003",
@@ -677,23 +677,23 @@
         "EVT-016",
         "EVT-017",
         "EVT-018",
-        "EVT-B005",
-        "EVT-B005R",
-        "EVT-B005S"
+        "EVT-172",
+        "EVT-173",
+        "EVT-174"
       ],
       "jrn004_additions": {
-        "new_owned_entity": "ENT-B005 (BusinessKycAssessment) \u2014 company-level KYC/CDD record for legal entity customers, extending the KycAssessment pattern (ENT-003) for commercial-specific requirements",
+        "new_owned_entity": "ENT-083 (BusinessKycAssessment) \u2014 company-level KYC/CDD record for legal entity customers, extending the KycAssessment pattern (ENT-003) for commercial-specific requirements",
         "new_published_events": [
           {
-            "event_id": "EVT-B005",
+            "event_id": "EVT-172",
             "name": "BusinessKYCCleared"
           },
           {
-            "event_id": "EVT-B005R",
+            "event_id": "EVT-173",
             "name": "BusinessKYCReferralRaised"
           },
           {
-            "event_id": "EVT-B005S",
+            "event_id": "EVT-174",
             "name": "BusinessSanctionsHitDetected"
           }
         ],
@@ -707,25 +707,25 @@
           "purpose": "JRN-001: Signals personal identity verification complete (outcome = pass). SVC-014 uses payload as PEP/sanctions/adverse media screening inputs."
         },
         {
-          "event_id": "EVT-B002",
+          "event_id": "EVT-169",
           "name": "CompaniesHouseVerified",
           "provider_service_id": "SVC-005",
           "purpose": "JRN-004: Company details (legal name, SIC codes, incorporation date) as CDD inputs for company-level screening."
         },
         {
-          "event_id": "EVT-B003",
+          "event_id": "EVT-170",
           "name": "UBOIdentified",
           "provider_service_id": "SVC-005",
           "purpose": "JRN-004: UBO details \u2014 registers individual in the BPH-005 screening queue."
         },
         {
-          "event_id": "EVT-B004",
+          "event_id": "EVT-171",
           "name": "DirectorVerified",
           "provider_service_id": "SVC-050",
           "purpose": "JRN-004: Verified identity data (name, DOB, nationality) for each director/UBO \u2014 triggers individual PEP/sanctions/adverse media screening."
         },
         {
-          "event_id": "EVT-B008",
+          "event_id": "EVT-177",
           "name": "BusinessAccountProvisioned",
           "provider_service_id": "SVC-005",
           "purpose": "JRN-004: Activates pKYC ongoing monitoring for the BusinessCustomer entity."
@@ -986,10 +986,10 @@
       ],
       "published_events": [
         "EVT-002",
-        "EVT-B004"
+        "EVT-171"
       ],
       "jrn004_additions": {
-        "new_published_event": "EVT-B004 (DirectorVerified) \u2014 individual identity verification completion event for business customer directors and UBOs. Carries verified identity data (name, DOB, nationality) as CDD inputs for SVC-014 individual screening. One event per individual. Replaces/parallels IdentityVerificationCompleted in the commercial onboarding context.",
+        "new_published_event": "EVT-171 (DirectorVerified) \u2014 individual identity verification completion event for business customer directors and UBOs. Carries verified identity data (name, DOB, nationality) as CDD inputs for SVC-014 individual screening. One event per individual. Replaces/parallels IdentityVerificationCompleted in the commercial onboarding context.",
         "new_capabilities": "Multiple concurrent identity verification sessions per business application (up to 10 individuals); secure email invitation dispatch to directors/UBOs who are not the primary applicant; per-individual verification status tracking per business_application_id; context field added to ENT-002 IdentityVerification for commercial use (business_application_id, individual_type, individual_entity_id)"
       },
       "consumed_events": [
@@ -1018,13 +1018,13 @@
           "purpose": "JRN-001: Marks KYC/CDD step complete; closes the identity verification orchestration session."
         },
         {
-          "event_id": "EVT-B001",
+          "event_id": "EVT-168",
           "name": "BusinessApplicationStarted",
           "provider_service_id": "SVC-005",
           "purpose": "JRN-004: Initialises the business onboarding case. No verification sessions created yet \u2014 created after BPH-003 UBO identification."
         },
         {
-          "event_id": "EVT-B003",
+          "event_id": "EVT-170",
           "name": "UBOIdentified",
           "provider_service_id": "SVC-005",
           "purpose": "JRN-004: Creates identity verification session for each UBO and dispatches secure invitation email. Primary applicant session activated immediately in-app."
@@ -1069,7 +1069,7 @@
       "owned_entities_note": "SVC-051 owns no entities. It is a stateless synchronous screening API. The sanctions_screening_result produced by SVC-051 is persisted within KycAssessment.sanctions_screening_result (owned by SVC-014).",
       "published_events": [
         "EVT-SVC051-001",
-        "EVT-P02"
+        "EVT-180"
       ],
       "published_events_detail": [
         {
@@ -1082,8 +1082,8 @@
           ]
         },
         {
-          "event_name": "SanctionsScreeningCompleted (EVT-P02)",
-          "trigger": "SVC-051 completes a real-time sanctions screen triggered by consuming PaymentIntentCreated (EVT-P01). JRN-002 only.",
+          "event_name": "SanctionsScreeningCompleted (EVT-180)",
+          "trigger": "SVC-051 completes a real-time sanctions screen triggered by consuming PaymentIntentCreated (EVT-179). JRN-002 only.",
           "payload_summary": "screening_result_id, payment_intent_id, customer_id, payee details, outcome (clear | hit | error), lists_screened, screened_at",
           "consumers": [
             "SVC-001",
@@ -1093,13 +1093,13 @@
       ],
       "consumed_events": [
         {
-          "event_id": "EVT-P01",
+          "event_id": "EVT-179",
           "name": "PaymentIntentCreated",
           "provider_service_id": "SVC-001",
           "purpose": "JRN-002: Triggers real-time sanctions screen against payee details. Result published as SanctionsScreeningCompleted."
         },
         {
-          "event_id": "EVT-P05",
+          "event_id": "EVT-183",
           "name": "PaymentExecuted",
           "provider_service_id": "SVC-009",
           "purpose": "JRN-002: Writes confirmed FPS execution to OFSI audit log per GOV-005-R02."
@@ -1227,8 +1227,8 @@
         "pay_uk_reimbursement_integration": "Pay.UK APP fraud reimbursement API added to existing Form3/Bottomline PTX scheme connectivity. SVC-009 orchestration layer extended; connectivity vendor handles scheme protocol."
       },
       "published_events": [
-        "EVT-P05",
-        "EVT-P07",
+        "EVT-183",
+        "EVT-185",
         "EVT-095",
         "EVT-096",
         "EVT-069",
@@ -1240,10 +1240,10 @@
       ],
       "consumed_events": [
         {
-          "event_id": "EVT-P04",
+          "event_id": "EVT-182",
           "name": "PaymentCleared",
           "provider_service_id": "SVC-001",
-          "purpose": "Triggers FPS execution. SVC-009 constructs ISO 20022 pacs.008 and submits to Pay.UK/Vocalink. Creates PaymentExecution (ENT-009). On acceptance: publishes PaymentExecuted (EVT-P05). On rejection after retries: publishes PaymentFailed (EVT-P07)."
+          "purpose": "Triggers FPS execution. SVC-009 constructs ISO 20022 pacs.008 and submits to Pay.UK/Vocalink. Creates PaymentExecution (ENT-009). On acceptance: publishes PaymentExecuted (EVT-183). On rejection after retries: publishes PaymentFailed (EVT-185)."
         },
         {
           "event_id": "EVT-092",
@@ -1338,7 +1338,7 @@
       ],
       "owned_entities_note": "JRN-002: SVC-013 owned no entities \u2014 fraud scores were provided via FraudScoreCompleted event and persisted on ENT-008 (PaymentIntent) by SVC-001. JRN-005: SVC-013 extended to full fraud case management service. New entities: ENT-043 (FraudCase) and ENT-044 (FraudEvidence).",
       "published_events": [
-        "EVT-P03",
+        "EVT-181",
         "EVT-090",
         "EVT-091",
         "EVT-092",
@@ -1414,13 +1414,13 @@
       },
       "consumed_events": [
         {
-          "event_id": "EVT-P01",
+          "event_id": "EVT-179",
           "name": "PaymentIntentCreated",
           "provider_service_id": "SVC-001",
-          "purpose": "JRN-002: Triggers ML fraud scoring. Publishes FraudScoreCompleted (EVT-P03) with risk_score, risk_level, top_risk_features, and model_version. P99 < 500ms."
+          "purpose": "JRN-002: Triggers ML fraud scoring. Publishes FraudScoreCompleted (EVT-181) with risk_score, risk_level, top_risk_features, and model_version. P99 < 500ms."
         },
         {
-          "event_id": "EVT-P08",
+          "event_id": "EVT-186",
           "name": "PaymentFraudBlocked",
           "provider_service_id": "SVC-001",
           "purpose": "JRN-002 + JRN-005: JRN-002: Creates fraud operations platform case. JRN-005: Auto-creates FraudCase (ENT-043) with trigger_type = realtime_block, total_loss_amount = 0.00."
@@ -2139,6 +2139,37 @@
       "source_journeys": [
         "JRN-015"
       ]
+    },
+    {
+      "service_id": "SVC-004",
+      "service_name": "Insurance Distribution Service",
+      "source_journeys": [
+        "JRN-030"
+      ],
+      "owned_entities": [
+        "ENT-078"
+      ],
+      "published_events": [
+        "EVT-167"
+      ]
+    },
+    {
+      "service_id": "SVC-008",
+      "service_name": "Merchant Acquiring Service",
+      "source_journeys": [
+        "JRN-018"
+      ],
+      "owned_entities": [
+        "ENT-059",
+        "ENT-060"
+      ],
+      "published_events": [
+        "EVT-130",
+        "EVT-133",
+        "EVT-134",
+        "EVT-135",
+        "EVT-137"
+      ]
     }
   ],
   "cross_service_interaction_summary": {
@@ -2260,7 +2291,7 @@
         "step": 11,
         "journey": "JRN-005",
         "phase": "PH-064",
-        "description": "Customer reports APP fraud via mobile app (CH-002). SVC-017 calls SVC-013 POST /fraud-cases. SVC-013 creates FraudCase (ENT-043, status=open). Publishes FraudCaseCreated (EVT-090). SVC-053 dispatches case confirmation to PER-001. Alternatively: SVC-013 auto-creates FraudCase on PaymentFraudBlocked (EVT-P08) consumption with trigger_type=realtime_block.",
+        "description": "Customer reports APP fraud via mobile app (CH-002). SVC-017 calls SVC-013 POST /fraud-cases. SVC-013 creates FraudCase (ENT-043, status=open). Publishes FraudCaseCreated (EVT-090). SVC-053 dispatches case confirmation to PER-001. Alternatively: SVC-013 auto-creates FraudCase on PaymentFraudBlocked (EVT-186) consumption with trigger_type=realtime_block.",
         "services_involved": [
           "SVC-017",
           "SVC-013",
@@ -2386,5 +2417,501 @@
         ]
       }
     ]
+  },
+  "jrn17_additions_SVC-012": {
+    "service_id": "SVC-012",
+    "journey": "JRN-017",
+    "new_owned_entities": [
+      "ENT-055"
+    ],
+    "new_published_events": [
+      "EVT-119",
+      "EVT-120",
+      "EVT-121",
+      "EVT-122",
+      "EVT-123"
+    ]
+  },
+  "jrn17_additions_SVC-015": {
+    "service_id": "SVC-015",
+    "journey": "JRN-017",
+    "new_owned_entities": [
+      "ENT-056",
+      "ENT-057",
+      "ENT-058"
+    ],
+    "new_published_events": [
+      "EVT-124",
+      "EVT-125",
+      "EVT-126",
+      "EVT-127",
+      "EVT-128",
+      "EVT-129"
+    ]
+  },
+  "jrn17_additions_SVC-103": {
+    "service_id": "SVC-103",
+    "journey": "JRN-017",
+    "new_owned_entities": [],
+    "new_published_events": []
+  },
+  "jrn17_additions_SVC-111": {
+    "service_id": "SVC-111",
+    "journey": "JRN-017",
+    "new_owned_entities": [],
+    "new_published_events": []
+  },
+  "jrn19_additions_SVC-001": {
+    "service_id": "SVC-001",
+    "journey": "JRN-019",
+    "new_owned_entities": [
+      "ENT-061"
+    ],
+    "new_published_events": [
+      "EVT-138",
+      "EVT-139",
+      "EVT-140",
+      "EVT-141"
+    ]
+  },
+  "jrn19_additions_SVC-015": {
+    "service_id": "SVC-015",
+    "journey": "JRN-019",
+    "new_owned_entities": [
+      "ENT-062"
+    ],
+    "new_published_events": []
+  },
+  "jrn19_additions_SVC-053": {
+    "service_id": "SVC-053",
+    "journey": "JRN-019",
+    "new_owned_entities": [],
+    "new_published_events": []
+  },
+  "jrn19_additions_SVC-103": {
+    "service_id": "SVC-103",
+    "journey": "JRN-019",
+    "new_owned_entities": [],
+    "new_published_events": []
+  },
+  "jrn20_additions_SVC-015": {
+    "service_id": "SVC-015",
+    "journey": "JRN-020",
+    "new_owned_entities": [
+      "ENT-063"
+    ],
+    "new_published_events": [
+      "EVT-142",
+      "EVT-143",
+      "EVT-144",
+      "EVT-145",
+      "EVT-146",
+      "EVT-147"
+    ]
+  },
+  "jrn20_additions_SVC-014": {
+    "service_id": "SVC-014",
+    "journey": "JRN-020",
+    "new_owned_entities": [
+      "ENT-064"
+    ],
+    "new_published_events": []
+  },
+  "jrn20_additions_SVC-005": {
+    "service_id": "SVC-005",
+    "journey": "JRN-020",
+    "new_owned_entities": [],
+    "new_published_events": []
+  },
+  "jrn20_additions_SVC-103": {
+    "service_id": "SVC-103",
+    "journey": "JRN-020",
+    "new_owned_entities": [],
+    "new_published_events": []
+  },
+  "jrn26_additions_SVC-001": {
+    "service_id": "SVC-001",
+    "journey": "JRN-026",
+    "new_owned_entities": [
+      "ENT-065",
+      "ENT-066"
+    ],
+    "new_published_events": [
+      "EVT-148",
+      "EVT-149",
+      "EVT-150",
+      "EVT-151"
+    ]
+  },
+  "jrn26_additions_SVC-014": {
+    "service_id": "SVC-014",
+    "journey": "JRN-026",
+    "new_owned_entities": [],
+    "new_published_events": []
+  },
+  "jrn26_additions_SVC-015": {
+    "service_id": "SVC-015",
+    "journey": "JRN-026",
+    "new_owned_entities": [],
+    "new_published_events": []
+  },
+  "jrn26_additions_SVC-053": {
+    "service_id": "SVC-053",
+    "journey": "JRN-026",
+    "new_owned_entities": [],
+    "new_published_events": []
+  },
+  "jrn26_additions_SVC-103": {
+    "service_id": "SVC-103",
+    "journey": "JRN-026",
+    "new_owned_entities": [],
+    "new_published_events": []
+  },
+  "jrn27_additions_SVC-001": {
+    "service_id": "SVC-001",
+    "journey": "JRN-027",
+    "new_owned_entities": [
+      "ENT-067",
+      "ENT-068",
+      "ENT-069"
+    ],
+    "new_published_events": [
+      "EVT-152",
+      "EVT-154",
+      "EVT-155"
+    ]
+  },
+  "jrn27_additions_SVC-012": {
+    "service_id": "SVC-012",
+    "journey": "JRN-027",
+    "new_owned_entities": [],
+    "new_published_events": [
+      "EVT-153"
+    ]
+  },
+  "jrn27_additions_SVC-014": {
+    "service_id": "SVC-014",
+    "journey": "JRN-027",
+    "new_owned_entities": [],
+    "new_published_events": []
+  },
+  "jrn27_additions_SVC-015": {
+    "service_id": "SVC-015",
+    "journey": "JRN-027",
+    "new_owned_entities": [],
+    "new_published_events": []
+  },
+  "jrn27_additions_SVC-009": {
+    "service_id": "SVC-009",
+    "journey": "JRN-027",
+    "new_owned_entities": [],
+    "new_published_events": []
+  },
+  "jrn27_additions_SVC-053": {
+    "service_id": "SVC-053",
+    "journey": "JRN-027",
+    "new_owned_entities": [],
+    "new_published_events": []
+  },
+  "jrn27_additions_SVC-103": {
+    "service_id": "SVC-103",
+    "journey": "JRN-027",
+    "new_owned_entities": [],
+    "new_published_events": []
+  },
+  "jrn29_additions_SVC-017": {
+    "service_id": "SVC-017",
+    "journey": "JRN-029",
+    "new_owned_entities": [],
+    "new_published_events": []
+  },
+  "jrn29_additions_SVC-009": {
+    "service_id": "SVC-009",
+    "journey": "JRN-029",
+    "new_owned_entities": [
+      "ENT-070",
+      "ENT-071"
+    ],
+    "new_published_events": [
+      "EVT-156",
+      "EVT-157",
+      "EVT-158"
+    ]
+  },
+  "jrn29_additions_SVC-013": {
+    "service_id": "SVC-013",
+    "journey": "JRN-029",
+    "new_owned_entities": [],
+    "new_published_events": []
+  },
+  "jrn29_additions_SVC-001": {
+    "service_id": "SVC-001",
+    "journey": "JRN-029",
+    "new_owned_entities": [],
+    "new_published_events": []
+  },
+  "jrn29_additions_SVC-053": {
+    "service_id": "SVC-053",
+    "journey": "JRN-029",
+    "new_owned_entities": [],
+    "new_published_events": []
+  },
+  "jrn29_additions_SVC-103": {
+    "service_id": "SVC-103",
+    "journey": "JRN-029",
+    "new_owned_entities": [],
+    "new_published_events": []
+  },
+  "jrn21_additions_SVC-017": {
+    "service_id": "SVC-017",
+    "journey": "JRN-021",
+    "new_owned_entities": [],
+    "new_published_events": []
+  },
+  "jrn21_additions_SVC-015": {
+    "service_id": "SVC-015",
+    "journey": "JRN-021",
+    "new_owned_entities": [
+      "ENT-072"
+    ],
+    "new_published_events": [
+      "EVT-159",
+      "EVT-160"
+    ]
+  },
+  "jrn21_additions_SVC-014": {
+    "service_id": "SVC-014",
+    "journey": "JRN-021",
+    "new_owned_entities": [],
+    "new_published_events": []
+  },
+  "jrn21_additions_SVC-001": {
+    "service_id": "SVC-001",
+    "journey": "JRN-021",
+    "new_owned_entities": [],
+    "new_published_events": []
+  },
+  "jrn21_additions_SVC-053": {
+    "service_id": "SVC-053",
+    "journey": "JRN-021",
+    "new_owned_entities": [],
+    "new_published_events": []
+  },
+  "jrn21_additions_SVC-103": {
+    "service_id": "SVC-103",
+    "journey": "JRN-021",
+    "new_owned_entities": [],
+    "new_published_events": []
+  },
+  "jrn22_additions_SVC-012": {
+    "service_id": "SVC-012",
+    "journey": "JRN-022",
+    "new_owned_entities": [
+      "ENT-073"
+    ],
+    "new_published_events": [
+      "EVT-161",
+      "EVT-162"
+    ]
+  },
+  "jrn22_additions_SVC-015": {
+    "service_id": "SVC-015",
+    "journey": "JRN-022",
+    "new_owned_entities": [
+      "ENT-074"
+    ],
+    "new_published_events": []
+  },
+  "jrn22_additions_SVC-103": {
+    "service_id": "SVC-103",
+    "journey": "JRN-022",
+    "new_owned_entities": [],
+    "new_published_events": []
+  },
+  "jrn23_additions_SVC-015": {
+    "service_id": "SVC-015",
+    "journey": "JRN-023",
+    "new_owned_entities": [
+      "ENT-075"
+    ],
+    "new_published_events": [
+      "EVT-163",
+      "EVT-164"
+    ]
+  },
+  "jrn23_additions_SVC-014": {
+    "service_id": "SVC-014",
+    "journey": "JRN-023",
+    "new_owned_entities": [],
+    "new_published_events": []
+  },
+  "jrn23_additions_SVC-007": {
+    "service_id": "SVC-007",
+    "journey": "JRN-023",
+    "new_owned_entities": [],
+    "new_published_events": []
+  },
+  "jrn23_additions_SVC-010": {
+    "service_id": "SVC-010",
+    "journey": "JRN-023",
+    "new_owned_entities": [],
+    "new_published_events": []
+  },
+  "jrn23_additions_SVC-103": {
+    "service_id": "SVC-103",
+    "journey": "JRN-023",
+    "new_owned_entities": [],
+    "new_published_events": []
+  },
+  "jrn24_additions_SVC-015": {
+    "service_id": "SVC-015",
+    "journey": "JRN-024",
+    "new_owned_entities": [
+      "ENT-076"
+    ],
+    "new_published_events": [
+      "EVT-165"
+    ]
+  },
+  "jrn24_additions_SVC-103": {
+    "service_id": "SVC-103",
+    "journey": "JRN-024",
+    "new_owned_entities": [],
+    "new_published_events": []
+  },
+  "jrn25_additions_SVC-001": {
+    "service_id": "SVC-001",
+    "journey": "JRN-025",
+    "new_owned_entities": [
+      "ENT-077"
+    ],
+    "new_published_events": [
+      "EVT-166"
+    ]
+  },
+  "jrn25_additions_SVC-015": {
+    "service_id": "SVC-015",
+    "journey": "JRN-025",
+    "new_owned_entities": [],
+    "new_published_events": []
+  },
+  "jrn25_additions_SVC-103": {
+    "service_id": "SVC-103",
+    "journey": "JRN-025",
+    "new_owned_entities": [],
+    "new_published_events": []
+  },
+  "jrn30_additions_SVC-017": {
+    "service_id": "SVC-017",
+    "journey": "JRN-030",
+    "new_owned_entities": [],
+    "new_published_events": []
+  },
+  "jrn30_additions_SVC-001": {
+    "service_id": "SVC-001",
+    "journey": "JRN-030",
+    "new_owned_entities": [],
+    "new_published_events": []
+  },
+  "jrn30_additions_SVC-053": {
+    "service_id": "SVC-053",
+    "journey": "JRN-030",
+    "new_owned_entities": [],
+    "new_published_events": []
+  },
+  "jrn30_additions_SVC-103": {
+    "service_id": "SVC-103",
+    "journey": "JRN-030",
+    "new_owned_entities": [],
+    "new_published_events": []
+  },
+  "jrn18_additions_SVC-005": {
+    "service_id": "SVC-005",
+    "journey": "JRN-018",
+    "new_owned_entities": [],
+    "new_published_events": [
+      "EVT-132"
+    ]
+  },
+  "jrn18_additions_SVC-014": {
+    "service_id": "SVC-014",
+    "journey": "JRN-018",
+    "new_owned_entities": [],
+    "new_published_events": [
+      "EVT-131"
+    ]
+  },
+  "jrn18_additions_SVC-051": {
+    "service_id": "SVC-051",
+    "journey": "JRN-018",
+    "new_owned_entities": [],
+    "new_published_events": []
+  },
+  "jrn18_additions_SVC-009": {
+    "service_id": "SVC-009",
+    "journey": "JRN-018",
+    "new_owned_entities": [],
+    "new_published_events": [
+      "EVT-136"
+    ]
+  },
+  "jrn18_additions_SVC-103": {
+    "service_id": "SVC-103",
+    "journey": "JRN-018",
+    "new_owned_entities": [],
+    "new_published_events": []
+  },
+  "jrn18_additions_SVC-111": {
+    "service_id": "SVC-111",
+    "journey": "JRN-018",
+    "new_owned_entities": [],
+    "new_published_events": []
+  },
+  "jrn9_additions_SVC-010": {
+    "service_id": "SVC-010",
+    "journey": "JRN-009",
+    "new_owned_entities": [
+      "ENT-026",
+      "ENT-027",
+      "ENT-028",
+      "ENT-029"
+    ],
+    "new_published_events": [
+      "EVT-049",
+      "EVT-050",
+      "EVT-053",
+      "EVT-054",
+      "EVT-055",
+      "EVT-056",
+      "EVT-057"
+    ]
+  },
+  "jrn9_additions_SVC-005": {
+    "service_id": "SVC-005",
+    "journey": "JRN-009",
+    "new_owned_entities": [],
+    "new_published_events": []
+  },
+  "jrn9_additions_SVC-051": {
+    "service_id": "SVC-051",
+    "journey": "JRN-009",
+    "new_owned_entities": [],
+    "new_published_events": [
+      "EVT-051"
+    ]
+  },
+  "jrn9_additions_SVC-013": {
+    "service_id": "SVC-013",
+    "journey": "JRN-009",
+    "new_owned_entities": [],
+    "new_published_events": [
+      "EVT-052"
+    ]
+  },
+  "jrn9_additions_SVC-009": {
+    "service_id": "SVC-009",
+    "journey": "JRN-009",
+    "new_owned_entities": [],
+    "new_published_events": []
   }
 }

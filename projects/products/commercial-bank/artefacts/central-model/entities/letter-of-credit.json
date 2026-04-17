@@ -1,7 +1,7 @@
 {
   "id": "ENT-036",
   "name": "LetterOfCredit",
-  "description": "Aggregate root for a documentary letter of credit. Captures the full lifecycle from application through issuance to settlement or expiry. Owned exclusively by SVC-006 (Trade Finance Service). References BusinessCustomer (ENT-B001) and BusinessAccount (ENT-B002) from SVC-005 by foreign key \u2014 no local copies.",
+  "description": "Aggregate root for a documentary letter of credit. Captures the full lifecycle from application through issuance to settlement or expiry. Owned exclusively by SVC-006 (Trade Finance Service). References BusinessCustomer (ENT-079) and BusinessAccount (ENT-080) from SVC-005 by foreign key \u2014 no local copies.",
   "owning_service": "SVC-006",
   "fields": [
     {
@@ -18,13 +18,13 @@
     },
     {
       "name": "business_customer_id",
-      "type": "UUID v4 (FK \u2192 ENT-B001)",
+      "type": "UUID v4 (FK \u2192 ENT-079)",
       "description": "Applicant \u2014 references BusinessCustomer in SVC-005. Read via same-capability API. No local copy.",
       "required": true
     },
     {
       "name": "account_id",
-      "type": "UUID v4 (FK \u2192 ENT-B002)",
+      "type": "UUID v4 (FK \u2192 ENT-080)",
       "description": "Applicant's BusinessAccount to be debited on settlement. References SVC-005 entity by FK.",
       "required": true
     },
@@ -263,12 +263,12 @@
     },
     {
       "type": "references",
-      "target": "ENT-B001 (BusinessCustomer) \u2014 SVC-005",
+      "target": "ENT-079 (BusinessCustomer) \u2014 SVC-005",
       "description": "FK reference to applicant. No local copy. Read via SVC-005 GET /business-customers/{id}."
     },
     {
       "type": "references",
-      "target": "ENT-B002 (BusinessAccount) \u2014 SVC-005",
+      "target": "ENT-080 (BusinessAccount) \u2014 SVC-005",
       "description": "FK reference to settlement account. No local copy. Read via SVC-005 GET /business-accounts/{id}."
     }
   ],

@@ -1,0 +1,137 @@
+{
+  "id": "ENT-060",
+  "name": "TerminalProvision",
+  "description": "Records the provisioning of payment acceptance infrastructure for an approved merchant \u2014 physical POS terminal, virtual terminal, or payment gateway API credentials.",
+  "owning_service": "SVC-008",
+  "fields": [
+    {
+      "name": "provision_id",
+      "type": "string",
+      "format": "UUID",
+      "description": "Unique provisioning identifier",
+      "validation": "Required.",
+      "source": "System-generated"
+    },
+    {
+      "name": "application_id",
+      "type": "string",
+      "description": "Reference to the MerchantApplication",
+      "validation": "Required.",
+      "source": "SVC-008 workflow"
+    },
+    {
+      "name": "terminal_type",
+      "type": "enum",
+      "values": [
+        "POS_PHYSICAL",
+        "VIRTUAL_TERMINAL",
+        "PAYMENT_GATEWAY_API"
+      ],
+      "description": "Type of terminal provisioned",
+      "validation": "Required.",
+      "source": "MerchantApplication"
+    },
+    {
+      "name": "terminal_id",
+      "type": "string",
+      "description": "Physical terminal serial number or virtual terminal ID",
+      "validation": "Required for POS and virtual.",
+      "source": "Terminal management system"
+    },
+    {
+      "name": "api_credentials",
+      "type": "object",
+      "description": "Payment gateway API credentials (for API merchants)",
+      "fields": [
+        {
+          "name": "api_key_id",
+          "type": "string"
+        },
+        {
+          "name": "sandbox_url",
+          "type": "string"
+        },
+        {
+          "name": "production_url",
+          "type": "string"
+        }
+      ],
+      "source": "SVC-008 API provisioning"
+    },
+    {
+      "name": "configuration",
+      "type": "object",
+      "description": "Terminal configuration",
+      "fields": [
+        {
+          "name": "visa_mid",
+          "type": "string"
+        },
+        {
+          "name": "mastercard_mid",
+          "type": "string"
+        },
+        {
+          "name": "pricing_plan_id",
+          "type": "string"
+        },
+        {
+          "name": "settlement_account_ref",
+          "type": "string"
+        }
+      ],
+      "source": "SVC-008"
+    },
+    {
+      "name": "test_transaction_status",
+      "type": "enum",
+      "values": [
+        "PENDING",
+        "PASSED",
+        "FAILED"
+      ],
+      "description": "Status of end-to-end test transaction",
+      "validation": "Required.",
+      "source": "SVC-008 test framework"
+    },
+    {
+      "name": "go_live_date",
+      "type": "date",
+      "description": "Date merchant went live",
+      "validation": "Required when test_transaction_status is PASSED.",
+      "source": "SVC-008"
+    },
+    {
+      "name": "status",
+      "type": "enum",
+      "values": [
+        "PROVISIONING",
+        "CONFIGURED",
+        "TESTING",
+        "LIVE",
+        "SUSPENDED"
+      ],
+      "description": "Provisioning lifecycle status",
+      "validation": "Required.",
+      "source": "SVC-008 workflow"
+    },
+    {
+      "name": "created_at",
+      "type": "datetime",
+      "format": "ISO 8601",
+      "validation": "Required.",
+      "source": "System clock"
+    }
+  ],
+  "relationships": [
+    {
+      "target_entity": "ENT-059",
+      "relationship_type": "belongs_to",
+      "description": "Each TerminalProvision belongs to one MerchantApplication"
+    }
+  ],
+  "design_decisions": [],
+  "source_journeys": [
+    "JRN-018"
+  ]
+}

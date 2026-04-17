@@ -71,7 +71,7 @@
         {
           "phase_id": "PH-016",
           "interaction": "Conducts initial needs analysis. Records preliminary deal in CRM pipeline. Issues indicative terms.",
-          "system_actions": ["Creates deal record in SVC-005 pipeline module", "Reviews ENT-B001 customer profile and existing facilities", "Issues indicative terms letter"]
+          "system_actions": ["Creates deal record in SVC-005 pipeline module", "Reviews ENT-079 customer profile and existing facilities", "Issues indicative terms letter"]
         },
         {
           "phase_id": "PH-017",
@@ -126,7 +126,7 @@
       "description": "The primary system service for the journey. Orchestrates the loan origination workflow, owns ENT-017/ENT-019/ENT-020/ENT-021, publishes 8 events, and coordinates with SVC-012 (async) and SVC-009 (sync) for cross-capability interactions.",
       "channel_access": ["internal_api", "event_bus_SVC-102"],
       "phase_interactions": [
-        { "phase_id": "PH-016", "interaction": "Read access to ENT-B001 for customer profile." },
+        { "phase_id": "PH-016", "interaction": "Read access to ENT-079 for customer profile." },
         { "phase_id": "PH-017", "interaction": "Creates ENT-017 (LoanApplication). Publishes EVT-031, EVT-032." },
         { "phase_id": "PH-018", "interaction": "Consumes EVT-033. Routes to Credit Analyst." },
         { "phase_id": "PH-019", "interaction": "Records committee decision. Publishes EVT-034 or EVT-035." },

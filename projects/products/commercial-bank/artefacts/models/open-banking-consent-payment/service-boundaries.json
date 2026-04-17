@@ -57,25 +57,25 @@
       "service_name": "Retail Banking Core",
       "capability_id": "CAP-001",
       "owned_entities": ["ENT-030", "ENT-031"],
-      "published_events": ["EVT-058", "EVT-059", "EVT-060", "EVT-061", "EVT-062", "EVT-063", "EVT-P01", "EVT-P04", "EVT-P06", "EVT-P07", "EVT-P08"],
+      "published_events": ["EVT-058", "EVT-059", "EVT-060", "EVT-061", "EVT-062", "EVT-063", "EVT-179", "EVT-182", "EVT-184", "EVT-185", "EVT-186"],
       "consumed_events": [
         {
-          "event_id": "EVT-P02",
+          "event_id": "EVT-180",
           "name": "SanctionsScreeningCompleted",
           "provider_service_id": "SVC-051",
-          "purpose": "Sanctions check result for open-banking-initiated PaymentIntent. Clear + EVT-P03 non-block: publish EVT-P04 (PaymentCleared) and subsequently EVT-062 when payment completes. Hit: publish EVT-P07 (PaymentFailed) and EVT-063 (OpenBankingPaymentFailed). Idempotent on payment_intent_id."
+          "purpose": "Sanctions check result for open-banking-initiated PaymentIntent. Clear + EVT-181 non-block: publish EVT-182 (PaymentCleared) and subsequently EVT-062 when payment completes. Hit: publish EVT-185 (PaymentFailed) and EVT-063 (OpenBankingPaymentFailed). Idempotent on payment_intent_id."
         },
         {
-          "event_id": "EVT-P03",
+          "event_id": "EVT-181",
           "name": "FraudScoreCompleted",
           "provider_service_id": "SVC-013",
-          "purpose": "Fraud risk result for open-banking-initiated PaymentIntent. Non-block + EVT-P02 clear: publish EVT-P04. Block: publish EVT-P08 (PaymentFraudBlocked) and EVT-063 (OpenBankingPaymentFailed)."
+          "purpose": "Fraud risk result for open-banking-initiated PaymentIntent. Non-block + EVT-180 clear: publish EVT-182. Block: publish EVT-186 (PaymentFraudBlocked) and EVT-063 (OpenBankingPaymentFailed)."
         },
         {
-          "event_id": "EVT-P05",
+          "event_id": "EVT-183",
           "name": "PaymentExecuted",
           "provider_service_id": "SVC-009",
-          "purpose": "FPS submission confirmed by SVC-009. SVC-001 debits the account ledger, sets PaymentIntent.status = completed, publishes EVT-P06 (AccountDebited) and EVT-062 (OpenBankingPaymentCompleted)."
+          "purpose": "FPS submission confirmed by SVC-009. SVC-001 debits the account ledger, sets PaymentIntent.status = completed, publishes EVT-184 (AccountDebited) and EVT-062 (OpenBankingPaymentCompleted)."
         }
       ],
       "consumed_apis": [
@@ -105,20 +105,20 @@
       "service_name": "Domestic Payments",
       "capability_id": "CAP-003",
       "owned_entities": ["ENT-009"],
-      "published_events": ["EVT-P05"],
+      "published_events": ["EVT-183"],
       "consumed_events": [
         {
-          "event_id": "EVT-P04",
+          "event_id": "EVT-182",
           "name": "PaymentCleared",
           "provider_service_id": "SVC-001",
-          "purpose": "Triggers FPS submission for open-banking-initiated payments (same consumer as JRN-002). SVC-009 creates ENT-009 (PaymentExecution), constructs ISO 20022 pacs.008, submits to Vocalink FPS. Publishes EVT-P05 on FPS acceptance."
+          "purpose": "Triggers FPS submission for open-banking-initiated payments (same consumer as JRN-002). SVC-009 creates ENT-009 (PaymentExecution), constructs ISO 20022 pacs.008, submits to Vocalink FPS. Publishes EVT-183 on FPS acceptance."
         }
       ],
       "consumed_apis": [],
       "design_decisions": [
         {
           "id": "DD-SVC009-JRN010-01",
-          "decision": "SVC-009 does not distinguish between direct payments (JRN-002) and open-banking-initiated payments (JRN-010) at the FPS submission layer. Both arrive via EVT-P04 with the same schema.",
+          "decision": "SVC-009 does not distinguish between direct payments (JRN-002) and open-banking-initiated payments (JRN-010) at the FPS submission layer. Both arrive via EVT-182 with the same schema.",
           "rationale": "The FPS rail does not carry OB provenance — the pacs.008 message format is the same regardless of origination channel. The OB-specific distinction (consent_id, tpp_id) lives in ENT-008 and the openbanking.payments topic, not in the FPS execution layer."
         }
       ]
@@ -128,13 +128,13 @@
       "service_name": "Sanctions Screening Service",
       "capability_id": "CAP-005",
       "owned_entities": [],
-      "published_events": ["EVT-P02"],
+      "published_events": ["EVT-180"],
       "consumed_events": [
         {
-          "event_id": "EVT-P01",
+          "event_id": "EVT-179",
           "name": "PaymentIntentCreated",
           "provider_service_id": "SVC-001",
-          "purpose": "Triggers concurrent sanctions screening of payee (name, sort code, account number) for open-banking-initiated payments. Reuses the JRN-002 consumer pattern. Publishes EVT-P02 (SanctionsScreeningCompleted). Must complete within 2 seconds P99."
+          "purpose": "Triggers concurrent sanctions screening of payee (name, sort code, account number) for open-banking-initiated payments. Reuses the JRN-002 consumer pattern. Publishes EVT-180 (SanctionsScreeningCompleted). Must complete within 2 seconds P99."
         }
       ],
       "consumed_apis": [],
@@ -145,13 +145,13 @@
       "service_name": "Fraud Detection",
       "capability_id": "CAP-004",
       "owned_entities": [],
-      "published_events": ["EVT-P03"],
+      "published_events": ["EVT-181"],
       "consumed_events": [
         {
-          "event_id": "EVT-P01",
+          "event_id": "EVT-179",
           "name": "PaymentIntentCreated",
           "provider_service_id": "SVC-001",
-          "purpose": "Triggers concurrent ML fraud scoring for open-banking-initiated payments. Reuses the JRN-002 consumer pattern. OB payments receive an additional feature: tpp_id and consent_id are included in the fraud feature vector (TPP-level fraud pattern detection). Publishes EVT-P03 (FraudScoreCompleted). Must complete within 500ms P99."
+          "purpose": "Triggers concurrent ML fraud scoring for open-banking-initiated payments. Reuses the JRN-002 consumer pattern. OB payments receive an additional feature: tpp_id and consent_id are included in the fraud feature vector (TPP-level fraud pattern detection). Publishes EVT-181 (FraudScoreCompleted). Must complete within 500ms P99."
         }
       ],
       "consumed_apis": [],
@@ -159,7 +159,7 @@
         {
           "id": "DD-SVC013-JRN010-01",
           "decision": "tpp_id is included as a feature in the fraud scoring model for OB-initiated payments.",
-          "rationale": "PISP-initiated payments present a different fraud risk profile from direct customer-initiated payments — the TPP's historical fraud rate, the volume of payments from this TPP to this payee, and the match between consent details and payment details are all relevant fraud signals. Including tpp_id enables TPP-level fraud detection without changing the core EVT-P01/EVT-P03 contract."
+          "rationale": "PISP-initiated payments present a different fraud risk profile from direct customer-initiated payments — the TPP's historical fraud rate, the volume of payments from this TPP to this payee, and the match between consent details and payment details are all relevant fraud signals. Including tpp_id enables TPP-level fraud detection without changing the core EVT-179/EVT-181 contract."
         }
       ]
     },
@@ -242,14 +242,14 @@
     {
       "from": "SVC-001 (Retail Banking Core — CAP-001)",
       "to": "SVC-051, SVC-013 (CAP-005, CAP-004)",
-      "interaction_type": "Async event — EVT-P01 published; EVT-P02 and EVT-P03 consumed",
+      "interaction_type": "Async event — EVT-179 published; EVT-180 and EVT-181 consumed",
       "phases": ["PH-039"],
       "description": "Standard JRN-002 payment screening pattern reused in full."
     },
     {
       "from": "SVC-001 (Retail Banking Core — CAP-001)",
       "to": "SVC-009 (Domestic Payments — CAP-003)",
-      "interaction_type": "Async event — EVT-P04 published; EVT-P05 consumed",
+      "interaction_type": "Async event — EVT-182 published; EVT-183 consumed",
       "phases": ["PH-039"],
       "description": "Standard JRN-002 FPS execution pattern reused in full."
     }

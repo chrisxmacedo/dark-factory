@@ -25,7 +25,7 @@
       "post": {
         "operationId": "createLoanApplication",
         "summary": "Submit a new SME term loan application",
-        "description": "Creates a LoanApplication (ENT-017) with status = submitted. Publishes EVT-031 (LoanApplicationSubmitted) and EVT-032 (CreditAssessmentRequested) to SVC-102. Called by the RM origination UI or business portal in PH-017. Requires the business_customer_id to reference an active BusinessCustomer (ENT-B001) created in JRN-004.",
+        "description": "Creates a LoanApplication (ENT-017) with status = submitted. Publishes EVT-031 (LoanApplicationSubmitted) and EVT-032 (CreditAssessmentRequested) to SVC-102. Called by the RM origination UI or business portal in PH-017. Requires the business_customer_id to reference an active BusinessCustomer (ENT-079) created in JRN-004.",
         "tags": ["Loan Applications"],
         "requestBody": {
           "required": true,
@@ -372,7 +372,7 @@
           "business_customer_id": {
             "type": "string",
             "format": "uuid",
-            "description": "FK to ENT-B001 (BusinessCustomer). Must reference an active BusinessCustomer."
+            "description": "FK to ENT-079 (BusinessCustomer). Must reference an active BusinessCustomer."
           },
           "requested_amount": {
             "type": "number",
@@ -485,7 +485,7 @@
           "destination_account_id": {
             "type": "string",
             "format": "uuid",
-            "description": "FK to ENT-B002 (BusinessAccount.business_account_id). The BusinessAccount to receive the drawdown credit."
+            "description": "FK to ENT-080 (BusinessAccount.business_account_id). The BusinessAccount to receive the drawdown credit."
           },
           "payment_rail": {
             "type": "string",

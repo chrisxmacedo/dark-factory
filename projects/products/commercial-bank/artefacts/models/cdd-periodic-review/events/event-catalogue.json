@@ -1,0 +1,228 @@
+{
+  "journey_id": "JRN-020",
+  "document_version": "0.1.0",
+  "status": "Draft",
+  "description": "Event catalogue for the CDD Periodic Review (Corporate) journey. Introduces 6 events: EVT-142 through EVT-147. All events published by SVC-015 (Compliance Core Service) via SVC-102 (Event Bus).",
+  "events": [
+    {
+      "event_id": "EVT-142",
+      "name": "CddReviewTriggered",
+      "source_service": "SVC-015",
+      "source_service_name": "Compliance Core Service",
+      "source_entity": "ENT-063",
+      "source_entity_name": "CddReviewCase",
+      "trigger": "Scheduled job reaches review due_date, or event-driven trigger (UBO change, adverse media, sanctions update).",
+      "journey_phase": "PH-102",
+      "journey_phase_name": "Review Trigger and Scheduling",
+      "capability_scope": "cross-capability",
+      "payload_schema": {
+        "review_id": "string (UUID v4)",
+        "client_id": "string (UUID v4)",
+        "review_type": "string enum (periodic | event_triggered)",
+        "trigger_reason": "string",
+        "risk_tier": "string enum (low | medium | high | pep)",
+        "due_date": "string (ISO 8601 date)",
+        "triggered_at": "string (ISO 8601 UTC timestamp)"
+      },
+      "derived_from": {
+        "review_id": "CddReviewCase.review_id",
+        "risk_tier": "CddReviewCase.risk_tier — from KycAssessment.risk_rating at trigger time"
+      },
+      "consumers": [
+        {"service": "SVC-014", "service_name": "KYC/AML Service", "action": "Pre-load KYC record for analyst review."},
+        {"service": "SVC-103", "service_name": "Audit & Logging Service", "action": "Write immutable audit record of review trigger."}
+      ],
+      "ordering_guarantees": "Per-client ordering via client_id partition key on topic compliance.cdd-reviews.",
+      "topic": "compliance.cdd-reviews",
+      "data_classification": "Confidential",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "MLR 2017 record-keeping — all CDD review triggers must be auditable for 7 years.",
+      "retention": "7 years (bank policy)",
+      "cloudevents_type": "uk.bank.compliance.cdd_review.triggered",
+      "governance_references": ["GOV-005-R01"],
+      "source_journeys": ["JRN-020"]
+    },
+    {
+      "event_id": "EVT-143",
+      "name": "BeneficialOwnershipChanged",
+      "source_service": "SVC-015",
+      "source_service_name": "Compliance Core Service",
+      "source_entity": "ENT-063",
+      "source_entity_name": "CddReviewCase",
+      "trigger": "KYC analyst records a change in the UBO structure during document verification.",
+      "journey_phase": "PH-103",
+      "journey_phase_name": "KYC Document Collection and Verification",
+      "capability_scope": "cross-capability",
+      "payload_schema": {
+        "review_id": "string (UUID v4)",
+        "client_id": "string (UUID v4)",
+        "change_summary": "string — description of ownership change (new UBO, UBO removed, % ownership changed)",
+        "new_ubo_count": "integer",
+        "recorded_at": "string (ISO 8601 UTC timestamp)"
+      },
+      "derived_from": {
+        "change_summary": "CddReviewCase.ubo_structure diff vs prior KycAssessment.ubo_structure"
+      },
+      "consumers": [
+        {"service": "SVC-103", "service_name": "Audit & Logging Service", "action": "Write immutable record of ownership change."}
+      ],
+      "ordering_guarantees": "Per-client ordering.",
+      "topic": "compliance.cdd-reviews",
+      "data_classification": "Highly Confidential — beneficial ownership data",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "UBO changes are legally significant. Required for ECTE Act 2022 compliance.",
+      "retention": "7 years",
+      "cloudevents_type": "uk.bank.compliance.beneficial_ownership.changed",
+      "governance_references": ["GOV-005-R01"],
+      "source_journeys": ["JRN-020"]
+    },
+    {
+      "event_id": "EVT-144",
+      "name": "CddSanctionsHitDetected",
+      "source_service": "SVC-015",
+      "source_service_name": "Compliance Core Service",
+      "source_entity": "ENT-063",
+      "source_entity_name": "CddReviewCase",
+      "trigger": "SVC-014 sanctions screening returns a hit on a UBO or corporate entity during CDD review.",
+      "journey_phase": "PH-104",
+      "journey_phase_name": "Risk Scoring and Screening",
+      "capability_scope": "cross-capability",
+      "payload_schema": {
+        "review_id": "string (UUID v4)",
+        "client_id": "string (UUID v4)",
+        "hit_entity": "string — UBO name or corporate entity name (no DOB or address — minimise PII in event payload)",
+        "sanctions_list": "string enum (OFSI | UN | EU | US_OFAC)",
+        "detected_at": "string (ISO 8601 UTC timestamp)"
+      },
+      "derived_from": {
+        "hit_entity": "CddReviewCase.screening_results — entity name only (PII minimised)",
+        "sanctions_list": "CddReviewCase.screening_results.sanctions_list"
+      },
+      "consumers": [
+        {"service": "SVC-005", "service_name": "Commercial Banking Core", "action": "Suspend client account pending MLRO review."},
+        {"service": "SVC-103", "service_name": "Audit & Logging Service", "action": "Write immutable WORM record — OFSI compliance."}
+      ],
+      "ordering_guarantees": "Per-client ordering. Must be processed before CddReviewCompleted for same review_id.",
+      "topic": "compliance.cdd-reviews",
+      "data_classification": "Highly Confidential",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "OFSI notification requirement — all sanctions hits must be auditable. Criminal liability if not reported.",
+      "retention": "7 years minimum",
+      "cloudevents_type": "uk.bank.compliance.cdd.sanctions_hit_detected",
+      "governance_references": ["GOV-005-R01", "GOV-005-R02"],
+      "source_journeys": ["JRN-020"]
+    },
+    {
+      "event_id": "EVT-145",
+      "name": "CddRiskRatingChanged",
+      "source_service": "SVC-015",
+      "source_service_name": "Compliance Core Service",
+      "source_entity": "ENT-063",
+      "source_entity_name": "CddReviewCase",
+      "trigger": "Risk assessment during CDD review produces a different risk_rating from the prior KycAssessment.",
+      "journey_phase": "PH-104",
+      "journey_phase_name": "Risk Scoring and Screening",
+      "capability_scope": "cross-capability",
+      "payload_schema": {
+        "review_id": "string (UUID v4)",
+        "client_id": "string (UUID v4)",
+        "previous_risk_rating": "string enum (low | medium | high | pep)",
+        "new_risk_rating": "string enum (low | medium | high | pep)",
+        "new_next_review_date": "string (ISO 8601 date)",
+        "changed_at": "string (ISO 8601 UTC timestamp)"
+      },
+      "derived_from": {
+        "previous_risk_rating": "KycAssessment.risk_rating before review",
+        "new_risk_rating": "CddReviewCase.risk_rating after assessment",
+        "new_next_review_date": "computed_from: new_risk_rating — pep/high: +1 year, medium: +3 years, low: +3 years"
+      },
+      "consumers": [
+        {"service": "SVC-005", "service_name": "Commercial Banking Core", "action": "Update internal client risk classification and exposure limits."},
+        {"service": "SVC-103", "service_name": "Audit & Logging Service", "action": "Write immutable record of risk rating change."}
+      ],
+      "ordering_guarantees": "Per-client ordering.",
+      "topic": "compliance.cdd-reviews",
+      "data_classification": "Confidential",
+      "worm_audit_pipeline": false,
+      "retention": "7 years",
+      "cloudevents_type": "uk.bank.compliance.cdd.risk_rating_changed",
+      "governance_references": ["GOV-005-R01"],
+      "source_journeys": ["JRN-020"]
+    },
+    {
+      "event_id": "EVT-146",
+      "name": "CddReviewCompleted",
+      "source_service": "SVC-015",
+      "source_service_name": "Compliance Core Service",
+      "source_entity": "ENT-063",
+      "source_entity_name": "CddReviewCase",
+      "trigger": "PER-052 records review decision and CddReviewCase status transitions to decision_made.",
+      "journey_phase": "PH-105",
+      "journey_phase_name": "Review Decision and Approval",
+      "capability_scope": "cross-capability",
+      "payload_schema": {
+        "review_id": "string (UUID v4)",
+        "client_id": "string (UUID v4)",
+        "review_decision": "string enum (continue | continue_with_edd | escalate_to_exit | suspend_account)",
+        "risk_rating": "string enum (low | medium | high | pep)",
+        "next_review_date": "string (ISO 8601 date)",
+        "completed_at": "string (ISO 8601 UTC timestamp)"
+      },
+      "derived_from": {
+        "review_decision": "CddReviewCase.review_decision",
+        "risk_rating": "CddReviewCase.risk_rating — final assessed value",
+        "next_review_date": "CddReviewCase.next_review_date"
+      },
+      "consumers": [
+        {"service": "SVC-014", "service_name": "KYC/AML Service", "action": "Update KycAssessment: last_reviewed_at, next_review_date, risk_rating, review_decision."},
+        {"service": "SVC-005", "service_name": "Commercial Banking Core", "action": "Update internal client record with CDD status."},
+        {"service": "SVC-103", "service_name": "Audit & Logging Service", "action": "Write immutable closure audit record (7-year retention)."}
+      ],
+      "ordering_guarantees": "Per-client ordering. CddReviewCompleted is terminal — no further review events for this review_id.",
+      "topic": "compliance.cdd-reviews",
+      "data_classification": "Highly Confidential",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "Review decision is a legally significant compliance act under MLR 2017. Must be audit-preserved.",
+      "retention": "7 years",
+      "cloudevents_type": "uk.bank.compliance.cdd_review.completed",
+      "governance_references": ["GOV-005-R01", "GOV-005-R04"],
+      "source_journeys": ["JRN-020"]
+    },
+    {
+      "event_id": "EVT-147",
+      "name": "CddExitEscalated",
+      "source_service": "SVC-015",
+      "source_service_name": "Compliance Core Service",
+      "source_entity": "ENT-063",
+      "source_entity_name": "CddReviewCase",
+      "trigger": "Review decision is escalate_to_exit and Senior Manager (PER-059) has approved the exit.",
+      "journey_phase": "PH-105",
+      "journey_phase_name": "Review Decision and Approval",
+      "capability_scope": "cross-capability",
+      "payload_schema": {
+        "review_id": "string (UUID v4)",
+        "client_id": "string (UUID v4)",
+        "exit_reason": "string enum (sanctions_hit | edd_refusal | document_failure | risk_appetite_exceeded)",
+        "senior_manager_approval_id": "string (UUID v4)",
+        "escalated_at": "string (ISO 8601 UTC timestamp)"
+      },
+      "derived_from": {
+        "exit_reason": "CddReviewCase.review_decision context — inferred from trigger chain (sanctions_hit, EDD failure, or document_failure)",
+        "senior_manager_approval_id": "CddReviewCase.senior_manager_approval_id"
+      },
+      "consumers": [
+        {"service": "SVC-005", "service_name": "Commercial Banking Core", "action": "Initiate client offboarding: close accounts, close credit facilities, return funds."},
+        {"service": "SVC-103", "service_name": "Audit & Logging Service", "action": "Write immutable exit escalation audit record."}
+      ],
+      "ordering_guarantees": "Must follow CddReviewCompleted for same review_id.",
+      "topic": "compliance.cdd-reviews",
+      "data_classification": "Highly Confidential",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "Exit escalation is a significant regulatory action — permanent audit trail required.",
+      "retention": "7 years",
+      "cloudevents_type": "uk.bank.compliance.cdd.exit_escalated",
+      "governance_references": ["GOV-005-R01", "GOV-005-R04"],
+      "source_journeys": ["JRN-020"]
+    }
+  ]
+}

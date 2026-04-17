@@ -1,0 +1,116 @@
+{
+  "journey_id": "JRN-022",
+  "name": "Annual Stress Test Participation (PRA)",
+  "status": "Draft",
+  "triggering_persona": "PER-059",
+  "capabilities_touched": ["CAP-004", "CAP-005"],
+  "phases": [
+    {
+      "id": "PH-123",
+      "name": "Scenario Loading and Model Initialisation",
+      "description": "The PRA publishes the annual concurrent stress test scenarios and data templates (typically Q1). The Chief Risk Officer (PER-059) triggers the stress test exercise. The Risk Management team loads PRA macroeconomic scenarios (GDP growth, unemployment, house price index, interest rate paths) into the stress testing models within SVC-012 (Risk Engine). A StressTestExercise record is created to track the submission lifecycle. Model Validation team confirms model versions are approved per SS1/23 (PRA supervisory statement on model risk).",
+      "actors": ["PER-059 (Senior Manager — CRO)", "SVC-012 (Risk Engine)"],
+      "services": ["SVC-012"],
+      "governance_rules": ["GOV-004-R01"],
+      "entry_conditions": [
+        "PRA has published stress test scenarios and data templates",
+        "Board Risk Committee has approved participation mandate",
+        "All credit, market, and operational risk models are validated and version-controlled"
+      ],
+      "exit_conditions": [
+        "StressTestExercise record created with status = in_progress",
+        "PRA scenarios loaded into SVC-012 model parameters",
+        "EVT-161 StressTestExerciseStarted published"
+      ]
+    },
+    {
+      "id": "PH-124",
+      "name": "Risk Model Projection",
+      "description": "SVC-012 (Risk Engine) runs the stress test projections under PRA prescribed scenarios. Credit risk models project 3-year loan loss rates (IFRS 9 ECL under stress). Market risk models project FRTB stressed losses. Operational risk applies Basel SA OpRisk capital. Results are computed as projected stressed CET1 ratio trajectory over 3 years. Model Validation team reviews outputs for reasonableness and signs off per SS1/23.",
+      "actors": ["PER-059 (Senior Manager — CRO)", "SVC-012 (Risk Engine)"],
+      "services": ["SVC-012"],
+      "governance_rules": ["GOV-004-R01", "GOV-004-R02"],
+      "entry_conditions": [
+        "StressTestExercise in status = in_progress",
+        "PRA scenarios loaded"
+      ],
+      "exit_conditions": [
+        "Projected stressed CET1 ratio trajectory computed for all scenarios",
+        "Model outputs signed off by Model Validation team",
+        "StressTestProjection record created"
+      ]
+    },
+    {
+      "id": "PH-125",
+      "name": "Board Review and Approval",
+      "description": "The CFO (PER-059) consolidates risk model outputs with finance projections (stressed P&L, capital ratios). The Board Risk Committee reviews the stress test results and approves the submission package. Any capital management actions proposed (e.g. dividend restriction under stress) are documented. Sign-off from CEO and CRO (both SMF holders) obtained.",
+      "actors": ["PER-059 (Senior Manager — CRO / CFO)"],
+      "services": ["SVC-015"],
+      "governance_rules": ["GOV-004-R01", "GOV-005-R03"],
+      "entry_conditions": [
+        "Model projections complete and validated",
+        "Finance consolidation complete"
+      ],
+      "exit_conditions": [
+        "Board Risk Committee sign-off documented",
+        "CEO and CRO attestation recorded",
+        "StressTestExercise updated to status = approved_for_submission"
+      ]
+    },
+    {
+      "id": "PH-126",
+      "name": "PRA Submission and Feedback",
+      "description": "The Compliance team (SVC-015) submits the stress test data package to the PRA via the PRA's regulatory portal (BEEDS or successor). The submission includes completed PRA data templates and a narrative document. PRA provides feedback (typically 6–8 weeks later). Results are incorporated into the ICAAP (Internal Capital Adequacy Assessment Process). StressTestExercise updated to closed.",
+      "actors": ["PER-059 (Senior Manager — Head of Regulatory Reporting)", "SVC-015 (Compliance Core)"],
+      "services": ["SVC-015"],
+      "governance_rules": ["GOV-005-R03"],
+      "entry_conditions": [
+        "StressTestExercise in status = approved_for_submission",
+        "PRA submission deadline not passed"
+      ],
+      "exit_conditions": [
+        "PRA submission confirmed (submission reference received)",
+        "EVT-162 StressTestSubmitted published",
+        "StressTestExercise updated to status = submitted"
+      ]
+    }
+  ],
+  "paths": {
+    "happy_path": {
+      "description": "CRO triggers exercise → PRA scenarios loaded into risk models → projections run and validated → Board approves → submitted to PRA within deadline → PRA feedback received → ICAAP updated.",
+      "phases": ["PH-123", "PH-124", "PH-125", "PH-126"]
+    },
+    "alternative_paths": [
+      {
+        "id": "ALT-022-01",
+        "name": "Model Validation Fail — Rerun Required",
+        "description": "Model Validation team identifies a material error in the stress test output (e.g. model over-states loan losses due to parameter error). Model is corrected, revalidated, and projections rerun. StressTestExercise remains in_progress.",
+        "phases": ["PH-124"],
+        "diverges_at": "PH-124: Model validation identifies material error"
+      }
+    ],
+    "exception_paths": [
+      {
+        "id": "EXC-022-01",
+        "name": "Submission Deadline Breach",
+        "description": "PRA submission deadline is missed (e.g. due to Board not convening in time, or model error discovered late). PRA notified immediately. Supervisory dialogue initiated. StressTestExercise escalated to LATE status. Potential Pillar 2 capital add-on risk.",
+        "phases": ["PH-126"],
+        "diverges_at": "PH-126: Submission date has passed without Board approval"
+      }
+    ]
+  },
+  "design_decisions": [
+    {
+      "id": "DD-022-01",
+      "decision": "StressTestExercise and StressTestProjection are owned by SVC-012 (Risk Engine, CAP-004). The submission lifecycle record is owned by SVC-015 (Compliance Core, CAP-005) — SVC-012 publishes EVT-161 which SVC-015 consumes to create its regulatory submission record.",
+      "rationale": "Risk model execution is CAP-004's domain. Regulatory submission and Board governance records are CAP-005's domain. Clear capability boundary avoids mixing risk model data with regulatory reporting.",
+      "alternatives_considered": "Single service owning both — rejected as it would create a god service spanning two capabilities."
+    },
+    {
+      "id": "DD-022-02",
+      "decision": "This journey is primarily an internal operational process. No customer-facing API surfaces are involved. The Channel→Capability API pattern applies to the CRO's internal dashboard (SVC-015 internal API). PRA submission is via external portal — not modelled as an internal API.",
+      "rationale": "PRA BEEDS portal is a third-party system outside the bank's API surface. Modelling it as an internal API call would misrepresent the integration pattern.",
+      "alternatives_considered": "N/A"
+    }
+  ]
+}

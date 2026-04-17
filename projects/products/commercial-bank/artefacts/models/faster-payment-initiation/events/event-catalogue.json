@@ -2,7 +2,7 @@
   "journey_id": "JRN-002",
   "document_version": "0.1.0",
   "status": "Draft",
-  "description": "Event catalogue for the Faster Payment Initiation journey. Introduces 8 new events: EVT-P01 through EVT-P08. SanctionsScreeningCompleted (EVT-P02) reuses the schema pattern established in JRN-001 but with payment-specific payload fields. All events are routed via SVC-102 (event bus). Financial and PII-tagged events are also written to the WORM audit pipeline (SVC-111).",
+  "description": "Event catalogue for the Faster Payment Initiation journey. Introduces 8 new events: EVT-179 through EVT-186. SanctionsScreeningCompleted (EVT-180) reuses the schema pattern established in JRN-001 but with payment-specific payload fields. All events are routed via SVC-102 (event bus). Financial and PII-tagged events are also written to the WORM audit pipeline (SVC-111).",
   "catalogue_principles": [
     "All event names are in past tense (domain event naming convention)",
     "Payload schemas carry the minimum data required for consumers to act — raw PII is not included in payloads beyond identifiers",
@@ -11,14 +11,14 @@
   ],
   "events": [
     {
-      "event_id": "EVT-P01",
+      "event_id": "EVT-179",
       "name": "PaymentIntentCreated",
       "source_service": "SVC-001",
       "source_service_name": "Retail Banking Core",
       "source_entity": "ENT-008",
       "source_entity_name": "PaymentIntent",
       "trigger": "PER-001 has completed SCA and the channel has called POST /payments. SVC-001 has validated account status (active), available balance, and daily payment limit. PaymentIntent is created with status = pending_screening.",
-      "journey_phase": "PY-001",
+      "journey_phase": "PH-147",
       "journey_phase_name": "Payment Initiation",
       "capability_scope": "cross-capability",
       "capability_scope_rationale": "Published by CAP-001 (SVC-001); consumed by CAP-005 (SVC-051), CAP-004 (SVC-013), and SVC-103. Initiates concurrent cross-capability pre-execution checks.",
@@ -67,14 +67,14 @@
       "source_journeys": ["JRN-002"]
     },
     {
-      "event_id": "EVT-P02",
+      "event_id": "EVT-180",
       "name": "SanctionsScreeningCompleted",
       "source_service": "SVC-051",
       "source_service_name": "Sanctions Screening Service",
       "source_entity": null,
       "source_entity_name": "Stateless — no owning entity in SVC-051",
       "trigger": "SVC-051 completes a real-time sanctions screen triggered by PaymentIntentCreated. Screen runs against OFSI Consolidated List, UN Consolidated List, EU Consolidated List, and US OFAC SDN List. Result is either clear or hit.",
-      "journey_phase": "PY-002",
+      "journey_phase": "PH-148",
       "journey_phase_name": "Pre-Execution Checks",
       "capability_scope": "cross-capability",
       "capability_scope_rationale": "Published by CAP-005 (SVC-051); consumed by CAP-001 (SVC-001). Result determines whether payment proceeds to execution.",
@@ -97,7 +97,7 @@
         {
           "service": "SVC-001",
           "service_name": "Retail Banking Core",
-          "action": "Evaluates outcome. If clear: records screening_result_id on PaymentIntent. If outcome is clear AND EVT-P03 (FraudScoreCompleted) also received with non-block result, publishes PaymentCleared. If hit: updates PaymentIntent.status = sanctions_blocked and publishes PaymentFailed. Alerts MLRO (PER-052)."
+          "action": "Evaluates outcome. If clear: records screening_result_id on PaymentIntent. If outcome is clear AND EVT-181 (FraudScoreCompleted) also received with non-block result, publishes PaymentCleared. If hit: updates PaymentIntent.status = sanctions_blocked and publishes PaymentFailed. Alerts MLRO (PER-052)."
         },
         {
           "service": "SVC-103",
@@ -116,14 +116,14 @@
       "source_journeys": ["JRN-001", "JRN-002"]
     },
     {
-      "event_id": "EVT-P03",
+      "event_id": "EVT-181",
       "name": "FraudScoreCompleted",
       "source_service": "SVC-013",
       "source_service_name": "Fraud Detection",
       "source_entity": null,
       "source_entity_name": "Stateless — no owning entity in SVC-013 for this journey",
       "trigger": "SVC-013 completes ML fraud scoring triggered by consuming PaymentIntentCreated. Scoring incorporates payment amount, payee, CoP result, device fingerprint, behavioural biometrics, and account history.",
-      "journey_phase": "PY-002",
+      "journey_phase": "PH-148",
       "journey_phase_name": "Pre-Execution Checks",
       "capability_scope": "cross-capability",
       "capability_scope_rationale": "Published by CAP-004 (SVC-013); consumed by CAP-001 (SVC-001). Result influences PaymentCleared vs PaymentFraudBlocked decision.",
@@ -142,7 +142,7 @@
         {
           "service": "SVC-001",
           "service_name": "Retail Banking Core",
-          "action": "Evaluates risk_level. If non-block AND EVT-P02 (SanctionsScreeningCompleted) also received with clear outcome: publishes PaymentCleared. If risk_level = block: updates PaymentIntent.status = fraud_blocked, publishes PaymentFraudBlocked, alerts Fraud Analyst (PER-054). Stores fraud_score and risk_level on PaymentIntent (access-controlled fields)."
+          "action": "Evaluates risk_level. If non-block AND EVT-180 (SanctionsScreeningCompleted) also received with clear outcome: publishes PaymentCleared. If risk_level = block: updates PaymentIntent.status = fraud_blocked, publishes PaymentFraudBlocked, alerts Fraud Analyst (PER-054). Stores fraud_score and risk_level on PaymentIntent (access-controlled fields)."
         },
         {
           "service": "SVC-103",
@@ -162,14 +162,14 @@
       "source_journeys": ["JRN-002"]
     },
     {
-      "event_id": "EVT-P04",
+      "event_id": "EVT-182",
       "name": "PaymentCleared",
       "source_service": "SVC-001",
       "source_service_name": "Retail Banking Core",
       "source_entity": "ENT-008",
       "source_entity_name": "PaymentIntent",
       "trigger": "SVC-001 has received both SanctionsScreeningCompleted (outcome = clear) and FraudScoreCompleted (risk_level != block) for the same payment_intent_id. All pre-execution checks are clear. PaymentIntent.status transitions to processing.",
-      "journey_phase": "PY-003",
+      "journey_phase": "PH-149",
       "journey_phase_name": "Payment Decision",
       "capability_scope": "cross-capability",
       "capability_scope_rationale": "Published by CAP-001 (SVC-001); consumed by CAP-003 (SVC-009). Crosses the Retail Banking → Payment Operations boundary.",
@@ -210,14 +210,14 @@
       "source_journeys": ["JRN-002"]
     },
     {
-      "event_id": "EVT-P05",
+      "event_id": "EVT-183",
       "name": "PaymentExecuted",
       "source_service": "SVC-009",
       "source_service_name": "Domestic Payments",
       "source_entity": "ENT-009",
       "source_entity_name": "PaymentExecution",
       "trigger": "SVC-009 has submitted the FPS pacs.008 instruction to Vocalink and received a positive acceptance acknowledgement (pacs.002 ACCP). The PaymentExecution entity is created with settlement_status = accepted.",
-      "journey_phase": "PY-004",
+      "journey_phase": "PH-150",
       "journey_phase_name": "FPS Execution",
       "capability_scope": "cross-capability",
       "capability_scope_rationale": "Published by CAP-003 (SVC-009); consumed by CAP-001 (SVC-001) for account debit. Crosses the Payment Operations → Retail Banking boundary.",
@@ -261,14 +261,14 @@
       "source_journeys": ["JRN-002"]
     },
     {
-      "event_id": "EVT-P06",
+      "event_id": "EVT-184",
       "name": "AccountDebited",
       "source_service": "SVC-001",
       "source_service_name": "Retail Banking Core",
       "source_entity": "ENT-004",
       "source_entity_name": "Account",
       "trigger": "SVC-001 has consumed PaymentExecuted and atomically debited the account ledger. PaymentIntent.status = completed. Account.daily_payment_total updated.",
-      "journey_phase": "PY-004",
+      "journey_phase": "PH-150",
       "journey_phase_name": "FPS Execution",
       "capability_scope": "cross-capability",
       "capability_scope_rationale": "Published by CAP-001 (SVC-001); consumed by CAP-005 (SVC-014 — AML transaction monitoring) and SVC-017 (channel — triggers confirmation screen). Crosses Retail Banking → Compliance boundary.",
@@ -314,14 +314,14 @@
       "source_journeys": ["JRN-002"]
     },
     {
-      "event_id": "EVT-P07",
+      "event_id": "EVT-185",
       "name": "PaymentFailed",
       "source_service": "SVC-001",
       "source_service_name": "Retail Banking Core",
       "source_entity": "ENT-008",
       "source_entity_name": "PaymentIntent",
-      "trigger": "Payment cannot proceed due to: (a) insufficient funds, (b) daily payment limit exceeded, (c) sanctions hit (outcome = hit in EVT-P02), (d) FPS submission failure after retry exhaustion (published by SVC-009 and then re-emitted by SVC-001 with updated PaymentIntent), or (e) sanctions screening service timeout (fail-closed behaviour).",
-      "journey_phase": "PY-003 or PY-004",
+      "trigger": "Payment cannot proceed due to: (a) insufficient funds, (b) daily payment limit exceeded, (c) sanctions hit (outcome = hit in EVT-180), (d) FPS submission failure after retry exhaustion (published by SVC-009 and then re-emitted by SVC-001 with updated PaymentIntent), or (e) sanctions screening service timeout (fail-closed behaviour).",
+      "journey_phase": "PH-149 or PH-150",
       "journey_phase_name": "Payment Decision or FPS Execution",
       "capability_scope": "cross-capability",
       "capability_scope_rationale": "Published by SVC-001 (CAP-001) or SVC-009 (CAP-003) depending on failure point. Consumed by SVC-017 (channel) for customer notification.",
@@ -359,14 +359,14 @@
       "source_journeys": ["JRN-002"]
     },
     {
-      "event_id": "EVT-P08",
+      "event_id": "EVT-186",
       "name": "PaymentFraudBlocked",
       "source_service": "SVC-001",
       "source_service_name": "Retail Banking Core",
       "source_entity": "ENT-008",
       "source_entity_name": "PaymentIntent",
-      "trigger": "SVC-001 consumed FraudScoreCompleted (EVT-P03) with risk_level = block. PaymentIntent.status transitions to fraud_blocked. A fraud analyst case is created.",
-      "journey_phase": "PY-003",
+      "trigger": "SVC-001 consumed FraudScoreCompleted (EVT-181) with risk_level = block. PaymentIntent.status transitions to fraud_blocked. A fraud analyst case is created.",
+      "journey_phase": "PH-149",
       "journey_phase_name": "Payment Decision",
       "capability_scope": "cross-capability",
       "capability_scope_rationale": "Published by CAP-001 (SVC-001); consumed by CAP-004 (SVC-013 — for case creation in fraud operations platform) and SVC-017 (channel — generic decline message). Internal alert to PER-054 (Fraud Analyst).",

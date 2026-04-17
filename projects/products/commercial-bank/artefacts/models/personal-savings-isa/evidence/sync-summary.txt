@@ -1,0 +1,23 @@
+
+==================================================
+Syncing central model: personal-savings-isa (JRN-026)
+==================================================
+
+[Entities]
+  [92mCREATED[0m: savings-account.json
+  [92mCREATED[0m: isa-subscription-record.json
+
+[Events]
+  [92mADDED[0m: 4 events to central catalogue as jrn26_events
+
+[Service Map]
+  [92mEXTENDED[0m: SVC-001 with JRN-026 additions
+  [92mEXTENDED[0m: SVC-014 with JRN-026 additions
+  [92mEXTENDED[0m: SVC-015 with JRN-026 additions
+  [92mEXTENDED[0m: SVC-053 with JRN-026 additions
+  [92mEXTENDED[0m: SVC-103 with JRN-026 additions
+
+==================================================
+Sync complete: 2 entities, 4 events, 5 service updates
+==================================================
+

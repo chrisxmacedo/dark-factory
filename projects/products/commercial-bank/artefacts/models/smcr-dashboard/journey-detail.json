@@ -1,0 +1,83 @@
+{
+  "journey_id": "JRN-024",
+  "name": "Senior Manager Dashboard and SM&CR Accountability Review",
+  "status": "Draft",
+  "triggering_persona": "PER-059",
+  "capabilities_touched": ["CAP-005"],
+  "phases": [
+    {
+      "id": "PH-131",
+      "name": "Conduct Monitoring and Surveillance Review",
+      "description": "The quarterly SM&CR review is triggered by the compliance calendar. The Compliance system (SVC-015) generates a conduct monitoring report: communications surveillance scan results (Behavox/NICE), training completion rates, and any open conduct investigations. The Head of Compliance (SMF16) reviews the report via the SM&CR dashboard.",
+      "actors": ["PER-059 (Senior Manager — Head of Compliance SMF16)", "SVC-015 (Compliance Core)"],
+      "services": ["SVC-015"],
+      "governance_rules": ["GOV-005-R05"],
+      "entry_conditions": [
+        "Quarterly compliance calendar trigger",
+        "All surveillance data feeds current"
+      ],
+      "exit_conditions": [
+        "Conduct monitoring report generated",
+        "No unresolved conduct alerts requiring escalation",
+        "SmscrReview record created with status = in_progress"
+      ]
+    },
+    {
+      "id": "PH-132",
+      "name": "Accountability Map and SoR Review",
+      "description": "The compliance team reviews the SM&CR accountability map for role changes since the last review. New Senior Managers or Certified Function individuals are identified. Statements of Responsibilities (SoR) are reviewed for material changes. FCA register updated for any new or changed SMF holders.",
+      "actors": ["PER-059 (Senior Manager — Head of Compliance SMF16)", "SVC-015 (Compliance Core)"],
+      "services": ["SVC-015"],
+      "governance_rules": ["GOV-005-R05"],
+      "entry_conditions": [
+        "SmscrReview in status = in_progress"
+      ],
+      "exit_conditions": [
+        "Accountability map updated for role changes",
+        "FCA register submissions initiated for any changes",
+        "No material SoR changes requiring new approval"
+      ]
+    },
+    {
+      "id": "PH-133",
+      "name": "Board Reporting and Review Closure",
+      "description": "The Head of Compliance prepares the SM&CR section of the Board Compliance Report. No conduct breaches or notifications required this quarter. SmscrReview updated to status = closed. EVT-165 SmscrReviewCompleted published.",
+      "actors": ["PER-059 (Senior Manager — Head of Compliance SMF16)", "SVC-015 (Compliance Core)"],
+      "services": ["SVC-015"],
+      "governance_rules": ["GOV-005-R05"],
+      "entry_conditions": [
+        "SmscrReview in status = in_progress",
+        "All accountability map reviews complete"
+      ],
+      "exit_conditions": [
+        "SmscrReview updated to status = closed",
+        "Board Compliance Report section updated",
+        "EVT-165 SmscrReviewCompleted published"
+      ]
+    }
+  ],
+  "paths": {
+    "happy_path": {
+      "description": "Quarterly review triggered → no conduct alerts → accountability map reviewed → no material SoR changes → Board report updated → review closed.",
+      "phases": ["PH-131", "PH-132", "PH-133"]
+    },
+    "alternative_paths": [
+      {
+        "id": "ALT-024-01",
+        "name": "Conduct Breach — FCA Notification Required",
+        "description": "Conduct monitoring identifies a breach of an FCA Conduct Rule by an SMF holder. FCA breach notification prepared and submitted. SmscrReview status = breach_notified.",
+        "phases": ["PH-131", "PH-133"],
+        "diverges_at": "PH-131: Surveillance scan identifies a conduct alert"
+      }
+    ],
+    "exception_paths": []
+  },
+  "design_decisions": [
+    {
+      "id": "DD-024-01",
+      "decision": "This journey is single-capability (CAP-005 only). SmscrReview is a compliance governance record owned by SVC-015. No cross-capability events are needed — the review process is entirely internal to CAP-005.",
+      "rationale": "SM&CR review is a governance process with no domain data dependencies outside CAP-005.",
+      "alternatives_considered": "N/A — single-capability journey by design."
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "diagram_id": "SEQ-JRN026-001",
+  "name": "Happy Path — Cash ISA Opening and Initial Deposit",
+  "journey_id": "JRN-026",
+  "scenario": "happy-path",
+  "description": "Existing customer opens a Cash ISA via mobile app. Passes eligibility check. KYC current. Application submitted. ISA account created. £5,000 initial deposit from current account. ISA subscription updated. Confirmation dispatched.",
+  "participants": [
+    {"id": "Customer", "label": "PER-001 (Customer)", "type": "actor"},
+    {"id": "Channel", "label": "SVC-017 (Digital Channels)", "type": "service"},
+    {"id": "RetailBanking", "label": "SVC-001 (Retail Banking Core)", "type": "service"},
+    {"id": "IAM", "label": "SVC-100 (IAM)", "type": "service"},
+    {"id": "KYC", "label": "SVC-014 (KYC/AML)", "type": "service"},
+    {"id": "EventBus", "label": "SVC-102 (Event Bus)", "type": "infrastructure"},
+    {"id": "Compliance", "label": "SVC-015 (Compliance Core)", "type": "service"},
+    {"id": "Notifications", "label": "SVC-053 (Notifications)", "type": "service"},
+    {"id": "Audit", "label": "SVC-103 (Audit & Logging)", "type": "service"}
+  ],
+  "steps": [
+    {"step": 1, "from": "Customer", "to": "Channel", "type": "sync", "action": "Browse savings products → select Cash ISA", "phase": "PH-107"},
+    {"step": 2, "from": "Channel", "to": "RetailBanking", "type": "sync", "action": "GET /savings/isa-eligibility", "phase": "PH-107"},
+    {"step": 3, "from": "RetailBanking", "to": "Channel", "type": "sync-return", "action": "200 OK {eligible: true, subscription_remaining: '20000.00', tax_year: '2026/2027'}", "phase": "PH-107"},
+    {"step": 4, "from": "Channel", "to": "Customer", "type": "ui", "action": "Display Cash ISA: AER 4.5%, FSCS protected, £20,000 remaining allowance", "phase": "PH-107"},
+    {"step": 5, "from": "Customer", "to": "Channel", "type": "sync", "action": "Complete ISA declaration + NI number + confirm SCA", "phase": "PH-108"},
+    {"step": 6, "from": "Channel", "to": "IAM", "type": "sync", "action": "POST /sca/validate {assertion}", "phase": "PH-108"},
+    {"step": 7, "from": "IAM", "to": "Channel", "type": "sync-return", "action": "200 OK {valid: true}", "phase": "PH-108"},
+    {"step": 8, "from": "Channel", "to": "RetailBanking", "type": "sync", "action": "POST /savings/accounts {product_id, isa_declaration_confirmed: true, national_insurance_number, initial_deposit_amount: '5000.00', initial_deposit_source_account_id}", "phase": "PH-108"},
+    {"step": 9, "from": "RetailBanking", "to": "KYC", "type": "intra-capability", "action": "Check KYC status for customer_id (SVC-001 calls SVC-014 — both within CAP-001 context, or via platform check)", "phase": "PH-108"},
+    {"step": 10, "from": "KYC", "to": "RetailBanking", "type": "intra-capability", "action": "KYC current — no new verification required", "phase": "PH-108"},
+    {"step": 11, "from": "RetailBanking", "to": "EventBus", "type": "async-publish", "action": "Publish SavingsAccountApplicationSubmitted (EVT-148)", "phase": "PH-108"},
+    {"step": 12, "from": "EventBus", "to": "KYC", "type": "async-consume", "action": "Consume EVT-148 → Set up AML monitoring for new savings relationship", "phase": "PH-108"},
+    {"step": 13, "from": "RetailBanking", "to": "RetailBanking", "type": "internal", "action": "Create SavingsAccount (account_number, sort_code, status=active) + IsaSubscriptionRecord (tax_year=2026/2027, subscription_used=0)", "phase": "PH-109"},
+    {"step": 14, "from": "RetailBanking", "to": "EventBus", "type": "async-publish", "action": "Publish SavingsAccountOpened (EVT-149) {account_id, account_number, is_isa_wrapper: true, tax_year}", "phase": "PH-109"},
+    {"step": 15, "from": "EventBus", "to": "Compliance", "type": "async-consume", "action": "Consume EVT-149 → Record for FSCS reporting and HMRC ISA notification queue", "phase": "PH-109"},
+    {"step": 16, "from": "RetailBanking", "to": "Channel", "type": "sync-return", "action": "201 Created {account_id, account_number, sort_code, isa_subscription_remaining: '20000.00'}", "phase": "PH-109"},
+    {"step": 17, "from": "RetailBanking", "to": "RetailBanking", "type": "internal", "action": "Process internal transfer: debit current account by £5,000; credit ISA savings account", "phase": "PH-110"},
+    {"step": 18, "from": "RetailBanking", "to": "RetailBanking", "type": "internal", "action": "Update IsaSubscriptionRecord: subscription_used = 5000.00, subscription_remaining = 15000.00", "phase": "PH-110"},
+    {"step": 19, "from": "RetailBanking", "to": "EventBus", "type": "async-publish", "action": "Publish IsaSubscriptionUpdated (EVT-150) {subscription_used: '5000.00', subscription_remaining: '15000.00'}", "phase": "PH-110"},
+    {"step": 20, "from": "RetailBanking", "to": "EventBus", "type": "async-publish", "action": "Publish SavingsDepositMade (EVT-151) {deposit_amount: '5000.00', new_balance: '5000.00'}", "phase": "PH-110"},
+    {"step": 21, "from": "EventBus", "to": "Notifications", "type": "async-consume", "action": "Consume EVT-149 → Dispatch Cash ISA opening confirmation: account number, AER 4.5%, FSCS protected, £15,000 remaining allowance", "phase": "PH-110"},
+    {"step": 22, "from": "EventBus", "to": "Audit", "type": "async-consume", "action": "Consume EVT-149 + EVT-150 → Write immutable audit records (HMRC/FSCS)", "phase": "PH-110"}
+  ]
+}

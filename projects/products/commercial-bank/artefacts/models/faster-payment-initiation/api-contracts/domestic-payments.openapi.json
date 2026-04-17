@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Domestic Payments Service API",
-    "description": "Internal API specification for SVC-009 (Domestic Payments). This service is primarily event-driven — it consumes PaymentCleared (EVT-P04) to execute Faster Payments and publishes PaymentExecuted (EVT-P05) on acceptance. The only synchronous API exposed is POST /cop/verify — the Confirmation of Payee proxy used by the channel during payment entry.\n\nSVC-009 is a NEW service introduced by JRN-002. It holds the FPS scheme connectivity (via Form3 or equivalent managed infrastructure). It does not expose any public or customer-facing endpoints — all consumption is internal via the channel (SVC-017 → POST /cop/verify) or event-driven.",
+    "description": "Internal API specification for SVC-009 (Domestic Payments). This service is primarily event-driven — it consumes PaymentCleared (EVT-182) to execute Faster Payments and publishes PaymentExecuted (EVT-183) on acceptance. The only synchronous API exposed is POST /cop/verify — the Confirmation of Payee proxy used by the channel during payment entry.\n\nSVC-009 is a NEW service introduced by JRN-002. It holds the FPS scheme connectivity (via Form3 or equivalent managed infrastructure). It does not expose any public or customer-facing endpoints — all consumption is internal via the channel (SVC-017 → POST /cop/verify) or event-driven.",
     "version": "1.0.0",
     "contact": {
       "name": "Payment Operations Team",
@@ -28,7 +28,7 @@
     "description": "SVC-009's primary responsibilities are event-driven. These are documented here for completeness alongside the synchronous API.",
     "consumed_events": [
       {
-        "event_id": "EVT-P04",
+        "event_id": "EVT-182",
         "event_name": "PaymentCleared",
         "topic": "retail.payments",
         "from_service": "SVC-001",
@@ -37,14 +37,14 @@
     ],
     "published_events": [
       {
-        "event_id": "EVT-P05",
+        "event_id": "EVT-183",
         "event_name": "PaymentExecuted",
         "topic": "payments.execution",
         "trigger": "FPS acceptance acknowledgement received from Vocalink (pacs.002 status = ACCP)",
         "payload_summary": "payment_execution_id, payment_intent_id, fps_reference, fps_message_id, settlement_status=accepted, amount, currency, payee_sort_code, payee_account_number, execution_timestamp"
       },
       {
-        "event_id": "EVT-P07",
+        "event_id": "EVT-185",
         "event_name": "PaymentFailed",
         "topic": "retail.payments",
         "trigger": "FPS rejection received (pacs.002 status = RJCT) or submission timeout after retry exhaustion",

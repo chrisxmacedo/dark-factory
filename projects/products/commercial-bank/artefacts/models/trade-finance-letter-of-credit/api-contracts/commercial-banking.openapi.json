@@ -43,7 +43,7 @@
       "post": {
         "operationId": "submitLCApplication",
         "summary": "Submit a new Letter of Credit application",
-        "description": "PH-052: Creates a LetterOfCredit (ENT-036) with status = application_submitted. Validates completeness of required fields: beneficiary, goods description, HS codes, Incoterms, shipment/expiry dates, and required document list. Publishes EVT-075 (LCApplicationSubmitted) to topic commercial.trade-finance. Returns the lc_id and lc_reference. Requires the business_customer_id to reference an active BusinessCustomer (ENT-B001) created in JRN-004.",
+        "description": "PH-052: Creates a LetterOfCredit (ENT-036) with status = application_submitted. Validates completeness of required fields: beneficiary, goods description, HS codes, Incoterms, shipment/expiry dates, and required document list. Publishes EVT-075 (LCApplicationSubmitted) to topic commercial.trade-finance. Returns the lc_id and lc_reference. Requires the business_customer_id to reference an active BusinessCustomer (ENT-079) created in JRN-004.",
         "tags": ["Letters of Credit"],
         "requestBody": {
           "required": true,

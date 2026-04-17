@@ -1,0 +1,38 @@
+sequenceDiagram
+    actor Treasury as PER-053 (Treasury Dealer)
+    actor SMF as PER-059 (Senior Manager)
+    participant Compliance as SVC-015<br/>Compliance Core
+    participant KYC as SVC-014<br/>KYC/AML
+    participant EventBus as SVC-102<br/>Event Bus
+    participant TreasurySvc as SVC-007<br/>Treasury Services
+    participant IntlPay as SVC-010<br/>International Payments
+    participant Audit as SVC-103<br/>Audit & Logging
+
+    Note over Treasury,Audit: PH-127 — FATF EDD and KYC Assessment
+
+    Treasury->>Compliance: POST /correspondent-relationships {bic: EAFRKENA, jurisdiction: KE, currency_corridor: GBP-KES}
+    Note right of Compliance: Create CorrespondentRelationship (status=under_assessment)
+    Compliance->>KYC: Sanctions screening + SWIFT KYC Registry (intra-CAP-005)
+    KYC-->>Compliance: sanctions_hit: false; fatf_risk_rating: standard
+    Note right of Compliance: Compile EDD documentation
+    Compliance-->>Treasury: 201 Created {relationship_id, status: under_assessment}
+
+    Note over Treasury,Audit: PH-128 — Senior Management Approval
+
+    SMF->>Compliance: POST /correspondent-relationships/{id}/approve {sm_attestation_ref: SMF16-2026-XXXX}
+    Note right of Compliance: Update status=approved<br/>Record sm_approval_ref and sm_approved_at
+    Compliance->>EventBus: Publish CorrespondentEddCompleted (EVT-163)
+    EventBus->>TreasurySvc: Consume EVT-163 → Create nostro account for GBP-KES
+    EventBus->>IntlPay: Consume EVT-163 → Register BIC EAFRKENA; enable GBP-KES corridor
+    EventBus->>KYC: Consume EVT-163 → Set up ongoing AML monitoring (intra-CAP-005)
+    EventBus->>Audit: Consume EVT-163 → Write immutable EDD + SM approval record
+
+    Note over Treasury,Audit: PH-129 — Nostro Account Setup and SWIFT Registration
+
+    TreasurySvc->>IntlPay: Exchange test SWIFT MT202 — confirm channel live
+    Note right of Compliance: Receive nostro_account_id<br/>Update status=active; set annual_review_due_date
+
+    Note over Treasury,Audit: PH-130 — Annual EDD Review Scheduling
+
+    Compliance->>EventBus: Publish CorrespondentOnboarded (EVT-164)
+    EventBus->>Audit: Consume EVT-164 → Write immutable onboarding record

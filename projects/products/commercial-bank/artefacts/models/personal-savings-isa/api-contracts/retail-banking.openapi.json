@@ -1,0 +1,167 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Retail Banking — Savings Accounts API",
+    "description": "Savings account and ISA management API exposed by SVC-001 (Retail Banking Core) for JRN-026. Consumed by channels (SVC-017). Authentication via OAuth 2.0 Bearer token. Requires savings:read and savings:write scopes.",
+    "version": "1.0.0",
+    "x-service-id": "SVC-001",
+    "x-capability-id": "CAP-001",
+    "x-journey-ids": ["JRN-026"]
+  },
+  "servers": [{"url": "https://api.bank.internal/retail/v1", "description": "Internal API gateway — production"}],
+  "security": [{"BearerAuth": []}],
+  "paths": {
+    "/savings/products": {
+      "get": {
+        "operationId": "listSavingsProducts",
+        "summary": "List available savings products",
+        "description": "Returns current savings product catalogue including AER, terms, and ISA eligibility. Public endpoint (no auth required for browsing).",
+        "tags": ["Savings Products"],
+        "security": [],
+        "responses": {
+          "200": {"description": "Product catalogue", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SavingsProductList"}}}}
+        }
+      }
+    },
+    "/savings/isa-eligibility": {
+      "get": {
+        "operationId": "checkIsaEligibility",
+        "summary": "Check ISA eligibility for authenticated customer",
+        "description": "Returns remaining Cash ISA allowance for the current tax year. Requires authenticated session.",
+        "tags": ["ISA"],
+        "responses": {
+          "200": {"description": "ISA eligibility", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/IsaEligibilityResponse"}}}},
+          "401": {"description": "Unauthenticated"}
+        }
+      }
+    },
+    "/savings/accounts": {
+      "post": {
+        "operationId": "openSavingsAccount",
+        "summary": "Open a savings account or Cash ISA",
+        "description": "Creates a savings account or ISA. Validates eligibility, performs KYC check, creates account and (if ISA) IsaSubscriptionRecord. Publishes SavingsAccountApplicationSubmitted (EVT-148) then SavingsAccountOpened (EVT-149).",
+        "tags": ["Savings Accounts"],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/OpenSavingsAccountRequest"}}}},
+        "responses": {
+          "201": {"description": "Account created", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SavingsAccountDetail"}}}},
+          "400": {"description": "Validation error"},
+          "409": {"description": "ISA allowance exceeded (EX-001) or duplicate ISA application"},
+          "422": {"description": "KYC failure — manual review required (EX-002)"}
+        }
+      },
+      "get": {
+        "operationId": "listSavingsAccounts",
+        "summary": "List savings accounts for authenticated customer",
+        "tags": ["Savings Accounts"],
+        "responses": {
+          "200": {"description": "List of savings accounts", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SavingsAccountList"}}}}
+        }
+      }
+    },
+    "/savings/accounts/{account_id}/deposits": {
+      "post": {
+        "operationId": "makeSavingsDeposit",
+        "summary": "Make a deposit to a savings account",
+        "description": "Initiates a deposit to a savings or ISA account. For ISA accounts, validates ISA allowance before processing. Publishes SavingsDepositMade (EVT-151) and IsaSubscriptionUpdated (EVT-150) if ISA.",
+        "tags": ["Savings Accounts"],
+        "parameters": [{"name": "account_id", "in": "path", "required": true, "schema": {"type": "string", "format": "uuid"}}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MakeDepositRequest"}}}},
+        "responses": {
+          "200": {"description": "Deposit processed", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/DepositResponse"}}}},
+          "409": {"description": "ISA allowance exceeded"},
+          "422": {"description": "Insufficient funds in source account"}
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "SavingsProductList": {
+        "type": "object",
+        "properties": {
+          "products": {"type": "array", "items": {"$ref": "#/components/schemas/SavingsProduct"}}
+        }
+      },
+      "SavingsProduct": {
+        "type": "object",
+        "properties": {
+          "product_id": {"type": "string"},
+          "product_name": {"type": "string"},
+          "account_type": {"type": "string", "enum": ["easy_access","fixed_term","notice","cash_isa"]},
+          "interest_rate_aer": {"type": "string"},
+          "interest_frequency": {"type": "string"},
+          "is_isa_wrapper": {"type": "boolean"},
+          "fscs_protected": {"type": "boolean"},
+          "minimum_opening_deposit": {"type": "string"},
+          "fixed_term_months": {"type": "integer", "nullable": true}
+        }
+      },
+      "IsaEligibilityResponse": {
+        "type": "object",
+        "properties": {
+          "tax_year": {"type": "string"},
+          "annual_allowance": {"type": "string"},
+          "subscription_used": {"type": "string"},
+          "subscription_remaining": {"type": "string"},
+          "eligible": {"type": "boolean"},
+          "ineligibility_reason": {"type": "string", "nullable": true}
+        }
+      },
+      "OpenSavingsAccountRequest": {
+        "type": "object",
+        "required": ["product_id"],
+        "properties": {
+          "product_id": {"type": "string"},
+          "initial_deposit_amount": {"type": "string", "description": "GBP amount as string"},
+          "initial_deposit_source_account_id": {"type": "string", "format": "uuid", "nullable": true},
+          "source_of_funds": {"type": "string", "description": "Required if initial_deposit_amount > 10000"},
+          "isa_declaration_confirmed": {"type": "boolean", "description": "Required if is_isa_wrapper=true"},
+          "national_insurance_number": {"type": "string", "description": "Required if is_isa_wrapper=true"}
+        }
+      },
+      "SavingsAccountDetail": {
+        "type": "object",
+        "properties": {
+          "account_id": {"type": "string", "format": "uuid"},
+          "account_number": {"type": "string"},
+          "sort_code": {"type": "string"},
+          "account_type": {"type": "string"},
+          "status": {"type": "string"},
+          "balance": {"type": "string"},
+          "interest_rate_aer": {"type": "string"},
+          "is_isa_wrapper": {"type": "boolean"},
+          "isa_subscription_remaining": {"type": "string", "nullable": true},
+          "fixed_term_end_date": {"type": "string", "format": "date", "nullable": true},
+          "fscs_protected": {"type": "boolean"},
+          "opened_at": {"type": "string", "format": "date-time"}
+        }
+      },
+      "SavingsAccountList": {
+        "type": "object",
+        "properties": {
+          "accounts": {"type": "array", "items": {"$ref": "#/components/schemas/SavingsAccountDetail"}}
+        }
+      },
+      "MakeDepositRequest": {
+        "type": "object",
+        "required": ["amount"],
+        "properties": {
+          "amount": {"type": "string", "description": "GBP amount as string"},
+          "source_account_id": {"type": "string", "format": "uuid", "nullable": true, "description": "Source account for internal transfer — if null, expects external FPS credit"}
+        }
+      },
+      "DepositResponse": {
+        "type": "object",
+        "properties": {
+          "account_id": {"type": "string", "format": "uuid"},
+          "deposit_amount": {"type": "string"},
+          "new_balance": {"type": "string"},
+          "isa_subscription_remaining": {"type": "string", "nullable": true}
+        }
+      }
+    },
+    "securitySchemes": {
+      "BearerAuth": {"type": "http", "scheme": "bearer", "bearerFormat": "JWT"}
+    }
+  }
+}

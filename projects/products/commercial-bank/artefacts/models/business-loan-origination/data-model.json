@@ -22,7 +22,7 @@
         {
           "name": "business_customer_id",
           "type": "UUID",
-          "validation_rule": "Required. FK → ENT-B001 (BusinessCustomer.business_customer_id). Immutable after creation. Must reference an active BusinessCustomer.",
+          "validation_rule": "Required. FK → ENT-079 (BusinessCustomer.business_customer_id). Immutable after creation. Must reference an active BusinessCustomer.",
           "source": "PH-017",
           "governed_by": null
         },
@@ -85,7 +85,7 @@
       ],
       "relationships": [
         {
-          "target_entity": "ENT-B001",
+          "target_entity": "ENT-079",
           "type": "many-to-one",
           "description": "LoanApplication belongs to one BusinessCustomer via business_customer_id FK. A BusinessCustomer may have multiple LoanApplication records over its lifetime."
         },
@@ -334,7 +334,7 @@
         {
           "name": "business_customer_id",
           "type": "UUID",
-          "validation_rule": "Required. FK → ENT-B001 (BusinessCustomer.business_customer_id). Immutable. A BusinessCustomer may have multiple LoanAccount records (one per facility).",
+          "validation_rule": "Required. FK → ENT-079 (BusinessCustomer.business_customer_id). Immutable. A BusinessCustomer may have multiple LoanAccount records (one per facility).",
           "source": "PH-021",
           "governed_by": null
         },
@@ -404,7 +404,7 @@
       ],
       "relationships": [
         {
-          "target_entity": "ENT-B001",
+          "target_entity": "ENT-079",
           "type": "many-to-one",
           "description": "LoanAccount belongs to one BusinessCustomer. A BusinessCustomer may have multiple concurrent LoanAccount records."
         },
@@ -422,7 +422,7 @@
       "design_decisions": [
         {
           "id": "DD-ENT020-01",
-          "decision": "LoanAccount is a separate entity from BusinessAccount (ENT-B002) — not a subtype or extension.",
+          "decision": "LoanAccount is a separate entity from BusinessAccount (ENT-080) — not a subtype or extension.",
           "rationale": "A term loan carries a distinct amortisation schedule, interest accrual logic, covenants, and IFRS 9 staging that are incompatible with the transaction account data model. A business customer may have multiple loans and one current account; conflating them prevents concurrent multi-facility structures and violates IFRS 9 per-instrument staging requirements."
         }
       ]
@@ -518,13 +518,13 @@
   ],
   "referenced_existing_entities": [
     {
-      "entity_id": "ENT-B001",
+      "entity_id": "ENT-079",
       "name": "BusinessCustomer",
       "owning_service": "SVC-005",
-      "usage_in_journey": "The aggregate root for all commercial customer data. LoanApplication.business_customer_id and LoanAccount.business_customer_id are FKs to ENT-B001. Established in JRN-004 — must exist with status = active before JRN-007 can commence. KYC clearance from JRN-004 is relied upon per MLR 2017 Regulation 30."
+      "usage_in_journey": "The aggregate root for all commercial customer data. LoanApplication.business_customer_id and LoanAccount.business_customer_id are FKs to ENT-079. Established in JRN-004 — must exist with status = active before JRN-007 can commence. KYC clearance from JRN-004 is relied upon per MLR 2017 Regulation 30."
     },
     {
-      "entity_id": "ENT-B002",
+      "entity_id": "ENT-080",
       "name": "BusinessAccount",
       "owning_service": "SVC-005",
       "usage_in_journey": "The destination account for loan drawdown disbursement in PH-021. SVC-009 credits the drawdown amount to the BusinessAccount. Also monitored for early-warning signals in PH-022 (transaction pattern deterioration). Established in JRN-004."
@@ -532,8 +532,8 @@
   ],
   "entity_extensions": [
     {
-      "entity_id": "ENT-B001",
-      "extension_description": "No structural changes to ENT-B001 fields. JRN-007 adds JRN-007 to the source_journeys array to record that this entity is read-accessed by the business lending journey.",
+      "entity_id": "ENT-079",
+      "extension_description": "No structural changes to ENT-079 fields. JRN-007 adds JRN-007 to the source_journeys array to record that this entity is read-accessed by the business lending journey.",
       "new_fields": []
     }
   ]

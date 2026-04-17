@@ -1,0 +1,122 @@
+{
+  "journey_id": "JRN-020",
+  "document_version": "0.1.0",
+  "status": "Draft",
+  "per_phase_nfrs": [
+    {
+      "phase_id": "PH-102",
+      "phase_name": "Review Trigger and Scheduling",
+      "latency": {
+        "trigger_to_case_creation": "< 1,000ms",
+        "trigger_to_assignment": "< 1 business day"
+      },
+      "availability": "99.9% — review scheduler must be highly available to prevent missed regulatory review dates",
+      "security": {
+        "data_classification": "Confidential — client identity and review trigger reasons",
+        "access_control": "Review queue accessible only to PER-052 and designated KYC team",
+        "audit": "All review triggers logged with source (scheduled | event_triggered) and timestamp"
+      }
+    },
+    {
+      "phase_id": "PH-103",
+      "phase_name": "KYC Document Collection and Verification",
+      "latency": {
+        "document_request_dispatch": "< 4 business hours of assignment",
+        "document_collection_sla": "14 calendar days from document request"
+      },
+      "availability": "99.5% — secure client portal must be available for document upload",
+      "security": {
+        "data_classification": "PII + Highly Confidential — identity documents, ownership structures, source of funds",
+        "access_control": "Documents encrypted at rest and in transit. Accessible only to assigned analyst and PER-052.",
+        "audit": "All document uploads logged with timestamp, document type, and analyst actions"
+      },
+      "throughput": "Support concurrent document uploads from multiple clients during peak review cycles"
+    },
+    {
+      "phase_id": "PH-104",
+      "phase_name": "Risk Scoring and Screening",
+      "latency": {
+        "sanctions_screening_p99": "< 30,000ms (real-time, but processing time for multiple UBOs)",
+        "pep_screening_p99": "< 30,000ms",
+        "risk_rating_calculation": "< 5,000ms after screening complete"
+      },
+      "availability": "99.9% — screening must not create bottleneck in CDD workflow",
+      "security": {
+        "data_classification": "Highly Confidential — sanctions and PEP screening results",
+        "access_control": "Screening results restricted to compliance team. Sanctions hits flagged to MLRO immediately.",
+        "audit": "All screening runs logged immutably with inputs, outputs, and timestamp (OFSI compliance — GOV-005-R02)"
+      }
+    },
+    {
+      "phase_id": "PH-105",
+      "phase_name": "Review Decision and Approval",
+      "latency": {
+        "decision_sla": "3 business days after risk assessment complete",
+        "senior_manager_approval_sla": "1 business day for exit escalation decisions"
+      },
+      "availability": "99.5%",
+      "security": {
+        "data_classification": "Highly Confidential",
+        "access_control": "Decision recording restricted to PER-052. Exit decisions require PER-059 digital approval with audit trail.",
+        "audit": "Review decisions logged immutably: decision maker, timestamp, rationale, approval chain"
+      }
+    },
+    {
+      "phase_id": "PH-106",
+      "phase_name": "Outcome Communication and Record Update",
+      "latency": {
+        "outcome_notification": "< 4 business hours of decision",
+        "record_archival": "Same day as decision"
+      },
+      "availability": "99.5%",
+      "security": {
+        "data_classification": "Highly Confidential — CDD records retained under MLR 2017",
+        "access_control": "Archived records accessible only to compliance and senior management",
+        "audit": "Full lifecycle archived (7 years — bank policy)"
+      }
+    }
+  ],
+  "cross_cutting_nfrs": [
+    {
+      "id": "XNFR-JRN020-01",
+      "name": "CDD Record Retention",
+      "requirement": "All CDD records (documents, screening results, decisions, audit trail) retained for minimum 5 years (MLR 2017 Regulation 40). Bank policy extends to 7 years.",
+      "rationale": "Regulatory minimum is 5 years. Bank policy extension provides buffer for regulatory investigations and litigation."
+    },
+    {
+      "id": "XNFR-JRN020-02",
+      "name": "Review Completion Rate",
+      "requirement": "100% of scheduled CDD reviews must be completed by their due date. SLA breach triggers compliance incident.",
+      "rationale": "Failure to conduct timely CDD reviews is a criminal offence under MLR 2017."
+    },
+    {
+      "id": "XNFR-JRN020-03",
+      "name": "Sanctions Screening Latency",
+      "requirement": "Sanctions screening must complete within 30 seconds per entity screened. Maximum 10 UBOs per corporate entity.",
+      "rationale": "OFSI requires prompt screening. Delays in CDD reviews that are caused by screening latency must not result in review deadline breaches."
+    }
+  ],
+  "regulatory_slas": [
+    {
+      "id": "REG-SLA-JRN020-01",
+      "name": "MLR 2017 — Periodic CDD Review Frequency",
+      "requirement": "PEP/high-risk clients: annual review. Standard-risk clients: review at least every 3 years. Risk-based determination required.",
+      "source": "MLR 2017 Regulation 28 + FCA Financial Crime Guide",
+      "breach_consequence": "Criminal liability for bank; FCA supervisory action; potential licence revocation"
+    },
+    {
+      "id": "REG-SLA-JRN020-02",
+      "name": "OFSI — Sanctions Hit Notification",
+      "requirement": "Notify OFSI within 14 calendar days of identifying a confirmed designated person",
+      "source": "GOV-005-R02 (OFSI sanctions regulations)",
+      "breach_consequence": "Criminal offence; unlimited fine"
+    },
+    {
+      "id": "REG-SLA-JRN020-03",
+      "name": "MLR 2017 — Record Keeping",
+      "requirement": "CDD records retained minimum 5 years from end of business relationship",
+      "source": "MLR 2017 Regulation 40",
+      "breach_consequence": "Regulatory breach; fine"
+    }
+  ]
+}

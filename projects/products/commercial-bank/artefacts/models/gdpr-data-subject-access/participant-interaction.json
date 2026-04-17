@@ -1,0 +1,25 @@
+{
+  "journey_id": "JRN-021",
+  "document_version": "0.1.0",
+  "status": "Draft",
+  "participants": [
+    {
+      "persona_id": "PER-001",
+      "persona_name": "Personal Customer",
+      "phases": ["PH-119", "PH-122"],
+      "touchpoints": [
+        {"phase": "PH-119", "channel": "online_banking", "action": "Submit SAR via online banking portal; complete SCA for identity verification"},
+        {"phase": "PH-122", "channel": "online_banking", "action": "Download encrypted response pack via secure link within 14 days"}
+      ]
+    },
+    {
+      "persona_id": "PER-052",
+      "persona_name": "Compliance Officer (DPO Team)",
+      "phases": ["PH-120", "PH-121"],
+      "touchpoints": [
+        {"phase": "PH-120", "channel": "internal_system", "action": "Review data extraction results; initiate any manual data source queries"},
+        {"phase": "PH-121", "channel": "internal_system", "action": "Review extracted data; apply UK GDPR Schedule 2 exemptions; redact third-party data; approve response pack for dispatch"}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,190 @@
+{
+  "journey_id": "JRN-027",
+  "name": "Personal Loan Application and Drawdown",
+  "version": "0.1.0",
+  "status": "Draft",
+  "triggering_persona": "PER-001",
+  "capabilities_touched": ["CAP-001", "CAP-004", "CAP-005"],
+  "cross_capability": true,
+  "orchestration_pattern": "channel-initiated-event-driven",
+  "orchestration_notes": "Customer applies for a personal loan via a channel. CAP-001 (Retail Banking) owns the loan origination and account lifecycle. CAP-004 (Risk Management) performs creditworthiness assessment via async events. CAP-005 (Compliance) monitors for AML obligations. Cross-capability coordination is exclusively event-driven.",
+  "regulatory_basis": [
+    {
+      "legislation": "Consumer Credit Act 1974 (CCA 1974) as amended",
+      "sections": ["s.61 — regulated credit agreement requirements", "s.62-63 — cooling off period", "s.77A — regular statements obligation", "s.140A — unfair relationship"],
+      "obligation": "Personal loans under £25,000 are regulated credit agreements. Pre-contractual information must be provided (SECCI form). Customer has 14-day withdrawal right after agreement execution."
+    },
+    {
+      "legislation": "FCA Handbook — CONC (Consumer Credit sourcebook)",
+      "sections": ["CONC 4 — creditworthiness and affordability assessment", "CONC 5 — responsible lending", "CONC 7 — arrears and default"],
+      "obligation": "Creditworthiness assessment required before granting credit. Assessment must consider income, committed expenditure, and credit history. Unaffordable lending is prohibited under Consumer Duty."
+    },
+    {
+      "legislation": "Consumer Duty (FCA PS22/9)",
+      "sections": ["Products and Services outcome", "Price and Value outcome", "Consumer Support outcome"],
+      "obligation": "Loan must offer fair value relative to APR and market rates. Affordability must be genuinely assessed — not superficial tick-box compliance."
+    },
+    {
+      "legislation": "UK GDPR / Data Protection Act 2018",
+      "sections": ["Article 22 — automated decision-making"],
+      "obligation": "If the loan decision is made by automated processing, the customer must be informed and has the right to request human review of a rejected application."
+    }
+  ],
+  "phases": [
+    {
+      "phase_id": "PH-111",
+      "name": "Loan Application Submission",
+      "description": "Customer applies for a personal loan via the channel. They specify the loan amount (£1,000–£25,000), term (12–84 months), and purpose. The channel presents an indicative APR (subject to credit assessment) and a pre-contractual Standard European Consumer Credit Information (SECCI) form. Customer completes the application including income, employment status, and monthly committed expenditure. SCA required to authenticate the application.",
+      "channel": ["CH-001 (Web)", "CH-002 (Mobile)"],
+      "persona_actions": [
+        "Customer selects loan amount, term, and purpose",
+        "Customer reviews indicative APR (variable based on credit profile — final APR determined after assessment)",
+        "Customer reviews and acknowledges SECCI form (pre-contractual information)",
+        "Customer provides income details: employment status, gross monthly income, employer",
+        "Customer provides committed expenditure: monthly rent/mortgage, existing credit commitments, childcare",
+        "Customer completes SCA to authenticate application",
+        "Customer submits application"
+      ],
+      "system_actions": [
+        "Channel presents indicative rate range and SECCI form based on selected amount and term",
+        "SVC-100 (IAM) validates SCA for application submission",
+        "SVC-001 creates LoanApplication: status = submitted, with income, expenditure, loan_amount, term, purpose",
+        "SVC-001 publishes LoanApplicationSubmitted (EVT-152)",
+        "SVC-012 (Risk Engine, CAP-004) consumes LoanApplicationSubmitted to initiate credit assessment"
+      ],
+      "exit_condition": "LoanApplication created with status = submitted; LoanApplicationSubmitted published",
+      "governance_references": ["GOV-001-R01", "GOV-001-R05"],
+      "nfr_references": ["SECCI form presented before application submission (CCA 1974)"]
+    },
+    {
+      "phase_id": "PH-112",
+      "name": "Creditworthiness and Affordability Assessment",
+      "description": "SVC-012 (Risk Engine, CAP-004) performs a credit assessment: credit bureau check (hard or soft), income verification, debt-to-income ratio calculation, and affordability stress test. The assessment produces a credit_score, risk_band, recommended_apr, and approval_decision (approved / referred / declined). A soft credit check is used for indicative decisions; a hard check is performed only on confirmed application.",
+      "channel": [],
+      "persona_actions": [
+        "Customer waits — no customer action during assessment",
+        "Channel displays processing state"
+      ],
+      "system_actions": [
+        "SVC-012 runs credit bureau check (hard search via Experian/Equifax/TransUnion)",
+        "SVC-012 calculates debt-to-income ratio: (committed_expenditure + proposed_loan_repayment) / gross_monthly_income",
+        "SVC-012 applies affordability stress test: can the customer afford repayments if interest rates rise 3%?",
+        "SVC-012 publishes CreditAssessmentCompleted (EVT-153) with credit_score, risk_band, recommended_apr, approval_decision",
+        "SVC-001 consumes CreditAssessmentCompleted: if approved, creates LoanOffer; if referred, routes to manual review; if declined, records decline with reason",
+        "SVC-014 (KYC/AML) consumes LoanApplicationSubmitted for AML loan origination monitoring"
+      ],
+      "exit_condition": "CreditAssessmentCompleted published; LoanApplication status updated (approved / referred / declined)",
+      "governance_references": ["GOV-001-R05", "GOV-004-R01"],
+      "nfr_references": ["Credit assessment < 30 seconds (automated path)", "Hard search only on confirmed application — not browsing"]
+    },
+    {
+      "phase_id": "PH-113",
+      "name": "Loan Offer and Agreement Execution",
+      "description": "SVC-001 presents the loan offer to the customer via the channel: approved loan amount, final APR, monthly repayment amount, total repayable, and loan term. The customer reviews the pre-contract credit agreement (CONC-compliant). Customer has 14-day withdrawal right. Customer signs the credit agreement electronically (SCA required). Credit agreement is executed.",
+      "channel": ["CH-001 (Web)", "CH-002 (Mobile)"],
+      "persona_actions": [
+        "Customer reviews final loan offer: amount, APR, monthly repayment, total cost of credit",
+        "Customer acknowledges 14-day withdrawal right",
+        "Customer reviews and accepts full credit agreement (CONC-compliant pre-contract document)",
+        "Customer completes SCA to sign agreement electronically",
+        "Customer confirms acceptance"
+      ],
+      "system_actions": [
+        "SVC-001 presents LoanOffer via channel: loan_amount, apr, monthly_repayment, total_repayable, term, withdrawal_deadline",
+        "SVC-100 validates SCA for agreement signing",
+        "SVC-001 creates LoanAgreement: status = executed, agreement_date, repayment_schedule",
+        "SVC-001 updates LoanApplication status = agreement_executed",
+        "SVC-001 publishes LoanAgreementExecuted (EVT-154)",
+        "SVC-015 (Compliance) consumes LoanAgreementExecuted for regulatory reporting (CONC consumer credit register)"
+      ],
+      "exit_condition": "LoanAgreement created with status = executed; LoanAgreementExecuted published",
+      "governance_references": ["GOV-001-R01", "GOV-001-R05"]
+    },
+    {
+      "phase_id": "PH-114",
+      "name": "Loan Drawdown and Account Activation",
+      "description": "Following agreement execution (and expiry of the 14-day reflection period is waived in the standard direct lending scenario — funds disbursed immediately on execution per CONC), SVC-001 disburses the loan proceeds to the customer's nominated account. A LoanAccount is created as the servicing vehicle for repayments.",
+      "channel": ["CH-001 (Web)", "CH-002 (Mobile)"],
+      "persona_actions": [
+        "Customer views loan disbursement confirmation",
+        "Customer sees funds in their nominated account"
+      ],
+      "system_actions": [
+        "SVC-001 creates LoanAccount: account_number, sort_code, status = active, outstanding_balance = loan_amount",
+        "SVC-009 (Domestic Payments) executes funds transfer to customer's nominated current account",
+        "SVC-001 updates LoanAccount status = active; outstanding_balance set",
+        "SVC-001 publishes LoanDrawdownCompleted (EVT-155)",
+        "SVC-053 (Notifications) dispatches disbursement confirmation: amount, repayment start date, direct debit details",
+        "SVC-103 records loan drawdown in audit log"
+      ],
+      "exit_condition": "Loan proceeds disbursed; LoanAccount active; LoanDrawdownCompleted published",
+      "governance_references": ["GOV-001-R01"]
+    }
+  ],
+  "happy_path": {
+    "description": "Existing customer applies for £10,000 personal loan over 36 months for home improvement. Automated credit assessment approves with APR 6.9%. Customer accepts offer and signs agreement. Funds disbursed to current account within 60 seconds of agreement execution.",
+    "phase_sequence": ["PH-111", "PH-112", "PH-113", "PH-114"],
+    "target_elapsed_seconds": 300,
+    "timing_breakdown": {
+      "application_submission": "< 3 minutes customer time",
+      "credit_assessment": "< 30 seconds (automated)",
+      "offer_review_and_signing": "< 2 minutes customer time",
+      "disbursement": "< 60 seconds after agreement execution"
+    }
+  },
+  "alternative_paths": [
+    {
+      "path_id": "ALT-001",
+      "name": "Referred to Manual Underwriter",
+      "description": "Automated assessment returns referred. A human underwriter reviews the application. Decision within 2 business days. Additional documentation may be required (payslips, bank statements).",
+      "diverges_at": "PH-112",
+      "rejoins_at": "PH-113",
+      "governance_references": ["GOV-001-R05"]
+    },
+    {
+      "path_id": "ALT-002",
+      "name": "Customer Exercises 14-Day Withdrawal Right",
+      "description": "Customer executes the agreement but then exercises their 14-day statutory withdrawal right (CCA 1974 s.66A). Customer must repay any drawn funds plus accrued interest within 30 days. LoanAgreement status updated to withdrawn.",
+      "diverges_at": "PH-113",
+      "rejoins_at": null,
+      "additional_steps": ["Customer submits withdrawal notice within 14 days", "SVC-001 calculates accrued interest and issues repayment demand", "Customer repays within 30 days"],
+      "governance_references": ["GOV-001-R05"]
+    }
+  ],
+  "exception_paths": [
+    {
+      "path_id": "EX-001",
+      "name": "Application Declined",
+      "description": "Credit assessment declines the application. Customer informed of decline with reasons (subject to automated decision-making transparency under UK GDPR Article 22). Customer offered option to request human review. Decline reason recorded.",
+      "trigger": "CreditAssessmentCompleted.approval_decision = declined",
+      "customer_message": "We're sorry, we are unable to offer you a loan at this time. [Reason: credit score below threshold / affordability assessment failed]. You have the right to request a review of this decision by a human underwriter.",
+      "internal_action": "LoanApplication status = declined; soft decline reason recorded; UK GDPR Article 22 disclosure provided",
+      "governance_references": ["GOV-001-R05"]
+    },
+    {
+      "path_id": "EX-002",
+      "name": "Disbursement Failure",
+      "description": "Funds transfer to customer's nominated account fails (invalid account, payment processing error). LoanAccount is created but status = pending_disbursement. Customer notified. Operations team alerted.",
+      "trigger": "SVC-009 returns payment failure for loan disbursement",
+      "customer_message": "Your loan has been approved but we couldn't transfer the funds. Please contact us.",
+      "internal_action": "LoanAccount status = pending_disbursement; PER-058 (Operations) alerted; re-attempt within 2 hours",
+      "governance_references": []
+    }
+  ],
+  "design_decisions": [
+    {
+      "id": "DD-JRN027-01",
+      "decision": "Hard credit search performed only on confirmed application (PH-112), not during the indicative rate quote phase (PH-111).",
+      "rationale": "CONC 4.2 requires proportionate creditworthiness assessment. A hard search at quote stage would damage the customer's credit file without their intent to proceed. Soft search used for eligibility check; hard search at confirmed application.",
+      "alternatives_considered": ["Hard search at quote stage"],
+      "rejected_because": "FCA guidance and Consumer Duty require the bank not to damage customers' interests unnecessarily. Hard search without intent to proceed is a known Consumer Duty concern."
+    },
+    {
+      "id": "DD-JRN027-02",
+      "decision": "Credit assessment (SVC-012, CAP-004) communicates results to Retail Banking (SVC-001, CAP-001) via async event (CreditAssessmentCompleted), not a synchronous API call.",
+      "rationale": "CAP-004 (Risk Management) must not be called synchronously from CAP-001 — cross-capability sync calls are prohibited by the architecture principle. The event-driven approach also allows the assessment to be re-run without blocking the customer session.",
+      "alternatives_considered": ["Synchronous API call to CAP-004"],
+      "rejected_because": "Violates architecture principle: cross-capability communication is exclusively async events."
+    }
+  ]
+}

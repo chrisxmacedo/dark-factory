@@ -1,5 +1,5 @@
 {
-  "entity_id": "ENT-B004",
+  "entity_id": "ENT-082",
   "name": "DirectorRecord",
   "description": "Records each appointed director of a BusinessCustomer as identified from the Companies House officer list at BPH-002. All current directors must be identified and individually verified (BPH-004) regardless of ownership percentage — MLR 2017 requires director screening even where the director holds no beneficial ownership. Directors are individually screened for PEP/sanctions status in BPH-005. The DirectorRecord links to the SVC-050 IdentityVerification record and to the Companies House officer_id for audit trail continuity and ongoing pKYC monitoring (e.g. director appointment/resignation changes trigger a pKYC review event).",
   "owning_service": "SVC-005",
@@ -88,12 +88,12 @@
   ],
   "relationships": [
     {
-      "target_entity": "ENT-B001",
+      "target_entity": "ENT-079",
       "type": "many-to-one",
       "description": "DirectorRecord belongs to one BusinessCustomer."
     },
     {
-      "target_entity": "ENT-B003",
+      "target_entity": "ENT-081",
       "type": "zero-or-one-to-one",
       "description": "A director who is also a UBO has a corresponding UltimateBeneficialOwner record (is_also_ubo = true). These are separate entities serving distinct MLR 2017 obligations."
     }

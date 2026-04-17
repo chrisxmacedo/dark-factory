@@ -1,0 +1,171 @@
+{
+  "journey_id": "JRN-020",
+  "name": "CDD Periodic Review (Corporate)",
+  "version": "0.1.0",
+  "status": "Draft",
+  "triggering_persona": "PER-052",
+  "capabilities_touched": ["CAP-005", "CAP-002"],
+  "cross_capability": true,
+  "orchestration_pattern": "internal-workflow-event-driven",
+  "orchestration_notes": "CAP-005 (Compliance & Regulatory) owns the CDD review lifecycle. CAP-002 (Commercial Banking) is notified of review outcomes via events. No capability calls another capability's API directly.",
+  "phases": [
+    {
+      "phase_id": "PH-102",
+      "name": "Review Trigger and Scheduling",
+      "description": "A CDD periodic review is triggered for a corporate client. Triggers: (1) scheduled cycle — review date reached based on risk rating (annually for PEP/high-risk, every 3 years for standard); (2) event-driven trigger — change in beneficial ownership, adverse media alert, sanctions list update, or transaction monitoring anomaly. SVC-015 creates a CddReviewCase.",
+      "channel": ["CH-005 (Internal Portal)"],
+      "persona_actions": [
+        "PER-052 reviews triggered review queue",
+        "PER-052 confirms review priority and assigns to KYC analyst"
+      ],
+      "system_actions": [
+        "Scheduled job or event trigger creates CddReviewCase: client_id, review_type, trigger_reason, risk_tier, due_date",
+        "SVC-015 publishes CddReviewTriggered (EVT-142)",
+        "SVC-014 consumes CddReviewTriggered to pre-load existing KYC record for analyst"
+      ],
+      "exit_condition": "CddReviewCase created with status = triggered; assigned to analyst",
+      "governance_references": ["GOV-005-R01", "GOV-005-R06"]
+    },
+    {
+      "phase_id": "PH-103",
+      "name": "KYC Document Collection and Verification",
+      "description": "KYC analyst collects updated CDD documents from the corporate client: certificate of incorporation, latest accounts, ownership structure chart, UBO declarations (PSC register for UK companies), source of funds documentation. Documents verified against Companies House and other authoritative sources.",
+      "channel": ["CH-005 (Internal Portal)", "CH-007 (Secure Client Portal)"],
+      "persona_actions": [
+        "KYC analyst sends document request to corporate client via secure portal",
+        "PER-003 (Corporate Client) provides updated documentation",
+        "KYC analyst verifies documents: authenticity, currency, consistency with prior record",
+        "KYC analyst records verified beneficial ownership structure (UBO data)"
+      ],
+      "system_actions": [
+        "SVC-015 generates document request checklist based on risk_tier and entity_type",
+        "SVC-015 records received documents in CddReviewCase.documents_received",
+        "SVC-014 runs identity verification on new/changed UBOs",
+        "SVC-015 updates CddReviewCase status = documents_under_review",
+        "If UBO changed: SVC-015 publishes BeneficialOwnershipChanged (EVT-143)"
+      ],
+      "exit_condition": "All documents received and verified; UBO data current; CddReviewCase status = documents_verified",
+      "governance_references": ["GOV-005-R01"],
+      "nfr_references": ["Document collection SLA: 14 calendar days"]
+    },
+    {
+      "phase_id": "PH-104",
+      "name": "Risk Scoring and Screening",
+      "description": "SVC-014 runs updated risk assessment: sanctions screening of all UBOs and corporate entity, PEP screening, adverse media check, and country risk scoring. Updated client risk rating calculated. High-risk findings trigger Enhanced Due Diligence.",
+      "channel": ["CH-005 (Internal Portal)"],
+      "persona_actions": [
+        "KYC analyst reviews screening results and risk score",
+        "If EDD required: analyst collects additional documentation",
+        "KYC analyst records risk assessment rationale"
+      ],
+      "system_actions": [
+        "SVC-014 runs real-time sanctions screening on all UBOs and corporate entity",
+        "SVC-014 runs PEP screening and adverse media check",
+        "SVC-014 calculates updated risk_rating: low / medium / high / PEP",
+        "SVC-015 updates KycAssessment.risk_rating and next_review_date",
+        "If sanctions_hit: SVC-015 publishes CddSanctionsHitDetected (EVT-144)",
+        "If risk_rating changed: SVC-015 publishes CddRiskRatingChanged (EVT-145)",
+        "SVC-015 updates CddReviewCase status = risk_assessed"
+      ],
+      "exit_condition": "Risk assessment complete; risk_rating updated; screening results recorded",
+      "governance_references": ["GOV-005-R01", "GOV-005-R02"],
+      "nfr_references": ["Screening results within 30 seconds"]
+    },
+    {
+      "phase_id": "PH-105",
+      "name": "Review Decision and Approval",
+      "description": "Compliance Officer reviews the completed assessment and makes the periodic review decision: continue relationship, continue with enhanced monitoring, or escalate to exit. Senior Manager approval required for relationship exit.",
+      "channel": ["CH-005 (Internal Portal)"],
+      "persona_actions": [
+        "PER-052 reviews full assessment and records review decision",
+        "If escalate_to_exit: PER-059 (Senior Manager) approval required",
+        "PER-052 updates next_review_date based on new risk_rating"
+      ],
+      "system_actions": [
+        "PER-052 records decision: continue | continue_with_edd | escalate_to_exit | suspend_account",
+        "SVC-015 updates KycAssessment: last_reviewed_at, next_review_date, risk_rating, review_decision",
+        "SVC-015 publishes CddReviewCompleted (EVT-146)",
+        "If escalate_to_exit: SVC-015 publishes CddExitEscalated (EVT-147)"
+      ],
+      "exit_condition": "CddReviewCase status = decision_made; CddReviewCompleted published",
+      "governance_references": ["GOV-005-R01", "GOV-005-R04"]
+    },
+    {
+      "phase_id": "PH-106",
+      "name": "Outcome Communication and Record Update",
+      "description": "Review outcome communicated to Relationship Manager. KYC records updated and archived. CAP-002 (Commercial Banking) notified via event. Next review scheduled.",
+      "channel": ["CH-005 (Internal Portal)"],
+      "persona_actions": [
+        "PER-050 receives outcome notification for their portfolio client",
+        "If exit: PER-050 initiates client offboarding",
+        "If enhanced monitoring: PER-050 updates client engagement plan"
+      ],
+      "system_actions": [
+        "SVC-005 (Commercial Banking Core, CAP-002) consumes CddReviewCompleted — updates internal client risk flag",
+        "SVC-015 archives CddReviewCase with all documents and decision trail",
+        "SVC-103 records full review lifecycle immutably (7-year retention)",
+        "SVC-015 schedules next_review_date in review queue"
+      ],
+      "exit_condition": "Outcome communicated; KYC records updated; next review scheduled; audit record created",
+      "governance_references": ["GOV-005-R01"]
+    }
+  ],
+  "happy_path": {
+    "description": "CDD periodic review triggered for standard-risk corporate client. Documents collected within 14 days. Screening clear. Risk rating remains medium. Relationship continued. CddReviewCompleted published. Next review scheduled in 3 years.",
+    "phase_sequence": ["PH-102", "PH-103", "PH-104", "PH-105", "PH-106"],
+    "target_elapsed_days": 21
+  },
+  "alternative_paths": [
+    {
+      "path_id": "ALT-001",
+      "name": "Event-Triggered Out-of-Cycle Review",
+      "description": "A change in beneficial ownership or adverse media alert triggers an out-of-cycle CDD review. Same workflow as periodic but trigger_reason = event_triggered. Review priority elevated.",
+      "diverges_at": "PH-102",
+      "rejoins_at": "PH-103",
+      "governance_references": ["GOV-005-R01", "GOV-005-R06"]
+    },
+    {
+      "path_id": "ALT-002",
+      "name": "High-Risk / PEP — Enhanced Due Diligence",
+      "description": "Risk screening returns PEP match or high-risk country. EDD required: senior management approval, source of wealth documentation, enhanced monitoring. Review frequency increased to annually.",
+      "diverges_at": "PH-104",
+      "rejoins_at": "PH-105",
+      "governance_references": ["GOV-005-R01"]
+    }
+  ],
+  "exception_paths": [
+    {
+      "path_id": "EX-001",
+      "name": "Sanctions Hit Detected",
+      "description": "Screening returns a sanctions match on a UBO or corporate entity. Account suspended immediately. OFSI notification required within 14 days if confirmed. Relationship exit initiated.",
+      "trigger": "SVC-014 returns sanctions_hit = true",
+      "internal_action": "CddSanctionsHitDetected (EVT-144) published; PER-052 notified; account suspended; OFSI notification workflow initiated",
+      "governance_references": ["GOV-005-R01", "GOV-005-R02"]
+    },
+    {
+      "path_id": "EX-002",
+      "name": "Client Fails to Provide Documents",
+      "description": "Corporate client fails to respond within 14-day SLA. Account restrictions applied. If no response within 30 days: relationship exit initiated.",
+      "trigger": "document_due_date exceeded with status = documents_requested",
+      "internal_action": "PER-050 notified; account restrictions applied if high-risk; escalation to exit after 30 days",
+      "governance_references": ["GOV-005-R01"]
+    },
+    {
+      "path_id": "EX-003",
+      "name": "Relationship Exit",
+      "description": "Decision to exit client relationship. PER-059 authorises. PER-050 notifies client. Account deactivated in orderly manner.",
+      "trigger": "review_decision = escalate_to_exit and PER-059 approval confirmed",
+      "internal_action": "CddExitEscalated (EVT-147) published; CAP-002 notified to initiate offboarding",
+      "governance_references": ["GOV-005-R01", "GOV-005-R04"]
+    }
+  ],
+  "design_decisions": [
+    {
+      "id": "DD-JRN020-01",
+      "decision": "CDD review lifecycle owned by CAP-005 (Compliance). CAP-002 (Commercial Banking) receives outcomes via events.",
+      "rationale": "CDD is a compliance obligation — legal accountability sits with the MLRO. Coupling Commercial Banking to CDD decisions would create regulatory risk where commercial incentives influence CDD independence.",
+      "alternatives_considered": ["Joint ownership", "Commercial Banking initiates and Compliance reviews"],
+      "rejected_because": "Joint ownership dilutes regulatory accountability. Commercial Banking initiation risks downgraded risk assessments."
+    }
+  ]
+}

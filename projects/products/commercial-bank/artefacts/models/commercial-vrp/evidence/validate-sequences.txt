@@ -1,0 +1,12 @@
+
+Capability map loaded: 22 services mapped
+============================================================
+
+--- commercial-vrp ---
+  [92mOK[0m: happy-path.mmd
+  [92mOK[0m: happy-path.json
+
+============================================================
+[92mPASSED[0m: No cross-capability violations
+============================================================
+

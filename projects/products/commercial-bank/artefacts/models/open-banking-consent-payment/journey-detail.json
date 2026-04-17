@@ -63,7 +63,7 @@
     {
       "id": "PH-038",
       "name": "Payment Initiation",
-      "description": "The TPP exchanges the authorisation code for an access token at SVC-100's token endpoint, then calls POST /domestic-payments on SVC-017 (channel) with the consent_id and the original payment details. SVC-017 validates that the consent_id is authorised, not consumed, and not expired. SVC-017 then makes a synchronous REST call to SVC-001 (Retail Banking Core, CAP-001) to create a PaymentIntent (ENT-008) — this is a channel-to-capability call, explicitly permitted by the architectural principle that channels may call capability REST APIs synchronously. SVC-001 validates account status, available balance, and daily payment limit. On success, SVC-001 creates ENT-008 and publishes EVT-P01 (PaymentIntentCreated). SVC-017 updates ENT-030.status = consumed and sets the open_banking_payment_id cross-reference. EVT-061 OpenBankingPaymentInitiated is published by SVC-001. SVC-017 returns a payment_id and status = AcceptedSettlementInProcess to the TPP.",
+      "description": "The TPP exchanges the authorisation code for an access token at SVC-100's token endpoint, then calls POST /domestic-payments on SVC-017 (channel) with the consent_id and the original payment details. SVC-017 validates that the consent_id is authorised, not consumed, and not expired. SVC-017 then makes a synchronous REST call to SVC-001 (Retail Banking Core, CAP-001) to create a PaymentIntent (ENT-008) — this is a channel-to-capability call, explicitly permitted by the architectural principle that channels may call capability REST APIs synchronously. SVC-001 validates account status, available balance, and daily payment limit. On success, SVC-001 creates ENT-008 and publishes EVT-179 (PaymentIntentCreated). SVC-017 updates ENT-030.status = consumed and sets the open_banking_payment_id cross-reference. EVT-061 OpenBankingPaymentInitiated is published by SVC-001. SVC-017 returns a payment_id and status = AcceptedSettlementInProcess to the TPP.",
       "actors": ["PER-006 (TPP)", "SVC-017 (Digital Channels — Open Banking API)", "SVC-001 (Retail Banking Core)"],
       "services": ["SVC-017", "SVC-001"],
       "governance_rules": ["GOV-006-R01", "GOV-003-R01", "GOV-003-R02"],
@@ -75,7 +75,7 @@
       "exit_conditions": [
         "ENT-008 PaymentIntent created with status = pending_screening",
         "ENT-030.status = consumed",
-        "EVT-P01 PaymentIntentCreated published by SVC-001",
+        "EVT-179 PaymentIntentCreated published by SVC-001",
         "EVT-061 OpenBankingPaymentInitiated published by SVC-001",
         "TPP receives HTTP 201 with payment_id and status = AcceptedSettlementInProcess"
       ]
@@ -83,19 +83,19 @@
     {
       "id": "PH-039",
       "name": "Payment Execution",
-      "description": "The JRN-002 event-driven payment execution flow is reused in full. EVT-P01 (PaymentIntentCreated) is consumed concurrently by SVC-051 (Sanctions Screening) and SVC-013 (Fraud Detection). SVC-051 publishes EVT-P02 (SanctionsScreeningCompleted); SVC-013 publishes EVT-P03 (FraudScoreCompleted). SVC-001 correlates both results on payment_intent_id: if both clear, it publishes EVT-P04 (PaymentCleared); if sanctions hit, it publishes EVT-P07 (PaymentFailed) with reason sanctions_review; if fraud block, it publishes EVT-P08 (PaymentFraudBlocked). On PaymentCleared, SVC-009 (Domestic Payments, CAP-003) consumes the event, constructs an ISO 20022 pacs.008 message, and submits to Vocalink FPS. SVC-009 creates ENT-009 (PaymentExecution) and publishes EVT-P05 (PaymentExecuted). SVC-001 consumes EVT-P05, debits the account ledger, updates PaymentIntent.status = completed, and publishes EVT-P06 (AccountDebited) and EVT-062 (OpenBankingPaymentCompleted). On any failure path, SVC-001 publishes EVT-063 (OpenBankingPaymentFailed).",
+      "description": "The JRN-002 event-driven payment execution flow is reused in full. EVT-179 (PaymentIntentCreated) is consumed concurrently by SVC-051 (Sanctions Screening) and SVC-013 (Fraud Detection). SVC-051 publishes EVT-180 (SanctionsScreeningCompleted); SVC-013 publishes EVT-181 (FraudScoreCompleted). SVC-001 correlates both results on payment_intent_id: if both clear, it publishes EVT-182 (PaymentCleared); if sanctions hit, it publishes EVT-185 (PaymentFailed) with reason sanctions_review; if fraud block, it publishes EVT-186 (PaymentFraudBlocked). On PaymentCleared, SVC-009 (Domestic Payments, CAP-003) consumes the event, constructs an ISO 20022 pacs.008 message, and submits to Vocalink FPS. SVC-009 creates ENT-009 (PaymentExecution) and publishes EVT-183 (PaymentExecuted). SVC-001 consumes EVT-183, debits the account ledger, updates PaymentIntent.status = completed, and publishes EVT-184 (AccountDebited) and EVT-062 (OpenBankingPaymentCompleted). On any failure path, SVC-001 publishes EVT-063 (OpenBankingPaymentFailed).",
       "actors": ["SVC-001 (Retail Banking Core)", "SVC-051 (Sanctions Screening)", "SVC-013 (Fraud Detection)", "SVC-009 (Domestic Payments)"],
       "services": ["SVC-001", "SVC-051", "SVC-013", "SVC-009"],
       "governance_rules": ["GOV-003-R01", "GOV-003-R02", "GOV-005-R02"],
       "entry_conditions": [
-        "PH-038 complete — EVT-P01 published and available on topic payments.initiation",
+        "PH-038 complete — EVT-179 published and available on topic payments.initiation",
         "PaymentIntent.status = pending_screening"
       ],
       "exit_conditions": [
-        "Happy path: PaymentIntent.status = completed, EVT-P06 published, EVT-062 published",
-        "Sanctions failure: PaymentIntent.status = sanctions_blocked, EVT-P07 published, EVT-063 published",
-        "Fraud failure: PaymentIntent.status = fraud_blocked, EVT-P08 published, EVT-063 published",
-        "FPS rejection: PaymentIntent.status = failed (failure_reason = fps_rejection), EVT-P07 published, EVT-063 published"
+        "Happy path: PaymentIntent.status = completed, EVT-184 published, EVT-062 published",
+        "Sanctions failure: PaymentIntent.status = sanctions_blocked, EVT-185 published, EVT-063 published",
+        "Fraud failure: PaymentIntent.status = fraud_blocked, EVT-186 published, EVT-063 published",
+        "FPS rejection: PaymentIntent.status = failed (failure_reason = fps_rejection), EVT-185 published, EVT-063 published"
       ]
     },
     {
@@ -148,14 +148,14 @@
       {
         "id": "EXC-001",
         "name": "Sanctions Hit",
-        "description": "During PH-039, SVC-051 returns a sanctions hit on EVT-P01. SVC-001 publishes EVT-P07 (PaymentFailed, reason = sanctions_review). SVC-001 also publishes EVT-063 (OpenBankingPaymentFailed). MLRO is alerted. PaymentIntent.status = sanctions_blocked. The TPP polls and receives status = Rejected. The customer receives a generic 'payment could not be processed' notification — the sanctions hit reason is not disclosed (tipping-off prohibition, POCA 2002 s333A).",
+        "description": "During PH-039, SVC-051 returns a sanctions hit on EVT-179. SVC-001 publishes EVT-185 (PaymentFailed, reason = sanctions_review). SVC-001 also publishes EVT-063 (OpenBankingPaymentFailed). MLRO is alerted. PaymentIntent.status = sanctions_blocked. The TPP polls and receives status = Rejected. The customer receives a generic 'payment could not be processed' notification — the sanctions hit reason is not disclosed (tipping-off prohibition, POCA 2002 s333A).",
         "diverges_at": "PH-039",
         "regulatory_references": ["POCA 2002 s333A", "GOV-005-R02"]
       },
       {
         "id": "EXC-002",
         "name": "Fraud Block",
-        "description": "During PH-039, SVC-013 returns risk_level = block on EVT-P01. SVC-001 publishes EVT-P08 (PaymentFraudBlocked) and EVT-063 (OpenBankingPaymentFailed). PaymentIntent.status = fraud_blocked. The TPP polls and receives status = Rejected. The customer receives a generic notification that the payment could not proceed — the fraud block reason is not surfaced to prevent fraud evasion. Fraud case management follows the JRN-005 pattern.",
+        "description": "During PH-039, SVC-013 returns risk_level = block on EVT-179. SVC-001 publishes EVT-186 (PaymentFraudBlocked) and EVT-063 (OpenBankingPaymentFailed). PaymentIntent.status = fraud_blocked. The TPP polls and receives status = Rejected. The customer receives a generic notification that the payment could not proceed — the fraud block reason is not surfaced to prevent fraud evasion. Fraud case management follows the JRN-005 pattern.",
         "diverges_at": "PH-039",
         "regulatory_references": ["GOV-003-R01"]
       },
@@ -190,7 +190,7 @@
     },
     {
       "id": "DD-JRN010-03",
-      "decision": "PH-039 fully reuses the JRN-002 event-driven payment execution chain (EVT-P01 through EVT-P08). No new payment events are introduced for the execution phase itself.",
+      "decision": "PH-039 fully reuses the JRN-002 event-driven payment execution chain (EVT-179 through EVT-186). No new payment events are introduced for the execution phase itself.",
       "rationale": "The Open Banking payment is a Faster Payment — it uses the same FPS rail, the same sanctions screening (SVC-051), the same fraud detection (SVC-013), and the same domestic payment execution (SVC-009). Introducing separate events for the OB payment execution would duplicate the payment event topology without adding value. The open-banking-specific events (EVT-061, EVT-062, EVT-063) serve as wrapper signals for the TPP notification layer and status mapping, while the core payment events remain shared.",
       "alternatives_considered": [
         "Create a parallel OB-specific payment event chain (OBPaymentIntentCreated, OBSanctionsCompleted, etc.)"

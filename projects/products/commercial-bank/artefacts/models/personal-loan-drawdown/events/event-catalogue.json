@@ -1,0 +1,172 @@
+{
+  "journey_id": "JRN-027",
+  "document_version": "0.1.0",
+  "status": "Draft",
+  "description": "Event catalogue for the Personal Loan Application and Drawdown journey. Introduces 4 events: EVT-152 through EVT-155. EVT-153 (CreditAssessmentCompleted) is published by SVC-012 (Risk Engine, CAP-004) — the only cross-capability event produced by a non-CAP-001 service in this journey.",
+  "events": [
+    {
+      "event_id": "EVT-152",
+      "name": "LoanApplicationSubmitted",
+      "source_service": "SVC-001",
+      "source_service_name": "Retail Banking Core",
+      "source_entity": "ENT-067",
+      "source_entity_name": "LoanApplication",
+      "trigger": "Customer completes and submits loan application with income and expenditure data.",
+      "journey_phase": "PH-111",
+      "journey_phase_name": "Loan Application Submission",
+      "capability_scope": "cross-capability",
+      "payload_schema": {
+        "application_id": "string (UUID v4)",
+        "customer_id": "string (UUID v4)",
+        "loan_amount": "string (decimal as string, GBP)",
+        "term_months": "integer",
+        "purpose": "string enum",
+        "gross_monthly_income": "string (decimal as string)",
+        "monthly_committed_expenditure": "string (decimal as string)",
+        "employment_status": "string enum",
+        "submitted_at": "string (ISO 8601 UTC timestamp)"
+      },
+      "derived_from": {
+        "loan_amount": "LoanApplication.loan_amount",
+        "gross_monthly_income": "LoanApplication.gross_monthly_income — self-declared; credit assessment may verify",
+        "monthly_committed_expenditure": "LoanApplication.monthly_committed_expenditure"
+      },
+      "consumers": [
+        {"service": "SVC-012", "service_name": "Risk Engine Service", "action": "Trigger credit bureau check, DTI calculation, affordability stress test. Publish CreditAssessmentCompleted."},
+        {"service": "SVC-014", "service_name": "KYC/AML Service", "action": "AML monitoring for loan origination — check for structuring risk."}
+      ],
+      "ordering_guarantees": "Per-customer ordering via customer_id partition key on topic retail.lending.",
+      "topic": "retail.lending",
+      "data_classification": "PII + Financial",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "Loan application with income/expenditure data is a consumer credit record — immutable for FCA/CCA audit.",
+      "retention": "6 years",
+      "cloudevents_type": "uk.bank.retail.loan_application.submitted",
+      "governance_references": ["GOV-001-R05"],
+      "source_journeys": ["JRN-027"]
+    },
+    {
+      "event_id": "EVT-153",
+      "name": "CreditAssessmentCompleted",
+      "source_service": "SVC-012",
+      "source_service_name": "Risk Engine Service",
+      "source_entity": null,
+      "source_entity_name": "Stateless — assessment result, no persisted entity in SVC-012",
+      "trigger": "SVC-012 completes credit bureau check, DTI calculation, and affordability stress test for the loan application.",
+      "journey_phase": "PH-112",
+      "journey_phase_name": "Creditworthiness and Affordability Assessment",
+      "capability_scope": "cross-capability",
+      "payload_schema": {
+        "application_id": "string (UUID v4)",
+        "customer_id": "string (UUID v4)",
+        "approval_decision": "string enum (approved | referred | declined)",
+        "risk_band": "string enum (A | B | C | D | E | declined)",
+        "recommended_apr": "string (decimal as string) — nullable if declined",
+        "monthly_repayment": "string (decimal as string) — nullable if declined",
+        "decline_reason": "string — nullable if approved/referred",
+        "bureau_search_reference": "string — credit bureau search reference for audit",
+        "assessed_at": "string (ISO 8601 UTC timestamp)"
+      },
+      "derived_from": {
+        "approval_decision": "Risk Engine scoring model output",
+        "recommended_apr": "risk_band → APR mapping table in SVC-012 pricing model",
+        "monthly_repayment": "computed_from: amortisation formula using recommended_apr, loan_amount, term_months"
+      },
+      "consumers": [
+        {"service": "SVC-001", "service_name": "Retail Banking Core", "action": "Update LoanApplication with assessment result. Present offer to customer if approved. Route to manual review if referred. Record decline if declined."}
+      ],
+      "ordering_guarantees": "Per-application ordering. CreditAssessmentCompleted must follow LoanApplicationSubmitted for same application_id.",
+      "topic": "retail.lending",
+      "data_classification": "Highly Confidential — credit score context",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "Credit assessment result is a consumer credit decision — ICO Article 22 audit trail required.",
+      "retention": "6 years",
+      "cloudevents_type": "uk.bank.risk.credit_assessment.completed",
+      "governance_references": ["GOV-001-R05"],
+      "source_journeys": ["JRN-027"]
+    },
+    {
+      "event_id": "EVT-154",
+      "name": "LoanAgreementExecuted",
+      "source_service": "SVC-001",
+      "source_service_name": "Retail Banking Core",
+      "source_entity": "ENT-068",
+      "source_entity_name": "LoanAgreement",
+      "trigger": "Customer accepts loan offer, completes SCA, and LoanAgreement is created with status = executed.",
+      "journey_phase": "PH-113",
+      "journey_phase_name": "Loan Offer and Agreement Execution",
+      "capability_scope": "cross-capability",
+      "payload_schema": {
+        "agreement_id": "string (UUID v4)",
+        "application_id": "string (UUID v4)",
+        "customer_id": "string (UUID v4)",
+        "loan_amount": "string (decimal as string)",
+        "term_months": "integer",
+        "apr": "string (decimal as string)",
+        "monthly_repayment": "string (decimal as string)",
+        "first_repayment_date": "string (ISO 8601 date)",
+        "withdrawal_deadline": "string (ISO 8601 date)",
+        "nominated_account_id": "string (UUID v4)",
+        "agreement_date": "string (ISO 8601 date)",
+        "sca_assertion_ref": "string"
+      },
+      "derived_from": {
+        "apr": "LoanAgreement.apr — final contracted rate from credit assessment",
+        "withdrawal_deadline": "computed_from: agreement_date + 14 calendar days (CCA 1974 s.66A)",
+        "first_repayment_date": "computed_from: agreement_date + 30-31 days (next full calendar month)"
+      },
+      "consumers": [
+        {"service": "SVC-015", "service_name": "Compliance Core Service", "action": "Record consumer credit agreement for CONC regulatory reporting."},
+        {"service": "SVC-009", "service_name": "Domestic Payments Service", "action": "Initiate loan drawdown payment to nominated account."},
+        {"service": "SVC-103", "service_name": "Audit & Logging Service", "action": "Write immutable agreement execution audit record (6-year retention)."}
+      ],
+      "ordering_guarantees": "Per-application ordering. LoanAgreementExecuted follows CreditAssessmentCompleted for same application_id.",
+      "topic": "retail.lending",
+      "data_classification": "PII + Financial",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "Consumer credit agreement execution is legally binding — immutable audit trail required for 6 years.",
+      "retention": "6 years",
+      "cloudevents_type": "uk.bank.retail.loan_agreement.executed",
+      "governance_references": ["GOV-001-R01", "GOV-001-R05"],
+      "source_journeys": ["JRN-027"]
+    },
+    {
+      "event_id": "EVT-155",
+      "name": "LoanDrawdownCompleted",
+      "source_service": "SVC-001",
+      "source_service_name": "Retail Banking Core",
+      "source_entity": "ENT-069",
+      "source_entity_name": "LoanAccount",
+      "trigger": "Loan proceeds successfully disbursed to customer's nominated account. LoanAccount status = active.",
+      "journey_phase": "PH-114",
+      "journey_phase_name": "Loan Drawdown and Account Activation",
+      "capability_scope": "cross-capability",
+      "payload_schema": {
+        "loan_account_id": "string (UUID v4)",
+        "agreement_id": "string (UUID v4)",
+        "customer_id": "string (UUID v4)",
+        "drawdown_amount": "string (decimal as string)",
+        "nominated_account_id": "string (UUID v4)",
+        "first_repayment_date": "string (ISO 8601 date)",
+        "monthly_repayment": "string (decimal as string)",
+        "disbursed_at": "string (ISO 8601 UTC timestamp)"
+      },
+      "derived_from": {
+        "drawdown_amount": "LoanAccount.drawdown_amount — equals loan_amount in standard case",
+        "first_repayment_date": "LoanAgreement.first_repayment_date"
+      },
+      "consumers": [
+        {"service": "SVC-053", "service_name": "Notifications Service", "action": "Dispatch disbursement confirmation to customer."},
+        {"service": "SVC-103", "service_name": "Audit & Logging Service", "action": "Write immutable drawdown audit record."}
+      ],
+      "ordering_guarantees": "Per-account ordering. LoanDrawdownCompleted follows LoanAgreementExecuted for same agreement_id.",
+      "topic": "retail.lending",
+      "data_classification": "Financial + PII",
+      "worm_audit_pipeline": false,
+      "retention": "6 years",
+      "cloudevents_type": "uk.bank.retail.loan_account.drawdown_completed",
+      "governance_references": ["GOV-001-R01"],
+      "source_journeys": ["JRN-027"]
+    }
+  ]
+}

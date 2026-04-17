@@ -1,0 +1,158 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Retail Banking — Personal Loan API",
+    "description": "Personal loan application and account management API exposed by SVC-001 (Retail Banking Core) for JRN-027. Consumed by channels (SVC-017). Authentication via OAuth 2.0 Bearer token. Requires lending:write and lending:read scopes.",
+    "version": "1.0.0",
+    "x-service-id": "SVC-001",
+    "x-capability-id": "CAP-001",
+    "x-journey-ids": ["JRN-027"]
+  },
+  "servers": [{"url": "https://api.bank.internal/retail/v1", "description": "Internal — production"}],
+  "security": [{"BearerAuth": []}],
+  "paths": {
+    "/loans/eligibility": {
+      "get": {
+        "operationId": "checkLoanEligibility",
+        "summary": "Get indicative loan eligibility and rate range",
+        "description": "Returns indicative APR range for a loan amount and term. Uses soft credit check. No impact on credit file.",
+        "tags": ["Personal Loans"],
+        "parameters": [
+          {"name": "amount", "in": "query", "required": true, "schema": {"type": "number", "minimum": 1000, "maximum": 25000}},
+          {"name": "term_months", "in": "query", "required": true, "schema": {"type": "integer", "minimum": 12, "maximum": 84}}
+        ],
+        "responses": {
+          "200": {"description": "Indicative eligibility", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/LoanEligibilityResponse"}}}}
+        }
+      }
+    },
+    "/loans/applications": {
+      "post": {
+        "operationId": "submitLoanApplication",
+        "summary": "Submit a personal loan application",
+        "description": "Creates LoanApplication. Triggers hard credit bureau search. Publishes LoanApplicationSubmitted (EVT-152). Returns application_id for polling.",
+        "tags": ["Personal Loans"],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/LoanApplicationRequest"}}}},
+        "responses": {
+          "202": {"description": "Application accepted. Credit assessment in progress.", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/LoanApplicationSubmittedResponse"}}}},
+          "400": {"description": "Validation error"},
+          "401": {"description": "Unauthenticated"}
+        }
+      }
+    },
+    "/loans/applications/{application_id}": {
+      "get": {
+        "operationId": "getLoanApplication",
+        "summary": "Get loan application status and offer (if ready)",
+        "description": "Poll for credit assessment result and loan offer. Returns offer once CreditAssessmentCompleted is received.",
+        "tags": ["Personal Loans"],
+        "parameters": [{"name": "application_id", "in": "path", "required": true, "schema": {"type": "string", "format": "uuid"}}],
+        "responses": {
+          "200": {"description": "Application status", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/LoanApplicationDetail"}}}},
+          "404": {"description": "Application not found"}
+        }
+      }
+    },
+    "/loans/applications/{application_id}/accept": {
+      "post": {
+        "operationId": "acceptLoanOffer",
+        "summary": "Accept loan offer and execute credit agreement",
+        "description": "Customer accepts the loan offer and signs the credit agreement electronically (SCA required). Creates LoanAgreement. Publishes LoanAgreementExecuted (EVT-154). Triggers drawdown.",
+        "tags": ["Personal Loans"],
+        "parameters": [{"name": "application_id", "in": "path", "required": true, "schema": {"type": "string", "format": "uuid"}}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/AcceptOfferRequest"}}}},
+        "responses": {
+          "201": {"description": "Agreement executed. Drawdown initiated.", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/LoanAgreementDetail"}}}},
+          "409": {"description": "Offer expired or already accepted"}
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "LoanEligibilityResponse": {
+        "type": "object",
+        "properties": {
+          "eligible": {"type": "boolean"},
+          "indicative_apr_min": {"type": "string"},
+          "indicative_apr_max": {"type": "string"},
+          "monthly_repayment_indicative": {"type": "string"},
+          "note": {"type": "string", "description": "CONC-required disclosure: 'Your actual APR will be determined after a full credit assessment'"}
+        }
+      },
+      "LoanApplicationRequest": {
+        "type": "object",
+        "required": ["loan_amount", "term_months", "purpose", "gross_monthly_income", "employment_status", "monthly_committed_expenditure", "secci_acknowledged", "sca_assertion_ref"],
+        "properties": {
+          "loan_amount": {"type": "number", "minimum": 1000, "maximum": 25000},
+          "term_months": {"type": "integer", "minimum": 12, "maximum": 84},
+          "purpose": {"type": "string", "enum": ["home_improvement","vehicle_purchase","debt_consolidation","holiday","education","other"]},
+          "gross_monthly_income": {"type": "number", "description": "Self-declared gross monthly income (GBP)"},
+          "employment_status": {"type": "string", "enum": ["employed_full_time","employed_part_time","self_employed","unemployed","retired","student"]},
+          "employer_name": {"type": "string", "nullable": true},
+          "monthly_committed_expenditure": {"type": "number", "description": "Total monthly committed expenditure (GBP)"},
+          "secci_acknowledged": {"type": "boolean", "description": "Customer confirmed they have received and read the SECCI form — required for CONC compliance"},
+          "sca_assertion_ref": {"type": "string", "description": "SCA assertion reference proving customer authentication"}
+        }
+      },
+      "LoanApplicationSubmittedResponse": {
+        "type": "object",
+        "properties": {
+          "application_id": {"type": "string", "format": "uuid"},
+          "status": {"type": "string", "enum": ["submitted","under_assessment"]},
+          "poll_url": {"type": "string", "description": "URL to poll for assessment result"},
+          "submitted_at": {"type": "string", "format": "date-time"}
+        }
+      },
+      "LoanApplicationDetail": {
+        "type": "object",
+        "properties": {
+          "application_id": {"type": "string", "format": "uuid"},
+          "status": {"type": "string"},
+          "loan_amount": {"type": "string"},
+          "term_months": {"type": "integer"},
+          "offer": {
+            "type": "object",
+            "nullable": true,
+            "description": "Populated once approved",
+            "properties": {
+              "approved_amount": {"type": "string"},
+              "apr": {"type": "string"},
+              "monthly_repayment": {"type": "string"},
+              "total_repayable": {"type": "string"},
+              "offer_expires_at": {"type": "string", "format": "date-time"},
+              "withdrawal_right_days": {"type": "integer", "enum": [14], "description": "CCA 1974 statutory 14-day withdrawal right"}
+            }
+          },
+          "decline_reason": {"type": "string", "nullable": true, "description": "UK GDPR Article 22 disclosure if declined by automated processing"},
+          "human_review_available": {"type": "boolean", "description": "True if customer can request human review of automated decline"}
+        }
+      },
+      "AcceptOfferRequest": {
+        "type": "object",
+        "required": ["agreement_accepted", "sca_assertion_ref", "nominated_account_id"],
+        "properties": {
+          "agreement_accepted": {"type": "boolean", "description": "Customer confirms acceptance of full credit agreement"},
+          "sca_assertion_ref": {"type": "string", "description": "SCA proof for electronic signature"},
+          "nominated_account_id": {"type": "string", "format": "uuid", "description": "Account to receive loan proceeds"}
+        }
+      },
+      "LoanAgreementDetail": {
+        "type": "object",
+        "properties": {
+          "agreement_id": {"type": "string", "format": "uuid"},
+          "loan_amount": {"type": "string"},
+          "apr": {"type": "string"},
+          "monthly_repayment": {"type": "string"},
+          "first_repayment_date": {"type": "string", "format": "date"},
+          "withdrawal_deadline": {"type": "string", "format": "date"},
+          "loan_account_number": {"type": "string"},
+          "status": {"type": "string"}
+        }
+      }
+    },
+    "securitySchemes": {
+      "BearerAuth": {"type": "http", "scheme": "bearer", "bearerFormat": "JWT"}
+    }
+  }
+}

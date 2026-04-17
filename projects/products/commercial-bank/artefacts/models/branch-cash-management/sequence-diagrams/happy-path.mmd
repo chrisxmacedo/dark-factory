@@ -1,0 +1,25 @@
+sequenceDiagram
+    actor Customer as PER-001 (Customer)
+    actor Staff as PER-056 (Branch Staff)
+    participant Retail as SVC-001<br/>Retail Banking Core
+    participant EventBus as SVC-102<br/>Event Bus
+    participant Compliance as SVC-015<br/>Compliance Core
+    participant Audit as SVC-103<br/>Audit & Logging
+
+    Note over Customer,Audit: PH-134 — Cash Deposit Receipt and AML Threshold Reporting
+
+    Customer->>Staff: Present £12,000 cash for deposit; provide ID
+    Note right of Staff: Verify customer identity (CDD)<br/>Count and verify cash via machine
+    Staff->>Retail: POST /branch/cash-deposits {amount: 12000, cash_count_verified: true}
+    Note right of Retail: Create CashDepositTransaction<br/>Amount 12000 > 10000 → aml_threshold_exceeded: true<br/>Generate aml_report_ref
+    Retail->>EventBus: Publish CashDepositAboveThreshold (EVT-166)
+    EventBus->>Compliance: Consume EVT-166 → Queue AML report for MLRO review
+    EventBus->>Audit: Consume EVT-166 → Write immutable AML threshold record
+
+    Note over Customer,Audit: PH-135 — Account Credit and Vault Reconciliation
+
+    Note right of Retail: Credit customer account<br/>Status → credited
+    Retail-->>Staff: 201 Created {credited, aml_threshold_exceeded: true, aml_report_ref}
+    Staff-->>Customer: Issue deposit receipt
+    Staff->>Retail: End of day: vault cash reconciliation
+    Retail-->>Staff: Vault reconciled; surplus prepared for cash centre

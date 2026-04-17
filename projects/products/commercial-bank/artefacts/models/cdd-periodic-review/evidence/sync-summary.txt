@@ -1,0 +1,22 @@
+
+==================================================
+Syncing central model: cdd-periodic-review (JRN-020)
+==================================================
+
+[Entities]
+  [92mCREATED[0m: cdd-review-case.json
+  [92mUPDATED[0m: kyc-assessment.json (added JRN-020)
+
+[Events]
+  [92mADDED[0m: 6 events to central catalogue as jrn20_events
+
+[Service Map]
+  [92mEXTENDED[0m: SVC-015 with JRN-020 additions
+  [92mEXTENDED[0m: SVC-014 with JRN-020 additions
+  [92mEXTENDED[0m: SVC-005 with JRN-020 additions
+  [92mEXTENDED[0m: SVC-103 with JRN-020 additions
+
+==================================================
+Sync complete: 2 entities, 6 events, 4 service updates
+==================================================
+

@@ -71,7 +71,7 @@
         "CoP result is not blocking (PER-001 has confirmed if no_match)"
       ],
       "exit_conditions": [
-        "SanctionsScreeningCompleted (EVT-P02 reused) published with result = clear OR",
+        "SanctionsScreeningCompleted (EVT-180 reused) published with result = clear OR",
         "SanctionsHitDetected (EVT-006 reused) published — payment blocked"
       ],
       "sla": "Sanctions screening must complete within 3,000ms (GOV-005-R02 hard limit)"
@@ -109,7 +109,7 @@
       ],
       "exit_conditions": [
         "CHAPSPaymentSettled (EVT-111) published — RTGS acceptance confirmed, funds irrevocably transferred",
-        "Account debited, AccountDebited (EVT-P06 variant) published",
+        "Account debited, AccountDebited (EVT-184 variant) published",
         "CHAPSPaymentExecutionRecord.settlement_status = settled",
         "MortgageCompletionPaymentConfirmed (EVT-112) published — notifies JRN-006 mortgage completion flow"
       ],

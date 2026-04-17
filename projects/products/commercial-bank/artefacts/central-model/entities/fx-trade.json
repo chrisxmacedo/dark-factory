@@ -17,7 +17,7 @@
     {
       "name": "client_id",
       "type": "UUID",
-      "validation_rule": "Required. FK → BusinessCustomer.business_customer_id (ENT-B001, owned by SVC-005). Immutable. SVC-007 holds no local copy of BusinessCustomer data.",
+      "validation_rule": "Required. FK → BusinessCustomer.business_customer_id (ENT-079, owned by SVC-005). Immutable. SVC-007 holds no local copy of BusinessCustomer data.",
       "source": "PH-059",
       "governed_by": "GOV-005-R01"
     },
@@ -142,7 +142,7 @@
       "description": "FXTrade has one FXSettlement record created at PH-063."
     },
     {
-      "target_entity": "ENT-B001",
+      "target_entity": "ENT-079",
       "type": "many-to-one",
       "description": "FXTrade belongs to one BusinessCustomer via client_id FK. BusinessCustomer owned by SVC-005 — SVC-007 holds no local copy."
     }

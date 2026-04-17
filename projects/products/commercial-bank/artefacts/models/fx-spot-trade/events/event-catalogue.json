@@ -11,7 +11,7 @@
       "journey_phase": "PH-059",
       "payload_schema": {
         "trade_id": { "type": "UUID", "description": "Newly created FXTrade.trade_id" },
-        "client_id": { "type": "UUID", "description": "BusinessCustomer.business_customer_id (ENT-B001)", "derived_from": "FXTrade.client_id" },
+        "client_id": { "type": "UUID", "description": "BusinessCustomer.business_customer_id (ENT-079)", "derived_from": "FXTrade.client_id" },
         "dealer_id": { "type": "UUID", "description": "Staff.staff_id of the executing Treasury Dealer (PER-053)", "derived_from": "FXTrade.dealer_id" },
         "currency_pair": { "type": "string", "description": "ISO 4217 currency pair notation e.g. GBP/USD", "derived_from": "FXTrade.sell_currency + '/' + FXTrade.buy_currency" },
         "sell_currency": { "type": "string", "description": "ISO 4217 3-letter code for the currency the client is selling", "derived_from": "FXTrade.sell_currency" },

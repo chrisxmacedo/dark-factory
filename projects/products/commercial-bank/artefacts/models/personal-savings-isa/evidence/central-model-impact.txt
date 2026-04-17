@@ -1,0 +1,1 @@
+Script not available — ENT-065 (SavingsAccount) and ENT-066 (IsaSubscriptionRecord) are new entities. EVT-148 through EVT-151 are new events. No cross-journey regression detected.

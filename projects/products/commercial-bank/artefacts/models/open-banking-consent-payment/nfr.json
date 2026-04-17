@@ -77,7 +77,7 @@
       "nfrs": [
         {
           "category": "Latency",
-          "requirement": "POST /domestic-payments synchronous response (SVC-017 → SVC-001 → HTTP 201 back to TPP) must complete within 2 seconds P95. SVC-001 must create ENT-008 and publish EVT-P01 within this window.",
+          "requirement": "POST /domestic-payments synchronous response (SVC-017 → SVC-001 → HTTP 201 back to TPP) must complete within 2 seconds P95. SVC-001 must create ENT-008 and publish EVT-179 within this window.",
           "target": "P95 < 2s"
         },
         {
@@ -98,12 +98,12 @@
       "nfrs": [
         {
           "category": "Latency",
-          "requirement": "Sanctions screening (SVC-051 EVT-P02) must complete within 2 seconds P99. Fraud scoring (SVC-013 EVT-P03) must complete within 500ms P99. FPS submission by SVC-009 after PaymentCleared must occur within 5 seconds P99. Total time from EVT-P01 published to EVT-P05 published: < 30 seconds P99 (normal path).",
+          "requirement": "Sanctions screening (SVC-051 EVT-180) must complete within 2 seconds P99. Fraud scoring (SVC-013 EVT-181) must complete within 500ms P99. FPS submission by SVC-009 after PaymentCleared must occur within 5 seconds P99. Total time from EVT-179 published to EVT-183 published: < 30 seconds P99 (normal path).",
           "target": "Sanctions P99 < 2s; Fraud P99 < 500ms; FPS P99 < 5s from PaymentCleared"
         },
         {
           "category": "Reliability",
-          "requirement": "EVT-P01, EVT-P04, EVT-P05 events must be delivered with at-least-once semantics. All event consumers must be idempotent on payment_intent_id. Dead-letter queues must capture events that fail processing after 3 retries.",
+          "requirement": "EVT-179, EVT-182, EVT-183 events must be delivered with at-least-once semantics. All event consumers must be idempotent on payment_intent_id. Dead-letter queues must capture events that fail processing after 3 retries.",
           "target": "Zero event loss; idempotent processing across all consumers"
         },
         {
@@ -167,8 +167,8 @@
     },
     {
       "regulation": "PSR 2017 Reg. 90 — Payment Execution Time",
-      "sla": "Open banking FPS payments must be executed within the next business day at the latest. In practice, FPS provides immediate settlement — SVC-009 must submit within 5 seconds of EVT-P04.",
-      "measurement": "Time from EVT-P01 to EVT-P05 publication",
+      "sla": "Open banking FPS payments must be executed within the next business day at the latest. In practice, FPS provides immediate settlement — SVC-009 must submit within 5 seconds of EVT-182.",
+      "measurement": "Time from EVT-179 to EVT-183 publication",
       "breach_consequence": "Late execution is a PSR 2017 breach; customer entitled to refund of charges. Reported in PSR annual payment statistics."
     },
     {

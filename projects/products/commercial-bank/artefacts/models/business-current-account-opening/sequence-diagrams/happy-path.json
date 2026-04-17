@@ -2,7 +2,7 @@
   "id": "SEQ-JRN004-HP",
   "name": "Happy Path — Business Current Account Opening",
   "journey_id": "JRN-004",
-  "journey_phase": "BPH-001 through BPH-008 (full happy path)",
+  "journey_phase": "PH-139 through PH-146 (full happy path)",
   "description": "Full happy path sequence for JRN-004. A limited company director applies via web portal, Companies House lookup confirms active company with 2 directors and 2 PSC UBOs (both >25%), all 3 required individuals (the applicant + 1 other director + 1 non-director UBO) complete identity verification, automated CDD screening returns CLEAR on all individuals and the company, automated decision approves, business account is provisioned with dual-authorisation configuration, and the business portal is activated. Total elapsed time: 3–4 business days (typical — gated by director/UBO verification completion).",
   "participants": [
     { "id": "PER-002", "name": "Business Customer", "type": "actor" },
@@ -19,7 +19,7 @@
   "steps": [
     {
       "step": 1,
-      "phase": "BPH-001",
+      "phase": "PH-139",
       "from": "PER-002",
       "to": "SVC-017",
       "action": "Submit business account application form",
@@ -36,7 +36,7 @@
     },
     {
       "step": 2,
-      "phase": "BPH-001",
+      "phase": "PH-139",
       "from": "SVC-017",
       "to": "SVC-005",
       "action": "POST /business-applications",
@@ -48,7 +48,7 @@
     },
     {
       "step": 3,
-      "phase": "BPH-001",
+      "phase": "PH-139",
       "from": "SVC-005",
       "to": "SVC-102",
       "action": "Publish BusinessApplicationStarted",
@@ -62,18 +62,18 @@
     },
     {
       "step": 4,
-      "phase": "BPH-001",
+      "phase": "PH-139",
       "from": "SVC-005",
       "to": "SVC-017",
       "action": "201 Created",
       "description": "SVC-005 returns application_id, application_ref, status: in_progress.",
-      "data": { "application_id": "UUID", "application_ref": "BCA-2025-00421", "status": "in_progress", "current_phase": "BPH-002" },
+      "data": { "application_id": "UUID", "application_ref": "BCA-2025-00421", "status": "in_progress", "current_phase": "PH-140" },
       "async": false,
       "http_method": "POST response"
     },
     {
       "step": 5,
-      "phase": "BPH-001",
+      "phase": "PH-139",
       "from": "SVC-017",
       "to": "PER-002",
       "action": "Display application reference",
@@ -82,7 +82,7 @@
     },
     {
       "step": 6,
-      "phase": "BPH-002",
+      "phase": "PH-140",
       "from": "SVC-005",
       "to": "CH_API",
       "action": "GET /company/12345678 + /officers + /persons-with-significant-control",
@@ -95,7 +95,7 @@
     },
     {
       "step": 7,
-      "phase": "BPH-002",
+      "phase": "PH-140",
       "from": "SVC-005",
       "to": "SVC-102",
       "action": "Publish CompaniesHouseVerified",
@@ -109,7 +109,7 @@
     },
     {
       "step": 8,
-      "phase": "BPH-002",
+      "phase": "PH-140",
       "from": "SVC-017",
       "to": "PER-002",
       "action": "Display Companies House verification confirmation",
@@ -118,7 +118,7 @@
     },
     {
       "step": 9,
-      "phase": "BPH-003",
+      "phase": "PH-141",
       "from": "PER-002",
       "to": "SVC-017",
       "action": "Confirm UBO list and provide contact details",
@@ -127,7 +127,7 @@
     },
     {
       "step": 10,
-      "phase": "BPH-003",
+      "phase": "PH-141",
       "from": "SVC-005",
       "to": "SVC-102",
       "action": "Publish UBOIdentified (x2)",
@@ -142,7 +142,7 @@
     },
     {
       "step": 11,
-      "phase": "BPH-003",
+      "phase": "PH-141",
       "from": "SVC-050",
       "to": "SVC-053",
       "action": "Dispatch verification invitations",
@@ -151,7 +151,7 @@
     },
     {
       "step": 12,
-      "phase": "BPH-004",
+      "phase": "PH-142",
       "from": "PER-002",
       "to": "SVC-050",
       "action": "Sarah Thornton completes identity verification (in-app, Day 1)",
@@ -161,7 +161,7 @@
     },
     {
       "step": 13,
-      "phase": "BPH-004",
+      "phase": "PH-142",
       "from": "SVC-050",
       "to": "SVC-102",
       "action": "Publish DirectorVerified (Sarah Thornton)",
@@ -175,7 +175,7 @@
     },
     {
       "step": 14,
-      "phase": "BPH-004",
+      "phase": "PH-142",
       "from": "SVC-050",
       "to": "SVC-102",
       "action": "Publish DirectorVerified (James Chen, Day 2)",
@@ -189,7 +189,7 @@
     },
     {
       "step": 15,
-      "phase": "BPH-004",
+      "phase": "PH-142",
       "from": "SVC-050",
       "to": "SVC-102",
       "action": "Publish DirectorVerified (Priya Kapoor, Day 2)",
@@ -203,11 +203,11 @@
     },
     {
       "step": 16,
-      "phase": "BPH-005",
+      "phase": "PH-143",
       "from": "SVC-014",
       "to": "SVC-051",
       "action": "Company sanctions screening (parallel fan-out begins)",
-      "description": "SVC-014 receives all DirectorVerified events. All verifications now complete. BPH-005 begins. SVC-014 initiates parallel sanctions screening: company name, Sarah Thornton, James Chen, Priya Kapoor — 4 parallel calls to SVC-051.",
+      "description": "SVC-014 receives all DirectorVerified events. All verifications now complete. PH-143 begins. SVC-014 initiates parallel sanctions screening: company name, Sarah Thornton, James Chen, Priya Kapoor — 4 parallel calls to SVC-051.",
       "data": {
         "calls": [
           "POST /screen { entity: 'Example Tech Solutions Ltd', type: company }",
@@ -221,7 +221,7 @@
     },
     {
       "step": 17,
-      "phase": "BPH-005",
+      "phase": "PH-143",
       "from": "SVC-051",
       "to": "SVC-014",
       "action": "Sanctions screening results: all CLEAR",
@@ -234,7 +234,7 @@
     },
     {
       "step": 18,
-      "phase": "BPH-005",
+      "phase": "PH-143",
       "from": "SVC-014",
       "to": "SVC-014",
       "action": "PEP + adverse media screening + risk scoring",
@@ -244,7 +244,7 @@
     },
     {
       "step": 19,
-      "phase": "BPH-005",
+      "phase": "PH-143",
       "from": "SVC-014",
       "to": "SVC-102",
       "action": "Publish BusinessKYCCleared",
@@ -258,7 +258,7 @@
     },
     {
       "step": 20,
-      "phase": "BPH-006",
+      "phase": "PH-144",
       "from": "SVC-005",
       "to": "SVC-005",
       "action": "Automated decision engine runs",
@@ -267,7 +267,7 @@
     },
     {
       "step": 21,
-      "phase": "BPH-006",
+      "phase": "PH-144",
       "from": "SVC-005",
       "to": "SVC-102",
       "action": "Publish BusinessApplicationDecisionMade (APPROVED)",
@@ -281,7 +281,7 @@
     },
     {
       "step": 22,
-      "phase": "BPH-006",
+      "phase": "PH-144",
       "from": "SVC-053",
       "to": "PER-002",
       "action": "Email + In-app: Application approved",
@@ -290,7 +290,7 @@
     },
     {
       "step": 23,
-      "phase": "BPH-007",
+      "phase": "PH-145",
       "from": "SVC-005",
       "to": "SVC-005",
       "action": "POST /business-accounts (internal provisioning)",
@@ -306,7 +306,7 @@
     },
     {
       "step": 24,
-      "phase": "BPH-007",
+      "phase": "PH-145",
       "from": "SVC-005",
       "to": "SVC-102",
       "action": "Publish BusinessAccountOpened + BusinessAccountProvisioned",
@@ -322,7 +322,7 @@
     },
     {
       "step": 25,
-      "phase": "BPH-007",
+      "phase": "PH-145",
       "from": "SVC-017",
       "to": "PER-002",
       "action": "Display account details confirmation screen",
@@ -331,7 +331,7 @@
     },
     {
       "step": 26,
-      "phase": "BPH-008",
+      "phase": "PH-146",
       "from": "PER-002",
       "to": "SVC-017",
       "action": "Set up business portal credentials",
@@ -340,7 +340,7 @@
     },
     {
       "step": 27,
-      "phase": "BPH-008",
+      "phase": "PH-146",
       "from": "SVC-017",
       "to": "SVC-100",
       "action": "Create credentials + register FIDO2 device",
@@ -355,7 +355,7 @@
     },
     {
       "step": 28,
-      "phase": "BPH-008",
+      "phase": "PH-146",
       "from": "PER-002",
       "to": "SVC-017",
       "action": "First login — biometric SCA (Face ID)",
@@ -364,7 +364,7 @@
     },
     {
       "step": 29,
-      "phase": "BPH-008",
+      "phase": "PH-146",
       "from": "SVC-017",
       "to": "SVC-102",
       "action": "Publish BusinessDigitalChannelActivated",
@@ -378,7 +378,7 @@
     },
     {
       "step": 30,
-      "phase": "BPH-008",
+      "phase": "PH-146",
       "from": "SVC-053",
       "to": "PER-002",
       "action": "Welcome email + in-app message",
@@ -387,7 +387,7 @@
     },
     {
       "step": 31,
-      "phase": "BPH-008",
+      "phase": "PH-146",
       "from": "SVC-017",
       "to": "PER-002",
       "action": "Business portal welcome dashboard",
