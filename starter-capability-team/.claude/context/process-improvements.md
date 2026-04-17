@@ -178,6 +178,15 @@ Consequences for artefacts:
     must have a corresponding API contract documenting its published
     REST surface for channels.
 
+## Pipeline ordering constraints
+
+18b. **Scaffolds must be sequential.** The scaffold script assigns
+    globally sequential IDs by scanning existing artefacts. If two
+    journeys are scaffolded before either writes artefacts, they get
+    overlapping ID ranges. Always scaffold → model → validate one
+    journey at a time, or scaffold with reserved ID blocks if parallel
+    modelling is needed.
+
 ## Script inventory
 
 | Script | Purpose | When to run |

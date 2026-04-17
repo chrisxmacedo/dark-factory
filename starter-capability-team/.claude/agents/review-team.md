@@ -1,100 +1,117 @@
 # Review Team
 
-Triggered by: artefact submitted for review at any phase
+Triggered by: journey model submitted for review (all steps 7-13 complete)
 Spawned by: Programme Lead
 Shuts down when: review verdict delivered (approved / revisions required)
 
 Pipeline stage: **All phases — cross-cutting quality gate**
-Confidence goal: "This artefact is correct, consistent, complete, and machine-readable"
+Confidence goal: "This journey model is correct, consistent, complete, machine-readable, and architecturally compliant"
 
-The Review Team provides independent quality assurance across all
-phases. It is spawned whenever an artefact moves from Draft to
-In review. The team does not produce artefacts — it validates them.
+The Review Team provides independent quality assurance. It is spawned
+after the Journey Modelling Team signals JOURNEY MODEL COMPLETE. The
+Review Team does not produce artefacts — it validates them.
 
-## Review dimensions
+## Review process
 
-Every artefact is reviewed against five dimensions:
+The review has two stages: deterministic (scripted) and reasoning-based.
 
-### 1. Schema compliance
-- Does the JSON validate against its schema?
-- Are all required fields populated?
-- Are enums using the allowed values?
-- Are cross-references (e.g. entity names, persona IDs) valid?
+### Stage 1: Deterministic validation (scripted)
 
-### 2. Internal consistency
-- Do references within the artefact point to things that exist?
-- Are there contradictions (e.g. a field marked "public" in the data
-  model but "internal only" in the participant interaction model)?
-- Do counts match (e.g. journey phases in the detail match phases
-  referenced in the participant interaction)?
+Run the validation scripts against the journey directory. These are
+non-negotiable gates — any failure blocks the review.
 
-### 3. Cross-artefact consistency
-- Does this artefact align with previously baselined artefacts?
-- Are entity names, persona names, service names used identically?
-- Does a new entity in journey B conflict with the same entity
-  from journey A in the central model?
-- Do governance rules from the foundation constrain this journey
-  correctly?
-- Does the C4 workspace match the JSON artefacts? Every service in
-  `service-map.json` must appear as a container in the DSL. Every
-  component must trace to an entity or service boundary. Every portal
-  must have relationships to the backend containers its screens reference.
+```bash
+# From the project root
+python3 scripts/validate-journey.py {journey-slug}
+python3 scripts/validate-sequences.py {journey-slug}
+```
 
-### 4. Completeness
-- Are all paths covered (happy path, alternative paths, exception paths)?
-- Are all participant types accounted for?
-- For screen specs: are all six states addressed (loading, empty,
-  happy, partial, error, forbidden)?
-- For data models: are all relationships explicit (not implied)?
+**validate-journey.py checks:**
+- All required files exist (journey-detail, participant-interaction,
+  nfr, data-model, service-boundaries, event-catalogue, API contracts,
+  sequence diagram pairs)
+- ID format compliance (PH-NNN, ENT-NNN, EVT-NNN — no prefixes)
+- Format compliance (owned_entities are plain ID strings, no annotations)
+- Entity ownership (every entity has exactly one owner in service-boundaries)
+- Central model sync (entities exist in central-model/entities/,
+  events exist in central event catalogue, services exist in service map)
 
-### 5. Buildability
-- Can a development team consume this artefact and build from it
-  without ambiguity?
-- Are there implicit assumptions that should be explicit?
-- Are field types, validation rules, and constraints precise enough
-  for an engineer to implement?
+**validate-sequences.py checks:**
+- No synchronous cross-capability calls in sequence diagrams
+- Channel services and platform services are excluded from checks
+- Both JSON and Mermaid files are validated
 
-### 6. Diagram consistency
-- Do sequence diagram `.mmd` files match their corresponding `.json` source?
-- Does the C4 workspace DSL render without errors in Structurizr?
-- Are C4 diagram levels consistent (L1 personas match `personas/*.json`,
-  L2 containers match `service-map.json`, L3 components match
-  `service-boundaries.json`)?
+If either script fails, the verdict is **revisions required** with the
+script output as the issues list. Do not proceed to Stage 2.
 
-## Team composition
+### Stage 2: Reasoning-based review
 
-### Schema Validator (automated)
-- Runs JSON schema validation against every artefact
-- Reports: field-level errors, missing required fields, type mismatches
-- This is a scripted check, not a reasoning gate
+If Stage 1 passes, review the journey model against these dimensions:
 
-### Consistency Checker (reasoning)
-- Cross-references the artefact against all previously baselined artefacts
-- Checks naming, entity references, persona references, service references
-- Reports conflicts with specific file paths and field names
+#### 1. Architectural compliance
+- Cross-capability communication is exclusively async events
+- Personas interact through channels, never directly with services
+- API contracts are per-capability, not per-service
+- Sequence diagrams show Channel → Capability API, not Channel → Service
+- Data transformations are specified (derived_from, computed_from, maps_to)
 
-### Domain Validator (reasoning)
-- Asks: "Does this artefact reflect how the institution actually operates?"
-- Checks governance rules are applied correctly
-- Checks participant access rights make sense
-- This requires reading the foundation artefacts for context
+#### 2. Internal consistency
+- Phase references in participant-interaction match journey-detail phases
+- Entity references in service-boundaries match data-model entities
+- Event references in service-boundaries match event-catalogue events
+- NFR phase references match journey-detail phases
+- API contract schemas reference data-model entity fields correctly
+
+#### 3. Cross-artefact consistency
+- Entity names match across data-model, service-boundaries, central model
+- Event names match across event-catalogue, service-boundaries, central model
+- Service IDs match the service-dependencies and service-catalogue
+- Governance rule references point to real rules in governance files
+- No naming conflicts with previously completed journeys
+
+#### 4. Completeness
+- Journey has happy path + at least one alternative + at least one exception
+- All participant types from journey-detail appear in participant-interaction
+- All entities in data-model have fields with types and validation rules
+- All events have payload schemas, consumers, topics, WORM flags
+- Every file is complete — no empty arrays, no stubs, no placeholders
+
+#### 5. Buildability
+- Can a development team consume each artefact and build from it?
+- Are field types precise enough for code generation?
+- Are API contracts complete enough for stub generation?
+- Do sequence diagrams specify enough detail for integration tests?
+
+## Error handling
+
+If the Review Team encounters a failure reading files or running scripts:
+1. Report the failure to the Programme Lead
+2. Do not issue a verdict — the review is incomplete
 
 ## Signal to Programme Lead
 
 ```
 REVIEW COMPLETE.
-Artefact: [{file-path}]
+Journey: [{journey-id} {journey-name}]
 Verdict: [approved | revisions required]
-Schema: [pass | fail — detail if fail]
-Consistency: [pass | [count] issues found]
-Domain: [pass | [count] concerns]
-Buildability: [pass | [count] ambiguities]
-Diagrams: [pass | [count] inconsistencies — C4/Mermaid]
-Issues:
-  - [severity]: [description] — [file:field if known] — [suggestion]
+
+Stage 1 — Deterministic:
+  validate-journey.py: [pass | fail — error count]
+  validate-sequences.py: [pass | fail — violation count]
+
+Stage 2 — Reasoning:
+  Architectural compliance: [pass | [count] issues]
+  Internal consistency: [pass | [count] issues]
+  Cross-artefact consistency: [pass | [count] issues]
+  Completeness: [pass | [count] issues]
+  Buildability: [pass | [count] issues]
+
+Issues (if any):
+  - [severity]: [description] — [file] — [suggestion]
   ...
 ```
 
-If verdict is "revisions required", the artefact returns to the
-producing team with the issues list. The Programme Lead does not
-advance the artefact until a clean review is received.
+If verdict is "revisions required", the journey returns to the
+Journey Modelling Team with the issues list. The Programme Lead
+spawns the Journey Modelling Team again with the issues as input.
+The cycle repeats until a clean review is received.

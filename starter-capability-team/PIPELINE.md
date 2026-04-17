@@ -89,21 +89,30 @@ cd infra && ./jiractl poll
 ### Phase C (Analytical Modelling)
 
 For each journey in priority order:
-1. Create a journey epic in the MODEL project
-2. Run `scaffold-journey.py {journey-id} {journey-slug}` to create
-   directory, manifest, and template files with next available IDs
-3. Spawn journey-modelling-team.md with the journey name
-   (agent reads `_manifest.json` first)
-4. After each artefact, spawn review-team.md
-5. Wait for JOURNEY MODEL COMPLETE signal
-6. Run `validate-journey.py {journey-slug}` — check files, IDs,
-   entity ownership, central model sync
-7. Run `validate-sequences.py {journey-slug}` — check for
-   cross-capability synchronous call violations
-8. If validation fails → return to team for fixes before Gate 2
-9. Verify Gate 2 (journey stable)
-10. Hand off to DEV as a Deliverable
-11. Select next journey, repeat
+
+1. **Programme Lead**: Create journey epic in MODEL project
+2. **Programme Lead**: Run `scaffold-journey.py {journey-id} {slug}`
+   — creates directory, manifest, templates with next available IDs.
+   Scaffolds must be sequential (one at a time) because IDs are global.
+3. **Programme Lead**: SPAWN journey-modelling-team.md with:
+   - The journey ID and slug
+   - Path to the manifest file
+   - Instruction to read all team docs and process improvements
+4. **Journey Modelling Team**: Produces all artefacts (steps 7-13),
+   updates central model, signals JOURNEY MODEL COMPLETE
+5. **Programme Lead**: On receiving completion signal, SPAWN
+   review-team.md with the journey slug
+6. **Review Team**: Runs Stage 1 (deterministic scripts) then
+   Stage 2 (reasoning review). Signals REVIEW COMPLETE with verdict.
+7. **If verdict = revisions required**: Programme Lead SPAWNS the
+   Journey Modelling Team again with the review issues as input.
+   Cycle repeats until the Review Team approves.
+8. **If verdict = approved**: Programme Lead verifies Gate 2,
+   marks journey Stable, creates DEV Deliverable.
+9. **Programme Lead**: Select next journey, repeat from step 2.
+
+The Programme Lead NEVER produces artefacts, runs validation scripts
+directly, or fixes issues. Every action is performed by a team.
 
 ### Sprint 0 handoff (once, after Gate 1)
 
