@@ -1,0 +1,172 @@
+{
+  "journey_id": "JRN-015",
+  "document_version": "0.1.0",
+  "status": "Draft",
+  "per_phase_nfrs": [
+    {
+      "phase_id": "PH-071",
+      "phase_name": "Review Scheduling and Pre-Meeting Preparation",
+      "latency": {
+        "portfolio_snapshot_load": "< 3 seconds P95 — advisor pre-meeting pack assembly",
+        "review_pack_generation": "< 10 seconds P95 — asynchronous generation acceptable; pack is available T-14 days before meeting",
+        "scheduling_confirmation": "< 2 seconds P95 — meeting booking confirmation"
+      },
+      "throughput": "Peak: annual review cycle creates batch load; up to 500 simultaneous review packs being prepared across the advisor team. Batch pre-generation recommended (T-14 days trigger).",
+      "availability": "99.5% during business hours (08:00–18:00 GMT). Review scheduling is non-critical-path: 1-hour RTO acceptable.",
+      "security": [
+        "Advisor authenticated via internal SSO (SM&CR identity verification)",
+        "Client notified via secure portal and email — no PII in plain-text notification payloads",
+        "Review pack contains classified data: data_classification = pii | financial — encrypted at rest (AES-256) and in transit (TLS 1.3)"
+      ]
+    },
+    {
+      "phase_id": "PH-072",
+      "phase_name": "Client Risk Profile and Objectives Reassessment",
+      "latency": {
+        "questionnaire_response_save": "< 500ms P95 — each response auto-saved to prevent data loss",
+        "risk_score_calculation": "< 2 seconds P95 — updated risk profile computed on questionnaire completion",
+        "suitability_gap_analysis": "< 3 seconds P95 — portfolio gap vs updated risk profile"
+      },
+      "throughput": "Low — single concurrent session per client during the review meeting.",
+      "availability": "99.9% during meeting hours (SLA-critical: review meetings are scheduled and a system failure could interrupt a regulated advisory session). RTO: 15 minutes.",
+      "security": [
+        "Client authenticated via wealth portal SCA (FIDO2/password + device)",
+        "Questionnaire responses are PII — data_classification = pii",
+        "Advisor session also authenticated; dual-party session requires both participants to be logged in",
+        "Audit log entry created for each questionnaire submission (COBS 9A audit trail — WORM)"
+      ]
+    },
+    {
+      "phase_id": "PH-073",
+      "phase_name": "Portfolio Performance Review and Rebalancing Recommendation",
+      "latency": {
+        "performance_dashboard_load": "< 3 seconds P95 — portfolio performance vs benchmark",
+        "ex_post_costs_charges_display": "< 2 seconds P95 — MiFID II required disclosure",
+        "rebalancing_recommendation_generation": "< 5 seconds P95 — model portfolio optimisation",
+        "cross_capability_account_data_request": "< 10 seconds P95 (async event request to CAP-001 — ALT-002 only)",
+        "sddr_label_lookup": "< 1 second P95 — fund sustainability label display"
+      },
+      "throughput": "Low — single advisor-client session.",
+      "availability": "99.9% (same as PH-072 — within active review meeting).",
+      "security": [
+        "Ex-post costs and charges data classified as financial",
+        "Rebalancing recommendation is pre-decision data — advisor-confidential until issued to client",
+        "Cross-capability account summary request (ALT-002): event payload minimised — only account_id, available_balance, account_type returned. Full account history not included."
+      ]
+    },
+    {
+      "phase_id": "PH-074",
+      "phase_name": "Client Instructions and Suitability Report Issuance",
+      "latency": {
+        "suitability_report_generation": "< 10 seconds P95 — PDF generation with all required COBS 9A fields",
+        "suitability_report_delivery": "< 5 seconds P95 — secure portal document delivery",
+        "compliance_event_publish": "< 2 seconds P95 — SuitabilityReportIssued event to CAP-005"
+      },
+      "throughput": "Low — single session. However, compliance event publishing must be reliable: at-least-once delivery guaranteed on SVC-102 (event bus).",
+      "availability": "99.9% (critical: suitability report must be delivered before execution is permitted). RTO: 15 minutes.",
+      "security": [
+        "Suitability report is classified as pii | financial | regulatory — WORM retention 5 years (FCA COBS 9A)",
+        "Client acknowledgement is recorded with timestamp and IP address",
+        "Head of Suitability approval workflow for referred cases (GOV-007-R01 approval chain)",
+        "No trade instruction can be created without SuitabilityRecord.status = issued_and_acknowledged"
+      ]
+    },
+    {
+      "phase_id": "PH-075",
+      "phase_name": "Rebalancing Trade Execution",
+      "latency": {
+        "order_submission_to_custody": "< 5 seconds P95 — order submitted to FNZ/SEI platform",
+        "trade_confirmation_receipt": "< 30 minutes for equity/fund trades (intraday settlement) — async confirmation",
+        "portfolio_update_post_trade": "< 2 seconds P95 after confirmation received"
+      },
+      "throughput": "Up to 20 simultaneous trade orders per client review (typical rebalancing). System must handle concurrent order batches across the full advisor book.",
+      "availability": "99.5% during trading hours (08:00–16:30 GMT for equity markets). Custody platform SLA applies for external dependency. Partial execution state must be persisted durably.",
+      "security": [
+        "Trade execution requires advisor authorisation and client instruction on record",
+        "Each order logged to WORM audit pipeline (MiFID II transaction reporting obligation)",
+        "data_classification = financial",
+        "Custody platform integration uses mTLS (mutual TLS) for all API calls",
+        "MiFID II transaction report submitted to FCA trade repository for each executed order"
+      ]
+    },
+    {
+      "phase_id": "PH-076",
+      "phase_name": "Post-Review Reporting and Consumer Duty Evidence",
+      "latency": {
+        "post_review_report_generation": "< 30 seconds P95 — report may include PDF generation and portfolio chart rendering",
+        "compliance_record_archive": "< 5 seconds P95 — compliance event to CAP-005",
+        "next_review_date_set": "< 1 second P95 — PortfolioReviewRecord update"
+      },
+      "throughput": "Low — post-meeting processing. Batch report generation is acceptable (T+1 day delivery for post-meeting report).",
+      "availability": "99.0% — non-time-critical. RTO: 4 hours.",
+      "security": [
+        "Post-review report classified as pii | financial",
+        "Consumer Duty evidence record classified as regulatory — WORM retention 7 years",
+        "Reports delivered via secure portal only — no plain-text email attachments"
+      ]
+    }
+  ],
+  "cross_cutting_nfrs": [
+    {
+      "id": "NFR-CC-001",
+      "name": "MiFID II Suitability Record Durability",
+      "description": "All suitability assessment records (ENT-047), suitability reports, and client instructions must be persisted durably with at-least-once delivery semantics. Loss of a suitability record is a regulatory breach under COBS 9A. SVC-016 must apply transactional outbox pattern for SuitabilityReportIssued event publication.",
+      "applicable_phases": ["PH-072", "PH-073", "PH-074"],
+      "requirement": "Zero data loss. Idempotent event consumers. Transactional outbox for cross-capability event publication."
+    },
+    {
+      "id": "NFR-CC-002",
+      "name": "Cross-Capability Async Event Latency Budget",
+      "description": "Cross-capability events (SuitabilityReportIssued to CAP-005, ClientAccountDataRequested to CAP-001) must be delivered within 30 seconds end-to-end via SVC-102. The review meeting workflow must not be blocked on cross-capability event responses — async fire-and-continue pattern used.",
+      "applicable_phases": ["PH-073", "PH-074", "PH-076"],
+      "requirement": "Cross-capability event delivery P95 < 30 seconds. Review meeting workflow non-blocking."
+    },
+    {
+      "id": "NFR-CC-003",
+      "name": "Custody Platform Dependency Resilience",
+      "description": "FNZ/SEI custody platform is an external dependency for trade execution (PH-075). The system must handle custody platform unavailability gracefully: queue orders, retry with exponential backoff, alert advisor of delays. Partial execution state must be persisted atomically.",
+      "applicable_phases": ["PH-075"],
+      "requirement": "Custody platform timeout: 30 seconds. Retry: 3 attempts with 5s, 10s, 30s backoff. Order queue durability: orders survive SVC-016 restart."
+    },
+    {
+      "id": "NFR-CC-004",
+      "name": "SM&CR Advisor Identity Verification",
+      "description": "All actions taken by PER-057 (Wealth Advisor) that produce a regulatory record (suitability report issuance, trade instruction, Consumer Duty evidence) must be attributable to a verified SM&CR Certified Function identity. The advisor's FCA register reference must be recorded on each regulated action.",
+      "applicable_phases": ["PH-072", "PH-073", "PH-074", "PH-075", "PH-076"],
+      "requirement": "Advisor fca_register_ref must be non-null on all SuitabilityAssessment, InvestmentInstruction, and ConsumerDutyEvidenceRecord entities."
+    },
+    {
+      "id": "NFR-CC-005",
+      "name": "Data Retention — COBS 9A Five-Year Minimum",
+      "description": "Suitability records and reports must be retained for minimum 5 years from the date of the review. Consumer Duty fair value evidence must be retained for 7 years. All records must be archived in the WORM audit pipeline (SVC-111).",
+      "applicable_phases": ["PH-074", "PH-076"],
+      "requirement": "Suitability records: 5-year WORM retention. Consumer Duty records: 7-year WORM retention. Deletion blocked by WORM policy."
+    }
+  ],
+  "regulatory_slas": [
+    {
+      "regulation": "FCA COBS 9A — MiFID II Suitability",
+      "obligation": "Suitability report must be provided to client BEFORE any investment recommendation is actioned. No execution without a complete and issued suitability report.",
+      "sla": "Suitability report issued in same session as recommendation presentation (PH-073/PH-074 continuous).",
+      "breach_consequence": "FCA enforcement action. Potential prohibition of the Wealth Advisor under SM&CR."
+    },
+    {
+      "regulation": "FCA Consumer Duty (PS22/9) — Fair Value Evidence",
+      "obligation": "Annual service review evidence must be produced for all clients paying ongoing advisory charges.",
+      "sla": "ConsumerDutyEvidenceRecord completed within 5 business days of the review meeting.",
+      "breach_consequence": "Consumer Duty breach. FCA supervisory risk. Potential obligation to remediate fees charged without evidence of service delivery."
+    },
+    {
+      "regulation": "FCA SDR (PS23/16) — ESG Label Display",
+      "obligation": "Sustainability labels for all in-scope funds must be displayed at the point of recommendation and in the suitability report.",
+      "sla": "SDR labels loaded and displayed at the start of PH-073 (< 1 second).",
+      "breach_consequence": "Anti-greenwashing rule breach. FCA enforcement priority."
+    },
+    {
+      "regulation": "MiFID II COBS 9A — Annual Review Frequency",
+      "obligation": "Periodic suitability review minimum annually for ongoing advisory/discretionary clients.",
+      "sla": "Review must be completed within 12 months of prior review date (or earlier if material change trigger fires).",
+      "breach_consequence": "Recurring FCA enforcement focus. Consumer Duty breach if fees charged without annual service delivery."
+    }
+  ]
+}

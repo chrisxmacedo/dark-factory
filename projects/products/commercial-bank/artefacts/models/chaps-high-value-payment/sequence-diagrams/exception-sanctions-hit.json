@@ -1,0 +1,35 @@
+{
+  "diagram_id": "SEQ-JRN028-02",
+  "journey_id": "JRN-028",
+  "path": "EXC-001",
+  "phases_covered": ["PH-077", "PH-078", "PH-079"],
+  "title": "JRN-028 CHAPS — EXC-001 Sanctions Hit",
+  "description": "Exception path: sanctions screening returns a hit. Payment blocked. MLRO alerted. Customer receives generic blocking message (tipping-off prohibition).",
+  "participants": [
+    { "id": "PER001", "label": "PER-001 (Personal Customer)" },
+    { "id": "CH001", "label": "CH-001 (Online Banking Portal)" },
+    { "id": "CAP001", "label": "CAP-001 API (SVC-001)" },
+    { "id": "EventBus", "label": "Event Bus (SVC-102)" },
+    { "id": "CAP003", "label": "CAP-003 API (SVC-009)" },
+    { "id": "CAP005", "label": "CAP-005 (SVC-014 / SVC-051)" },
+    { "id": "EXTCOP", "label": "EXT: Pay.UK CoP Service" },
+    { "id": "OPS001", "label": "OPS-001 (MLRO/Operations)" }
+  ],
+  "steps": [
+    { "seq": 1, "from": "PER001", "to": "CH001", "label": "Enter payment details", "type": "sync", "phase": "PH-077" },
+    { "seq": 2, "from": "CH001", "to": "CAP001", "label": "POST /chaps-payments", "type": "sync", "phase": "PH-077" },
+    { "seq": 3, "from": "CAP001", "to": "EventBus", "label": "publish CHAPSPaymentIntentCreated EVT-108", "type": "async", "phase": "PH-077" },
+    { "seq": 4, "from": "EventBus", "to": "CAP003", "label": "EVT-108 consumed — CoP check", "type": "async", "phase": "PH-078" },
+    { "seq": 5, "from": "CAP003", "to": "EXTCOP", "label": "CoP request", "type": "sync", "phase": "PH-078" },
+    { "seq": 6, "from": "EXTCOP", "to": "CAP003", "label": "result=match", "type": "sync-response", "phase": "PH-078" },
+    { "seq": 7, "from": "CAP003", "to": "EventBus", "label": "publish CHAPSCoPCheckCompleted EVT-109", "type": "async", "phase": "PH-078" },
+    { "seq": 8, "from": "EventBus", "to": "CAP005", "label": "EVT-108 consumed — sanctions screening", "type": "async", "phase": "PH-079" },
+    { "seq": 9, "from": "CAP005", "to": "CAP005", "label": "SVC-014 → SVC-051 — SANCTIONS HIT DETECTED", "type": "internal", "phase": "PH-079" },
+    { "seq": 10, "from": "CAP005", "to": "EventBus", "label": "publish SanctionsHitDetected EVT-006 (MLRO alert)", "type": "async", "phase": "PH-079" },
+    { "seq": 11, "from": "EventBus", "to": "CAP001", "label": "EVT-006 consumed — CHAPSPaymentIntent status → failed", "type": "async", "phase": "PH-079" },
+    { "seq": 12, "from": "EventBus", "to": "OPS001", "label": "MLRO alert: sanctions hit on CHAPS payment", "type": "async", "phase": "PH-079" },
+    { "seq": 13, "from": "CH001", "to": "CAP001", "label": "GET /chaps-payments/{id} — poll status", "type": "sync", "phase": "PH-079" },
+    { "seq": 14, "from": "CAP001", "to": "CH001", "label": "200 status=failed (generic — no sanctions detail)", "type": "sync-response", "phase": "PH-079" },
+    { "seq": 15, "from": "CH001", "to": "PER001", "label": "We are unable to process this payment (generic — tipping-off prohibition POCA 2002 s333A)", "type": "sync", "phase": "PH-079" }
+  ]
+}

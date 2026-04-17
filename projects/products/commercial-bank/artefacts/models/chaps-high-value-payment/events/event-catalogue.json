@@ -1,0 +1,81 @@
+{
+  "journey_id": "JRN-028",
+  "document_version": "0.1.0",
+  "description": "Index of all new events introduced by JRN-028. Full event definitions are in individual files (EVT-108.json through EVT-113.json).",
+  "events": [
+    {
+      "event_id": "EVT-108",
+      "name": "CHAPSPaymentIntentCreated",
+      "source_service": "SVC-001",
+      "source_entity": "ENT-053",
+      "topic": "payments.chaps",
+      "journey_phase": "PH-077",
+      "capability_scope": "cross-capability",
+      "file": "EVT-108.json"
+    },
+    {
+      "event_id": "EVT-109",
+      "name": "CHAPSCoPCheckCompleted",
+      "source_service": "SVC-009",
+      "source_entity": "ENT-052",
+      "topic": "payments.chaps",
+      "journey_phase": "PH-078",
+      "capability_scope": "cross-capability",
+      "file": "EVT-109.json"
+    },
+    {
+      "event_id": "EVT-110",
+      "name": "CHAPSPaymentAuthorised",
+      "source_service": "SVC-001",
+      "source_entity": "ENT-053",
+      "topic": "payments.chaps",
+      "journey_phase": "PH-080",
+      "capability_scope": "cross-capability",
+      "file": "EVT-110.json"
+    },
+    {
+      "event_id": "EVT-111",
+      "name": "CHAPSPaymentSettled",
+      "source_service": "SVC-009",
+      "source_entity": "ENT-052",
+      "topic": "payments.chaps",
+      "journey_phase": "PH-081",
+      "capability_scope": "cross-capability",
+      "file": "EVT-111.json"
+    },
+    {
+      "event_id": "EVT-112",
+      "name": "MortgageCompletionPaymentConfirmed",
+      "source_service": "SVC-009",
+      "source_entity": "ENT-052",
+      "topic": "payments.chaps",
+      "journey_phase": "PH-082",
+      "capability_scope": "cross-capability",
+      "file": "EVT-112.json"
+    },
+    {
+      "event_id": "EVT-113",
+      "name": "CHAPSPaymentFailed",
+      "source_service": "SVC-009",
+      "source_entity": "ENT-052",
+      "topic": "payments.chaps",
+      "journey_phase": "PH-081",
+      "capability_scope": "cross-capability",
+      "file": "EVT-113.json"
+    }
+  ],
+  "reused_events": [
+    {
+      "event_id": "EVT-P02",
+      "name": "SanctionsScreeningCompleted",
+      "source_service": "SVC-051",
+      "note": "Reused from JRN-002 (FPS Faster Payment). Extended to cover CHAPS payment sanctions screening. source_journeys updated in central model."
+    },
+    {
+      "event_id": "EVT-006",
+      "name": "SanctionsHitDetected",
+      "source_service": "SVC-014",
+      "note": "Reused from JRN-001, JRN-002. source_journeys updated in central model."
+    }
+  ]
+}

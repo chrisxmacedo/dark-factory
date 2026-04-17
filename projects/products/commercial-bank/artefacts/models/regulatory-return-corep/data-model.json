@@ -1,0 +1,18 @@
+{
+  "journey_id": "JRN-017",
+  "document_version": "0.1.0",
+  "status": "Draft",
+  "new_entities": [
+    {
+      "id": "ENT-055",
+      "name": "",
+      "description": "",
+      "owning_service": "",
+      "fields": [],
+      "relationships": [],
+      "design_decisions": []
+    }
+  ],
+  "referenced_existing_entities": [],
+  "entity_extensions": []
+}

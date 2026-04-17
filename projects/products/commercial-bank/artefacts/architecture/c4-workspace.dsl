@@ -408,6 +408,12 @@ workspace "UK Commercial Bank" "Architecture model for a UK-regulated commercial
         digitalChannelsService -> obieDirectory "TPP certificate validation" "OBIE Directory API"
         wealthPlatformService -> esgRatingAgency "Consumes ESG rating data for SDR-labelled portfolios" "API / Data Feed"
 
+        /* JRN-015 (HNW Investment Portfolio Review) — L2 cross-capability async event relationships */
+        wealthPlatformService -> eventBus "Publishes PortfolioReviewScheduled (EVT-099), SuitabilityAssessmentUpdated (EVT-100), ClientAccountDataRequested (EVT-101), SuitabilityReportGenerated (EVT-102), SuitabilityReportIssued (EVT-103), InvestmentInstructionReceived (EVT-104), PortfolioReviewCompleted (EVT-105), ConsumerDutyEvidenceCompleted (EVT-106)" "Kafka Producer (mTLS)"
+        eventBus -> wealthPlatformService "Delivers KYCClearanceGranted (EVT-004 from CAP-005), ClientAccountSummaryProvided (EVT-107 from CAP-001)" "Kafka Consumer (mTLS)"
+        eventBus -> kycAmlService "Delivers SuitabilityReportIssued (EVT-103), ConsumerDutyEvidenceCompleted (EVT-106) from CAP-006 for MiFID II compliance registration" "Kafka Consumer (mTLS)"
+        eventBus -> retailBankingCore "Delivers ClientAccountDataRequested (EVT-101) from CAP-006 — triggers account summary provision (EVT-107)" "Kafka Consumer (mTLS)"
+
     }
     /* End model */
 
@@ -427,8 +433,41 @@ workspace "UK Commercial Bank" "Architecture model for a UK-regulated commercial
         container bankingSystem "ContainerView" "Container view of the UK Commercial Bank: channel containers, all domain and cross-cutting service containers, platform and observability containers, and data stores." {
             include *
             autoLayout lr
-            description "Level 2 — Container: channel layer, 17 domain services (SVC-001 to SVC-017), 6 cross-cutting services (SVC-050 to SVC-055), 7 foundation platform services (SVC-100 to SVC-106), 7 observability containers (SVC-107 to SVC-113), and per-service data stores. Component views deferred to Phase C."
+            description "Level 2 — Container: channel layer, 17 domain services (SVC-001 to SVC-017), 6 cross-cutting services (SVC-050 to SVC-055), 7 foundation platform services (SVC-100 to SVC-106), 7 observability containers (SVC-107 to SVC-113), and per-service data stores. JRN-015 adds cross-capability async event relationships: CAP-006 ↔ CAP-005 (suitability compliance) and CAP-006 ↔ CAP-001 (cash balance data)."
         }
+
+        /* ── L3: SVC-016 Wealth Platform Service (JRN-015) ── */
+        /*
+         * Component diagram for SVC-016. Shows internal modules (retained sub-capabilities),
+         * inbound event consumers, outbound event publishers, API controller,
+         * data store, and platform adapters.
+         *
+         * Internal components (all RETAINED sub-capabilities — scored 0/4 on promotion test):
+         *   - Investment Advisory Module (CAP-006.01): suitability assessment, questionnaire engine, report generation
+         *   - Portfolio Management Module (CAP-006.02): portfolio optimisation, rebalancing engine, performance analytics
+         *   - Private Banking Module (CAP-006.03): relationship management, private credit, bespoke services
+         *   - Financial Planning Module (CAP-006.04): cashflow modelling, retirement planning, tax efficiency
+         *
+         * Inbound event consumers (cross-capability):
+         *   - KYCClearanceGranted (EVT-004) from CAP-005/SVC-014
+         *   - ClientAccountSummaryProvided (EVT-107) from CAP-001/SVC-001
+         *
+         * Outbound event publishers (cross-capability):
+         *   - SuitabilityReportIssued (EVT-103) → CAP-005/SVC-014
+         *   - ConsumerDutyEvidenceCompleted (EVT-106) → CAP-005/SVC-014
+         *   - ClientAccountDataRequested (EVT-101) → CAP-001/SVC-001
+         *
+         * External dependency (internal to CAP-006):
+         *   - Custody Platform (FNZ/SEI): trade order submission and confirmation (PH-075)
+         *
+         * Data store: DS-SVC-016 Wealth DB (PostgreSQL)
+         *   - Entities: ENT-046 PortfolioReviewRecord, ENT-047 SuitabilityAssessment,
+         *                ENT-048 RebalancingRecommendation, ENT-049 InvestmentInstruction,
+         *                ENT-050 PortfolioSnapshot, ENT-051 ConsumerDutyEvidenceRecord
+         *
+         * This comment serves as the L3 specification pending full Structurizr component
+         * element support. Formal component elements to be added in Phase D.
+         */
 
 
         /* ── STYLES ── */

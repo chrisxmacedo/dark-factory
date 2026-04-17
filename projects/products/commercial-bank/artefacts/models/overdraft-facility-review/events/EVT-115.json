@@ -1,0 +1,52 @@
+{
+  "event_id": "EVT-115",
+  "name": "OverdraftAssessmentCompleted",
+  "source_service": "SVC-012",
+  "source_service_name": "Risk Engine",
+  "source_entity": null,
+  "source_entity_name": null,
+  "trigger": "SVC-012 completes credit bureau refresh and 12-month behavioural analysis for the account. Publishes assessment results including credit grade, affordability score, and behavioural metrics.",
+  "journey_phase": "PH-084",
+  "journey_phase_name": "Credit Bureau Refresh and Behavioural Analysis",
+  "capability_scope": "cross-capability",
+  "capability_scope_rationale": "Published by CAP-004 (SVC-012); consumed by CAP-001 (SVC-001) for review decision. Crosses CAP-004 -> CAP-001.",
+  "payload_schema": {
+    "review_id": "string (UUID v4) — correlation to OverdraftReview",
+    "account_id": "string (UUID v4)",
+    "customer_id": "string (UUID v4)",
+    "credit_bureau_score": "integer (0-999, nullable if unavailable)",
+    "credit_bureau_refresh_date": "string (ISO 8601 UTC)",
+    "credit_grade": "string enum (A | B | C | D | E | F)",
+    "affordability_score": "decimal (0.0-1.0)",
+    "avg_monthly_credit_turnover": "decimal — GBP",
+    "overdraft_utilisation_days": "integer (0-365)",
+    "missed_payment_count": "integer (>= 0)",
+    "adverse_data_flags": "array of string — CCJ, IVA, bankruptcy flags from bureau",
+    "assessment_status": "string enum (completed | bureau_unavailable)"
+  },
+  "derived_from": {
+    "entity": null,
+    "note": "SVC-012 does not own a persistent entity for this assessment. Results are computed and published as an event. SVC-001 persists them on ENT-054."
+  },
+  "consumers": [
+    {
+      "service": "SVC-001",
+      "service_name": "Retail Banking Core",
+      "action": "Updates OverdraftReview (ENT-054) with assessment results. Proceeds to persistent debt screening (PH-085). If assessment_status = bureau_unavailable, defers review by 7 days."
+    },
+    {
+      "service": "SVC-103",
+      "service_name": "Audit & Logging",
+      "action": "Records credit assessment for audit trail."
+    }
+  ],
+  "ordering_guarantees": "Per-account ordering. Always follows EVT-114 for the same review_id.",
+  "topic": "retail.overdraft",
+  "data_classification": "pii + financial",
+  "worm_audit_pipeline": true,
+  "worm_rationale": "Credit assessment is audit evidence for overdraft affordability assessment (FCA CONC 5A). Must be retained to demonstrate the bank conducted a proper affordability check before renewing/modifying the facility.",
+  "retention": "7 years (WORM audit pipeline — SVC-111)",
+  "cloudevents_type": "uk.bank.risk.overdraft.assessment.completed",
+  "governance_references": ["GOV-001-R03", "GOV-001-R01"],
+  "source_journeys": ["JRN-016"]
+}

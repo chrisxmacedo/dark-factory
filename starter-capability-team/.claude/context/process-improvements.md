@@ -189,8 +189,10 @@ Consequences for artefacts:
 
 ## Script inventory
 
-| Script | Purpose | When to run |
-|--------|---------|-------------|
-| `scaffold-journey.py` | Creates directory, manifest, templates with next available IDs | Before modelling each journey |
-| `validate-journey.py` | Checks files, ID formats, entity ownership, central model sync | After modelling each journey |
-| `validate-sequences.py` | Checks sequence diagrams for cross-capability sync violations | After modelling each journey |
+| Script | Purpose | Run by | When |
+|--------|---------|--------|------|
+| `scaffold-journey.py` | Creates directory, manifest, templates with next available IDs | Programme Lead | Before spawning Journey Modelling Team |
+| `cleanup-ids.py` | Strips annotated IDs from service-boundaries (ENT-012 (Name) → ENT-012) | Journey Modelling Team | After steps 7-13, before signalling complete |
+| `sync-central-model.py` | Copies entities to central-model/entities/, appends events to catalogue, merges service map | Journey Modelling Team | After cleanup, before signalling complete |
+| `validate-journey.py` | Checks files, ID formats, entity ownership, central model sync | Review Team (Stage 1) | First action when reviewing a journey |
+| `validate-sequences.py` | Checks sequence diagrams for cross-capability sync violations | Review Team (Stage 1) | After validate-journey passes |

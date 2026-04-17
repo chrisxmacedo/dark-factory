@@ -1,0 +1,133 @@
+{
+  "journey_id": "JRN-016",
+  "document_version": "0.1.0",
+  "status": "Draft",
+  "per_phase_nfrs": [
+    {
+      "phase_id": "PH-083",
+      "phase_name": "Automated Review Trigger",
+      "latency": {
+        "p95_ms": null,
+        "batch_sla": "All qualifying accounts identified and OverdraftReviewTriggered events published within 2-hour nightly batch window (02:00-04:00 UTC).",
+        "rationale": "Batch process — no real-time latency requirement. Must complete within nightly batch window to allow credit bureau refresh during off-peak hours."
+      },
+      "availability": {
+        "target_percent": 99.5,
+        "rationale": "Batch process tolerance — missed nightly run can be retried the following night. Review is triggered 30 days before expiry, providing buffer for one missed run."
+      },
+      "throughput": {
+        "accounts_per_batch": 50000,
+        "rationale": "Mid-tier bank with 500k overdraft accounts: ~1,400 reviews per day (500k / 365). Peak at quarter-end when many facilities share anniversary dates. Batch must handle peak of up to 50k reviews per night."
+      },
+      "security": {
+        "data_classification": "financial",
+        "encryption": "AES-256 at rest. No PII transmitted in batch trigger events — only account_id and review parameters."
+      }
+    },
+    {
+      "phase_id": "PH-084",
+      "phase_name": "Credit Bureau Refresh and Behavioural Analysis",
+      "latency": {
+        "p95_ms": 5000,
+        "p99_ms": 10000,
+        "rationale": "Credit bureau API call P95 is 3s (Experian Connect API SLA). Behavioural analysis against 12-month transaction history adds 1-2s for database query. Total P95 target 5s. Acceptable as this is a background batch process with no customer waiting."
+      },
+      "availability": {
+        "target_percent": 99.0,
+        "fallback": "If credit bureau unavailable: retry after 30 seconds. If still unavailable: defer review by 7 days (EXC-003). No customer impact — review is 30 days before expiry."
+      },
+      "security": {
+        "data_classification": "pii + financial",
+        "note": "Credit bureau data contains PII (name, address, financial history). SVC-012 → EXT-BUREAU call uses mTLS. Bureau data retained per data retention policy (credit reference data: 6 years per ICO guidance)."
+      }
+    },
+    {
+      "phase_id": "PH-085",
+      "phase_name": "Persistent Debt Screening",
+      "latency": {
+        "p95_ms": 2000,
+        "rationale": "18-month transaction aggregation query against Account transaction ledger. Index-supported query on account_id + date range. P95 2s is sufficient for batch processing."
+      },
+      "availability": {
+        "target_percent": 99.5,
+        "rationale": "Same-service call within SVC-001. High availability as it queries the account's own transaction ledger."
+      },
+      "security": {
+        "data_classification": "financial",
+        "audit": "Persistent debt calculation results written to WORM audit pipeline. FCA CONC 6.7 requires evidence of screening and intervention timing."
+      }
+    },
+    {
+      "phase_id": "PH-086",
+      "phase_name": "Review Decision and Terms Update",
+      "latency": {
+        "p95_ms": 500,
+        "rationale": "Decision logic is deterministic rule evaluation against credit assessment, behavioural score, and persistent debt status. No external call. Sub-500ms."
+      },
+      "availability": {
+        "target_percent": 99.5,
+        "rationale": "Core service write operation. Standard SVC-001 availability target."
+      },
+      "security": {
+        "data_classification": "financial",
+        "audit": "Decision record written to WORM audit pipeline. Consumer Duty outcome evidence saved per GOV-001-R01."
+      }
+    },
+    {
+      "phase_id": "PH-087",
+      "phase_name": "Customer Notification",
+      "latency": {
+        "p95_ms": 3000,
+        "rationale": "Notification dispatch via SVC-053 is async. In-app update near-real-time (< 1s). Email and push notification delivery depends on external provider SLA (< 30s)."
+      },
+      "availability": {
+        "target_percent": 99.0,
+        "rationale": "Notification delivery is a soft dependency. Review decision has already been made and terms updated. Notification failure does not affect the facility status."
+      },
+      "security": {
+        "data_classification": "financial + pii",
+        "note": "Notification content includes overdraft terms and customer name. Email notifications must not include full account number — use last 4 digits only."
+      }
+    }
+  ],
+  "cross_cutting_nfrs": [
+    {
+      "category": "Idempotency",
+      "requirement": "Review trigger must be idempotent on account_id + review_period. Duplicate batch runs must not create multiple OverdraftReview records for the same account in the same review cycle."
+    },
+    {
+      "category": "Audit trail",
+      "requirement": "Complete audit trail from trigger through to customer notification. Each phase generates an audit event written to SVC-111 (WORM). Required for FCA CONC 6.7 persistent debt compliance evidence and Consumer Duty (GOV-001-R01) outcome tracking. Minimum 7-year retention."
+    },
+    {
+      "category": "Data residency",
+      "requirement": "Credit bureau data and affordability assessments must remain within UK jurisdiction. Bureau API calls must route through UK-resident endpoints."
+    },
+    {
+      "category": "Batch resilience",
+      "requirement": "If the nightly batch fails mid-run, it must be resumable from the point of failure. Already-processed accounts must not be re-processed. Checkpoint-based batch processing required."
+    }
+  ],
+  "regulatory_slas": [
+    {
+      "rule": "GOV-001-R03",
+      "obligation": "Overdraft review must be completed before facility expiry date",
+      "sla": "Review triggered 30 days before expiry. Decision and notification must be completed at least 14 days before expiry to give customers time to make alternative arrangements."
+    },
+    {
+      "rule": "GOV-001-R03",
+      "obligation": "Persistent debt intervention at 18-month trigger",
+      "sla": "CONC 6.7 intervention communication must be sent within 7 days of the persistent debt determination."
+    },
+    {
+      "rule": "GOV-001-R03",
+      "obligation": "Facility suspension at 36-month persistent debt",
+      "sla": "Facility must be suspended if persistent debt is not resolved after 36 months. Suspension effective immediately with notification."
+    },
+    {
+      "rule": "GOV-001-R01",
+      "obligation": "Consumer Duty fair value outcome evidence",
+      "sla": "Fair value assessment must be documented for every overdraft review. Board attestation that overdraft products deliver fair value (annual)."
+    }
+  ]
+}

@@ -1,0 +1,433 @@
+{
+  "journey_id": "JRN-015",
+  "sequence_id": "happy-path",
+  "name": "HNW Investment Portfolio Review — Happy Path",
+  "description": "Full annual review: PH-071 scheduling → PH-072 risk reassessment → PH-073 recommendation → PH-074 instruction and suitability report → PH-075 trade execution → PH-076 post-review reporting. No material change in risk profile. Client approves full rebalancing.",
+  "participants": [
+    {"id": "PER004", "label": "PER-004 HNW Client", "type": "persona"},
+    {"id": "PER057", "label": "PER-057 Wealth Advisor", "type": "persona"},
+    {"id": "WAPORTAL", "label": "Wealth Advisor Portal (Channel)", "type": "channel"},
+    {"id": "WCPORTAL", "label": "Wealth Client Portal (Channel)", "type": "channel"},
+    {"id": "CAP006", "label": "CAP-006 API (SVC-016 Wealth Platform)", "type": "capability"},
+    {"id": "SVC102", "label": "SVC-102 Event Bus", "type": "infrastructure"},
+    {"id": "CAP005", "label": "CAP-005 API (SVC-014 KYC/AML)", "type": "capability"},
+    {"id": "SVC053", "label": "SVC-053 Notification Service", "type": "service"},
+    {"id": "CUSTODY", "label": "Custody Platform (FNZ/SEI — ext)", "type": "external_system"}
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "phase": "PH-071",
+      "from": "SVC102",
+      "to": "CAP006",
+      "action": "Delivers EVT-004: KYCClearanceGranted [CROSS-CAPABILITY ▶ from CAP-005]",
+      "async": true,
+      "data": "customer_id=PER-004-UUID, kyc_status=current, cleared_at=2026-04-08T09:00:00Z",
+      "note": "SVC-016 checks KYC is current before allowing review to be scheduled. Reuses existing EVT-004."
+    },
+    {
+      "step": 2,
+      "phase": "PH-071",
+      "from": "PER057",
+      "to": "WAPORTAL",
+      "action": "Schedules annual portfolio review for client",
+      "async": false,
+      "data": "client_id, review_type=annual, scheduled_at=2026-04-22T10:00:00Z"
+    },
+    {
+      "step": 3,
+      "phase": "PH-071",
+      "from": "WAPORTAL",
+      "to": "CAP006",
+      "action": "POST /wealth/v1/portfolio-reviews",
+      "async": false,
+      "data": "client_id=PER-004-UUID, review_type=annual, scheduled_at=2026-04-22T10:00:00Z"
+    },
+    {
+      "step": 4,
+      "phase": "PH-071",
+      "from": "CAP006",
+      "to": "CAP006",
+      "action": "Creates ENT-046 (PortfolioReviewRecord) status=scheduled; creates pre-review ENT-050 (PortfolioSnapshot)",
+      "async": false,
+      "data": "review_id=d1e2f3a4-..., total_market_value_gbp=1,250,000, snapshot_type=pre_review"
+    },
+    {
+      "step": 5,
+      "phase": "PH-071",
+      "from": "CAP006",
+      "to": "SVC102",
+      "action": "Publishes EVT-099: PortfolioReviewScheduled",
+      "async": true,
+      "data": "review_id, client_id, scheduled_at, review_type=annual"
+    },
+    {
+      "step": 6,
+      "phase": "PH-071",
+      "from": "CAP006",
+      "to": "WAPORTAL",
+      "action": "201 Created — review_id, status=scheduled",
+      "async": false,
+      "data": "review_id=d1e2f3a4-..., scheduled_at=2026-04-22T10:00:00Z"
+    },
+    {
+      "step": 7,
+      "phase": "PH-071",
+      "from": "SVC102",
+      "to": "SVC053",
+      "action": "Delivers EVT-099 → dispatch review confirmation to PER-004",
+      "async": true,
+      "data": "channel=email + portal, content=annual review meeting confirmation + pre-meeting questionnaire link"
+    },
+    {
+      "step": 8,
+      "phase": "PH-072",
+      "from": "PER004",
+      "to": "WCPORTAL",
+      "action": "Completes pre-meeting suitability questionnaire online",
+      "async": false,
+      "data": "questionnaire_version=v3.2, loss_tolerance=7, investment_horizon=10, investment_knowledge=8, financial_situation_stability=9, esg_preference_level=consider"
+    },
+    {
+      "step": 9,
+      "phase": "PH-072",
+      "from": "WCPORTAL",
+      "to": "CAP006",
+      "action": "POST /wealth/v1/portfolio-reviews/{review_id}/suitability-assessment",
+      "async": false,
+      "data": "questionnaire_version=v3.2, questionnaire_responses={...}, sustainability_preferences={esg_preference_level: consider, excluded_sectors: [weapons, tobacco]}"
+    },
+    {
+      "step": 10,
+      "phase": "PH-072",
+      "from": "CAP006",
+      "to": "CAP006",
+      "action": "Creates ENT-047 (SuitabilityAssessment); computes updated_risk_profile_score=7 (unchanged from prior score=7); risk_profile_changed=false; runs suitability gap analysis — no gaps",
+      "async": false,
+      "data": "assessment_id=b8c7d6e5-..., updated_risk_profile_score=7, risk_profile_changed=false, suitability_gap_flags=[], head_of_suitability_required=false"
+    },
+    {
+      "step": 11,
+      "phase": "PH-072",
+      "from": "CAP006",
+      "to": "SVC102",
+      "action": "Publishes EVT-100: SuitabilityAssessmentUpdated",
+      "async": true,
+      "data": "review_id, assessment_id, risk_profile_changed=false, status=gap_analysis_complete"
+    },
+    {
+      "step": 12,
+      "phase": "PH-072",
+      "from": "CAP006",
+      "to": "WCPORTAL",
+      "action": "201 Created — assessment_id, updated_risk_profile_score=7, status=gap_analysis_complete",
+      "async": false,
+      "data": "assessment_id=b8c7d6e5-..."
+    },
+    {
+      "step": 13,
+      "phase": "PH-073",
+      "from": "PER057",
+      "to": "WAPORTAL",
+      "action": "Requests rebalancing recommendation generation",
+      "async": false,
+      "data": "review_id, cash_balance_requested=false"
+    },
+    {
+      "step": 14,
+      "phase": "PH-073",
+      "from": "WAPORTAL",
+      "to": "CAP006",
+      "action": "POST /wealth/v1/portfolio-reviews/{review_id}/rebalancing-recommendation",
+      "async": false,
+      "data": "cash_balance_requested=false"
+    },
+    {
+      "step": 15,
+      "phase": "PH-073",
+      "from": "CAP006",
+      "to": "CAP006",
+      "action": "Creates ENT-048 (RebalancingRecommendation): runs portfolio optimisation model; retrieves ex-post costs/charges; loads SDR labels for in-scope funds",
+      "async": false,
+      "data": "recommendation_id=a7b6c5d4-..., proposed_trades=[{sell: Global Equity Fund 10%, buy: Infrastructure Fund 10%, sddr_label: sustainability_focus}], target_allocation={equities:45%, bonds:35%, alternatives:15%, cash:5%}, ex_post_total_cost_pct=0.85"
+    },
+    {
+      "step": 16,
+      "phase": "PH-073",
+      "from": "CAP006",
+      "to": "WAPORTAL",
+      "action": "201 Created — RebalancingRecommendation",
+      "async": false,
+      "data": "recommendation_id=a7b6c5d4-..., proposed_trades=[...], performance_1yr_pct=+6.2%, benchmark_return_1yr_pct=+5.8%, ex_post_costs_charges={total_cost_pct: 0.85}"
+    },
+    {
+      "step": 17,
+      "phase": "PH-073",
+      "from": "PER057",
+      "to": "WAPORTAL",
+      "action": "Reviews recommendation, accepts without change, presents to PER-004 via portal",
+      "async": false,
+      "data": "Advisor presents: +6.2% vs +5.8% benchmark, proposed rebalancing, ex-post costs 0.85%, SDR label on new fund"
+    },
+    {
+      "step": 18,
+      "phase": "PH-074",
+      "from": "PER057",
+      "to": "WAPORTAL",
+      "action": "Issues suitability report to client",
+      "async": false,
+      "data": "review_id, head_of_suitability_signoff_ref=null (not required)"
+    },
+    {
+      "step": 19,
+      "phase": "PH-074",
+      "from": "WAPORTAL",
+      "to": "CAP006",
+      "action": "POST /wealth/v1/portfolio-reviews/{review_id}/suitability-assessment/issue",
+      "async": false,
+      "data": "review_id"
+    },
+    {
+      "step": 20,
+      "phase": "PH-074",
+      "from": "CAP006",
+      "to": "CAP006",
+      "action": "Generates suitability report PDF; stores at S3 URI; sets ENT-047.status=issued; sets ENT-047.issued_at",
+      "async": false,
+      "data": "suitability_report_document_ref=s3://wealth-docs/reviews/d1e2f3a4-suitability-report.pdf, issued_at=2026-04-22T11:55:00Z"
+    },
+    {
+      "step": 21,
+      "phase": "PH-074",
+      "from": "CAP006",
+      "to": "SVC102",
+      "action": "Publishes EVT-102: SuitabilityReportGenerated",
+      "async": true,
+      "data": "review_id, assessment_id, issued_at"
+    },
+    {
+      "step": 22,
+      "phase": "PH-074",
+      "from": "CAP006",
+      "to": "SVC102",
+      "action": "Publishes EVT-103: SuitabilityReportIssued [CROSS-CAPABILITY ▶ to CAP-005]",
+      "async": true,
+      "data": "assessment_id, review_id, client_id, advisor_fca_register_ref=IND654321, review_type=annual, risk_profile_score=7, issued_at=2026-04-22T11:55:00Z"
+    },
+    {
+      "step": 23,
+      "phase": "PH-074",
+      "from": "SVC102",
+      "to": "CAP005",
+      "action": "Delivers EVT-103: SuitabilityReportIssued [◀ CROSS-CAPABILITY received by CAP-005]",
+      "async": true,
+      "data": "SVC-014 creates SuitabilityRecord in compliance store; compliance audit trail updated"
+    },
+    {
+      "step": 24,
+      "phase": "PH-074",
+      "from": "SVC102",
+      "to": "SVC053",
+      "action": "Delivers EVT-102 → dispatch suitability report notification to PER-004",
+      "async": true,
+      "data": "channel=secure portal + email, content=suitability report ready for review"
+    },
+    {
+      "step": 25,
+      "phase": "PH-074",
+      "from": "PER004",
+      "to": "WCPORTAL",
+      "action": "Reviews and acknowledges suitability report",
+      "async": false,
+      "data": "review_id"
+    },
+    {
+      "step": 26,
+      "phase": "PH-074",
+      "from": "WCPORTAL",
+      "to": "CAP006",
+      "action": "POST /wealth/v1/portfolio-reviews/{review_id}/suitability-assessment/acknowledge",
+      "async": false,
+      "data": "review_id"
+    },
+    {
+      "step": 27,
+      "phase": "PH-074",
+      "from": "CAP006",
+      "to": "CAP006",
+      "action": "Sets ENT-047.client_acknowledged_at; status=acknowledged",
+      "async": false,
+      "data": "client_acknowledged_at=2026-04-22T12:10:00Z"
+    },
+    {
+      "step": 28,
+      "phase": "PH-074",
+      "from": "PER004",
+      "to": "WCPORTAL",
+      "action": "Submits investment instruction: proceed_full",
+      "async": false,
+      "data": "instruction_type=proceed_full"
+    },
+    {
+      "step": 29,
+      "phase": "PH-074",
+      "from": "WCPORTAL",
+      "to": "CAP006",
+      "action": "POST /wealth/v1/portfolio-reviews/{review_id}/investment-instruction",
+      "async": false,
+      "data": "instruction_type=proceed_full"
+    },
+    {
+      "step": 30,
+      "phase": "PH-074",
+      "from": "CAP006",
+      "to": "CAP006",
+      "action": "Creates ENT-049 (InvestmentInstruction); sets client_decision=approved on ENT-048",
+      "async": false,
+      "data": "instruction_id=e5f6a7b8-..., instruction_type=proceed_full, instructions_given_at=2026-04-22T12:15:00Z, execution_status=in_progress"
+    },
+    {
+      "step": 31,
+      "phase": "PH-074",
+      "from": "CAP006",
+      "to": "SVC102",
+      "action": "Publishes EVT-104: InvestmentInstructionReceived",
+      "async": true,
+      "data": "instruction_id, review_id, client_id, instruction_type=proceed_full, instructions_given_at"
+    },
+    {
+      "step": 32,
+      "phase": "PH-075",
+      "from": "CAP006",
+      "to": "CUSTODY",
+      "action": "Submits rebalancing orders: SELL Global Equity Fund £125,000 + BUY Infrastructure Fund £125,000",
+      "async": false,
+      "data": "orders=[{action:sell, instrument: GB00BXYZ1234, amount_gbp: 125000}, {action:buy, instrument: GB00ABCD5678, amount_gbp: 125000}], client_mandate_ref"
+    },
+    {
+      "step": 33,
+      "phase": "PH-075",
+      "from": "CUSTODY",
+      "to": "CAP006",
+      "action": "Order acknowledgement — custody_order_refs assigned",
+      "async": false,
+      "data": "custody_order_ref_sell=CRF-20260422-001, custody_order_ref_buy=CRF-20260422-002, status=submitted"
+    },
+    {
+      "step": 34,
+      "phase": "PH-075",
+      "from": "CUSTODY",
+      "to": "CAP006",
+      "action": "Trade confirmation callbacks received (async) — both orders executed",
+      "async": true,
+      "data": "CRF-20260422-001 status=confirmed, execution_price=£98.45 per unit; CRF-20260422-002 status=confirmed, execution_price=£112.30 per unit; both MiFIR UTIs assigned"
+    },
+    {
+      "step": 35,
+      "phase": "PH-075",
+      "from": "CAP006",
+      "to": "CAP006",
+      "action": "Updates ENT-049 orders[*].status=confirmed; execution_status=fully_executed; post-rebalancing ENT-050 (PortfolioSnapshot) created",
+      "async": false,
+      "data": "execution_completed_at=2026-04-22T14:30:00Z, mifid_transaction_refs=[UTI-2026-000099101, UTI-2026-000099102]"
+    },
+    {
+      "step": 36,
+      "phase": "PH-075",
+      "from": "CAP006",
+      "to": "SVC102",
+      "action": "Publishes EVT-105: PortfolioReviewCompleted (preliminary — execution confirmed)",
+      "async": true,
+      "data": "review_id, instruction_id, execution_status=fully_executed, executed_at"
+    },
+    {
+      "step": 37,
+      "phase": "PH-075",
+      "from": "SVC102",
+      "to": "SVC053",
+      "action": "Delivers EVT-105 → dispatch trade execution confirmation to PER-004 and PER-057",
+      "async": true,
+      "data": "channel=email + portal, content=rebalancing execution confirmed, trade summary"
+    },
+    {
+      "step": 38,
+      "phase": "PH-076",
+      "from": "PER057",
+      "to": "WAPORTAL",
+      "action": "Validates post-review report and completes the review",
+      "async": false,
+      "data": "review_id"
+    },
+    {
+      "step": 39,
+      "phase": "PH-076",
+      "from": "WAPORTAL",
+      "to": "CAP006",
+      "action": "POST /wealth/v1/portfolio-reviews/{review_id}/complete",
+      "async": false,
+      "data": "review_id"
+    },
+    {
+      "step": 40,
+      "phase": "PH-076",
+      "from": "CAP006",
+      "to": "CAP006",
+      "action": "Creates ENT-051 (ConsumerDutyEvidenceRecord); sets PortfolioReviewRecord.status=completed; next_review_date=2027-04-22",
+      "async": false,
+      "data": "evidence_id=f9a0b1c2-..., service_activities=[annual_review_meeting, portfolio_performance_presentation, suitability_report, rebalancing_execution], fair_value_assessment_score=fair_value_met"
+    },
+    {
+      "step": 41,
+      "phase": "PH-076",
+      "from": "CAP006",
+      "to": "SVC102",
+      "action": "Publishes EVT-106: ConsumerDutyEvidenceCompleted [CROSS-CAPABILITY ▶ to CAP-005]",
+      "async": true,
+      "data": "evidence_id, client_id, period_start=2025-04-22, period_end=2026-04-22, fair_value_assessment_score=fair_value_met, remediation_required=false"
+    },
+    {
+      "step": 42,
+      "phase": "PH-076",
+      "from": "SVC102",
+      "to": "CAP005",
+      "action": "Delivers EVT-106: ConsumerDutyEvidenceCompleted [◀ CROSS-CAPABILITY received by CAP-005]",
+      "async": true,
+      "data": "SVC-014 creates ConsumerDutyComplianceRecord in compliance store"
+    },
+    {
+      "step": 43,
+      "phase": "PH-076",
+      "from": "SVC102",
+      "to": "SVC053",
+      "action": "Delivers EVT-106 → dispatch post-review report to PER-004",
+      "async": true,
+      "data": "channel=secure portal + email, content=annual review complete, updated portfolio report, next review date=2027-04-22"
+    }
+  ],
+  "cross_capability_interactions": [
+    {
+      "step": 1,
+      "from_capability": "CAP-005",
+      "to_capability": "CAP-006",
+      "event": "EVT-004 (KYCClearanceGranted)",
+      "mechanism": "async event via SVC-102",
+      "note": "Reuses existing event. SVC-016 validates KYC is current before scheduling review."
+    },
+    {
+      "step": 22,
+      "from_capability": "CAP-006",
+      "to_capability": "CAP-005",
+      "event": "EVT-103 (SuitabilityReportIssued)",
+      "mechanism": "async event via SVC-102",
+      "note": "Cross-capability compliance record registration. SVC-014 creates SuitabilityRecord."
+    },
+    {
+      "step": 41,
+      "from_capability": "CAP-006",
+      "to_capability": "CAP-005",
+      "event": "EVT-106 (ConsumerDutyEvidenceCompleted)",
+      "mechanism": "async event via SVC-102",
+      "note": "Consumer Duty fair value evidence registered in CAP-005 compliance store."
+    }
+  ]
+}

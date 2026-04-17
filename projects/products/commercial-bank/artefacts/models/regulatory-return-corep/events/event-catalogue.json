@@ -1,0 +1,22 @@
+{
+  "journey_id": "JRN-017",
+  "document_version": "0.1.0",
+  "events": [
+    {
+      "event_id": "EVT-119",
+      "name": "",
+      "source_service": "",
+      "source_entity": "",
+      "trigger": "",
+      "journey_phase": "",
+      "payload_schema": {},
+      "consumers": [],
+      "ordering_guarantees": "",
+      "topic": "",
+      "data_classification": "",
+      "worm_audit_pipeline": true,
+      "retention": "",
+      "cloudevents_type": ""
+    }
+  ]
+}

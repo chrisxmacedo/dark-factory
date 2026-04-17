@@ -98,12 +98,21 @@ For each journey in priority order:
    - The journey ID and slug
    - Path to the manifest file
    - Instruction to read all team docs and process improvements
-4. **Journey Modelling Team**: Produces all artefacts (steps 7-13),
-   updates central model, signals JOURNEY MODEL COMPLETE
+4. **Journey Modelling Team**:
+   a. Reads `_manifest.json` for ID ranges and format rules
+   b. Produces all artefacts (steps 7-13)
+   c. Runs `cleanup-ids.py {slug}` — strips annotated IDs
+   d. Runs `sync-central-model.py {slug}` — syncs entities, events,
+      service map to central model (deterministic, replaces manual sync)
+   e. Signals JOURNEY MODEL COMPLETE (confirms scripts ran)
 5. **Programme Lead**: On receiving completion signal, SPAWN
    review-team.md with the journey slug
-6. **Review Team**: Runs Stage 1 (deterministic scripts) then
-   Stage 2 (reasoning review). Signals REVIEW COMPLETE with verdict.
+6. **Review Team**:
+   a. Stage 1: Runs `validate-journey.py {slug}` and
+      `validate-sequences.py {slug}` (deterministic gates)
+   b. Stage 2: Reasoning review (architectural, consistency,
+      completeness, buildability)
+   c. Signals REVIEW COMPLETE with verdict
 7. **If verdict = revisions required**: Programme Lead SPAWNS the
    Journey Modelling Team again with the review issues as input.
    Cycle repeats until the Review Team approves.
@@ -113,6 +122,16 @@ For each journey in priority order:
 
 The Programme Lead NEVER produces artefacts, runs validation scripts
 directly, or fixes issues. Every action is performed by a team.
+
+## Script assignment summary
+
+| Script | Run by | When |
+|--------|--------|------|
+| `scaffold-journey.py` | Programme Lead | Before spawning Journey Modelling Team |
+| `cleanup-ids.py` | Journey Modelling Team | After steps 7-13, before signalling complete |
+| `sync-central-model.py` | Journey Modelling Team | After cleanup, before signalling complete |
+| `validate-journey.py` | Review Team (Stage 1) | First action on receiving journey for review |
+| `validate-sequences.py` | Review Team (Stage 1) | After validate-journey passes |
 
 ### Sprint 0 handoff (once, after Gate 1)
 

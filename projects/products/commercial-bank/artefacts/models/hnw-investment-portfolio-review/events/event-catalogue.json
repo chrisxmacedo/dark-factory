@@ -1,0 +1,379 @@
+{
+  "journey_id": "JRN-015",
+  "document_version": "0.1.0",
+  "events": [
+    {
+      "event_id": "EVT-099",
+      "name": "PortfolioReviewScheduled",
+      "source_service": "SVC-016",
+      "source_service_name": "Wealth Platform Service",
+      "source_entity": "ENT-046",
+      "source_entity_name": "PortfolioReviewRecord",
+      "trigger": "Wealth Advisor creates a new portfolio review record (POST /wealth/v1/portfolio-reviews). PortfolioReviewRecord.status transitions to 'scheduled'. Published after the database write is committed (transactional outbox pattern).",
+      "journey_phase": "PH-071",
+      "journey_phase_name": "Review Scheduling and Pre-Meeting Preparation",
+      "capability_scope": "cross-capability",
+      "capability_scope_rationale": "Published by CAP-006 (Wealth Platform / SVC-016); consumed by Notification Service (SVC-053) to dispatch client review confirmation. Also consumed by CAP-005 for regulatory activity monitoring.",
+      "payload_schema": {
+        "review_id": "string (UUID v4) — PortfolioReviewRecord identifier; immutable",
+        "client_id": "string (UUID v4) — customer reference",
+        "advisor_id": "string — advisor identity reference",
+        "advisor_fca_register_ref": "string — SM&CR FCA register reference",
+        "review_type": "string enum (annual | material_change_triggered | ad_hoc_client_request)",
+        "scheduled_at": "string (ISO 8601 UTC) — scheduled meeting datetime",
+        "occurred_at": "string (ISO 8601 UTC) — event publication timestamp"
+      },
+      "derived_from": {
+        "entity": "ENT-046 (PortfolioReviewRecord)",
+        "field_mappings": [
+          {"entity_field": "review_id", "event_field": "review_id"},
+          {"entity_field": "client_id", "event_field": "client_id"},
+          {"entity_field": "advisor_id", "event_field": "advisor_id"},
+          {"entity_field": "advisor_fca_register_ref", "event_field": "advisor_fca_register_ref"},
+          {"entity_field": "review_type", "event_field": "review_type"},
+          {"entity_field": "scheduled_at", "event_field": "scheduled_at"}
+        ],
+        "excluded_fields": ["status", "prior_review_id", "contact_attempts", "created_at"],
+        "masking": "None required — no sensitive PII in this event beyond client_id (pseudonymous)"
+      },
+      "consumers": [
+        {"service": "SVC-053", "service_name": "Notification Service", "action": "Dispatches review confirmation email and portal notification to client; includes pre-meeting questionnaire link"},
+        {"service": "SVC-103", "service_name": "Audit & Logging", "action": "Creates immutable audit log entry for review scheduling event"}
+      ],
+      "ordering_guarantees": "Per-client strict ordering via client_id partition key on topic wealth.portfolio-reviews.",
+      "topic": "wealth.portfolio-reviews",
+      "data_classification": "pii",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "Contains client_id (PII). Regulatory evidence of review scheduling activity for MiFID II COBS 9A and Consumer Duty audit trail. Retained 7 years.",
+      "retention": "7 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.wealth.portfolio-review.scheduled"
+    },
+    {
+      "event_id": "EVT-100",
+      "name": "SuitabilityAssessmentUpdated",
+      "source_service": "SVC-016",
+      "source_service_name": "Wealth Platform Service",
+      "source_entity": "ENT-047",
+      "source_entity_name": "SuitabilityAssessment",
+      "trigger": "SuitabilityAssessment questionnaire responses are submitted and the risk profile scoring and gap analysis complete. Published after ENT-047.status transitions to 'gap_analysis_complete' (or 'pending_hofs_signoff' if material change detected).",
+      "journey_phase": "PH-072",
+      "journey_phase_name": "Client Risk Profile and Objectives Reassessment",
+      "capability_scope": "cross-capability",
+      "capability_scope_rationale": "Published by CAP-006; consumed by Notification Service (SVC-053) to alert the advisor that client questionnaire is complete.",
+      "payload_schema": {
+        "assessment_id": "string (UUID v4) — SuitabilityAssessment identifier",
+        "review_id": "string (UUID v4)",
+        "client_id": "string (UUID v4)",
+        "updated_risk_profile_score": "integer (1-10)",
+        "risk_profile_changed": "boolean",
+        "head_of_suitability_required": "boolean",
+        "status": "string enum (gap_analysis_complete | pending_hofs_signoff)",
+        "occurred_at": "string (ISO 8601 UTC)"
+      },
+      "derived_from": {
+        "entity": "ENT-047 (SuitabilityAssessment)",
+        "field_mappings": [
+          {"entity_field": "assessment_id", "event_field": "assessment_id"},
+          {"entity_field": "review_id", "event_field": "review_id"},
+          {"entity_field": "client_id", "event_field": "client_id"},
+          {"entity_field": "updated_risk_profile_score", "event_field": "updated_risk_profile_score"},
+          {"entity_field": "risk_profile_changed", "event_field": "risk_profile_changed"},
+          {"entity_field": "head_of_suitability_required", "event_field": "head_of_suitability_required"},
+          {"entity_field": "status", "event_field": "status"}
+        ],
+        "excluded_fields": ["questionnaire_responses", "suitability_gap_flags", "advisor_notes", "head_of_suitability_signoff_notes", "sustainability_preferences"],
+        "masking": "questionnaire_responses excluded — too large for event payload and contains detailed PII. suitability_gap_flags excluded — internal advisory data not required by consumers."
+      },
+      "consumers": [
+        {"service": "SVC-053", "service_name": "Notification Service", "action": "Alerts advisor dashboard: client questionnaire complete, risk profile updated"}
+      ],
+      "ordering_guarantees": "Per-client strict ordering via client_id partition key on topic wealth.suitability.",
+      "topic": "wealth.suitability",
+      "data_classification": "pii",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "MiFID II COBS 9A requires audit trail of suitability assessment updates. PII (client_id, risk profile score). 7-year retention.",
+      "retention": "7 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.wealth.suitability-assessment.updated"
+    },
+    {
+      "event_id": "EVT-101",
+      "name": "ClientAccountDataRequested",
+      "source_service": "SVC-016",
+      "source_service_name": "Wealth Platform Service",
+      "source_entity": "ENT-048",
+      "source_entity_name": "RebalancingRecommendation",
+      "trigger": "ALT-002 (PH-073): Advisor requests the rebalancing recommendation with cash_balance_requested=true. SVC-016 has no local copy of CAP-001 account data and must request it via async event.",
+      "journey_phase": "PH-073",
+      "journey_phase_name": "Portfolio Performance Review and Rebalancing Recommendation",
+      "capability_scope": "cross-capability",
+      "capability_scope_rationale": "Published by CAP-006 (SVC-016) to CAP-001 (SVC-001) via the Event Bus. Cross-capability data request — the only valid mechanism for SVC-016 to access CAP-001 data.",
+      "payload_schema": {
+        "request_id": "string (UUID v4) — correlation ID for async request-response",
+        "client_id": "string (UUID v4)",
+        "review_id": "string (UUID v4)",
+        "account_types_requested": "array of string enum (current | savings | mortgage)",
+        "requested_by": "string — requesting service (SVC-016)",
+        "occurred_at": "string (ISO 8601 UTC)"
+      },
+      "derived_from": {
+        "entity": "ENT-048 (RebalancingRecommendation) + ENT-046 (PortfolioReviewRecord)",
+        "field_mappings": [
+          {"entity_field": "ENT-046.client_id", "event_field": "client_id"},
+          {"entity_field": "ENT-046.review_id", "event_field": "review_id"},
+          {"computed": "UUID.randomUUID()", "event_field": "request_id"}
+        ],
+        "excluded_fields": ["All RebalancingRecommendation fields — this event requests external data, not derives from internal entity"],
+        "masking": "Minimal payload — only client_id and account_types_requested. No balance or transaction data in request."
+      },
+      "consumers": [
+        {"service": "SVC-001", "service_name": "Retail Banking Core", "action": "Looks up client accounts, assembles minimal summary (available_balance_gbp, account_type, snapshot_at), publishes EVT-107 (ClientAccountSummaryProvided) as response"}
+      ],
+      "ordering_guarantees": "Correlation via request_id — SVC-001 includes request_id in EVT-107 response. No strict ordering requirement on request topic.",
+      "topic": "wealth.account-data-requests",
+      "data_classification": "pii",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "Cross-capability data access request containing client_id. Audit evidence that data access was legitimate and purpose-limited.",
+      "retention": "7 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.wealth.client-account-data.requested"
+    },
+    {
+      "event_id": "EVT-102",
+      "name": "SuitabilityReportGenerated",
+      "source_service": "SVC-016",
+      "source_service_name": "Wealth Platform Service",
+      "source_entity": "ENT-047",
+      "source_entity_name": "SuitabilityAssessment",
+      "trigger": "MiFID II suitability report PDF is successfully generated and stored. ENT-047.status transitions to 'report_generated'. Published before delivery to the client portal.",
+      "journey_phase": "PH-074",
+      "journey_phase_name": "Client Instructions and Suitability Report Issuance",
+      "capability_scope": "intra-capability",
+      "capability_scope_rationale": "Published by SVC-016; consumed by SVC-053 (Notification Service) to notify the client that the report is ready. No cross-capability routing required.",
+      "payload_schema": {
+        "assessment_id": "string (UUID v4)",
+        "review_id": "string (UUID v4)",
+        "client_id": "string (UUID v4)",
+        "suitability_report_document_ref": "string (S3 URI) — reference to the generated PDF",
+        "issued_at": "string (ISO 8601 UTC)",
+        "occurred_at": "string (ISO 8601 UTC)"
+      },
+      "derived_from": {
+        "entity": "ENT-047 (SuitabilityAssessment)",
+        "field_mappings": [
+          {"entity_field": "assessment_id", "event_field": "assessment_id"},
+          {"entity_field": "review_id", "event_field": "review_id"},
+          {"entity_field": "client_id", "event_field": "client_id"},
+          {"entity_field": "suitability_report_document_ref", "event_field": "suitability_report_document_ref"},
+          {"entity_field": "issued_at", "event_field": "issued_at"}
+        ],
+        "excluded_fields": ["questionnaire_responses", "advisor_notes", "suitability_gap_flags", "ex_ante_costs_charges", "ex_post_costs_charges"],
+        "masking": "Full questionnaire data and cost tables excluded from event — too large; accessible via CAP-006 API."
+      },
+      "consumers": [
+        {"service": "SVC-053", "service_name": "Notification Service", "action": "Delivers suitability report ready notification to client portal and via email"},
+        {"service": "SVC-103", "service_name": "Audit & Logging", "action": "Creates immutable audit log entry for suitability report generation"}
+      ],
+      "ordering_guarantees": "Per-client strict ordering via client_id partition key on topic wealth.suitability.",
+      "topic": "wealth.suitability",
+      "data_classification": "pii",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "Evidence of suitability report generation is a COBS 9A audit trail requirement. S3 URI reference is included — the actual document is stored with 5-year WORM policy.",
+      "retention": "7 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.wealth.suitability-report.generated"
+    },
+    {
+      "event_id": "EVT-103",
+      "name": "SuitabilityReportIssued",
+      "source_service": "SVC-016",
+      "source_service_name": "Wealth Platform Service",
+      "source_entity": "ENT-047",
+      "source_entity_name": "SuitabilityAssessment",
+      "trigger": "Suitability report is delivered to the client and ENT-047.status = 'issued'. Published atomically with the status update (transactional outbox). This is the critical cross-capability compliance registration event.",
+      "journey_phase": "PH-074",
+      "journey_phase_name": "Client Instructions and Suitability Report Issuance",
+      "capability_scope": "cross-capability",
+      "capability_scope_rationale": "Published by CAP-006 (SVC-016); consumed by CAP-005 (SVC-014) to create a SuitabilityRecord in the central compliance audit trail. This is the mechanism by which CAP-005 knows a MiFID II suitability review has been conducted.",
+      "payload_schema": {
+        "assessment_id": "string (UUID v4)",
+        "review_id": "string (UUID v4)",
+        "client_id": "string (UUID v4)",
+        "advisor_fca_register_ref": "string — SM&CR accountability",
+        "review_type": "string enum (annual | material_change_triggered | ad_hoc_client_request)",
+        "risk_profile_score": "integer (1-10) — updated risk profile",
+        "issued_at": "string (ISO 8601 UTC)",
+        "ex_ante_costs_charges_summary": "object — total cost percentage (not full breakdown)",
+        "occurred_at": "string (ISO 8601 UTC)"
+      },
+      "derived_from": {
+        "entity": "ENT-047 (SuitabilityAssessment) + ENT-046 (PortfolioReviewRecord)",
+        "field_mappings": [
+          {"entity_field": "ENT-047.assessment_id", "event_field": "assessment_id"},
+          {"entity_field": "ENT-046.review_id", "event_field": "review_id"},
+          {"entity_field": "ENT-047.client_id", "event_field": "client_id"},
+          {"entity_field": "ENT-046.advisor_fca_register_ref", "event_field": "advisor_fca_register_ref"},
+          {"entity_field": "ENT-046.review_type", "event_field": "review_type"},
+          {"entity_field": "ENT-047.updated_risk_profile_score", "event_field": "risk_profile_score"},
+          {"entity_field": "ENT-047.issued_at", "event_field": "issued_at"},
+          {"computed": "ENT-047.ex_ante_costs_charges.total_cost_pct", "event_field": "ex_ante_costs_charges_summary.total_cost_pct"}
+        ],
+        "excluded_fields": ["questionnaire_responses", "advisor_notes", "suitability_gap_flags", "head_of_suitability_signoff_notes", "suitability_report_document_ref"],
+        "masking": "Full questionnaire and advisor notes excluded — not required by CAP-005 compliance record. Document ref excluded — SVC-014 does not store the PDF."
+      },
+      "consumers": [
+        {"service": "SVC-014", "service_name": "KYC/AML Service", "action": "Creates SuitabilityRecord in CAP-005 compliance store. Maps event fields per service-boundaries.json maps_to specification."},
+        {"service": "SVC-103", "service_name": "Audit & Logging", "action": "Immutable WORM audit entry — COBS 9A 5-year minimum retention evidence"}
+      ],
+      "ordering_guarantees": "Per-client strict ordering via client_id partition key on topic wealth.suitability. At-least-once delivery guaranteed.",
+      "topic": "wealth.suitability",
+      "data_classification": "pii",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "Core MiFID II COBS 9A compliance evidence. SuitabilityReportIssued is the regulatory proof that a compliant review was conducted. Minimum 5-year retention per COBS 9A; 7-year WORM pipeline retention applied.",
+      "retention": "7 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.wealth.suitability-report.issued"
+    },
+    {
+      "event_id": "EVT-104",
+      "name": "InvestmentInstructionReceived",
+      "source_service": "SVC-016",
+      "source_service_name": "Wealth Platform Service",
+      "source_entity": "ENT-049",
+      "source_entity_name": "InvestmentInstruction",
+      "trigger": "Client submits formal investment instruction (proceed_full | proceed_partial | decline). ENT-049 created. If instruction_type != decline, PH-075 trade execution initiated.",
+      "journey_phase": "PH-074",
+      "journey_phase_name": "Client Instructions and Suitability Report Issuance",
+      "capability_scope": "intra-capability",
+      "capability_scope_rationale": "Published by SVC-016; consumed by SVC-053 (Notification Service) and SVC-103 (Audit). Internal to CAP-006 workflow trigger.",
+      "payload_schema": {
+        "instruction_id": "string (UUID v4)",
+        "review_id": "string (UUID v4)",
+        "client_id": "string (UUID v4)",
+        "instruction_type": "string enum (proceed_full | proceed_partial | decline)",
+        "instructions_given_at": "string (ISO 8601 UTC)",
+        "occurred_at": "string (ISO 8601 UTC)"
+      },
+      "derived_from": {
+        "entity": "ENT-049 (InvestmentInstruction)",
+        "field_mappings": [
+          {"entity_field": "instruction_id", "event_field": "instruction_id"},
+          {"entity_field": "review_id", "event_field": "review_id"},
+          {"entity_field": "client_id", "event_field": "client_id"},
+          {"entity_field": "instruction_type", "event_field": "instruction_type"},
+          {"entity_field": "instructions_given_at", "event_field": "instructions_given_at"}
+        ],
+        "excluded_fields": ["orders", "mifid_transaction_refs", "partial_trades_approved", "client_decline_reason"],
+        "masking": "orders array excluded — contains trade detail not required by notification/audit consumers at instruction receipt stage."
+      },
+      "consumers": [
+        {"service": "SVC-053", "service_name": "Notification Service", "action": "Sends advisor confirmation that client instruction has been received"},
+        {"service": "SVC-103", "service_name": "Audit & Logging", "action": "Immutable audit entry — client investment instruction recorded with timestamp for COBS 9A audit trail"}
+      ],
+      "ordering_guarantees": "Per-client strict ordering via client_id partition key on topic wealth.investment-instructions.",
+      "topic": "wealth.investment-instructions",
+      "data_classification": "pii",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "Client investment instruction is a regulated action. COBS 9A requires the instruction to be recorded with timestamp and circumstances. WORM retention 7 years.",
+      "retention": "7 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.wealth.investment-instruction.received"
+    },
+    {
+      "event_id": "EVT-105",
+      "name": "PortfolioReviewCompleted",
+      "source_service": "SVC-016",
+      "source_service_name": "Wealth Platform Service",
+      "source_entity": "ENT-046",
+      "source_entity_name": "PortfolioReviewRecord",
+      "trigger": "All rebalancing trades are confirmed (execution_status = fully_executed or partially_executed) OR client has declined (instruction_type = decline). PortfolioReviewRecord.status transitions to 'reporting'. Published at end of PH-075.",
+      "journey_phase": "PH-075",
+      "journey_phase_name": "Rebalancing Trade Execution",
+      "capability_scope": "intra-capability",
+      "capability_scope_rationale": "Published by SVC-016; consumed by SVC-053 (Notification Service) to dispatch trade execution confirmation to client and advisor.",
+      "payload_schema": {
+        "review_id": "string (UUID v4)",
+        "instruction_id": "string (UUID v4)",
+        "client_id": "string (UUID v4)",
+        "execution_status": "string enum (fully_executed | partially_executed | not_required)",
+        "orders_executed_count": "integer",
+        "orders_failed_count": "integer",
+        "execution_completed_at": "string (ISO 8601 UTC) — nullable if not_required",
+        "occurred_at": "string (ISO 8601 UTC)"
+      },
+      "derived_from": {
+        "entity": "ENT-049 (InvestmentInstruction) + ENT-046 (PortfolioReviewRecord)",
+        "field_mappings": [
+          {"entity_field": "ENT-046.review_id", "event_field": "review_id"},
+          {"entity_field": "ENT-049.instruction_id", "event_field": "instruction_id"},
+          {"entity_field": "ENT-046.client_id", "event_field": "client_id"},
+          {"entity_field": "ENT-049.execution_status", "event_field": "execution_status"},
+          {"computed": "COUNT(ENT-049.orders[status=confirmed])", "event_field": "orders_executed_count"},
+          {"computed": "COUNT(ENT-049.orders[status=failed])", "event_field": "orders_failed_count"},
+          {"entity_field": "ENT-049.execution_completed_at", "event_field": "execution_completed_at"}
+        ],
+        "excluded_fields": ["orders detail", "mifid_transaction_refs", "custody_order_refs"],
+        "masking": "Detailed order array and MiFIR transaction refs excluded — sensitive financial data not required by notification consumers."
+      },
+      "consumers": [
+        {"service": "SVC-053", "service_name": "Notification Service", "action": "Dispatches trade execution confirmation to client (PER-004) and advisor (PER-057) via portal and email"},
+        {"service": "SVC-103", "service_name": "Audit & Logging", "action": "Immutable audit entry for review execution completion"}
+      ],
+      "ordering_guarantees": "Per-client strict ordering via client_id partition key on topic wealth.portfolio-reviews.",
+      "topic": "wealth.portfolio-reviews",
+      "data_classification": "financial",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "Portfolio execution completion is a financial event. MiFID II transaction reporting obligation for executed orders. 7-year WORM retention.",
+      "retention": "7 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.wealth.portfolio-review.completed"
+    },
+    {
+      "event_id": "EVT-106",
+      "name": "ConsumerDutyEvidenceCompleted",
+      "source_service": "SVC-016",
+      "source_service_name": "Wealth Platform Service",
+      "source_entity": "ENT-051",
+      "source_entity_name": "ConsumerDutyEvidenceRecord",
+      "trigger": "Advisor completes the portfolio review (POST /portfolio-reviews/{review_id}/complete). ConsumerDutyEvidenceRecord (ENT-051) is created and compliance_submitted_at is set. Published cross-capability to CAP-005 for compliance tracking.",
+      "journey_phase": "PH-076",
+      "journey_phase_name": "Post-Review Reporting and Consumer Duty Evidence",
+      "capability_scope": "cross-capability",
+      "capability_scope_rationale": "Published by CAP-006 (SVC-016); consumed by CAP-005 (SVC-014) to update the Consumer Duty monitoring register for FCA supervisory reporting.",
+      "payload_schema": {
+        "evidence_id": "string (UUID v4)",
+        "review_id": "string (UUID v4)",
+        "client_id": "string (UUID v4)",
+        "period_start": "string (ISO 8601 date)",
+        "period_end": "string (ISO 8601 date)",
+        "total_fee_charged_gbp": "decimal — total advisory/management fee for the period",
+        "fair_value_assessment_score": "string enum (fair_value_met | fair_value_borderline | fair_value_gap) — encrypted in transit",
+        "remediation_required": "boolean",
+        "service_activities_count": "integer — number of documented service activities delivered",
+        "occurred_at": "string (ISO 8601 UTC)"
+      },
+      "derived_from": {
+        "entity": "ENT-051 (ConsumerDutyEvidenceRecord)",
+        "field_mappings": [
+          {"entity_field": "evidence_id", "event_field": "evidence_id"},
+          {"entity_field": "review_id", "event_field": "review_id"},
+          {"entity_field": "client_id", "event_field": "client_id"},
+          {"entity_field": "period_start", "event_field": "period_start"},
+          {"entity_field": "period_end", "event_field": "period_end"},
+          {"entity_field": "total_fee_charged_gbp", "event_field": "total_fee_charged_gbp"},
+          {"entity_field": "fair_value_assessment_score", "event_field": "fair_value_assessment_score", "notes": "Encrypted in payload; SVC-014 decrypts with shared key"},
+          {"entity_field": "remediation_required", "event_field": "remediation_required"},
+          {"computed": "COUNT(ENT-051.service_activities_delivered)", "event_field": "service_activities_count"}
+        ],
+        "excluded_fields": ["fair_value_assessment_notes", "service_activities_delivered (full array)", "remediation_plan_ref", "annual_statement_dispatched_at"],
+        "masking": "fair_value_assessment_score is encrypted in the event payload. service_activities_delivered array excluded — too verbose; count sufficient for compliance aggregation. Full detail accessible via CAP-006 API."
+      },
+      "consumers": [
+        {"service": "SVC-014", "service_name": "KYC/AML Service", "action": "Creates ConsumerDutyComplianceRecord in CAP-005 compliance store. If remediation_required=true, raises compliance alert to Head of Compliance dashboard."},
+        {"service": "SVC-053", "service_name": "Notification Service", "action": "Triggers dispatch of annual service statement to client"},
+        {"service": "SVC-103", "service_name": "Audit & Logging", "action": "Immutable 7-year WORM audit entry — Consumer Duty evidence"}
+      ],
+      "ordering_guarantees": "Per-client strict ordering via client_id partition key on topic wealth.consumer-duty.",
+      "topic": "wealth.consumer-duty",
+      "data_classification": "pii",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "Consumer Duty evidence is a regulatory record. FCA may require evidence of fair value assessments for supervisory review. 7-year WORM retention per Consumer Duty regulatory timeline.",
+      "retention": "7 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.wealth.consumer-duty-evidence.completed"
+    }
+  ]
+}

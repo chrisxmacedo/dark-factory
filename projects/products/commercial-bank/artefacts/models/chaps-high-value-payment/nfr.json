@@ -1,0 +1,165 @@
+{
+  "journey_id": "JRN-028",
+  "document_version": "0.1.0",
+  "status": "Draft",
+  "per_phase_nfrs": [
+    {
+      "phase_id": "PH-077",
+      "phase_name": "Payment Initiation",
+      "latency": {
+        "p95_ms": 800,
+        "p99_ms": 1500,
+        "rationale": "Channel form submission and PaymentIntent creation. SVC-001 write + EVT-108 publish must complete in < 1.5s. EISCD modulus check is synchronous and sub-100ms."
+      },
+      "availability": {
+        "target_percent": 99.9,
+        "rationale": "CHAPS availability window matches RTGS operating hours. Degradation outside CHAPS hours (post-17:00) is acceptable — payment instruction rejected with appropriate message."
+      },
+      "security": {
+        "authentication": "SCA required — FIDO2 biometric or TOTP. Session token validated by SVC-100 on every API call.",
+        "authorisation": "CHAPS_PAYMENT_INITIATION entitlement checked at channel layer.",
+        "data_classification": "financial + pii",
+        "encryption": "TLS 1.3 in transit. AES-256 at rest."
+      }
+    },
+    {
+      "phase_id": "PH-078",
+      "phase_name": "Confirmation of Payee Check",
+      "latency": {
+        "p95_ms": 1500,
+        "p99_ms": 3000,
+        "rationale": "CoP is a synchronous call from SVC-009 to the Pay.UK CoP service. Pay.UK SLA is 2s; internal overhead adds < 500ms. If CoP service times out: result = unavailable; payment proceeds with unavailable warning to customer (GOV-003-R02 permits this)."
+      },
+      "availability": {
+        "target_percent": 99.5,
+        "fallback": "unavailable_result — payment proceeds with customer-facing 'Unable to verify payee name' message. This is the mandatory CoP unavailability handling (GOV-003-R02 scheme rules)."
+      },
+      "security": {
+        "data_classification": "financial + pii",
+        "note": "CoP request contains beneficiary name and account details (partial PII). SVC-009 → Pay.UK CoP call uses mTLS."
+      }
+    },
+    {
+      "phase_id": "PH-079",
+      "phase_name": "Sanctions Screening",
+      "latency": {
+        "p95_ms": 2000,
+        "p99_ms": 3000,
+        "hard_limit_ms": 3000,
+        "rationale": "GOV-005-R02 hard limit: sanctions screening must complete within 3,000ms. SVC-051 P99 target is 2,000ms leaving 1,000ms for SVC-014 orchestration. If 3,000ms limit exceeded: payment held for manual review (fail-secure)."
+      },
+      "availability": {
+        "target_percent": 99.99,
+        "rationale": "Sanctions screening is a hard gate. Unavailability blocks payments. Redundant sanctions engine required. Fail-closed: if SVC-051 is unavailable, payment is held rather than passed.",
+        "failure_mode": "fail-closed — payment held for manual MLRO review on sanctions engine unavailability"
+      },
+      "security": {
+        "data_classification": "regulated — sanctions list data",
+        "audit": "All screening results written to WORM audit pipeline (SVC-111). 7-year retention.",
+        "tipping_off": "Screening result never surfaced to customer in full. Generic blocking message only."
+      }
+    },
+    {
+      "phase_id": "PH-080",
+      "phase_name": "Payment Authorisation",
+      "latency": {
+        "p95_ms": 500,
+        "p99_ms": 1000,
+        "rationale": "SCA challenge delivery (OTP SMS or biometric push) must be fast enough for customer to complete before CHAPS cut-off. SVC-100 token validation is sub-100ms. OTP delivery SLA: 10 seconds (SMS provider SLA)."
+      },
+      "availability": {
+        "target_percent": 99.9,
+        "rationale": "SCA pathway must be highly available. If SMS OTP fails, biometric fallback must be available."
+      },
+      "security": {
+        "authentication": "Full SCA re-challenge for payment authorisation — separate from session authentication. Dynamic linking required (SCA must be linked to payment amount and beneficiary — PSR 2017 Reg 100).",
+        "data_classification": "financial",
+        "irrevocability_disclosure": "Mandatory irrevocability warning must be displayed before SCA challenge. Logged as Consumer Duty evidence."
+      }
+    },
+    {
+      "phase_id": "PH-081",
+      "phase_name": "CHAPS Submission and Settlement",
+      "latency": {
+        "submission_to_rtgs_ms": 500,
+        "rtgs_settlement_typical_minutes": 5,
+        "rtgs_settlement_maximum_minutes": 60,
+        "rationale": "SVC-009 must submit pacs.008 to RTGS within 500ms of receiving CHAPSPaymentAuthorised. RTGS settlement is typically within minutes but can take up to the end of the operating day. Payment must be submitted before CHAPS bank cut-off (internal: 16:30 for customer-originated; varies). The 500ms submission SLA is internal — failure after authorisation but before submission creates a critical gap that must be monitored."
+      },
+      "availability": {
+        "target_percent": 99.99,
+        "rationale": "CHAPS submission is critically time-sensitive. RTGS availability is governed by Bank of England (>99.95% per CHAPS Rules). SVC-009 must have redundant connectivity to the RTGS gateway.",
+        "chaps_operating_hours": "Currently 06:00–18:00 Mon–Fri (excluding Bank Holidays). Being extended to 01:30 opening (GOV-003-R04 incoming)."
+      },
+      "security": {
+        "data_classification": "financial",
+        "message_signing": "ISO 20022 pacs.008 messages signed with the bank's CHAPS digital certificate. Certificate expiry monitoring mandatory.",
+        "uetr": "Unique End-to-End Transaction Reference (UETR, ISO 20022 standard) generated per payment. Included in pacs.008. Used for tracing and investigation."
+      },
+      "throughput": {
+        "note": "CHAPS payments are low-volume high-value. Peak throughput during property completion days (month/quarter-end). No per-message concurrency constraints — sequential submission acceptable. Volume spikes expected at property market peaks (end of tax year, end of stamp duty holidays)."
+      }
+    },
+    {
+      "phase_id": "PH-082",
+      "phase_name": "Completion Confirmation and Notifications",
+      "latency": {
+        "p95_ms": 2000,
+        "p99_ms": 5000,
+        "rationale": "Notification delivery is non-blocking — published via async event to SVC-053. In-app update must be near-real-time (< 2s). Push notification delivery depends on APNS/FCM SLA."
+      },
+      "availability": {
+        "target_percent": 99.5,
+        "rationale": "Notification delivery is soft dependency. Settlement has already occurred — notification failure does not reverse the payment."
+      },
+      "security": {
+        "data_classification": "financial + pii",
+        "audit": "Settlement event written to WORM audit pipeline (SVC-111). Immutable. 7-year retention."
+      }
+    }
+  ],
+  "cross_cutting_nfrs": [
+    {
+      "category": "Idempotency",
+      "requirement": "CHAPS payment submission to RTGS must be idempotent. SVC-009 must check CHAPSPaymentExecution.submission_status before submitting — duplicate submissions on retry must use the same UETR. RTGS will reject duplicate UETRs, providing a natural circuit-breaker."
+    },
+    {
+      "category": "Cut-off enforcement",
+      "requirement": "SVC-009 must enforce CHAPS cut-off times server-side. Customer-facing cut-off (16:00) and bank internal cut-off (16:30 for scheme message submission) must be configurable and enforced deterministically. Clock skew tolerance: ±1 second."
+    },
+    {
+      "category": "Audit trail",
+      "requirement": "All phases generate immutable audit events written to SVC-111 (WORM). Required for FCA Consumer Duty (GOV-001-R01), CHAPS data quality audit (GOV-003-R03), and PSR payment tracing obligations. Minimum 7-year retention."
+    },
+    {
+      "category": "Data residency",
+      "requirement": "CHAPS payment data must remain within UK jurisdiction. No cross-border data transfer to payment processing vendors. Bank of England RTGS operates within UK sovereign infrastructure."
+    },
+    {
+      "category": "Observability",
+      "requirement": "CHAPS submission-to-settlement latency must be instrumented end-to-end. Dashboard alert if settlement not confirmed within 30 minutes of submission. UETR-based tracing across SVC-009 ↔ RTGS boundary."
+    }
+  ],
+  "regulatory_slas": [
+    {
+      "rule": "GOV-003-R02",
+      "obligation": "CoP check on all CHAPS payments",
+      "sla": "CoP result returned before payment authorisation (PH-080). No payment proceeds without CoP result or explicit unavailability acknowledgement."
+    },
+    {
+      "rule": "GOV-003-R03",
+      "obligation": "ISO 20022 LEIs and Purpose Codes mandatory in CHAPS from 1 May 2025",
+      "sla": "Purpose Code (PROP) populated on all property purchase CHAPS payments from 1 May 2025. Validation failure at pacs.008 construction blocks submission."
+    },
+    {
+      "rule": "GOV-005-R02",
+      "obligation": "Sanctions screening within 3,000ms",
+      "sla": "Hard limit. Breach triggers automatic payment hold and MLRO alert."
+    },
+    {
+      "rule": "PSR 2017 Reg 100",
+      "obligation": "Dynamic linking for SCA on payment authorisation",
+      "sla": "SCA authentication token must be cryptographically linked to payment amount and beneficiary account number. Validated at PH-080."
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "journey_id": "JRN-017",
+  "document_version": "0.1.0",
+  "status": "Draft",
+  "architectural_principle": "Cross-capability communication is exclusively async events. Within a capability, services communicate freely.",
+  "services": [
+    {
+      "service_id": "",
+      "service_name": "",
+      "capability_id": "",
+      "owned_entities": [],
+      "published_events": [],
+      "consumed_events": [],
+      "consumed_apis": [],
+      "design_decisions": []
+    }
+  ],
+  "cross_service_interaction_summary": []
+}

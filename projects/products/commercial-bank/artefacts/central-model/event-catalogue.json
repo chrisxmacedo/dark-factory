@@ -4798,6 +4798,806 @@
       "cloudevents_type": "com.bank.treasury.fx-counterparty-sanctions-screened.v1",
       "governance_references": ["GOV-005-R02", "GOV-002-R07"],
       "source_journeys": ["JRN-014"]
+    },
+    {
+      "event_id": "EVT-099",
+      "name": "PortfolioReviewScheduled",
+      "source_service": "SVC-016",
+      "source_service_name": "Wealth Platform Service",
+      "source_entity": "ENT-046",
+      "source_entity_name": "PortfolioReviewRecord",
+      "trigger": "Wealth Advisor creates a new portfolio review record. PortfolioReviewRecord.status = scheduled.",
+      "journey_phase": "PH-071",
+      "journey_phase_name": "Review Scheduling and Pre-Meeting Preparation",
+      "capability_scope": "cross-capability",
+      "payload_schema": {
+        "review_id": "string (UUID v4)",
+        "client_id": "string (UUID v4)",
+        "advisor_id": "string",
+        "advisor_fca_register_ref": "string",
+        "review_type": "string enum (annual | material_change_triggered | ad_hoc_client_request)",
+        "scheduled_at": "string (ISO 8601 UTC)",
+        "occurred_at": "string (ISO 8601 UTC)"
+      },
+      "derived_from": {
+        "entity": "ENT-046 (PortfolioReviewRecord)",
+        "field_mappings": [
+          {"entity_field": "review_id", "event_field": "review_id"},
+          {"entity_field": "client_id", "event_field": "client_id"},
+          {"entity_field": "advisor_fca_register_ref", "event_field": "advisor_fca_register_ref"},
+          {"entity_field": "review_type", "event_field": "review_type"},
+          {"entity_field": "scheduled_at", "event_field": "scheduled_at"}
+        ],
+        "excluded_fields": ["status", "prior_review_id", "contact_attempts"]
+      },
+      "consumers": [
+        {"service": "SVC-053", "service_name": "Notification Service", "action": "Dispatches review confirmation and pre-meeting questionnaire link to client"},
+        {"service": "SVC-103", "service_name": "Audit & Logging", "action": "Immutable audit log entry for review scheduling"}
+      ],
+      "ordering_guarantees": "Per-client strict ordering via client_id partition key on topic wealth.portfolio-reviews.",
+      "topic": "wealth.portfolio-reviews",
+      "data_classification": "pii",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "MiFID II COBS 9A and Consumer Duty audit evidence. 7-year retention.",
+      "retention": "7 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.wealth.portfolio-review.scheduled",
+      "governance_references": ["GOV-007-R01", "GOV-007-R03"],
+      "source_journeys": ["JRN-015"]
+    },
+    {
+      "event_id": "EVT-100",
+      "name": "SuitabilityAssessmentUpdated",
+      "source_service": "SVC-016",
+      "source_service_name": "Wealth Platform Service",
+      "source_entity": "ENT-047",
+      "source_entity_name": "SuitabilityAssessment",
+      "trigger": "Suitability questionnaire responses submitted and risk profile scoring and gap analysis complete. ENT-047.status = gap_analysis_complete or pending_hofs_signoff.",
+      "journey_phase": "PH-072",
+      "journey_phase_name": "Client Risk Profile and Objectives Reassessment",
+      "capability_scope": "cross-capability",
+      "payload_schema": {
+        "assessment_id": "string (UUID v4)",
+        "review_id": "string (UUID v4)",
+        "client_id": "string (UUID v4)",
+        "updated_risk_profile_score": "integer (1-10)",
+        "risk_profile_changed": "boolean",
+        "head_of_suitability_required": "boolean",
+        "status": "string enum",
+        "occurred_at": "string (ISO 8601 UTC)"
+      },
+      "derived_from": {
+        "entity": "ENT-047 (SuitabilityAssessment)",
+        "field_mappings": [
+          {"entity_field": "assessment_id", "event_field": "assessment_id"},
+          {"entity_field": "updated_risk_profile_score", "event_field": "updated_risk_profile_score"},
+          {"entity_field": "risk_profile_changed", "event_field": "risk_profile_changed"},
+          {"entity_field": "head_of_suitability_required", "event_field": "head_of_suitability_required"}
+        ],
+        "excluded_fields": ["questionnaire_responses", "suitability_gap_flags", "advisor_notes", "sustainability_preferences"]
+      },
+      "consumers": [
+        {"service": "SVC-053", "service_name": "Notification Service", "action": "Alerts advisor dashboard: client questionnaire complete"}
+      ],
+      "ordering_guarantees": "Per-client strict ordering via client_id partition key on topic wealth.suitability.",
+      "topic": "wealth.suitability",
+      "data_classification": "pii",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "COBS 9A suitability audit trail. 7-year retention.",
+      "retention": "7 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.wealth.suitability-assessment.updated",
+      "governance_references": ["GOV-007-R01"],
+      "source_journeys": ["JRN-015"]
+    },
+    {
+      "event_id": "EVT-101",
+      "name": "ClientAccountDataRequested",
+      "source_service": "SVC-016",
+      "source_service_name": "Wealth Platform Service",
+      "source_entity": "ENT-048",
+      "source_entity_name": "RebalancingRecommendation",
+      "trigger": "ALT-002 (PH-073): Advisor requests rebalancing recommendation with cash_balance_requested=true. SVC-016 publishes this cross-capability request event to obtain CAP-001 account data.",
+      "journey_phase": "PH-073",
+      "journey_phase_name": "Portfolio Performance Review and Rebalancing Recommendation",
+      "capability_scope": "cross-capability",
+      "payload_schema": {
+        "request_id": "string (UUID v4) — correlation ID",
+        "client_id": "string (UUID v4)",
+        "review_id": "string (UUID v4)",
+        "account_types_requested": "array of string enum (current | savings | mortgage)",
+        "requested_by": "string (SVC-016)",
+        "occurred_at": "string (ISO 8601 UTC)"
+      },
+      "derived_from": {
+        "entity": "ENT-046 (PortfolioReviewRecord)",
+        "field_mappings": [
+          {"entity_field": "client_id", "event_field": "client_id"},
+          {"entity_field": "review_id", "event_field": "review_id"},
+          {"computed": "UUID.randomUUID()", "event_field": "request_id"}
+        ],
+        "masking": "Minimal payload — no balance or transaction data in request"
+      },
+      "consumers": [
+        {"service": "SVC-001", "service_name": "Retail Banking Core", "action": "Assembles minimal account summary; publishes EVT-107 (ClientAccountSummaryProvided) as async response correlated via request_id"}
+      ],
+      "ordering_guarantees": "Correlated via request_id. No strict ordering required.",
+      "topic": "wealth.account-data-requests",
+      "data_classification": "pii",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "Cross-capability PII data access audit evidence.",
+      "retention": "7 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.wealth.client-account-data.requested",
+      "governance_references": ["GOV-007-R01"],
+      "source_journeys": ["JRN-015"]
+    },
+    {
+      "event_id": "EVT-102",
+      "name": "SuitabilityReportGenerated",
+      "source_service": "SVC-016",
+      "source_service_name": "Wealth Platform Service",
+      "source_entity": "ENT-047",
+      "source_entity_name": "SuitabilityAssessment",
+      "trigger": "MiFID II suitability report PDF generated and stored. ENT-047.status = report_generated.",
+      "journey_phase": "PH-074",
+      "journey_phase_name": "Client Instructions and Suitability Report Issuance",
+      "capability_scope": "intra-capability",
+      "payload_schema": {
+        "assessment_id": "string (UUID v4)",
+        "review_id": "string (UUID v4)",
+        "client_id": "string (UUID v4)",
+        "suitability_report_document_ref": "string (S3 URI)",
+        "issued_at": "string (ISO 8601 UTC)",
+        "occurred_at": "string (ISO 8601 UTC)"
+      },
+      "derived_from": {
+        "entity": "ENT-047 (SuitabilityAssessment)",
+        "field_mappings": [
+          {"entity_field": "assessment_id", "event_field": "assessment_id"},
+          {"entity_field": "suitability_report_document_ref", "event_field": "suitability_report_document_ref"},
+          {"entity_field": "issued_at", "event_field": "issued_at"}
+        ],
+        "excluded_fields": ["questionnaire_responses", "advisor_notes", "ex_ante_costs_charges", "ex_post_costs_charges"]
+      },
+      "consumers": [
+        {"service": "SVC-053", "service_name": "Notification Service", "action": "Notifies client that suitability report is ready for review"},
+        {"service": "SVC-103", "service_name": "Audit & Logging", "action": "Immutable audit entry for report generation"}
+      ],
+      "ordering_guarantees": "Per-client strict ordering on topic wealth.suitability.",
+      "topic": "wealth.suitability",
+      "data_classification": "pii",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "COBS 9A suitability audit trail — report generation evidence. 7-year retention.",
+      "retention": "7 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.wealth.suitability-report.generated",
+      "governance_references": ["GOV-007-R01"],
+      "source_journeys": ["JRN-015"]
+    },
+    {
+      "event_id": "EVT-103",
+      "name": "SuitabilityReportIssued",
+      "source_service": "SVC-016",
+      "source_service_name": "Wealth Platform Service",
+      "source_entity": "ENT-047",
+      "source_entity_name": "SuitabilityAssessment",
+      "trigger": "Suitability report delivered to client. ENT-047.status = issued. Critical cross-capability compliance registration event. Published atomically via transactional outbox.",
+      "journey_phase": "PH-074",
+      "journey_phase_name": "Client Instructions and Suitability Report Issuance",
+      "capability_scope": "cross-capability",
+      "capability_scope_rationale": "Published by CAP-006 (SVC-016); consumed by CAP-005 (SVC-014) to register the MiFID II suitability review in the central compliance audit trail.",
+      "payload_schema": {
+        "assessment_id": "string (UUID v4)",
+        "review_id": "string (UUID v4)",
+        "client_id": "string (UUID v4)",
+        "advisor_fca_register_ref": "string",
+        "review_type": "string enum",
+        "risk_profile_score": "integer (1-10)",
+        "issued_at": "string (ISO 8601 UTC)",
+        "ex_ante_costs_charges_summary": "object (total_cost_pct only)",
+        "occurred_at": "string (ISO 8601 UTC)"
+      },
+      "derived_from": {
+        "entity": "ENT-047 (SuitabilityAssessment) + ENT-046 (PortfolioReviewRecord)",
+        "field_mappings": [
+          {"entity_field": "ENT-047.assessment_id", "event_field": "assessment_id"},
+          {"entity_field": "ENT-046.advisor_fca_register_ref", "event_field": "advisor_fca_register_ref"},
+          {"entity_field": "ENT-046.review_type", "event_field": "review_type"},
+          {"entity_field": "ENT-047.updated_risk_profile_score", "event_field": "risk_profile_score"},
+          {"entity_field": "ENT-047.issued_at", "event_field": "issued_at"},
+          {"computed": "ENT-047.ex_ante_costs_charges.total_cost_pct", "event_field": "ex_ante_costs_charges_summary.total_cost_pct"}
+        ],
+        "excluded_fields": ["questionnaire_responses", "advisor_notes", "suitability_gap_flags", "head_of_suitability_signoff_notes", "suitability_report_document_ref"]
+      },
+      "consumers": [
+        {"service": "SVC-014", "service_name": "KYC/AML Service", "action": "CROSS-CAPABILITY: Creates SuitabilityRecord in CAP-005 compliance store. Fields mapped per service-boundaries.json."},
+        {"service": "SVC-103", "service_name": "Audit & Logging", "action": "WORM audit entry — COBS 9A 5-year minimum retention evidence"}
+      ],
+      "ordering_guarantees": "Per-client strict ordering on topic wealth.suitability. At-least-once delivery.",
+      "topic": "wealth.suitability",
+      "data_classification": "pii",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "Core MiFID II COBS 9A compliance evidence. 7-year WORM retention.",
+      "retention": "7 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.wealth.suitability-report.issued",
+      "governance_references": ["GOV-007-R01", "GOV-007-R03"],
+      "source_journeys": ["JRN-015"]
+    },
+    {
+      "event_id": "EVT-104",
+      "name": "InvestmentInstructionReceived",
+      "source_service": "SVC-016",
+      "source_service_name": "Wealth Platform Service",
+      "source_entity": "ENT-049",
+      "source_entity_name": "InvestmentInstruction",
+      "trigger": "Client submits formal investment instruction (proceed_full | proceed_partial | decline). ENT-049 created.",
+      "journey_phase": "PH-074",
+      "journey_phase_name": "Client Instructions and Suitability Report Issuance",
+      "capability_scope": "intra-capability",
+      "payload_schema": {
+        "instruction_id": "string (UUID v4)",
+        "review_id": "string (UUID v4)",
+        "client_id": "string (UUID v4)",
+        "instruction_type": "string enum (proceed_full | proceed_partial | decline)",
+        "instructions_given_at": "string (ISO 8601 UTC)",
+        "occurred_at": "string (ISO 8601 UTC)"
+      },
+      "derived_from": {
+        "entity": "ENT-049 (InvestmentInstruction)",
+        "field_mappings": [
+          {"entity_field": "instruction_id", "event_field": "instruction_id"},
+          {"entity_field": "instruction_type", "event_field": "instruction_type"},
+          {"entity_field": "instructions_given_at", "event_field": "instructions_given_at"}
+        ],
+        "excluded_fields": ["orders", "mifid_transaction_refs", "partial_trades_approved", "client_decline_reason"]
+      },
+      "consumers": [
+        {"service": "SVC-053", "service_name": "Notification Service", "action": "Advisor confirmation of client instruction receipt"},
+        {"service": "SVC-103", "service_name": "Audit & Logging", "action": "COBS 9A audit entry — client investment instruction recorded"}
+      ],
+      "ordering_guarantees": "Per-client strict ordering on topic wealth.investment-instructions.",
+      "topic": "wealth.investment-instructions",
+      "data_classification": "pii",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "Client investment instruction is a regulated action. 7-year WORM retention.",
+      "retention": "7 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.wealth.investment-instruction.received",
+      "governance_references": ["GOV-007-R01"],
+      "source_journeys": ["JRN-015"]
+    },
+    {
+      "event_id": "EVT-105",
+      "name": "PortfolioReviewCompleted",
+      "source_service": "SVC-016",
+      "source_service_name": "Wealth Platform Service",
+      "source_entity": "ENT-046",
+      "source_entity_name": "PortfolioReviewRecord",
+      "trigger": "All rebalancing trades confirmed (or client declined). PortfolioReviewRecord.status transitions to reporting.",
+      "journey_phase": "PH-075",
+      "journey_phase_name": "Rebalancing Trade Execution",
+      "capability_scope": "intra-capability",
+      "payload_schema": {
+        "review_id": "string (UUID v4)",
+        "instruction_id": "string (UUID v4)",
+        "client_id": "string (UUID v4)",
+        "execution_status": "string enum (fully_executed | partially_executed | not_required)",
+        "orders_executed_count": "integer",
+        "orders_failed_count": "integer",
+        "execution_completed_at": "string (ISO 8601 UTC) — nullable",
+        "occurred_at": "string (ISO 8601 UTC)"
+      },
+      "derived_from": {
+        "entity": "ENT-049 (InvestmentInstruction) + ENT-046 (PortfolioReviewRecord)",
+        "field_mappings": [
+          {"entity_field": "ENT-049.execution_status", "event_field": "execution_status"},
+          {"computed": "COUNT(orders[status=confirmed])", "event_field": "orders_executed_count"},
+          {"computed": "COUNT(orders[status=failed])", "event_field": "orders_failed_count"}
+        ],
+        "excluded_fields": ["orders detail", "mifid_transaction_refs", "custody_order_refs"]
+      },
+      "consumers": [
+        {"service": "SVC-053", "service_name": "Notification Service", "action": "Dispatches trade execution confirmation to client and advisor"},
+        {"service": "SVC-103", "service_name": "Audit & Logging", "action": "Immutable audit entry for execution completion"}
+      ],
+      "ordering_guarantees": "Per-client strict ordering on topic wealth.portfolio-reviews.",
+      "topic": "wealth.portfolio-reviews",
+      "data_classification": "financial",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "MiFID II transaction reporting — 7-year retention.",
+      "retention": "7 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.wealth.portfolio-review.completed",
+      "governance_references": ["GOV-007-R01"],
+      "source_journeys": ["JRN-015"]
+    },
+    {
+      "event_id": "EVT-106",
+      "name": "ConsumerDutyEvidenceCompleted",
+      "source_service": "SVC-016",
+      "source_service_name": "Wealth Platform Service",
+      "source_entity": "ENT-051",
+      "source_entity_name": "ConsumerDutyEvidenceRecord",
+      "trigger": "Advisor completes the portfolio review. ConsumerDutyEvidenceRecord created and compliance_submitted_at set. Critical cross-capability compliance registration event.",
+      "journey_phase": "PH-076",
+      "journey_phase_name": "Post-Review Reporting and Consumer Duty Evidence",
+      "capability_scope": "cross-capability",
+      "capability_scope_rationale": "Published by CAP-006 (SVC-016); consumed by CAP-005 (SVC-014) to update Consumer Duty monitoring register for FCA supervisory reporting.",
+      "payload_schema": {
+        "evidence_id": "string (UUID v4)",
+        "review_id": "string (UUID v4)",
+        "client_id": "string (UUID v4)",
+        "period_start": "string (ISO 8601 date)",
+        "period_end": "string (ISO 8601 date)",
+        "total_fee_charged_gbp": "decimal",
+        "fair_value_assessment_score": "string enum (encrypted in transit)",
+        "remediation_required": "boolean",
+        "service_activities_count": "integer",
+        "occurred_at": "string (ISO 8601 UTC)"
+      },
+      "derived_from": {
+        "entity": "ENT-051 (ConsumerDutyEvidenceRecord)",
+        "field_mappings": [
+          {"entity_field": "evidence_id", "event_field": "evidence_id"},
+          {"entity_field": "fair_value_assessment_score", "event_field": "fair_value_assessment_score", "notes": "Encrypted in payload"},
+          {"entity_field": "remediation_required", "event_field": "remediation_required"},
+          {"computed": "COUNT(service_activities_delivered)", "event_field": "service_activities_count"}
+        ],
+        "excluded_fields": ["fair_value_assessment_notes", "service_activities_delivered (full array)", "remediation_plan_ref"]
+      },
+      "consumers": [
+        {"service": "SVC-014", "service_name": "KYC/AML Service", "action": "CROSS-CAPABILITY: Creates ConsumerDutyComplianceRecord. Raises compliance alert if remediation_required=true."},
+        {"service": "SVC-053", "service_name": "Notification Service", "action": "Triggers annual service statement dispatch to client"},
+        {"service": "SVC-103", "service_name": "Audit & Logging", "action": "Immutable 7-year WORM entry — Consumer Duty evidence"}
+      ],
+      "ordering_guarantees": "Per-client strict ordering on topic wealth.consumer-duty.",
+      "topic": "wealth.consumer-duty",
+      "data_classification": "pii",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "Consumer Duty regulatory record. FCA supervisory review evidence. 7-year WORM retention.",
+      "retention": "7 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.wealth.consumer-duty-evidence.completed",
+      "governance_references": ["GOV-007-R01", "GOV-007-R03"],
+      "source_journeys": ["JRN-015"]
+    },
+    {
+      "event_id": "EVT-107",
+      "name": "ClientAccountSummaryProvided",
+      "source_service": "SVC-001",
+      "source_service_name": "Retail Banking Core",
+      "source_entity": "ENT-004",
+      "source_entity_name": "Account",
+      "trigger": "JRN-015 ALT-002: SVC-001 receives EVT-101 (ClientAccountDataRequested) from SVC-016. Assembles minimal account summary for the requested client and account types. Publishes as async response correlated via request_id.",
+      "journey_phase": "PH-073",
+      "journey_phase_name": "Portfolio Performance Review and Rebalancing Recommendation (ALT-002)",
+      "capability_scope": "cross-capability",
+      "capability_scope_rationale": "Published by CAP-001 (SVC-001); consumed by CAP-006 (SVC-016) for holistic wealth view. Cross-capability async response pattern.",
+      "payload_schema": {
+        "request_id": "string (UUID v4) — correlation ID from EVT-101",
+        "client_id": "string (UUID v4)",
+        "available_balance_gbp": "decimal — combined balance across requested account types converted to GBP",
+        "account_type": "array of string enum (current | savings | mortgage)",
+        "snapshot_at": "string (ISO 8601 UTC)",
+        "occurred_at": "string (ISO 8601 UTC)"
+      },
+      "derived_from": {
+        "entity": "ENT-004 (Account)",
+        "field_mappings": [
+          {"entity_field": "available_balance", "event_field": "available_balance_gbp", "notes": "Converted to GBP; sum across matching accounts"},
+          {"entity_field": "account_type", "event_field": "account_type"}
+        ],
+        "excluded_fields": ["account_number", "sort_code", "transaction_history", "overdraft_limit", "all PII beyond client_id"],
+        "masking": "Minimal payload — only available_balance_gbp and account_type returned. Full account details excluded. Purpose-limited to liquidity buffer assessment."
+      },
+      "consumers": [
+        {"service": "SVC-016", "service_name": "Wealth Platform Service", "action": "Maps available_balance_gbp → ENT-048 (RebalancingRecommendation).cash_balance_snapshot_gbp for liquidity buffer assessment"}
+      ],
+      "ordering_guarantees": "Correlated via request_id. No strict ordering required.",
+      "topic": "retail.account-summaries",
+      "data_classification": "financial",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "Cross-capability financial data access. Purpose-limitation evidence for data minimisation compliance.",
+      "retention": "7 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.retail.client-account-summary.provided",
+      "governance_references": ["GOV-007-R01"],
+      "source_journeys": ["JRN-015"]
+    },
+    {
+      "event_id": "EVT-108",
+      "name": "CHAPSPaymentIntentCreated",
+      "source_service": "SVC-001",
+      "source_service_name": "Retail Banking Core",
+      "source_entity": "ENT-053",
+      "source_entity_name": "CHAPSPaymentIntent",
+      "trigger": "PER-001 submits a CHAPS payment instruction. SVC-001 creates CHAPSPaymentIntent (ENT-053) with status=initiated. Triggers CoP check and sanctions screening.",
+      "journey_phase": "PH-077",
+      "journey_phase_name": "Payment Initiation",
+      "capability_scope": "cross-capability",
+      "capability_scope_rationale": "Published by CAP-001 (SVC-001); consumed by CAP-003 (SVC-009) for CoP and CAP-005 (SVC-014) for sanctions.",
+      "payload_schema": {
+        "chaps_intent_id": "string (UUID v4)",
+        "customer_id": "string (UUID v4)",
+        "account_id": "string (UUID v4)",
+        "beneficiary_sort_code": "string",
+        "beneficiary_account_number": "string",
+        "beneficiary_name": "string",
+        "beneficiary_lei": "string (nullable)",
+        "amount_gbp": "decimal",
+        "purpose_code": "string (ISO 20022 ExternalPurpose1Code)",
+        "payment_reference": "string",
+        "is_mortgage_completion_payment": "boolean",
+        "mortgage_account_id": "string (UUID v4, nullable)",
+        "enhanced_monitoring_flag": "boolean",
+        "initiated_at": "string (ISO 8601 UTC)",
+        "channel": "string enum (web | mobile)"
+      },
+      "consumers": [
+        { "service": "SVC-009", "service_name": "Domestic Payments", "action": "Initiates CoP check" },
+        { "service": "SVC-014", "service_name": "KYC/AML Service", "action": "Initiates sanctions screening and enhanced monitoring if applicable" },
+        { "service": "SVC-103", "service_name": "Audit & Logging", "action": "Creates immutable audit record" }
+      ],
+      "ordering_guarantees": "Per-customer strict ordering via customer_id on topic payments.chaps",
+      "topic": "payments.chaps",
+      "data_classification": "financial + pii",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "CHAPS payment initiation audit trail. GOV-003-R03 data quality and Consumer Duty evidence. 7-year retention.",
+      "retention": "7 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.payments.chaps.intent.created",
+      "governance_references": ["GOV-003-R02", "GOV-003-R03", "GOV-005-R02"],
+      "source_journeys": ["JRN-028"]
+    },
+    {
+      "event_id": "EVT-109",
+      "name": "CHAPSCoPCheckCompleted",
+      "source_service": "SVC-009",
+      "source_service_name": "Domestic Payments",
+      "source_entity": "ENT-052",
+      "source_entity_name": "CHAPSPaymentExecution",
+      "trigger": "SVC-009 receives CoP result from Pay.UK CoP service. Records cop_result and cop_checked_at on ENT-052.",
+      "journey_phase": "PH-078",
+      "journey_phase_name": "Confirmation of Payee Check",
+      "capability_scope": "cross-capability",
+      "capability_scope_rationale": "Published by CAP-003 (SVC-009); consumed by CAP-001 (SVC-001).",
+      "payload_schema": {
+        "chaps_intent_id": "string (UUID v4)",
+        "cop_result": "string enum (match | partial_match | no_match | unavailable)",
+        "cop_matched_name": "string (nullable)",
+        "checked_at": "string (ISO 8601 UTC)"
+      },
+      "consumers": [
+        { "service": "SVC-001", "service_name": "Retail Banking Core", "action": "Updates CHAPSPaymentIntent status to cop_complete" },
+        { "service": "SVC-103", "service_name": "Audit & Logging", "action": "Records CoP result for GOV-003-R02 audit evidence" }
+      ],
+      "ordering_guarantees": "Per-customer on topic payments.chaps",
+      "topic": "payments.chaps",
+      "data_classification": "financial",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "CoP result is audit evidence for GOV-003-R02 Consumer Duty compliance.",
+      "retention": "7 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.payments.chaps.cop.completed",
+      "governance_references": ["GOV-003-R02"],
+      "source_journeys": ["JRN-028"]
+    },
+    {
+      "event_id": "EVT-110",
+      "name": "CHAPSPaymentAuthorised",
+      "source_service": "SVC-001",
+      "source_service_name": "Retail Banking Core",
+      "source_entity": "ENT-053",
+      "source_entity_name": "CHAPSPaymentIntent",
+      "trigger": "PER-001 completes SCA at PH-080. Funds reserved from Account. Triggers RTGS submission.",
+      "journey_phase": "PH-080",
+      "journey_phase_name": "Payment Authorisation",
+      "capability_scope": "cross-capability",
+      "capability_scope_rationale": "Published by CAP-001 (SVC-001); consumed by CAP-003 (SVC-009) to trigger RTGS submission.",
+      "payload_schema": {
+        "chaps_intent_id": "string (UUID v4)",
+        "customer_id": "string (UUID v4)",
+        "account_id": "string (UUID v4)",
+        "beneficiary_sort_code": "string",
+        "beneficiary_account_number": "string",
+        "beneficiary_name": "string",
+        "beneficiary_lei": "string (nullable)",
+        "amount_gbp": "decimal",
+        "purpose_code": "string",
+        "payment_reference": "string",
+        "is_mortgage_completion_payment": "boolean",
+        "mortgage_account_id": "string (UUID v4, nullable)",
+        "authorised_at": "string (ISO 8601 UTC)",
+        "sca_reference": "string"
+      },
+      "consumers": [
+        { "service": "SVC-009", "service_name": "Domestic Payments", "action": "Creates ENT-052, generates UETR, constructs pacs.008, submits to RTGS" },
+        { "service": "SVC-103", "service_name": "Audit & Logging", "action": "SCA authorisation audit record — PSR 2017 Reg 100 dynamic linking evidence" }
+      ],
+      "ordering_guarantees": "Per-customer strict ordering on topic payments.chaps. Follows EVT-108 and EVT-109 for same intent.",
+      "topic": "payments.chaps",
+      "data_classification": "financial + pii",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "Irrevocable payment authorisation. SCA dynamic linking evidence. Consumer Duty. 7-year retention.",
+      "retention": "7 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.payments.chaps.intent.authorised",
+      "governance_references": ["GOV-003-R02", "GOV-003-R03", "PSR 2017 Reg 100"],
+      "source_journeys": ["JRN-028"]
+    },
+    {
+      "event_id": "EVT-111",
+      "name": "CHAPSPaymentSettled",
+      "source_service": "SVC-009",
+      "source_service_name": "Domestic Payments",
+      "source_entity": "ENT-052",
+      "source_entity_name": "CHAPSPaymentExecution",
+      "trigger": "Bank of England RTGS confirms settlement. Irrevocable. SVC-009 updates ENT-052 submission_status to settled.",
+      "journey_phase": "PH-081",
+      "journey_phase_name": "CHAPS Submission and Settlement",
+      "capability_scope": "cross-capability",
+      "capability_scope_rationale": "Published by CAP-003 (SVC-009); consumed by CAP-001 (SVC-001) for account debit.",
+      "payload_schema": {
+        "chaps_execution_id": "string (UUID v4)",
+        "payment_intent_id": "string (UUID v4)",
+        "customer_id": "string (UUID v4)",
+        "account_id": "string (UUID v4)",
+        "amount_gbp": "decimal",
+        "uetr": "string",
+        "rtgs_message_reference": "string",
+        "settled_at": "string (ISO 8601 UTC)",
+        "is_mortgage_completion_payment": "boolean",
+        "mortgage_account_id": "string (UUID v4, nullable)"
+      },
+      "consumers": [
+        { "service": "SVC-001", "service_name": "Retail Banking Core", "action": "Debits Account ENT-004, updates chaps_daily_total, transitions ENT-053 to completed" },
+        { "service": "SVC-103", "service_name": "Audit & Logging", "action": "Immutable settlement record — CHAPS data quality audit" }
+      ],
+      "ordering_guarantees": "Per-customer. Idempotent on chaps_execution_id. SVC-001 consumer must be idempotent.",
+      "topic": "payments.chaps",
+      "data_classification": "financial",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "Irrevocable settlement fact. Financial record for reconciliation and regulatory reporting. 7-year retention.",
+      "retention": "7 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.payments.chaps.payment.settled",
+      "governance_references": ["GOV-003-R03", "GOV-003-R04"],
+      "source_journeys": ["JRN-028"]
+    },
+    {
+      "event_id": "EVT-112",
+      "name": "MortgageCompletionPaymentConfirmed",
+      "source_service": "SVC-009",
+      "source_service_name": "Domestic Payments",
+      "source_entity": "ENT-052",
+      "source_entity_name": "CHAPSPaymentExecution",
+      "trigger": "EVT-111 published and is_mortgage_completion_payment=true. SVC-009 publishes to notify SVC-002 of completion payment settlement.",
+      "journey_phase": "PH-082",
+      "journey_phase_name": "Completion Confirmation and Notifications",
+      "capability_scope": "cross-capability",
+      "capability_scope_rationale": "Published by CAP-003 (SVC-009); consumed by CAP-001/SVC-002 (Mortgage Service). Connects JRN-028 to JRN-006.",
+      "payload_schema": {
+        "chaps_execution_id": "string (UUID v4)",
+        "mortgage_account_id": "string (UUID v4)",
+        "customer_id": "string (UUID v4)",
+        "settlement_amount_gbp": "decimal",
+        "settled_at": "string (ISO 8601 UTC)",
+        "uetr": "string",
+        "completion_date": "string (YYYY-MM-DD)"
+      },
+      "consumers": [
+        { "service": "SVC-002", "service_name": "Mortgage Service", "action": "Transitions MortgageAccount ENT-016 to completed. Sets completion_date. Triggers completion docs." }
+      ],
+      "ordering_guarantees": "Per-mortgage via mortgage_account_id. Published after EVT-111 for same execution. Idempotent on mortgage_account_id + chaps_execution_id.",
+      "topic": "payments.chaps",
+      "data_classification": "financial + pii",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "Mortgage completion regulatory event. Links CHAPS settlement to MCOB audit trail. 7-year retention.",
+      "retention": "7 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.payments.chaps.mortgage.completion.confirmed",
+      "governance_references": ["GOV-003-R03"],
+      "source_journeys": ["JRN-028", "JRN-006"]
+    },
+    {
+      "event_id": "EVT-113",
+      "name": "CHAPSPaymentFailed",
+      "source_service": "SVC-009",
+      "source_service_name": "Domestic Payments",
+      "source_entity": "ENT-052",
+      "source_entity_name": "CHAPSPaymentExecution",
+      "trigger": "RTGS rejects pacs.008 (EXC-003) or CHAPS cut-off passed (EXC-004). submission_status set to failed. Reserved funds must be released.",
+      "journey_phase": "PH-081",
+      "journey_phase_name": "CHAPS Submission and Settlement",
+      "capability_scope": "cross-capability",
+      "capability_scope_rationale": "Published by CAP-003 (SVC-009); consumed by CAP-001 (SVC-001) for fund release.",
+      "payload_schema": {
+        "chaps_execution_id": "string (UUID v4)",
+        "payment_intent_id": "string (UUID v4)",
+        "customer_id": "string (UUID v4)",
+        "account_id": "string (UUID v4)",
+        "amount_gbp": "decimal",
+        "failure_reason": "string enum (rtgs_rejection | cut_off_missed | technical_failure)",
+        "rejection_code": "string (nullable)",
+        "failed_at": "string (ISO 8601 UTC)"
+      },
+      "consumers": [
+        { "service": "SVC-001", "service_name": "Retail Banking Core", "action": "Releases reserved funds. Updates ENT-053 status to failed. Triggers customer notification." },
+        { "service": "SVC-103", "service_name": "Audit & Logging", "action": "Records failure with rejection_code for CHAPS data quality reporting" }
+      ],
+      "ordering_guarantees": "Per-customer. Terminal event — no EVT-111 follows for same execution.",
+      "topic": "payments.chaps",
+      "data_classification": "financial",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "Payment failure audit evidence. CHAPS data quality programme. 7-year retention.",
+      "retention": "7 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.payments.chaps.payment.failed",
+      "governance_references": ["GOV-003-R03", "GOV-003-R04"],
+      "source_journeys": ["JRN-028"]
+    },
+    {
+      "event_id": "EVT-114",
+      "name": "OverdraftReviewTriggered",
+      "source_service": "SVC-001",
+      "source_service_name": "Retail Banking Core",
+      "source_entity": "ENT-054",
+      "source_entity_name": "OverdraftReview",
+      "trigger": "Nightly batch identifies accounts with overdraft expiring within 30 days. Creates OverdraftReview record and publishes trigger event.",
+      "journey_phase": "PH-083",
+      "journey_phase_name": "Automated Review Trigger",
+      "capability_scope": "cross-capability",
+      "capability_scope_rationale": "Published by CAP-001 (SVC-001); consumed by CAP-004 (SVC-012) for credit assessment.",
+      "payload_schema": {
+        "review_id": "string (UUID v4)",
+        "account_id": "string (UUID v4)",
+        "customer_id": "string (UUID v4)",
+        "current_overdraft_limit": "decimal",
+        "current_overdraft_apr": "decimal",
+        "overdraft_expiry_date": "string (YYYY-MM-DD)",
+        "review_period_start": "string (YYYY-MM-DD)",
+        "review_period_end": "string (YYYY-MM-DD)",
+        "triggered_at": "string (ISO 8601 UTC)"
+      },
+      "consumers": [
+        { "service": "SVC-012", "service_name": "Risk Engine", "action": "Initiates credit bureau refresh and behavioural analysis." },
+        { "service": "SVC-103", "service_name": "Audit & Logging", "action": "Records review initiation for CONC 6.7 audit trail." }
+      ],
+      "ordering_guarantees": "Per-account ordering via account_id partition key.",
+      "topic": "retail.overdraft",
+      "data_classification": "financial",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "Audit evidence that review was triggered within required timeframe. FCA CONC 6.7.",
+      "retention": "7 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.retail.overdraft.review.triggered",
+      "governance_references": ["GOV-001-R03"],
+      "source_journeys": ["JRN-016"]
+    },
+    {
+      "event_id": "EVT-115",
+      "name": "OverdraftAssessmentCompleted",
+      "source_service": "SVC-012",
+      "source_service_name": "Risk Engine",
+      "source_entity": null,
+      "source_entity_name": null,
+      "trigger": "SVC-012 completes credit bureau refresh and behavioural analysis. Publishes assessment results.",
+      "journey_phase": "PH-084",
+      "journey_phase_name": "Credit Bureau Refresh and Behavioural Analysis",
+      "capability_scope": "cross-capability",
+      "capability_scope_rationale": "Published by CAP-004 (SVC-012); consumed by CAP-001 (SVC-001).",
+      "payload_schema": {
+        "review_id": "string (UUID v4)",
+        "account_id": "string (UUID v4)",
+        "customer_id": "string (UUID v4)",
+        "credit_bureau_score": "integer (0-999, nullable)",
+        "credit_grade": "string enum (A-F)",
+        "affordability_score": "decimal (0.0-1.0)",
+        "avg_monthly_credit_turnover": "decimal",
+        "overdraft_utilisation_days": "integer (0-365)",
+        "missed_payment_count": "integer",
+        "assessment_status": "string enum (completed | bureau_unavailable)"
+      },
+      "consumers": [
+        { "service": "SVC-001", "service_name": "Retail Banking Core", "action": "Updates OverdraftReview with assessment. Proceeds to persistent debt screening." },
+        { "service": "SVC-103", "service_name": "Audit & Logging", "action": "Records credit assessment for audit trail." }
+      ],
+      "ordering_guarantees": "Per-account ordering. Follows EVT-114.",
+      "topic": "retail.overdraft",
+      "data_classification": "pii + financial",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "Credit assessment audit evidence for FCA CONC 5A affordability obligation.",
+      "retention": "7 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.risk.overdraft.assessment.completed",
+      "governance_references": ["GOV-001-R03", "GOV-001-R01"],
+      "source_journeys": ["JRN-016"]
+    },
+    {
+      "event_id": "EVT-116",
+      "name": "PersistentDebtScreeningCompleted",
+      "source_service": "SVC-001",
+      "source_service_name": "Retail Banking Core",
+      "source_entity": "ENT-054",
+      "source_entity_name": "OverdraftReview",
+      "trigger": "SVC-001 completes persistent debt screening against 18-month transaction history.",
+      "journey_phase": "PH-085",
+      "journey_phase_name": "Persistent Debt Screening",
+      "capability_scope": "intra-capability",
+      "capability_scope_rationale": "Published and consumed within CAP-001.",
+      "payload_schema": {
+        "review_id": "string (UUID v4)",
+        "account_id": "string (UUID v4)",
+        "persistent_debt_status": "string enum (none | 18_month_trigger | 36_month_trigger)",
+        "interest_paid_18m": "decimal",
+        "principal_repaid_18m": "decimal"
+      },
+      "consumers": [
+        { "service": "SVC-001", "service_name": "Retail Banking Core", "action": "Feeds into review decision at PH-086." },
+        { "service": "SVC-103", "service_name": "Audit & Logging", "action": "FCA CONC 6.7 compliance evidence." }
+      ],
+      "ordering_guarantees": "Per-account ordering. Follows EVT-115.",
+      "topic": "retail.overdraft",
+      "data_classification": "financial",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "FCA CONC 6.7 persistent debt screening evidence. 7-year retention.",
+      "retention": "7 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.retail.overdraft.persistent-debt.screened",
+      "governance_references": ["GOV-001-R03"],
+      "source_journeys": ["JRN-016"]
+    },
+    {
+      "event_id": "EVT-117",
+      "name": "OverdraftReviewDecided",
+      "source_service": "SVC-001",
+      "source_service_name": "Retail Banking Core",
+      "source_entity": "ENT-054",
+      "source_entity_name": "OverdraftReview",
+      "trigger": "SVC-001 consolidates assessment and persistent debt screening into review decision.",
+      "journey_phase": "PH-086",
+      "journey_phase_name": "Review Decision and Terms Update",
+      "capability_scope": "intra-capability",
+      "capability_scope_rationale": "Published and consumed within CAP-001.",
+      "payload_schema": {
+        "review_id": "string (UUID v4)",
+        "account_id": "string (UUID v4)",
+        "decision": "string enum (renew | modify | withdraw | suspend)",
+        "new_overdraft_limit": "decimal (nullable)",
+        "new_overdraft_apr": "decimal (nullable)",
+        "persistent_debt_status": "string enum",
+        "decided_at": "string (ISO 8601 UTC)"
+      },
+      "consumers": [
+        { "service": "SVC-001", "service_name": "Retail Banking Core", "action": "Triggers customer notification at PH-087." },
+        { "service": "SVC-103", "service_name": "Audit & Logging", "action": "Consumer Duty outcome evidence." }
+      ],
+      "ordering_guarantees": "Per-account ordering. Follows EVT-116.",
+      "topic": "retail.overdraft",
+      "data_classification": "financial",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "Review decision is core Consumer Duty outcome evidence. 7-year retention.",
+      "retention": "7 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.retail.overdraft.review.decided",
+      "governance_references": ["GOV-001-R01", "GOV-001-R03"],
+      "source_journeys": ["JRN-016"]
+    },
+    {
+      "event_id": "EVT-118",
+      "name": "OverdraftCustomerNotified",
+      "source_service": "SVC-001",
+      "source_service_name": "Retail Banking Core",
+      "source_entity": "ENT-054",
+      "source_entity_name": "OverdraftReview",
+      "trigger": "Customer notification dispatched for overdraft review outcome.",
+      "journey_phase": "PH-087",
+      "journey_phase_name": "Customer Notification",
+      "capability_scope": "intra-capability",
+      "capability_scope_rationale": "Published by CAP-001. Terminal event.",
+      "payload_schema": {
+        "review_id": "string (UUID v4)",
+        "account_id": "string (UUID v4)",
+        "decision": "string enum (renew | modify | withdraw | suspend)",
+        "notification_channels": "array of string",
+        "persistent_debt_intervention_sent": "boolean",
+        "notified_at": "string (ISO 8601 UTC)"
+      },
+      "consumers": [
+        { "service": "SVC-103", "service_name": "Audit & Logging", "action": "Records notification completion for Consumer Duty and CONC 6.7 audit." }
+      ],
+      "ordering_guarantees": "Per-account ordering. Terminal event. Follows EVT-117.",
+      "topic": "retail.overdraft",
+      "data_classification": "financial",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "Evidence customer was notified within required timeframe. 7-year retention.",
+      "retention": "7 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.retail.overdraft.customer.notified",
+      "governance_references": ["GOV-001-R01", "GOV-001-R03"],
+      "source_journeys": ["JRN-016"]
     }
   ]
 }

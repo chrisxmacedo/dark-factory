@@ -1,0 +1,56 @@
+{
+  "event_id": "EVT-112",
+  "name": "MortgageCompletionPaymentConfirmed",
+  "source_service": "SVC-009",
+  "source_service_name": "Domestic Payments",
+  "source_entity": "ENT-052",
+  "source_entity_name": "CHAPSPaymentExecution",
+  "trigger": "CHAPSPaymentSettled (EVT-111) is published and CHAPSPaymentExecution.is_mortgage_completion_payment = true. SVC-009 publishes MortgageCompletionPaymentConfirmed to notify SVC-002 (Mortgage Service) that the property purchase completion payment has settled. Enables SVC-002 to close the mortgage completion lifecycle (JRN-006).",
+  "journey_phase": "PH-082",
+  "journey_phase_name": "Completion Confirmation and Notifications",
+  "capability_scope": "cross-capability",
+  "capability_scope_rationale": "Published by CAP-003 (SVC-009); consumed by CAP-001/SVC-002 (Mortgage Service). Crosses CAP-003 → CAP-001 boundary. Connects JRN-028 (CHAPS payment) back to JRN-006 (mortgage completion).",
+  "payload_schema": {
+    "chaps_execution_id": "string (UUID v4)",
+    "mortgage_account_id": "string (UUID v4) — FK to ENT-016",
+    "customer_id": "string (UUID v4)",
+    "settlement_amount_gbp": "decimal — the settled CHAPS amount",
+    "settled_at": "string (ISO 8601 UTC)",
+    "uetr": "string — RTGS UETR for tracing",
+    "completion_date": "string (YYYY-MM-DD) — extracted from settled_at for mortgage record"
+  },
+  "derived_from": {
+    "entity": "ENT-052",
+    "field_mappings": [
+      {"entity_field": "chaps_execution_id", "payload_field": "chaps_execution_id"},
+      {"entity_field": "mortgage_account_id", "payload_field": "mortgage_account_id"},
+      {"entity_field": "amount_gbp", "payload_field": "settlement_amount_gbp"},
+      {"entity_field": "settled_at", "payload_field": "settled_at"},
+      {"entity_field": "uetr", "payload_field": "uetr"},
+      {"entity_field": "settled_at", "payload_field": "completion_date", "note": "Date portion of settled_at — YYYY-MM-DD extracted"}
+    ],
+    "excluded_fields": ["beneficiary_sort_code", "beneficiary_account_number", "beneficiary_name", "beneficiary_lei", "purpose_code", "payment_reference", "sanctions_screening_reference"]
+  },
+  "consumers": [
+    {
+      "service": "SVC-002",
+      "service_name": "Mortgage Service",
+      "action": "Transitions MortgageAccount (ENT-016) status to 'completed'. Sets completion_date. Triggers completion documentation pack dispatch. Completes JRN-006 mortgage lifecycle. Idempotent on mortgage_account_id + chaps_execution_id."
+    },
+    {
+      "service": "SVC-103",
+      "service_name": "Audit & Logging",
+      "action": "Audit trail linking mortgage completion to CHAPS settlement event"
+    }
+  ],
+  "ordering_guarantees": "Per-mortgage ordering via mortgage_account_id. Published after EVT-111 for the same execution. SVC-002 consumer must be idempotent — duplicate publication must not result in double completion.",
+  "topic": "payments.chaps",
+  "data_classification": "financial + pii",
+  "worm_audit_pipeline": true,
+  "worm_rationale": "Mortgage completion is a regulated financial event. Links CHAPS settlement (payment audit) to mortgage lifecycle (MCOB audit). Required for regulatory evidence trail. 7-year retention.",
+  "retention": "7 years (WORM audit pipeline — SVC-111)",
+  "cloudevents_type": "uk.bank.payments.chaps.mortgage.completion.confirmed",
+  "governance_references": ["GOV-003-R03"],
+  "source_journeys": ["JRN-028", "JRN-006"],
+  "cross_journey_note": "This event is the bridge between JRN-028 (CHAPS payment) and JRN-006 (mortgage completion). It must be consumed by SVC-002 to close the JRN-006 lifecycle. Any change to this event schema requires review against JRN-006 artefacts."
+}

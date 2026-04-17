@@ -1,0 +1,113 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "CAP-001 Retail Banking API — Overdraft Review Extensions (JRN-016)",
+    "description": "Extensions to the CAP-001 (Retail Banking) API surface for overdraft facility review and management. JRN-016 is primarily a batch-driven journey with no customer-initiated API calls. The endpoints below expose overdraft review status and terms for channel rendering. Served by SVC-001 (Retail Banking Core) internally.",
+    "version": "0.1.0 (JRN-016 extension)",
+    "x-capability": "CAP-001",
+    "x-source-journey": "JRN-016",
+    "x-owning-service": "SVC-001"
+  },
+  "servers": [
+    { "url": "https://api.bank.internal/retail/v1", "description": "Internal capability API gateway" }
+  ],
+  "security": [{ "BearerAuth": [] }],
+  "paths": {
+    "/accounts/{account_id}/overdraft": {
+      "get": {
+        "operationId": "getOverdraftFacility",
+        "summary": "Get current overdraft facility details",
+        "description": "Returns the current overdraft facility terms for the specified account: limit, APR, expiry date, and facility status. Also returns the most recent review outcome if one exists. Used by channels to render the overdraft management section.",
+        "parameters": [
+          { "name": "account_id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Overdraft facility details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "account_id": { "type": "string", "format": "uuid" },
+                    "overdraft_facility_status": { "type": "string", "enum": ["active", "suspended", "withdrawn", "pending_review"] },
+                    "overdraft_limit": { "type": "number", "format": "decimal", "description": "Current authorised overdraft limit in GBP" },
+                    "overdraft_apr": { "type": "number", "format": "decimal", "description": "Current overdraft APR (single rate per FCA PS19/16)" },
+                    "overdraft_expiry_date": { "type": "string", "format": "date", "description": "Date when current facility expires" },
+                    "last_review": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "review_id": { "type": "string", "format": "uuid" },
+                        "decision": { "type": "string", "enum": ["renew", "modify", "withdraw", "suspend"] },
+                        "decided_at": { "type": "string", "format": "date-time" },
+                        "effective_date": { "type": "string", "format": "date" }
+                      }
+                    },
+                    "persistent_debt_status": { "type": "string", "enum": ["none", "18_month_trigger", "36_month_trigger"], "description": "Current persistent debt status. Visible to customer with explanation." }
+                  }
+                }
+              }
+            }
+          },
+          "403": { "description": "Account belongs to different customer" },
+          "404": { "description": "Account not found or has no overdraft facility" }
+        }
+      }
+    },
+    "/accounts/{account_id}/overdraft/reviews": {
+      "get": {
+        "operationId": "getOverdraftReviewHistory",
+        "summary": "Get overdraft review history",
+        "description": "Returns the history of overdraft reviews for this account. Used by internal operations portal (CH-004) for credit analyst review of past decisions. Channel access (CH-001/CH-002) returns a simplified projection without credit grades.",
+        "parameters": [
+          { "name": "account_id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 5, "maximum": 20 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of overdraft reviews",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "reviews": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "review_id": { "type": "string", "format": "uuid" },
+                          "review_period_start": { "type": "string", "format": "date" },
+                          "review_period_end": { "type": "string", "format": "date" },
+                          "decision": { "type": "string", "enum": ["renew", "modify", "withdraw", "suspend"] },
+                          "previous_limit": { "type": "number" },
+                          "new_limit": { "type": "number", "nullable": true },
+                          "previous_apr": { "type": "number" },
+                          "new_apr": { "type": "number", "nullable": true },
+                          "decided_at": { "type": "string", "format": "date-time" },
+                          "persistent_debt_status": { "type": "string" },
+                          "x-projection-note": "credit_grade, affordability_score, credit_bureau_score NOT included in customer-facing projection. Available via internal portal with CREDIT_ANALYST_ACCESS."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT issued by SVC-100 (IAM). Claims include customer_id, entitlements."
+      }
+    }
+  }
+}

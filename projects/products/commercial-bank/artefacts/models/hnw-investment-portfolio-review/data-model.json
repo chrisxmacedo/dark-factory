@@ -1,0 +1,287 @@
+{
+  "journey_id": "JRN-015",
+  "document_version": "0.1.0",
+  "status": "Draft",
+  "new_entities": [
+    {
+      "id": "ENT-046",
+      "name": "PortfolioReviewRecord",
+      "description": "Aggregate root for one periodic suitability review cycle. Created at PH-071 when a review is scheduled and closed at PH-076 when the post-review report is dispatched. Tracks review status, meeting details, linked suitability assessment, rebalancing recommendation, and next review date.",
+      "owning_service": "SVC-016",
+      "fields": [
+        {"name": "review_id", "type": "UUID", "validation": "globally unique, immutable", "source": "JRN-015 PH-071"},
+        {"name": "client_id", "type": "UUID", "validation": "FK to Customer (ENT-001, CAP-001); not null", "source": "JRN-015 PH-071"},
+        {"name": "advisor_id", "type": "string", "validation": "FK to Wealth Advisor identity (IAM); not null", "source": "JRN-015 PH-071"},
+        {"name": "advisor_fca_register_ref", "type": "string", "validation": "FCA Financial Services Register reference; not null for all regulated actions", "source": "JRN-015 PH-071"},
+        {"name": "review_type", "type": "enum", "validation": "annual | material_change_triggered | ad_hoc_client_request", "source": "JRN-015 PH-071"},
+        {"name": "scheduled_at", "type": "ISO 8601 UTC datetime", "validation": "not null", "source": "JRN-015 PH-071"},
+        {"name": "meeting_confirmed_at", "type": "ISO 8601 UTC datetime", "validation": "nullable — null until client confirms", "source": "JRN-015 PH-071"},
+        {"name": "status", "type": "enum", "validation": "scheduled | in_progress | suitability_pending | awaiting_client_instruction | execution_in_progress | reporting | completed | overdue | cancelled", "source": "JRN-015 PH-071"},
+        {"name": "suitability_assessment_id", "type": "UUID", "validation": "FK to SuitabilityAssessment (ENT-047); nullable until PH-072 starts", "source": "JRN-015 PH-072"},
+        {"name": "rebalancing_recommendation_id", "type": "UUID", "validation": "FK to RebalancingRecommendation (ENT-048); nullable until PH-073", "source": "JRN-015 PH-073"},
+        {"name": "investment_instruction_id", "type": "UUID", "validation": "FK to InvestmentInstruction (ENT-049); nullable until PH-074", "source": "JRN-015 PH-074"},
+        {"name": "consumer_duty_evidence_id", "type": "UUID", "validation": "FK to ConsumerDutyEvidenceRecord (ENT-051); nullable until PH-076", "source": "JRN-015 PH-076"},
+        {"name": "prior_review_id", "type": "UUID", "validation": "FK to prior PortfolioReviewRecord; nullable for first review", "source": "JRN-015 PH-071"},
+        {"name": "next_review_date", "type": "ISO 8601 date", "validation": "set at PH-076; must be within 12 months of review_completed_at per COBS 9A", "source": "JRN-015 PH-076"},
+        {"name": "review_completed_at", "type": "ISO 8601 UTC datetime", "validation": "nullable — set at PH-076", "source": "JRN-015 PH-076"},
+        {"name": "contact_attempts", "type": "integer", "validation": "0..N; incremented on each scheduling communication to client", "source": "JRN-015 PH-071 EXC-003"},
+        {"name": "escalated_at", "type": "ISO 8601 UTC datetime", "validation": "nullable — set if contact_attempts >= 3", "source": "JRN-015 EXC-003"},
+        {"name": "created_at", "type": "ISO 8601 UTC datetime", "validation": "not null; immutable", "source": "JRN-015 PH-071"},
+        {"name": "updated_at", "type": "ISO 8601 UTC datetime", "validation": "not null; updated on each status transition", "source": "JRN-015 PH-071"}
+      ],
+      "relationships": [
+        {"entity": "ENT-047 (SuitabilityAssessment)", "type": "one-to-one", "note": "One PortfolioReviewRecord has one SuitabilityAssessment per review cycle"},
+        {"entity": "ENT-048 (RebalancingRecommendation)", "type": "one-to-one", "note": "One PortfolioReviewRecord has one RebalancingRecommendation"},
+        {"entity": "ENT-049 (InvestmentInstruction)", "type": "one-to-one", "note": "One PortfolioReviewRecord has one InvestmentInstruction capturing the client's decision"},
+        {"entity": "ENT-050 (PortfolioSnapshot)", "type": "one-to-many", "note": "Multiple snapshots per review: pre-review and post-rebalancing"},
+        {"entity": "ENT-051 (ConsumerDutyEvidenceRecord)", "type": "one-to-one", "note": "One Consumer Duty evidence record per review cycle"},
+        {"entity": "ENT-001 (Customer)", "type": "reference", "note": "CAP-001 entity; referenced by client_id; not owned by SVC-016"}
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-ENT046-01",
+          "decision": "PortfolioReviewRecord is the aggregate root for the entire review lifecycle. All other JRN-015 entities are linked through it.",
+          "rationale": "Provides a single audit entry point for the MiFID II suitability review cycle. Simplifies compliance querying: 'show all completed reviews for client X in the last 5 years' maps to a single entity."
+        }
+      ]
+    },
+    {
+      "id": "ENT-047",
+      "name": "SuitabilityAssessment",
+      "description": "Records the full MiFID II suitability assessment for one review cycle: questionnaire responses, risk profile scoring, sustainability preferences, suitability gap analysis, advisor notes, and the final suitability report. The suitability report PDF is stored as a reference (not inline). Owned by SVC-016 (Wealth Management). A copy of the suitability record reference is published to SVC-014 (CAP-005) via async event for the central compliance audit trail.",
+      "owning_service": "SVC-016",
+      "fields": [
+        {"name": "assessment_id", "type": "UUID", "validation": "globally unique, immutable", "source": "JRN-015 PH-072"},
+        {"name": "review_id", "type": "UUID", "validation": "FK to PortfolioReviewRecord (ENT-046); not null", "source": "JRN-015 PH-072"},
+        {"name": "client_id", "type": "UUID", "validation": "FK to Customer (ENT-001, CAP-001); not null", "source": "JRN-015 PH-072"},
+        {"name": "questionnaire_version", "type": "string", "validation": "version identifier of the suitability questionnaire template; not null", "source": "JRN-015 PH-072"},
+        {"name": "questionnaire_responses", "type": "JSON object", "validation": "complete set of scored questionnaire answers; not null; schema validated against questionnaire_version", "source": "JRN-015 PH-072"},
+        {"name": "prior_risk_profile_score", "type": "integer", "validation": "1..10; copied from prior SuitabilityAssessment at review start", "source": "JRN-015 PH-072"},
+        {"name": "updated_risk_profile_score", "type": "integer", "validation": "1..10; computed from questionnaire_responses", "source": "JRN-015 PH-072",
+          "computed_from": {
+            "logic": "Risk scoring model: weighted sum of questionnaire_responses[loss_tolerance], questionnaire_responses[investment_horizon], questionnaire_responses[investment_knowledge], questionnaire_responses[financial_situation_stability]. Score band: 1-3 Cautious, 4-6 Moderate, 7-8 Growth, 9-10 Aggressive.",
+            "source_fields": ["questionnaire_responses.loss_tolerance", "questionnaire_responses.investment_horizon", "questionnaire_responses.investment_knowledge", "questionnaire_responses.financial_situation_stability"]
+          }
+        },
+        {"name": "risk_profile_changed", "type": "boolean", "validation": "true if updated_risk_profile_score != prior_risk_profile_score by >= 2 bands",
+          "computed_from": {
+            "logic": "ABS(updated_risk_profile_score - prior_risk_profile_score) >= 2 → material change flag",
+            "source_fields": ["updated_risk_profile_score", "prior_risk_profile_score"]
+          }
+        },
+        {"name": "sustainability_preferences", "type": "JSON object", "validation": "captures ESG preference flags per FCA SDR label categories; nullable if client has no preference", "source": "JRN-015 PH-072"},
+        {"name": "suitability_gap_flags", "type": "JSON array", "validation": "list of instruments in current mandate that are no longer suitable given the updated risk profile; may be empty", "source": "JRN-015 PH-072"},
+        {"name": "head_of_suitability_required", "type": "boolean", "validation": "true if risk_profile_changed = true OR any suitability_gap_flags present for a restricted investment", "source": "JRN-015 ALT-003"},
+        {"name": "head_of_suitability_signoff_ref", "type": "string", "validation": "nullable; required if head_of_suitability_required = true before status = issued", "source": "JRN-015 ALT-003"},
+        {"name": "head_of_suitability_signoff_notes", "type": "string (encrypted)", "validation": "nullable; internal compliance record only; never projected to client", "source": "JRN-015 ALT-003"},
+        {"name": "advisor_notes", "type": "string (encrypted)", "validation": "advisor-only notes; not included in client-facing suitability report", "source": "JRN-015 PH-072"},
+        {"name": "recommendation_rationale_client", "type": "string", "validation": "consumer-facing rationale for the rebalancing recommendation; included in suitability report", "source": "JRN-015 PH-073"},
+        {"name": "ex_ante_costs_charges", "type": "JSON object", "validation": "MiFID II standardised costs and charges disclosure; not null before status = issued", "source": "JRN-015 PH-074"},
+        {"name": "ex_post_costs_charges", "type": "JSON object", "validation": "MiFID II annual ex-post disclosure; not null", "source": "JRN-015 PH-073"},
+        {"name": "suitability_report_document_ref", "type": "string (S3/object-store URI)", "validation": "reference to PDF document; not null when status = issued", "source": "JRN-015 PH-074"},
+        {"name": "client_acknowledged_at", "type": "ISO 8601 UTC datetime", "validation": "nullable; set when client acknowledges the suitability report in the portal", "source": "JRN-015 PH-074"},
+        {"name": "client_acknowledgement_ip", "type": "string (masked)", "validation": "last 4 octets retained for audit; full IP stored in WORM audit trail only", "source": "JRN-015 PH-074"},
+        {"name": "status", "type": "enum", "validation": "in_progress | gap_analysis_complete | pending_hofs_signoff | report_generated | issued | acknowledged | archived", "source": "JRN-015 PH-072"},
+        {"name": "created_at", "type": "ISO 8601 UTC datetime", "validation": "not null; immutable", "source": "JRN-015 PH-072"},
+        {"name": "issued_at", "type": "ISO 8601 UTC datetime", "validation": "nullable; set when suitability report is issued to client", "source": "JRN-015 PH-074"}
+      ],
+      "relationships": [
+        {"entity": "ENT-046 (PortfolioReviewRecord)", "type": "belongs-to", "note": "Each SuitabilityAssessment belongs to one PortfolioReviewRecord"},
+        {"entity": "ENT-048 (RebalancingRecommendation)", "type": "one-to-one", "note": "The suitability assessment provides the basis for the rebalancing recommendation"}
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-ENT047-01",
+          "decision": "SuitabilityAssessment is owned by SVC-016. SVC-014 (CAP-005) stores only a lightweight SuitabilityRecord reference (assessment_id, review_id, client_id, issued_at, status) for compliance audit queries. It does not hold the full questionnaire data.",
+          "rationale": "Full questionnaire responses and advisor notes are operationally sensitive wealth management data. SVC-014's compliance audit record only needs the evidence that a compliant review was conducted and issued — not the full advisory content."
+        },
+        {
+          "id": "DD-ENT047-02",
+          "decision": "head_of_suitability_signoff_notes is encrypted at rest and never projected to the client or included in the suitability report.",
+          "rationale": "Internal compliance sign-off notes may contain risk assessments or escalation rationale that is privileged under FSMA s348. Excluded from all client-facing projections."
+        }
+      ]
+    },
+    {
+      "id": "ENT-048",
+      "name": "RebalancingRecommendation",
+      "description": "Captures the Wealth Advisor's investment rebalancing recommendation for one review cycle: proposed trade list, target allocation, rationale, ex-ante costs, and the SDR label set. Created at PH-073. Linked to the SuitabilityAssessment as the basis document. May be declined by the client (client_decision = declined).",
+      "owning_service": "SVC-016",
+      "fields": [
+        {"name": "recommendation_id", "type": "UUID", "validation": "globally unique, immutable", "source": "JRN-015 PH-073"},
+        {"name": "review_id", "type": "UUID", "validation": "FK to PortfolioReviewRecord (ENT-046); not null", "source": "JRN-015 PH-073"},
+        {"name": "assessment_id", "type": "UUID", "validation": "FK to SuitabilityAssessment (ENT-047); not null", "source": "JRN-015 PH-073"},
+        {"name": "proposed_trades", "type": "JSON array", "validation": "array of {instrument_id, instrument_name, action: buy|sell|hold, amount_gbp, target_weight_pct, sddr_label: string|null}; not null; min 1 item if any rebalancing proposed", "source": "JRN-015 PH-073"},
+        {"name": "target_allocation", "type": "JSON object", "validation": "asset class percentages summing to 100; validated by system", "source": "JRN-015 PH-073"},
+        {"name": "current_allocation", "type": "JSON object", "validation": "asset class percentages at time of recommendation; not null", "source": "JRN-015 PH-073"},
+        {"name": "performance_vs_benchmark", "type": "JSON object", "validation": "1-year, 3-year portfolio return vs benchmark index; includes attribution summary", "source": "JRN-015 PH-073"},
+        {"name": "ex_post_costs_charges", "type": "JSON object", "validation": "MiFID II COBS 9A ex-post total costs for prior 12 months", "source": "JRN-015 PH-073"},
+        {"name": "ex_ante_costs_charges", "type": "JSON object", "validation": "MiFID II COBS 9A ex-ante costs for proposed portfolio", "source": "JRN-015 PH-074"},
+        {"name": "model_weights", "type": "JSON object (encrypted)", "validation": "internal optimiser weights; not projected to client", "source": "JRN-015 PH-073"},
+        {"name": "investment_committee_override", "type": "boolean", "validation": "true if IC manual override applied", "source": "JRN-015 PH-073"},
+        {"name": "investment_committee_override_notes", "type": "string (encrypted)", "validation": "nullable; internal only", "source": "JRN-015 PH-073"},
+        {"name": "client_decision", "type": "enum", "validation": "pending | approved | declined | partial_approved", "source": "JRN-015 PH-074"},
+        {"name": "client_decision_at", "type": "ISO 8601 UTC datetime", "validation": "nullable; set when client gives instruction", "source": "JRN-015 PH-074"},
+        {"name": "client_decline_reason", "type": "string", "validation": "nullable; required if client_decision = declined; COBS 9A requires documentation of client override", "source": "JRN-015 ALT-001"},
+        {"name": "cash_balance_included", "type": "boolean", "validation": "true if ALT-002 cross-capability account data was retrieved and included in recommendation", "source": "JRN-015 ALT-002"},
+        {"name": "cash_balance_snapshot_gbp", "type": "decimal", "validation": "nullable; populated from CAP-001 event response if ALT-002; used for liquidity buffer assessment", "source": "JRN-015 ALT-002"},
+        {"name": "created_at", "type": "ISO 8601 UTC datetime", "validation": "not null; immutable", "source": "JRN-015 PH-073"},
+        {"name": "updated_at", "type": "ISO 8601 UTC datetime", "validation": "not null", "source": "JRN-015 PH-073"}
+      ],
+      "relationships": [
+        {"entity": "ENT-046 (PortfolioReviewRecord)", "type": "belongs-to"},
+        {"entity": "ENT-047 (SuitabilityAssessment)", "type": "belongs-to"},
+        {"entity": "ENT-049 (InvestmentInstruction)", "type": "one-to-one", "note": "Client instructions reference the recommendation"}
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-ENT048-01",
+          "decision": "model_weights and investment_committee_override_notes are encrypted and excluded from all client projections.",
+          "rationale": "Internal optimiser model weights are commercially sensitive intellectual property. IC override notes may contain market-sensitive information."
+        },
+        {
+          "id": "DD-ENT048-02",
+          "decision": "cash_balance_snapshot_gbp is a locally cached value from CAP-001, populated only in ALT-002. SVC-016 does not maintain a live balance — it uses the point-in-time snapshot received from the async event.",
+          "rationale": "SVC-016 must not hold a live replica of CAP-001 Account data. The snapshot is explicitly timestamped and used only for the liquidity buffer calculation in the review session."
+        }
+      ]
+    },
+    {
+      "id": "ENT-049",
+      "name": "InvestmentInstruction",
+      "description": "Records the client's formal investment instruction for the review cycle: the client's decision (proceed, decline, partial), the individual trade orders submitted to the custody platform, and execution outcomes. Created at PH-074. One instruction per review cycle.",
+      "owning_service": "SVC-016",
+      "fields": [
+        {"name": "instruction_id", "type": "UUID", "validation": "globally unique, immutable", "source": "JRN-015 PH-074"},
+        {"name": "review_id", "type": "UUID", "validation": "FK to PortfolioReviewRecord (ENT-046); not null", "source": "JRN-015 PH-074"},
+        {"name": "recommendation_id", "type": "UUID", "validation": "FK to RebalancingRecommendation (ENT-048); not null", "source": "JRN-015 PH-074"},
+        {"name": "instruction_type", "type": "enum", "validation": "proceed_full | proceed_partial | decline", "source": "JRN-015 PH-074"},
+        {"name": "instructions_given_at", "type": "ISO 8601 UTC datetime", "validation": "not null; immutable audit record", "source": "JRN-015 PH-074"},
+        {"name": "orders", "type": "JSON array", "validation": "array of {order_id: UUID, instrument_id: string, action: buy|sell, amount_gbp: decimal, status: pending|submitted|confirmed|failed|cancelled, custody_order_ref: string|null, submitted_at: datetime|null, confirmed_at: datetime|null, fail_reason: string|null}; not null if instruction_type != decline", "source": "JRN-015 PH-075"},
+        {"name": "custody_platform", "type": "enum", "validation": "FNZ | SEI | other", "source": "JRN-015 PH-075"},
+        {"name": "mifid_transaction_refs", "type": "JSON array", "validation": "array of UTI strings; one per executed order; required by MiFID II transaction reporting", "source": "JRN-015 PH-075"},
+        {"name": "execution_status", "type": "enum", "validation": "not_started | in_progress | fully_executed | partially_executed | failed | not_required (if instruction_type=decline)", "source": "JRN-015 PH-075"},
+        {"name": "execution_completed_at", "type": "ISO 8601 UTC datetime", "validation": "nullable; set when all orders reach terminal state", "source": "JRN-015 PH-075"},
+        {"name": "partial_execution_notes", "type": "string", "validation": "nullable; required if execution_status = partially_executed (EXC-002)", "source": "JRN-015 EXC-002"},
+        {"name": "created_at", "type": "ISO 8601 UTC datetime", "validation": "not null; immutable", "source": "JRN-015 PH-074"}
+      ],
+      "relationships": [
+        {"entity": "ENT-046 (PortfolioReviewRecord)", "type": "belongs-to"},
+        {"entity": "ENT-048 (RebalancingRecommendation)", "type": "belongs-to"},
+        {"entity": "ENT-050 (PortfolioSnapshot)", "type": "one-to-one", "note": "Post-execution snapshot taken after all orders confirmed"}
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-ENT049-01",
+          "decision": "Trade orders are modelled as a JSON array within InvestmentInstruction rather than as a separate Orders entity.",
+          "rationale": "Rebalancing orders are always processed as a batch (never individually from an instruction perspective). Embedding as a JSON array simplifies the aggregate and avoids a spurious entity. The order array is small (typically 5-20 items per rebalancing)."
+        }
+      ]
+    },
+    {
+      "id": "ENT-050",
+      "name": "PortfolioSnapshot",
+      "description": "An immutable point-in-time record of the client's portfolio holdings, market values, asset allocation, and performance metrics. Created at PH-071 (pre-review baseline) and at PH-076 (post-rebalancing). Provides the basis for the performance review presentation and the post-review report. May also be created ad hoc for intra-review recalculation.",
+      "owning_service": "SVC-016",
+      "fields": [
+        {"name": "snapshot_id", "type": "UUID", "validation": "globally unique, immutable", "source": "JRN-015 PH-071"},
+        {"name": "client_id", "type": "UUID", "validation": "FK to Customer (ENT-001, CAP-001); not null", "source": "JRN-015 PH-071"},
+        {"name": "review_id", "type": "UUID", "validation": "FK to PortfolioReviewRecord (ENT-046); not null", "source": "JRN-015 PH-071"},
+        {"name": "snapshot_type", "type": "enum", "validation": "pre_review | post_rebalancing | intra_review", "source": "JRN-015 PH-071"},
+        {"name": "snapshot_at", "type": "ISO 8601 UTC datetime", "validation": "not null; immutable", "source": "JRN-015 PH-071"},
+        {"name": "total_market_value_gbp", "type": "decimal", "validation": "non-negative; sum of all position market values converted to GBP", "source": "JRN-015 PH-071",
+          "computed_from": {
+            "logic": "SUM(positions[*].market_value_gbp) where market_value_gbp = position_quantity * closing_price * fx_rate_to_gbp",
+            "source_fields": ["positions.position_quantity", "positions.closing_price", "positions.fx_rate_to_gbp"]
+          }
+        },
+        {"name": "positions", "type": "JSON array", "validation": "array of {instrument_id: string, instrument_name: string, isin: string, asset_class: enum, market_value_gbp: decimal, position_quantity: decimal, closing_price: decimal, currency: string, fx_rate_to_gbp: decimal, sddr_label: string|null, weight_pct: decimal}", "source": "JRN-015 PH-071"},
+        {"name": "asset_allocation", "type": "JSON object", "validation": "asset class percentages summing to 100; computed from positions", "source": "JRN-015 PH-071",
+          "computed_from": {
+            "logic": "For each asset_class: SUM(positions[asset_class=X].market_value_gbp) / total_market_value_gbp * 100",
+            "source_fields": ["positions.asset_class", "positions.market_value_gbp", "total_market_value_gbp"]
+          }
+        },
+        {"name": "performance_1yr_pct", "type": "decimal", "validation": "nullable on first snapshot; computed from current vs 12-month-prior snapshot", "source": "JRN-015 PH-073",
+          "computed_from": {
+            "logic": "(total_market_value_gbp - snapshot_12m_prior.total_market_value_gbp - net_contributions_12m) / snapshot_12m_prior.total_market_value_gbp * 100",
+            "source_fields": ["total_market_value_gbp", "prior_snapshot.total_market_value_gbp", "net_contributions_12m"]
+          }
+        },
+        {"name": "performance_3yr_pct", "type": "decimal", "validation": "nullable if portfolio < 3 years old", "source": "JRN-015 PH-073"},
+        {"name": "benchmark_return_1yr_pct", "type": "decimal", "validation": "nullable; ARC/WMA benchmark return for the client's risk profile band", "source": "JRN-015 PH-073"},
+        {"name": "benchmark_id", "type": "string", "validation": "ARC index identifier per risk profile (e.g. ARC_STERLING_MODERATE_GROWTH)", "source": "JRN-015 PH-073"},
+        {"name": "ex_post_total_costs_pct", "type": "decimal", "validation": "MiFID II total charges expressed as a percentage of AUM for the period; not null when snapshot_type = pre_review", "source": "JRN-015 PH-073"},
+        {"name": "cash_balance_gbp", "type": "decimal", "validation": "nullable; populated from ALT-002 cross-capability event if included in holistic view", "source": "JRN-015 ALT-002"}
+      ],
+      "relationships": [
+        {"entity": "ENT-046 (PortfolioReviewRecord)", "type": "belongs-to"},
+        {"entity": "ENT-049 (InvestmentInstruction)", "type": "referenced-by", "note": "Post-rebalancing snapshot is linked from the InvestmentInstruction"}
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-ENT050-01",
+          "decision": "PortfolioSnapshot is immutable once created. A new snapshot is always created; existing snapshots are never updated.",
+          "rationale": "Regulatory audit requirement: the performance figures presented to the client during the review meeting must be identical to the figures stored in the compliance record. Mutable snapshots would allow retrospective alteration of regulatory evidence."
+        }
+      ]
+    },
+    {
+      "id": "ENT-051",
+      "name": "ConsumerDutyEvidenceRecord",
+      "description": "Records the bank's annual Consumer Duty fair value evidence for one client review cycle. Documents the service activities delivered for the advisory/management fee charged, the fair value assessment outcome, and any remediation actions. Required by FCA Consumer Duty (PS22/9). Created at PH-076. Published to CAP-005 for central compliance tracking.",
+      "owning_service": "SVC-016",
+      "fields": [
+        {"name": "evidence_id", "type": "UUID", "validation": "globally unique, immutable", "source": "JRN-015 PH-076"},
+        {"name": "review_id", "type": "UUID", "validation": "FK to PortfolioReviewRecord (ENT-046); not null", "source": "JRN-015 PH-076"},
+        {"name": "client_id", "type": "UUID", "validation": "FK to Customer (ENT-001, CAP-001); not null", "source": "JRN-015 PH-076"},
+        {"name": "period_start", "type": "ISO 8601 date", "validation": "start of the annual service period; not null", "source": "JRN-015 PH-076"},
+        {"name": "period_end", "type": "ISO 8601 date", "validation": "end of the annual service period; not null", "source": "JRN-015 PH-076"},
+        {"name": "total_fee_charged_gbp", "type": "decimal", "validation": "total advisory/management fee charged in the period; not null", "source": "JRN-015 PH-076"},
+        {"name": "fee_basis_pct", "type": "decimal", "validation": "fee as a percentage of average AUM in the period", "source": "JRN-015 PH-076",
+          "computed_from": {
+            "logic": "total_fee_charged_gbp / average_aum_gbp * 100",
+            "source_fields": ["total_fee_charged_gbp", "average_aum_gbp"]
+          }
+        },
+        {"name": "average_aum_gbp", "type": "decimal", "validation": "average AUM over the period; not null", "source": "JRN-015 PH-076"},
+        {"name": "service_activities_delivered", "type": "JSON array", "validation": "list of service activities delivered (review meetings, ad hoc calls, reports, etc.); not null; min 1 item", "source": "JRN-015 PH-076"},
+        {"name": "service_activities_summary", "type": "string", "validation": "consumer-facing summary of service activities for the annual statement; not null", "source": "JRN-015 PH-076"},
+        {"name": "fair_value_assessment_score", "type": "enum (encrypted)", "validation": "fair_value_met | fair_value_borderline | fair_value_gap; internal only; encrypted at rest", "source": "JRN-015 PH-076"},
+        {"name": "fair_value_assessment_notes", "type": "string (encrypted)", "validation": "internal compliance notes; not projected to client", "source": "JRN-015 PH-076"},
+        {"name": "remediation_required", "type": "boolean", "validation": "true if fair_value_assessment_score = fair_value_gap", "source": "JRN-015 PH-076"},
+        {"name": "remediation_plan_ref", "type": "string", "validation": "nullable; reference to remediation plan document if remediation_required = true", "source": "JRN-015 PH-076"},
+        {"name": "annual_statement_dispatched_at", "type": "ISO 8601 UTC datetime", "validation": "nullable; set when annual service statement dispatched to client", "source": "JRN-015 PH-076"},
+        {"name": "compliance_submitted_at", "type": "ISO 8601 UTC datetime", "validation": "nullable; set when ConsumerDutyEvidenceCompleted event published to CAP-005", "source": "JRN-015 PH-076"},
+        {"name": "created_at", "type": "ISO 8601 UTC datetime", "validation": "not null; immutable", "source": "JRN-015 PH-076"}
+      ],
+      "relationships": [
+        {"entity": "ENT-046 (PortfolioReviewRecord)", "type": "belongs-to"}
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-ENT051-01",
+          "decision": "fair_value_assessment_score and fair_value_assessment_notes are encrypted at rest and excluded from all client-facing projections.",
+          "rationale": "Internal fair value assessment scores are commercially sensitive and legally privileged compliance assessments. Disclosing borderline or gap scores to clients before remediation could trigger premature complaints or regulatory notifications. The client receives only the service_activities_summary."
+        }
+      ]
+    }
+  ],
+  "referenced_existing_entities": [
+    {
+      "entity_id": "ENT-001",
+      "entity_name": "Customer",
+      "owning_service": "SVC-001",
+      "owning_capability": "CAP-001",
+      "usage": "JRN-015: Referenced by client_id on ENT-046, ENT-047, ENT-050, ENT-051. SVC-016 holds only the UUID reference — no local copy of Customer fields. In ALT-002, SVC-016 requests a point-in-time account summary from SVC-001 via async event."
+    },
+    {
+      "entity_id": "ENT-003",
+      "entity_name": "KycAssessment",
+      "owning_service": "SVC-014",
+      "owning_capability": "CAP-005",
+      "usage": "JRN-015: SVC-016 references the existing KYC clearance status for the HNW client to confirm ongoing relationship is compliant before proceeding with the review. KYC record is not modified by JRN-015."
+    }
+  ],
+  "entity_extensions": []
+}

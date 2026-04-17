@@ -1,0 +1,49 @@
+{
+  "entity_id": "ENT-054",
+  "name": "OverdraftReview",
+  "description": "Records the full lifecycle of an annual overdraft facility review for a personal customer account. Each review is a discrete audit record covering credit assessment, behavioural analysis, persistent debt screening, and the renewal/modification/withdrawal decision. Owned by SVC-001 (Retail Banking Core, CAP-001). Introduced by JRN-016.",
+  "owning_service": "SVC-001",
+  "reachable_from_phases": ["PH-083", "PH-084", "PH-085", "PH-086", "PH-087"],
+  "aggregate_root": true,
+  "fields": [
+    { "name": "review_id", "type": "UUID", "validation_rule": "RFC 4122 UUID v4. System-generated. Immutable.", "source": "PH-083" },
+    { "name": "account_id", "type": "UUID", "validation_rule": "FK -> ENT-004. Immutable.", "source": "PH-083" },
+    { "name": "customer_id", "type": "UUID", "validation_rule": "FK -> ENT-001. Denormalised. Immutable.", "source": "PH-083" },
+    { "name": "review_period_start", "type": "date", "validation_rule": "ISO 8601. Immutable.", "source": "PH-083" },
+    { "name": "review_period_end", "type": "date", "validation_rule": "ISO 8601. = overdraft_expiry_date. Immutable.", "source": "PH-083" },
+    { "name": "status", "type": "enum", "validation_rule": "initiated | assessing | assessed | decided | notified | closed | deferred. Forward-only.", "source": "PH-083" },
+    { "name": "initiated_at", "type": "timestamp", "validation_rule": "ISO 8601 UTC. Immutable.", "source": "PH-083" },
+    { "name": "previous_overdraft_limit", "type": "decimal", "validation_rule": "GBP. Max 2dp. Captured at initiation.", "source": "PH-083" },
+    { "name": "previous_overdraft_apr", "type": "decimal", "validation_rule": "Percentage. Max 2dp.", "source": "PH-083" },
+    { "name": "credit_bureau_score", "type": "integer", "validation_rule": "0-999. Nullable if bureau unavailable.", "source": "PH-084" },
+    { "name": "credit_bureau_refresh_date", "type": "timestamp", "validation_rule": "ISO 8601 UTC.", "source": "PH-084" },
+    { "name": "credit_grade", "type": "enum", "validation_rule": "A | B | C | D | E | F.", "source": "PH-084" },
+    { "name": "affordability_score", "type": "decimal", "validation_rule": "0.0-1.0.", "source": "PH-084" },
+    { "name": "avg_monthly_credit_turnover", "type": "decimal", "validation_rule": "GBP. Max 2dp.", "source": "PH-084" },
+    { "name": "overdraft_utilisation_days", "type": "integer", "validation_rule": "0-365.", "source": "PH-084" },
+    { "name": "missed_payment_count", "type": "integer", "validation_rule": ">= 0.", "source": "PH-084" },
+    { "name": "persistent_debt_status", "type": "enum", "validation_rule": "none | 18_month_trigger | 36_month_trigger.", "source": "PH-085", "governed_by": "GOV-001-R03" },
+    { "name": "interest_paid_18m", "type": "decimal", "validation_rule": "GBP. Max 2dp.", "source": "PH-085" },
+    { "name": "principal_repaid_18m", "type": "decimal", "validation_rule": "GBP. Max 2dp. Can be negative.", "source": "PH-085" },
+    { "name": "decision", "type": "enum", "validation_rule": "renew | modify | withdraw | suspend.", "source": "PH-086" },
+    { "name": "new_overdraft_limit", "type": "decimal", "validation_rule": "GBP. Max 2dp. Nullable if withdrawn/suspended.", "source": "PH-086" },
+    { "name": "new_overdraft_apr", "type": "decimal", "validation_rule": "Percentage. Max 2dp. Nullable.", "source": "PH-086" },
+    { "name": "new_expiry_date", "type": "date", "validation_rule": "ISO 8601. Nullable.", "source": "PH-086" },
+    { "name": "withdrawal_effective_date", "type": "date", "validation_rule": "ISO 8601. >= decided_at + 30 days. Nullable.", "source": "PH-086" },
+    { "name": "decision_rationale", "type": "string", "validation_rule": "Max 1000 chars.", "source": "PH-086" },
+    { "name": "consumer_duty_fair_value_assessment", "type": "string", "validation_rule": "Max 2000 chars.", "source": "PH-086", "governed_by": "GOV-001-R01" },
+    { "name": "decided_at", "type": "timestamp", "validation_rule": "ISO 8601 UTC.", "source": "PH-086" },
+    { "name": "notified_at", "type": "timestamp", "validation_rule": "ISO 8601 UTC.", "source": "PH-087" },
+    { "name": "manual_review_required", "type": "boolean", "validation_rule": "Default false.", "source": "PH-086" },
+    { "name": "manual_review_analyst_id", "type": "string", "validation_rule": "Conditional. Analyst ID.", "source": "PH-086" },
+    { "name": "deferred_until", "type": "date", "validation_rule": "ISO 8601. Set when deferred.", "source": "PH-084" }
+  ],
+  "relationships": [
+    { "target_entity": "ENT-004", "type": "many-to-one", "description": "Belongs to one Account. Multiple reviews per account over time." },
+    { "target_entity": "ENT-001", "type": "many-to-one", "description": "Belongs to one Customer (denormalised)." }
+  ],
+  "design_decisions": [
+    { "id": "DD-ENT054-01", "decision": "Separate entity from Account (ENT-004)", "rationale": "Each annual review is a discrete audit record with its own lifecycle. Enables indexed queries by review period, persistent debt status, and decision type." }
+  ],
+  "source_journeys": ["JRN-016"]
+}

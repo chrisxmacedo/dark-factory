@@ -1,0 +1,207 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "CAP-001 Retail Banking API — CHAPS Payment Extensions (JRN-028)",
+    "description": "Extensions to the CAP-001 (Retail Banking) API surface for CHAPS high-value payment initiation and authorisation. This contract documents the CHAPS-specific endpoints added by JRN-028. These endpoints are served by SVC-001 (Retail Banking Core) internally — channels call the CAP-001 API surface; internal routing to SVC-001 is an L3 concern.",
+    "version": "0.1.0 (JRN-028 extension)",
+    "x-capability": "CAP-001",
+    "x-source-journey": "JRN-028",
+    "x-owning-service": "SVC-001"
+  },
+  "servers": [
+    { "url": "https://api.bank.internal/retail/v1", "description": "Internal capability API gateway" }
+  ],
+  "security": [{ "BearerAuth": [] }],
+  "paths": {
+    "/chaps-payments": {
+      "post": {
+        "operationId": "createCHAPSPaymentIntent",
+        "summary": "Initiate a CHAPS payment",
+        "description": "Creates a CHAPSPaymentIntent (ENT-053) for PER-001. Publishes CHAPSPaymentIntentCreated (EVT-108) which triggers CoP check and sanctions screening. Returns the intent ID and initial status. Phase: PH-077.",
+        "security": [{ "BearerAuth": ["CHAPS_PAYMENT_INITIATION"] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["account_id", "beneficiary_sort_code", "beneficiary_account_number", "beneficiary_name", "amount_gbp", "purpose_code", "payment_reference"],
+                "properties": {
+                  "account_id": { "type": "string", "format": "uuid", "description": "Source account UUID (ENT-004)" },
+                  "beneficiary_sort_code": { "type": "string", "pattern": "^\\d{2}-\\d{2}-\\d{2}$", "description": "6-digit UK sort code in XX-XX-XX format" },
+                  "beneficiary_account_number": { "type": "string", "pattern": "^\\d{8}$", "description": "8-digit UK account number" },
+                  "beneficiary_name": { "type": "string", "maxLength": 140, "description": "Beneficiary account name for CoP check" },
+                  "beneficiary_lei": { "type": "string", "pattern": "^[A-Z0-9]{20}$", "description": "ISO 17442 LEI — mandatory for corporate beneficiaries from 1 May 2025 (GOV-003-R03)" },
+                  "amount_gbp": { "type": "number", "format": "decimal", "minimum": 0.01, "description": "Payment amount in GBP" },
+                  "purpose_code": { "type": "string", "enum": ["PROP", "GDDS", "SUPP", "SALA", "TREA", "OTHR"], "description": "ISO 20022 ExternalPurpose1Code — use PROP for property purchase" },
+                  "payment_reference": { "type": "string", "maxLength": 35, "description": "Free-text payment reference for beneficiary" },
+                  "is_mortgage_completion_payment": { "type": "boolean", "default": false },
+                  "mortgage_account_id": { "type": "string", "format": "uuid", "description": "FK to ENT-016 — required when is_mortgage_completion_payment = true" },
+                  "channel": { "type": "string", "enum": ["web", "mobile"] }
+                }
+              },
+              "example": {
+                "account_id": "a3b4c5d6-1234-4abc-9def-0123456789ab",
+                "beneficiary_sort_code": "20-00-00",
+                "beneficiary_account_number": "12345678",
+                "beneficiary_name": "Smith & Jones Solicitors LLP Client Account",
+                "amount_gbp": 450000.00,
+                "purpose_code": "PROP",
+                "payment_reference": "123 High Street London W1A 1AA Completion",
+                "is_mortgage_completion_payment": true,
+                "mortgage_account_id": "b5c6d7e8-2345-4bcd-aef0-1234567890bc",
+                "channel": "web"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "CHAPSPaymentIntent created. CoP check and sanctions screening initiated asynchronously.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "chaps_intent_id": { "type": "string", "format": "uuid" },
+                    "status": { "type": "string", "enum": ["initiated"] },
+                    "initiated_at": { "type": "string", "format": "date-time" },
+                    "chaps_cutoff_time": { "type": "string", "description": "CHAPS customer cut-off time for today in ISO 8601 (e.g. 16:00:00). Display if current time is within 30 min." }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Validation error — invalid beneficiary details, missing mandatory fields, or EISCD modulus check failure" },
+          "403": { "description": "Insufficient entitlement — CHAPS_PAYMENT_INITIATION required" },
+          "409": { "description": "Account status not active, or duplicate payment intent detected" },
+          "422": { "description": "Amount below minimum, account not eligible for CHAPS" }
+        }
+      }
+    },
+    "/chaps-payments/{chaps_intent_id}": {
+      "get": {
+        "operationId": "getCHAPSPaymentIntent",
+        "summary": "Get CHAPS payment intent status",
+        "description": "Returns current status of CHAPSPaymentIntent including CoP result, sanctions status, and authorisation state. Projection varies by phase: CoP result surfaced only after PH-078; sanctions result never surfaced in full.",
+        "parameters": [
+          { "name": "chaps_intent_id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "CHAPSPaymentIntent detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "chaps_intent_id": { "type": "string", "format": "uuid" },
+                    "status": { "type": "string", "enum": ["initiated", "cop_pending", "cop_complete", "sanctions_pending", "sanctions_complete", "authorised", "executed", "completed", "failed", "cancelled"] },
+                    "cop_result": { "type": "string", "enum": ["match", "partial_match", "no_match", "unavailable"], "description": "Null until PH-078 completes" },
+                    "cop_matched_name": { "type": "string", "description": "Partial match: name as held at receiving bank (if returned by CoP scheme)" },
+                    "beneficiary_sort_code": { "type": "string" },
+                    "beneficiary_account_number": { "type": "string" },
+                    "beneficiary_name": { "type": "string" },
+                    "amount_gbp": { "type": "number" },
+                    "purpose_code": { "type": "string" },
+                    "payment_reference": { "type": "string" },
+                    "chaps_execution_id": { "type": "string", "format": "uuid", "description": "Null until PH-081 (execution begins)" },
+                    "uetr": { "type": "string", "description": "RTGS Unique End-to-End Transaction Reference — visible to customer for tracing" },
+                    "settled_at": { "type": "string", "format": "date-time", "description": "Null until settlement confirmed" },
+                    "x-projection-note": { "type": "string", "description": "sanctions_screening_result NEVER included in response. If blocked: status = failed, no sanctions detail." }
+                  }
+                }
+              }
+            }
+          },
+          "403": { "description": "Forbidden — chaps_intent_id belongs to different customer_id" },
+          "404": { "description": "Intent not found" }
+        }
+      }
+    },
+    "/chaps-payments/{chaps_intent_id}/cop-confirmation": {
+      "post": {
+        "operationId": "confirmCHAPSCoPResult",
+        "summary": "Customer confirms intent to proceed after CoP no/partial match",
+        "description": "PER-001 confirms they wish to proceed after reviewing a no_match or partial_match CoP result. Records customer_cop_confirmation = confirmed_proceed on ENT-053. Mandatory before proceeding to PH-080 when cop_result IN (no_match, partial_match). Phase: PH-078 ALT-001, ALT-002.",
+        "parameters": [
+          { "name": "chaps_intent_id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["confirmation"],
+                "properties": {
+                  "confirmation": { "type": "string", "enum": ["confirmed_proceed", "cancelled"], "description": "Customer's explicit choice after CoP mismatch warning" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Confirmation recorded. If confirmed_proceed: status advances to sanctions_pending." },
+          "409": { "description": "Intent status does not require CoP confirmation (cop_result is match or intent not in cop_complete state)" }
+        }
+      }
+    },
+    "/chaps-payments/{chaps_intent_id}/authorise": {
+      "post": {
+        "operationId": "authoriseCHAPSPayment",
+        "summary": "Authorise CHAPS payment with SCA",
+        "description": "PER-001 provides SCA credential to authorise the CHAPS payment. SVC-001 validates SCA with SVC-100 (dynamic linking — amount + beneficiary). On success: publishes CHAPSPaymentAuthorised (EVT-110), reserves funds from Account.available_balance, and transitions ENT-053 status to authorised. Phase: PH-080.",
+        "parameters": [
+          { "name": "chaps_intent_id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["sca_credential"],
+                "properties": {
+                  "sca_credential": { "type": "string", "description": "SCA credential token from SVC-100 challenge — biometric or OTP" },
+                  "irrevocability_confirmed": { "type": "boolean", "description": "Customer confirmed irrevocability warning. Required for audit evidence." }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Payment authorised. Execution triggered asynchronously.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "chaps_intent_id": { "type": "string", "format": "uuid" },
+                    "status": { "type": "string", "enum": ["authorised"] },
+                    "authorised_at": { "type": "string", "format": "date-time" },
+                    "estimated_settlement": { "type": "string", "description": "Estimated settlement time (CHAPS typically settles within minutes)" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Invalid SCA credential" },
+          "409": { "description": "Insufficient funds, CHAPS cut-off passed, or intent not in sanctions_complete state" },
+          "422": { "description": "SCA dynamic linking validation failed — amount or beneficiary mismatch" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT issued by SVC-100 (IAM). Claims include customer_id, entitlements, and SCA_COMPLETED flag."
+      }
+    }
+  }
+}

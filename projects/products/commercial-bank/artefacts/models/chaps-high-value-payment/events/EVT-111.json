@@ -1,0 +1,61 @@
+{
+  "event_id": "EVT-111",
+  "name": "CHAPSPaymentSettled",
+  "source_service": "SVC-009",
+  "source_service_name": "Domestic Payments",
+  "source_entity": "ENT-052",
+  "source_entity_name": "CHAPSPaymentExecution",
+  "trigger": "Bank of England RTGS (RT2) confirms settlement of the CHAPS payment. SVC-009 updates CHAPSPaymentExecution (ENT-052) submission_status to settled, records settled_at. Settlement is irrevocable — this event cannot be reversed. Published as the definitive settlement fact.",
+  "journey_phase": "PH-081",
+  "journey_phase_name": "CHAPS Submission and Settlement",
+  "capability_scope": "cross-capability",
+  "capability_scope_rationale": "Published by CAP-003 (SVC-009); consumed by CAP-001 (SVC-001) for account debit. Crosses CAP-003 → CAP-001 boundary. Settlement fact also triggers MortgageCompletionPaymentConfirmed (EVT-112) publication.",
+  "payload_schema": {
+    "chaps_execution_id": "string (UUID v4) — CHAPSPaymentExecution identifier",
+    "payment_intent_id": "string (UUID v4) — correlation to ENT-053",
+    "customer_id": "string (UUID v4)",
+    "account_id": "string (UUID v4) — account to debit",
+    "amount_gbp": "decimal — settled amount",
+    "uetr": "string — ISO 20022 UETR (for customer reference and tracing)",
+    "rtgs_message_reference": "string — Bank of England RTGS message ID",
+    "settled_at": "string (ISO 8601 UTC) — definitive settlement timestamp from RTGS",
+    "is_mortgage_completion_payment": "boolean",
+    "mortgage_account_id": "string (UUID v4, nullable)"
+  },
+  "derived_from": {
+    "entity": "ENT-052",
+    "field_mappings": [
+      {"entity_field": "chaps_execution_id", "payload_field": "chaps_execution_id"},
+      {"entity_field": "payment_intent_id", "payload_field": "payment_intent_id"},
+      {"entity_field": "originator_account_id", "payload_field": "account_id"},
+      {"entity_field": "amount_gbp", "payload_field": "amount_gbp"},
+      {"entity_field": "uetr", "payload_field": "uetr"},
+      {"entity_field": "rtgs_message_reference", "payload_field": "rtgs_message_reference"},
+      {"entity_field": "settled_at", "payload_field": "settled_at"},
+      {"entity_field": "is_mortgage_completion_payment", "payload_field": "is_mortgage_completion_payment"},
+      {"entity_field": "mortgage_account_id", "payload_field": "mortgage_account_id"}
+    ],
+    "excluded_fields": ["beneficiary_sort_code", "beneficiary_account_number", "beneficiary_name", "beneficiary_lei", "purpose_code", "payment_reference", "cop_result", "sanctions_screening_reference", "note": "Excluded from settlement event — not required by consumers; sensitive fields minimised per event payload principles"]
+  },
+  "consumers": [
+    {
+      "service": "SVC-001",
+      "service_name": "Retail Banking Core",
+      "action": "Debits Account (ENT-004) by amount_gbp. Updates Account.chaps_daily_total. Updates CHAPSPaymentIntent (ENT-053) status to completed. Triggers customer notification via SVC-053."
+    },
+    {
+      "service": "SVC-103",
+      "service_name": "Audit & Logging",
+      "action": "Creates immutable settlement audit record with UETR and RTGS reference. Financial crime monitoring — settlement of high-value payment."
+    }
+  ],
+  "ordering_guarantees": "Per-customer strict ordering via customer_id + chaps_execution_id. Always follows EVT-110 for the same intent. SVC-001 consumer is idempotent on chaps_execution_id — duplicate settlement events produce no duplicate debits.",
+  "topic": "payments.chaps",
+  "data_classification": "financial",
+  "worm_audit_pipeline": true,
+  "worm_rationale": "Irrevocable settlement fact. Financial record required for reconciliation, regulatory reporting, and Consumer Duty evidence. CHAPS data quality audit by Bank of England. 7-year retention.",
+  "retention": "7 years (WORM audit pipeline — SVC-111)",
+  "cloudevents_type": "uk.bank.payments.chaps.payment.settled",
+  "governance_references": ["GOV-003-R03", "GOV-003-R04"],
+  "source_journeys": ["JRN-028"]
+}

@@ -1,0 +1,31 @@
+{
+  "entity_id": "ENT-050",
+  "name": "PortfolioSnapshot",
+  "description": "Immutable point-in-time record of client portfolio holdings, market values, asset allocation, and performance. Created at pre-review and post-rebalancing phases. Provides the regulatory audit record for performance presentation. Introduced by JRN-015.",
+  "owning_service": "SVC-016",
+  "owning_capability": "CAP-006",
+  "source_journey": "JRN-015",
+  "fields": [
+    {"name": "snapshot_id", "type": "UUID", "validation": "globally unique, immutable"},
+    {"name": "client_id", "type": "UUID", "validation": "FK to ENT-001 (CAP-001); not null"},
+    {"name": "review_id", "type": "UUID", "validation": "FK to ENT-046; not null"},
+    {"name": "snapshot_type", "type": "enum", "validation": "pre_review | post_rebalancing | intra_review"},
+    {"name": "snapshot_at", "type": "ISO 8601 UTC datetime", "validation": "not null; immutable"},
+    {"name": "total_market_value_gbp", "type": "decimal", "validation": "non-negative; computed from positions"},
+    {"name": "positions", "type": "JSON array", "validation": "each position: instrument_id, market_value_gbp, weight_pct, sddr_label"},
+    {"name": "asset_allocation", "type": "JSON object", "validation": "percentages sum to 100; computed"},
+    {"name": "performance_1yr_pct", "type": "decimal", "validation": "nullable on first snapshot"},
+    {"name": "benchmark_return_1yr_pct", "type": "decimal", "validation": "nullable"},
+    {"name": "ex_post_total_costs_pct", "type": "decimal", "validation": "not null for pre_review type"}
+  ],
+  "relationships": [
+    {"entity_id": "ENT-046", "type": "belongs-to"}
+  ],
+  "design_decisions": [
+    {
+      "id": "DD-ENT050-01",
+      "decision": "PortfolioSnapshot is immutable once created.",
+      "rationale": "Regulatory audit requirement — performance figures presented to client must match stored compliance record."
+    }
+  ]
+}

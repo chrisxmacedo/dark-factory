@@ -1,0 +1,16 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "CAP-004 Risk Management API — Overdraft Assessment (JRN-016)",
+    "description": "CAP-004 (Risk Management) does not expose a new REST API surface for JRN-016. SVC-012 (Risk Engine) participates in JRN-016 exclusively via async event consumption: consumes OverdraftReviewTriggered (EVT-114), performs credit assessment, and publishes OverdraftAssessmentCompleted (EVT-115). No synchronous channel call to CAP-004. This document confirms no new API endpoints are required.",
+    "version": "0.1.0 (JRN-016 — no new endpoints)",
+    "x-capability": "CAP-004",
+    "x-source-journey": "JRN-016",
+    "x-note": "No new CAP-004 API endpoints introduced by JRN-016. SVC-012 participates via async event consumption only. Internal SVC-012 -> EXT-BUREAU call is an external system integration, not a capability API."
+  },
+  "servers": [
+    { "url": "https://api.bank.internal/risk/v1", "description": "Internal risk API gateway" }
+  ],
+  "paths": {},
+  "components": {}
+}

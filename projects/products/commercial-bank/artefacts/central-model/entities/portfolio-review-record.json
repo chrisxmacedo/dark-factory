@@ -1,0 +1,28 @@
+{
+  "entity_id": "ENT-046",
+  "name": "PortfolioReviewRecord",
+  "description": "Aggregate root for one periodic suitability review cycle for an HNW client. Tracks review status, meeting details, linked suitability assessment, rebalancing recommendation, and next review date. Introduced by JRN-015.",
+  "owning_service": "SVC-016",
+  "owning_capability": "CAP-006",
+  "source_journey": "JRN-015",
+  "fields": [
+    {"name": "review_id", "type": "UUID", "validation": "globally unique, immutable"},
+    {"name": "client_id", "type": "UUID", "validation": "FK to Customer (ENT-001, CAP-001); not null"},
+    {"name": "advisor_id", "type": "string", "validation": "FK to Wealth Advisor identity (IAM); not null"},
+    {"name": "advisor_fca_register_ref", "type": "string", "validation": "FCA Financial Services Register reference; not null"},
+    {"name": "review_type", "type": "enum", "validation": "annual | material_change_triggered | ad_hoc_client_request"},
+    {"name": "scheduled_at", "type": "ISO 8601 UTC datetime", "validation": "not null"},
+    {"name": "status", "type": "enum", "validation": "scheduled | in_progress | suitability_pending | awaiting_client_instruction | execution_in_progress | reporting | completed | overdue | cancelled"},
+    {"name": "next_review_date", "type": "ISO 8601 date", "validation": "set at PH-076; must be within 12 months per COBS 9A"},
+    {"name": "created_at", "type": "ISO 8601 UTC datetime", "validation": "not null; immutable"},
+    {"name": "updated_at", "type": "ISO 8601 UTC datetime", "validation": "not null"}
+  ],
+  "relationships": [
+    {"entity_id": "ENT-047", "type": "one-to-one"},
+    {"entity_id": "ENT-048", "type": "one-to-one"},
+    {"entity_id": "ENT-049", "type": "one-to-one"},
+    {"entity_id": "ENT-050", "type": "one-to-many"},
+    {"entity_id": "ENT-051", "type": "one-to-one"},
+    {"entity_id": "ENT-001", "type": "reference", "note": "CAP-001 entity; referenced by client_id only"}
+  ]
+}

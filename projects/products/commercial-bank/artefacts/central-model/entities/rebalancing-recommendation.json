@@ -1,0 +1,27 @@
+{
+  "entity_id": "ENT-048",
+  "name": "RebalancingRecommendation",
+  "description": "Investment rebalancing recommendation for one review cycle: proposed trades, target allocation, performance data, costs and charges, and client decision. Introduced by JRN-015.",
+  "owning_service": "SVC-016",
+  "owning_capability": "CAP-006",
+  "source_journey": "JRN-015",
+  "fields": [
+    {"name": "recommendation_id", "type": "UUID", "validation": "globally unique, immutable"},
+    {"name": "review_id", "type": "UUID", "validation": "FK to ENT-046; not null"},
+    {"name": "assessment_id", "type": "UUID", "validation": "FK to ENT-047; not null"},
+    {"name": "proposed_trades", "type": "JSON array", "validation": "min 1 item if rebalancing proposed"},
+    {"name": "target_allocation", "type": "JSON object", "validation": "percentages sum to 100"},
+    {"name": "current_allocation", "type": "JSON object", "validation": "not null"},
+    {"name": "ex_post_costs_charges", "type": "JSON object", "validation": "not null"},
+    {"name": "ex_ante_costs_charges", "type": "JSON object", "validation": "nullable until PH-074"},
+    {"name": "model_weights", "type": "JSON object (encrypted)", "validation": "not projected to client"},
+    {"name": "client_decision", "type": "enum", "validation": "pending | approved | declined | partial_approved"},
+    {"name": "cash_balance_snapshot_gbp", "type": "decimal", "validation": "nullable; from ALT-002"},
+    {"name": "created_at", "type": "ISO 8601 UTC datetime", "validation": "not null; immutable"}
+  ],
+  "relationships": [
+    {"entity_id": "ENT-046", "type": "belongs-to"},
+    {"entity_id": "ENT-047", "type": "belongs-to"},
+    {"entity_id": "ENT-049", "type": "one-to-one"}
+  ]
+}

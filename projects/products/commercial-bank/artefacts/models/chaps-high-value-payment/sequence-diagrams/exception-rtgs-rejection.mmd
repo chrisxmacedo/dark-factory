@@ -1,0 +1,31 @@
+sequenceDiagram
+    autonumber
+    participant PER001 as PER-001 (Personal Customer)
+    participant CH001 as CH-001 (Online Banking Portal)
+    participant CAP001 as CAP-001 API (SVC-001)
+    participant EventBus as Event Bus (SVC-102)
+    participant CAP003 as CAP-003 API (SVC-009)
+    participant EXTRTGS as EXT: Bank of England RTGS (RT2)
+    participant SVC053 as SVC-053 (Notifications)
+
+    Note over PER001,CAP001: PH-077: Payment Initiation
+    PER001->>CH001: Enter payment details
+    CH001->>CAP001: POST /chaps-payments
+    CAP001--)EventBus: publish CHAPSPaymentIntentCreated EVT-108
+
+    Note over CAP003: PH-078-079: CoP + Sanctions (match + clear — abbreviated)
+    EventBus--)CAP003: EVT-108 consumed — CoP check + sanctions clear
+
+    Note over PER001,CAP001: PH-080: Authorisation
+    CH001->>CAP001: POST /chaps-payments/{id}/authorise (SCA)
+    CAP001--)EventBus: publish CHAPSPaymentAuthorised EVT-110 (funds reserved)
+    CAP001-->>CH001: 200 status=authorised
+
+    Note over CAP003,EXTRTGS: PH-081: RTGS Submission — REJECTION
+    EventBus--)CAP003: EVT-110 consumed — construct ISO 20022 pacs.008
+    CAP003->>EXTRTGS: Submit pacs.008 to RTGS (RT2)
+    EXTRTGS-->>CAP003: RTGS REJECTION (e.g. AM09: InvalidAmount / CH16: InvalidBIC)
+    CAP003--)EventBus: publish CHAPSPaymentFailed EVT-113 (rejection_reason)
+    EventBus--)CAP001: EVT-113 consumed — release reserved funds, status→failed
+    CAP001--)SVC053: Notify customer: payment failed + reason + guidance
+    SVC053--)PER001: CHAPS payment failed. Your funds have not been debited.

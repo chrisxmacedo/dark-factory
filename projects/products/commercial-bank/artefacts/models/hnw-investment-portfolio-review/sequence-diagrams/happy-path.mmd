@@ -1,0 +1,83 @@
+sequenceDiagram
+    autonumber
+    participant PER004 as PER-004<br/>HNW Client
+    participant PER057 as PER-057<br/>Wealth Advisor
+    participant WAPORTAL as Wealth Advisor Portal<br/>(Channel)
+    participant WCPORTAL as Wealth Client Portal<br/>(Channel)
+    participant CAP006 as CAP-006 API<br/>(SVC-016 Wealth Platform)
+    participant SVC102 as SVC-102<br/>Event Bus
+    participant CAP005 as CAP-005 API<br/>(SVC-014 KYC/AML)
+    participant SVC053 as SVC-053<br/>Notification Service
+    participant CUSTODY as Custody Platform<br/>(FNZ/SEI — External)
+
+    rect rgb(230, 245, 255)
+        Note over PER057,SVC053: PH-071: Review Scheduling and Pre-Meeting Preparation
+        SVC102-)CAP006: EVT-004: KYCClearanceGranted [◀ CROSS-CAPABILITY from CAP-005]<br/>{customer_id, kyc_status: current, cleared_at}
+        Note over CAP006: KYC current — scheduling permitted
+        PER057->>WAPORTAL: Schedules annual review for PER-004<br/>{review_type: annual, scheduled_at: 2026-04-22T10:00:00Z}
+        WAPORTAL->>CAP006: POST /wealth/v1/portfolio-reviews<br/>{client_id, review_type: annual, scheduled_at: 2026-04-22T10:00:00Z}
+        CAP006->>CAP006: Creates ENT-046 (PortfolioReviewRecord) status=scheduled<br/>Creates pre-review ENT-050 (PortfolioSnapshot)<br/>total_market_value_gbp=1,250,000
+        CAP006-)SVC102: EVT-099: PortfolioReviewScheduled<br/>{review_id, client_id, scheduled_at, review_type: annual}
+        CAP006-->>WAPORTAL: 201 Created {review_id: d1e2f3a4-..., status: scheduled}
+        SVC102-)SVC053: EVT-099 → review confirmation + questionnaire link to PER-004
+    end
+
+    rect rgb(255, 248, 220)
+        Note over PER004,CAP006: PH-072: Client Risk Profile and Objectives Reassessment
+        PER004->>WCPORTAL: Completes pre-meeting suitability questionnaire<br/>{questionnaire_version: v3.2, loss_tolerance: 7,<br/>investment_horizon: 10, investment_knowledge: 8,<br/>financial_situation_stability: 9, esg_level: consider}
+        WCPORTAL->>CAP006: POST /wealth/v1/portfolio-reviews/{review_id}/suitability-assessment<br/>{questionnaire_version: v3.2, questionnaire_responses: {...},<br/>sustainability_preferences: {esg_preference_level: consider,<br/>excluded_sectors: [weapons, tobacco]}}
+        CAP006->>CAP006: Creates ENT-047 (SuitabilityAssessment)<br/>Computes updated_risk_profile_score=7 (unchanged from prior 7)<br/>risk_profile_changed=false, suitability_gap_flags=[]<br/>head_of_suitability_required=false
+        CAP006-)SVC102: EVT-100: SuitabilityAssessmentUpdated<br/>{review_id, assessment_id, risk_profile_changed: false,<br/>status: gap_analysis_complete}
+        CAP006-->>WCPORTAL: 201 Created {assessment_id, updated_risk_profile_score: 7,<br/>status: gap_analysis_complete}
+    end
+
+    rect rgb(255, 235, 235)
+        Note over PER057,CAP006: PH-073: Portfolio Performance Review and Rebalancing Recommendation
+        PER057->>WAPORTAL: Requests rebalancing recommendation
+        WAPORTAL->>CAP006: POST /wealth/v1/portfolio-reviews/{review_id}/rebalancing-recommendation<br/>{cash_balance_requested: false}
+        CAP006->>CAP006: Creates ENT-048 (RebalancingRecommendation)<br/>Runs portfolio optimisation; loads SDR labels for in-scope funds<br/>proposed_trades: [{SELL Global Equity 10%, BUY Infrastructure Fund 10%,<br/>sddr_label: sustainability_focus}]<br/>performance_1yr_pct=+6.2% vs benchmark +5.8%<br/>ex_post_total_cost_pct=0.85%
+        CAP006-->>WAPORTAL: 201 Created {recommendation_id, proposed_trades, performance_vs_benchmark,<br/>ex_post_costs_charges, target_allocation}
+        PER057->>WAPORTAL: Reviews and approves recommendation for presentation
+        PER057-->>PER004: Presents portfolio review via portal:<br/>performance +6.2% vs +5.8% benchmark<br/>proposed rebalancing + SDR label disclosure<br/>ex-post costs 0.85% disclosed
+    end
+
+    rect rgb(240, 255, 240)
+        Note over PER004,CAP005: PH-074: Client Instructions and Suitability Report Issuance
+        PER057->>WAPORTAL: Issues suitability report to client
+        WAPORTAL->>CAP006: POST /wealth/v1/portfolio-reviews/{review_id}/suitability-assessment/issue
+        CAP006->>CAP006: Generates MiFID II suitability report PDF<br/>ENT-047.status=issued, issued_at=2026-04-22T11:55:00Z<br/>suitability_report_document_ref=s3://wealth-docs/...
+        CAP006-)SVC102: EVT-102: SuitabilityReportGenerated<br/>{review_id, assessment_id, issued_at}
+        CAP006-)SVC102: EVT-103: SuitabilityReportIssued [CROSS-CAPABILITY ▶ to CAP-005]<br/>{assessment_id, review_id, client_id,<br/>advisor_fca_register_ref: IND654321,<br/>risk_profile_score: 7, issued_at}
+        SVC102-)CAP005: EVT-103 [◀ CROSS-CAPABILITY received by CAP-005]<br/>SVC-014 creates SuitabilityRecord in compliance store
+        SVC102-)SVC053: EVT-102 → suitability report notification to PER-004
+        PER004->>WCPORTAL: Reviews suitability report and acknowledges
+        WCPORTAL->>CAP006: POST /wealth/v1/portfolio-reviews/{review_id}/suitability-assessment/acknowledge
+        CAP006->>CAP006: ENT-047.client_acknowledged_at=2026-04-22T12:10:00Z<br/>status=acknowledged
+        CAP006-->>WCPORTAL: 200 OK {client_acknowledged_at}
+        PER004->>WCPORTAL: Submits investment instruction: proceed_full
+        WCPORTAL->>CAP006: POST /wealth/v1/portfolio-reviews/{review_id}/investment-instruction<br/>{instruction_type: proceed_full}
+        CAP006->>CAP006: Creates ENT-049 (InvestmentInstruction)<br/>ENT-048.client_decision=approved<br/>execution_status=in_progress
+        CAP006-)SVC102: EVT-104: InvestmentInstructionReceived<br/>{instruction_id, review_id, instruction_type: proceed_full}
+        CAP006-->>WCPORTAL: 201 Created {instruction_id, execution_status: in_progress}
+    end
+
+    rect rgb(248, 230, 255)
+        Note over CAP006,CUSTODY: PH-075: Rebalancing Trade Execution
+        CAP006->>CUSTODY: Submits rebalancing orders<br/>SELL: Global Equity Fund GB00BXYZ1234 £125,000<br/>BUY: Infrastructure Fund GB00ABCD5678 £125,000
+        CUSTODY-->>CAP006: Order acknowledgement<br/>custody_order_ref_sell=CRF-20260422-001<br/>custody_order_ref_buy=CRF-20260422-002, status=submitted
+        CUSTODY-)CAP006: Trade confirmation callbacks (async)<br/>CRF-20260422-001: confirmed @£98.45/unit<br/>CRF-20260422-002: confirmed @£112.30/unit<br/>UTI-2026-000099101, UTI-2026-000099102
+        CAP006->>CAP006: ENT-049.orders[*].status=confirmed<br/>execution_status=fully_executed<br/>execution_completed_at=2026-04-22T14:30:00Z<br/>Creates post-rebalancing ENT-050 (PortfolioSnapshot)
+        CAP006-)SVC102: EVT-105: PortfolioReviewCompleted<br/>{review_id, instruction_id, execution_status: fully_executed}
+        SVC102-)SVC053: EVT-105 → trade execution confirmation to PER-004 + PER-057
+    end
+
+    rect rgb(230, 255, 240)
+        Note over PER057,CAP005: PH-076: Post-Review Reporting and Consumer Duty Evidence
+        PER057->>WAPORTAL: Validates post-review report and completes review
+        WAPORTAL->>CAP006: POST /wealth/v1/portfolio-reviews/{review_id}/complete
+        CAP006->>CAP006: Creates ENT-051 (ConsumerDutyEvidenceRecord)<br/>service_activities: [annual_review_meeting, performance_presentation,<br/>suitability_report, rebalancing_execution]<br/>fair_value_assessment_score=fair_value_met<br/>ENT-046.status=completed<br/>ENT-046.next_review_date=2027-04-22
+        CAP006-)SVC102: EVT-106: ConsumerDutyEvidenceCompleted [CROSS-CAPABILITY ▶ to CAP-005]<br/>{evidence_id, client_id, period_start: 2025-04-22,<br/>period_end: 2026-04-22,<br/>fair_value_assessment_score: fair_value_met,<br/>remediation_required: false}
+        SVC102-)CAP005: EVT-106 [◀ CROSS-CAPABILITY received by CAP-005]<br/>SVC-014 creates ConsumerDutyComplianceRecord
+        SVC102-)SVC053: EVT-106 → post-review report to PER-004<br/>content: annual review complete, portfolio report, next review: 2027-04-22
+        CAP006-->>WAPORTAL: 200 OK {status: completed, next_review_date: 2027-04-22}
+    end

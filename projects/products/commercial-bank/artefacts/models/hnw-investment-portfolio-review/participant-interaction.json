@@ -1,0 +1,122 @@
+{
+  "journey_id": "JRN-015",
+  "document_version": "0.1.0",
+  "status": "Draft",
+  "participants": [
+    {
+      "persona_id": "PER-004",
+      "persona_name": "High Net Worth (HNW) Client",
+      "type": "external",
+      "channel": "wealth_portal",
+      "channel_note": "Interacts via the bank's wealth management portal (authenticated web/mobile). Receives pre-meeting review pack, accesses portfolio performance dashboard, completes online suitability questionnaire, reviews suitability report, and receives post-review confirmation and reports.",
+      "phases_active": ["PH-071", "PH-072", "PH-073", "PH-074", "PH-076"],
+      "projections": [
+        {
+          "phase": "PH-071",
+          "data_exposed": ["PortfolioReviewRecord.review_meeting_date", "PortfolioReviewRecord.review_type", "SuitabilityAssessment.risk_profile_score (prior)", "PortfolioSnapshot.total_market_value", "PortfolioSnapshot.asset_allocation_summary"],
+          "data_withheld": ["SuitabilityAssessment.advisor_notes", "SuitabilityAssessment.compliance_flags", "InvestmentInstruction.internal_routing_ref"],
+          "projection_note": "Client sees portfolio valuation summary and review schedule. Advisor notes and compliance flags are internal only."
+        },
+        {
+          "phase": "PH-072",
+          "data_exposed": ["SuitabilityAssessment.questionnaire_responses (own responses)", "SuitabilityAssessment.risk_profile_score (updated)", "SuitabilityAssessment.sustainability_preferences"],
+          "data_withheld": ["SuitabilityAssessment.internal_risk_band_mapping", "SuitabilityAssessment.system_suitability_gap_flags"],
+          "projection_note": "Client sees their own questionnaire responses and updated risk score. Internal gap analysis flags are advisor-only."
+        },
+        {
+          "phase": "PH-073",
+          "data_exposed": ["PortfolioSnapshot.performance_vs_benchmark", "PortfolioSnapshot.asset_allocation", "PortfolioSnapshot.ex_post_costs_charges", "RebalancingRecommendation.proposed_changes_summary", "RebalancingRecommendation.rationale (consumer-facing)", "SustainabilityLabel (FCA SDR label per fund)"],
+          "data_withheld": ["RebalancingRecommendation.internal_model_weights", "RebalancingRecommendation.investment_committee_override_flags"],
+          "projection_note": "Client sees proposed trades and consumer-facing rationale. Internal model weights and IC override flags are not disclosed."
+        },
+        {
+          "phase": "PH-074",
+          "data_exposed": ["SuitabilityAssessment (full suitability report document)", "RebalancingRecommendation.ex_ante_costs_charges", "InvestmentInstruction.instruction_type", "InvestmentInstruction.instructions_given_at"],
+          "data_withheld": ["SuitabilityAssessment.head_of_suitability_signoff_notes"],
+          "projection_note": "Client receives the full MiFID II suitability report. Head of Suitability sign-off notes are internal compliance records."
+        },
+        {
+          "phase": "PH-076",
+          "data_exposed": ["PortfolioSnapshot (post-rebalancing)", "InvestmentInstruction.execution_summary", "PortfolioReviewRecord.next_review_date", "ConsumerDutyEvidenceRecord.service_activities_summary (public excerpt)"],
+          "data_withheld": ["ConsumerDutyEvidenceRecord.internal_fair_value_assessment_score"],
+          "projection_note": "Client receives post-trade confirmation and updated portfolio report. Internal fair value score is not disclosed."
+        }
+      ],
+      "entitlements": [
+        "Read own portfolio (PortfolioSnapshot, RebalancingRecommendation)",
+        "Complete suitability questionnaire (SuitabilityAssessment — own responses only)",
+        "View and acknowledge suitability report",
+        "Confirm or decline rebalancing instructions",
+        "Receive post-review report"
+      ],
+      "notifications": [
+        {"phase": "PH-071", "trigger": "Review meeting scheduled", "channel": "email + wealth portal", "content": "Annual portfolio review confirmation with meeting date, pre-meeting questionnaire link, and review pack."},
+        {"phase": "PH-074", "trigger": "Suitability report issued", "channel": "secure portal document + email notification", "content": "MiFID II suitability report available for review and acknowledgement."},
+        {"phase": "PH-075", "trigger": "Rebalancing trades executed", "channel": "email + wealth portal", "content": "Trade execution confirmation with trade summary and updated portfolio allocation."},
+        {"phase": "PH-076", "trigger": "Post-review report ready", "channel": "secure portal document + email notification", "content": "Annual review complete: updated portfolio valuation, performance report, and next review date."}
+      ]
+    },
+    {
+      "persona_id": "PER-057",
+      "persona_name": "Wealth Advisor",
+      "type": "internal",
+      "channel": "wealth_advisor_portal",
+      "channel_note": "Interacts via the bank's internal wealth management platform (SVC-016 advisor interface — e.g. Wealth Dynamix CRM overlay on the Wealth Platform Service). Has full access to client suitability records, portfolio data, compliance flags, and trade execution workflows.",
+      "phases_active": ["PH-071", "PH-072", "PH-073", "PH-074", "PH-075", "PH-076"],
+      "projections": [
+        {
+          "phase": "PH-071",
+          "data_exposed": ["PortfolioReviewRecord (full)", "PortfolioSnapshot (full)", "SuitabilityAssessment (prior — full including advisor notes)", "MaterialChangeTrigger flags"],
+          "data_withheld": [],
+          "projection_note": "Advisor sees full prior suitability record and all system flags. No fields withheld."
+        },
+        {
+          "phase": "PH-072",
+          "data_exposed": ["SuitabilityAssessment (full live questionnaire, risk score, gap analysis, sustainability preferences)"],
+          "data_withheld": [],
+          "projection_note": "Advisor has full view of the suitability assessment in progress."
+        },
+        {
+          "phase": "PH-073",
+          "data_exposed": ["PortfolioSnapshot (full, including internal benchmark attribution)", "RebalancingRecommendation (full including internal model weights and IC override flags)", "ClientAccountSummary (cash balance data from CAP-001 — received via async event)"],
+          "data_withheld": [],
+          "projection_note": "Advisor has full view including internal attribution and model recommendation detail."
+        },
+        {
+          "phase": "PH-074",
+          "data_exposed": ["SuitabilityAssessment (full draft suitability report)", "InvestmentInstruction (full)", "Compliance workflow status"],
+          "data_withheld": [],
+          "projection_note": "Advisor can see and edit the draft suitability report before issuance."
+        },
+        {
+          "phase": "PH-075",
+          "data_exposed": ["InvestmentInstruction (full execution detail)", "Trade execution status per order", "Custody platform confirmations"],
+          "data_withheld": [],
+          "projection_note": "Advisor monitors trade execution progress."
+        },
+        {
+          "phase": "PH-076",
+          "data_exposed": ["ConsumerDutyEvidenceRecord (full)", "PortfolioReviewRecord (final state)", "PortfolioSnapshot (post-rebalancing, full)"],
+          "data_withheld": [],
+          "projection_note": "Advisor validates and dispatches post-review reports."
+        }
+      ],
+      "entitlements": [
+        "Read and write client suitability record (SuitabilityAssessment)",
+        "Create and finalise PortfolioReviewRecord",
+        "Generate and issue suitability report",
+        "Submit rebalancing recommendations (RebalancingRecommendation)",
+        "Initiate and monitor trade execution (InvestmentInstruction)",
+        "Complete ConsumerDutyEvidenceRecord",
+        "Request cash balance data from CAP-001 (via async event — ALT-002)"
+      ],
+      "notifications": [
+        {"phase": "PH-071", "trigger": "Annual review date approaching (T-14 days)", "channel": "wealth_advisor_portal dashboard alert", "content": "Client review due: review pack ready, pre-meeting questionnaire dispatched to client."},
+        {"phase": "PH-072", "trigger": "Client completes pre-meeting questionnaire", "channel": "wealth_advisor_portal alert", "content": "Client suitability questionnaire completed — updated risk profile available."},
+        {"phase": "PH-074", "trigger": "Suitability report acknowledged by client", "channel": "wealth_advisor_portal alert", "content": "Client has acknowledged suitability report. Ready to submit trade instructions."},
+        {"phase": "PH-075", "trigger": "All rebalancing trades confirmed or any trade fails", "channel": "wealth_advisor_portal alert + email", "content": "Execution summary: [N] trades completed, [N] failed. Review and action required."},
+        {"phase": "PH-076", "trigger": "Post-review report ready for dispatch", "channel": "wealth_advisor_portal task", "content": "Annual review complete: validate post-review report before dispatching to client."}
+      ]
+    }
+  ]
+}

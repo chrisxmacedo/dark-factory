@@ -1,0 +1,35 @@
+{
+  "entity_id": "ENT-053",
+  "name": "CHAPSPaymentIntent",
+  "description": "A CHAPS-specific payment intent created by SVC-001 when PER-001 initiates a CHAPS payment. Distinct from ENT-008 (PaymentIntent/FPS) due to different state machine, mandatory ISO 20022 fields, and mortgage completion linkage. Owned by SVC-001 (Retail Banking Core, CAP-001).",
+  "owning_service": "SVC-001",
+  "reachable_from_phases": ["PH-077", "PH-078", "PH-079", "PH-080", "PH-081", "PH-082"],
+  "aggregate_root": true,
+  "fields": [
+    { "name": "chaps_intent_id", "type": "UUID", "validation_rule": "RFC 4122 UUID v4. System-generated. Immutable.", "source": "PH-077" },
+    { "name": "customer_id", "type": "UUID", "validation_rule": "FK → ENT-001. Immutable.", "source": "PH-077" },
+    { "name": "account_id", "type": "UUID", "validation_rule": "FK → ENT-004. Must be active. Immutable.", "source": "PH-077" },
+    { "name": "beneficiary_sort_code", "type": "string", "validation_rule": "6-digit sort code. EISCD validated.", "source": "PH-077" },
+    { "name": "beneficiary_account_number", "type": "string", "validation_rule": "8-digit account number. EISCD modulus checked.", "source": "PH-077" },
+    { "name": "beneficiary_name", "type": "string", "validation_rule": "Max 140 chars.", "source": "PH-077" },
+    { "name": "beneficiary_lei", "type": "string", "validation_rule": "Conditional. ISO 17442 LEI. Mandatory for corporate beneficiaries from 1 May 2025.", "source": "PH-077", "governed_by": "GOV-003-R03" },
+    { "name": "amount_gbp", "type": "decimal", "validation_rule": "Positive, max 2dp. Must be <= Account.available_balance at authorisation.", "source": "PH-077" },
+    { "name": "purpose_code", "type": "string", "validation_rule": "ISO 20022 ExternalPurpose1Code. Enum enforced. PROP for property purchase.", "source": "PH-077", "governed_by": "GOV-003-R03" },
+    { "name": "payment_reference", "type": "string", "validation_rule": "Max 35 chars.", "source": "PH-077" },
+    { "name": "is_mortgage_completion_payment", "type": "boolean", "validation_rule": "Default false.", "source": "PH-077" },
+    { "name": "mortgage_account_id", "type": "UUID", "validation_rule": "Conditional. FK → ENT-016. Required when is_mortgage_completion_payment=true.", "source": "PH-077" },
+    { "name": "status", "type": "enum", "validation_rule": "initiated | cop_pending | cop_complete | sanctions_pending | sanctions_complete | authorised | executed | completed | failed | cancelled. Forward-only.", "source": "PH-077" },
+    { "name": "initiated_at", "type": "timestamp", "validation_rule": "ISO 8601 UTC. Immutable.", "source": "PH-077" },
+    { "name": "channel", "type": "enum", "validation_rule": "web | mobile.", "source": "PH-077" },
+    { "name": "reserved_funds_at", "type": "timestamp", "validation_rule": "Conditional. Set when status=authorised.", "source": "PH-080" }
+  ],
+  "relationships": [
+    { "target_entity": "ENT-001", "type": "many-to-one", "description": "Belongs to one Customer. Same-capability (CAP-001)." },
+    { "target_entity": "ENT-004", "type": "many-to-one", "description": "Debits one Account. Same-capability (CAP-001)." },
+    { "target_entity": "ENT-052", "type": "one-to-one", "description": "CHAPSPaymentIntent produces one CHAPSPaymentExecution in SVC-009 (CAP-003). Cross-capability." }
+  ],
+  "design_decisions": [
+    { "id": "DD-ENT053-01", "decision": "Separate entity from ENT-008 (FPS PaymentIntent)", "rationale": "CHAPS initiation orchestration (CoP → sanctions → SCA) differs from FPS (fraud score → sanctions → CoP at end). Different state machine, different required fields. Extending ENT-008 would produce a sparse entity with ~40% nullable fields." }
+  ],
+  "source_journeys": ["JRN-028"]
+}

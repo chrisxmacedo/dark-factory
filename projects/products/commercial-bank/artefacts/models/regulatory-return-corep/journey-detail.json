@@ -1,0 +1,28 @@
+{
+  "journey_id": "JRN-017",
+  "name": "",
+  "status": "Draft",
+  "triggering_persona": "",
+  "capabilities_touched": [],
+  "phases": [
+    {
+      "id": "PH-088",
+      "name": "",
+      "description": "",
+      "actors": [],
+      "services": [],
+      "governance_rules": [],
+      "entry_conditions": [],
+      "exit_conditions": []
+    }
+  ],
+  "paths": {
+    "happy_path": {
+      "description": "",
+      "phases": []
+    },
+    "alternative_paths": [],
+    "exception_paths": []
+  },
+  "design_decisions": []
+}

@@ -1,0 +1,57 @@
+{
+  "journey_id": "JRN-016",
+  "document_version": "0.1.0",
+  "description": "Index of all new events introduced by JRN-016. Full event definitions are in individual files (EVT-114.json through EVT-118.json).",
+  "events": [
+    {
+      "event_id": "EVT-114",
+      "name": "OverdraftReviewTriggered",
+      "source_service": "SVC-001",
+      "source_entity": "ENT-054",
+      "topic": "retail.overdraft",
+      "journey_phase": "PH-083",
+      "capability_scope": "cross-capability",
+      "file": "EVT-114.json"
+    },
+    {
+      "event_id": "EVT-115",
+      "name": "OverdraftAssessmentCompleted",
+      "source_service": "SVC-012",
+      "source_entity": null,
+      "topic": "retail.overdraft",
+      "journey_phase": "PH-084",
+      "capability_scope": "cross-capability",
+      "file": "EVT-115.json"
+    },
+    {
+      "event_id": "EVT-116",
+      "name": "PersistentDebtScreeningCompleted",
+      "source_service": "SVC-001",
+      "source_entity": "ENT-054",
+      "topic": "retail.overdraft",
+      "journey_phase": "PH-085",
+      "capability_scope": "intra-capability",
+      "file": "EVT-116.json"
+    },
+    {
+      "event_id": "EVT-117",
+      "name": "OverdraftReviewDecided",
+      "source_service": "SVC-001",
+      "source_entity": "ENT-054",
+      "topic": "retail.overdraft",
+      "journey_phase": "PH-086",
+      "capability_scope": "intra-capability",
+      "file": "EVT-117.json"
+    },
+    {
+      "event_id": "EVT-118",
+      "name": "OverdraftCustomerNotified",
+      "source_service": "SVC-001",
+      "source_entity": "ENT-054",
+      "topic": "retail.overdraft",
+      "journey_phase": "PH-087",
+      "capability_scope": "intra-capability",
+      "file": "EVT-118.json"
+    }
+  ]
+}

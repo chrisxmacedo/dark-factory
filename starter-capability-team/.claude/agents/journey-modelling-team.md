@@ -25,20 +25,38 @@ script to create the journey directory with:
 The modelling agent MUST read `_manifest.json` before starting work
 and use ONLY the assigned ID ranges. No journey-specific prefixes.
 
-## Post-modelling: validation
+## Post-modelling: deterministic sync (Journey Modelling Team runs these)
 
-After all artefacts are produced and the central model is updated,
-the Programme Lead runs:
-1. `validate-journey.py` — checks files, ID formats, entity ownership,
+After all artefacts are produced (steps 7-13), the Journey Modelling
+Team runs these scripts BEFORE signalling JOURNEY MODEL COMPLETE:
+
+```bash
+# 1. Clean annotated IDs (strips "ENT-012 (Name)" → "ENT-012")
+python3 scripts/cleanup-ids.py {journey-slug}
+
+# 2. Sync central model (entities, events, service map)
+python3 scripts/sync-central-model.py {journey-slug}
+```
+
+These scripts handle the deterministic parts that agents frequently
+get wrong: entity file creation, event catalogue sync, and ID format
+cleanup. The agent still produces the journey artefacts (steps 7-13)
+but the central model sync is scripted, not manual.
+
+The JOURNEY MODEL COMPLETE signal must confirm these scripts ran
+successfully. If either fails, signal JOURNEY MODEL BLOCKED instead.
+
+## Post-review: validation (Review Team runs these)
+
+The Review Team runs the validation scripts as Stage 1 of its review:
+1. `validate-journey.py` — files, ID formats, entity ownership,
    central model sync
-2. `validate-sequences.py` — checks sequence diagrams for
-   cross-capability synchronous call violations
+2. `validate-sequences.py` — cross-capability communication rules
 
-Failures block Gate 2. The team must fix violations before the journey
-can be marked Stable.
+Failures block Gate 2. The journey returns to this team with the
+Review Team's issues list for remediation.
 
-See `context/process-improvements.md` for the full list of learnings
-that inform these checks.
+See `context/process-improvements.md` for the full list of learnings.
 
 ## Deliverables
 

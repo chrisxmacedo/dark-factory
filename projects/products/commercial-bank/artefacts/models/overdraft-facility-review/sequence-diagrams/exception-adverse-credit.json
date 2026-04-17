@@ -1,0 +1,33 @@
+{
+  "diagram_id": "SEQ-JRN016-03",
+  "journey_id": "JRN-016",
+  "path": "exception_adverse_credit_withdrawal",
+  "phases_covered": ["PH-083", "PH-084", "PH-085", "PH-086", "PH-087"],
+  "title": "JRN-016 Overdraft Review — Exception: Adverse Credit Withdrawal",
+  "description": "Credit bureau refresh reveals significant adverse data (CCJ, IVA, bankruptcy). Credit grade drops to F. Facility withdrawn with 30-day notice. Customer notified with debt advice signposting.",
+  "participants": [
+    { "id": "BATCH", "label": "SVC-001 Batch Scheduler" },
+    { "id": "CAP001", "label": "CAP-001 API (SVC-001)" },
+    { "id": "EventBus", "label": "Event Bus (SVC-102)" },
+    { "id": "CAP004", "label": "CAP-004 (SVC-012)" },
+    { "id": "EXTBUREAU", "label": "EXT: Credit Bureau" },
+    { "id": "SVC053", "label": "SVC-053 (Notifications)" },
+    { "id": "PER001", "label": "PER-001 (Personal Customer)" }
+  ],
+  "steps": [
+    { "seq": 1, "from": "BATCH", "to": "CAP001", "label": "Identify account with overdraft expiring", "type": "internal", "phase": "PH-083" },
+    { "seq": 2, "from": "CAP001", "to": "EventBus", "label": "publish OverdraftReviewTriggered EVT-114", "type": "async", "phase": "PH-083" },
+    { "seq": 3, "from": "EventBus", "to": "CAP004", "label": "EVT-114 consumed", "type": "async", "phase": "PH-084" },
+    { "seq": 4, "from": "CAP004", "to": "EXTBUREAU", "label": "Credit bureau refresh", "type": "sync", "phase": "PH-084" },
+    { "seq": 5, "from": "EXTBUREAU", "to": "CAP004", "label": "Bureau score=280, CCJ registered, IVA in progress", "type": "sync-response", "phase": "PH-084" },
+    { "seq": 6, "from": "CAP004", "to": "EventBus", "label": "publish OverdraftAssessmentCompleted EVT-115 (grade=F, adverse_data=[CCJ, IVA])", "type": "async", "phase": "PH-084" },
+    { "seq": 7, "from": "EventBus", "to": "CAP001", "label": "EVT-115 consumed", "type": "async", "phase": "PH-085" },
+    { "seq": 8, "from": "CAP001", "to": "CAP001", "label": "Persistent debt screening (secondary concern — withdrawal triggered by credit grade)", "type": "internal", "phase": "PH-085" },
+    { "seq": 9, "from": "CAP001", "to": "EventBus", "label": "publish PersistentDebtScreeningCompleted EVT-116", "type": "async", "phase": "PH-085" },
+    { "seq": 10, "from": "CAP001", "to": "CAP001", "label": "Decision: withdraw. Set withdrawal_effective_date = decided_at + 30 days.", "type": "internal", "phase": "PH-086" },
+    { "seq": 11, "from": "CAP001", "to": "EventBus", "label": "publish OverdraftReviewDecided EVT-117 (decision=withdraw)", "type": "async", "phase": "PH-086" },
+    { "seq": 12, "from": "CAP001", "to": "SVC053", "label": "Dispatch withdrawal notice (registered post + email + in-app)", "type": "async", "phase": "PH-087" },
+    { "seq": 13, "from": "SVC053", "to": "PER001", "label": "Letter: overdraft withdrawn in 30 days. Debt advice: StepChange, Citizens Advice", "type": "async", "phase": "PH-087" },
+    { "seq": 14, "from": "CAP001", "to": "EventBus", "label": "publish OverdraftCustomerNotified EVT-118", "type": "async", "phase": "PH-087" }
+  ]
+}

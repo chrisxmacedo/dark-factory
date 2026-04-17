@@ -1,0 +1,230 @@
+{
+  "journey_id": "JRN-028",
+  "name": "CHAPS High-Value Payment — Property Purchase Completion",
+  "status": "Draft",
+  "triggering_persona": "PER-001",
+  "capabilities_touched": ["CAP-001", "CAP-003", "CAP-005"],
+  "depends_on": ["JRN-001", "JRN-006"],
+  "dependency_notes": {
+    "JRN-001": "Customer (ENT-001) and Account (ENT-004) must exist with status = active. PER-001 must be authenticated.",
+    "JRN-006": "MortgageAccount (ENT-016) must exist for the property. Mortgage completion instruction from solicitor drives the payment amount and beneficiary."
+  },
+  "business_context": "A personal customer (PER-001) instructs a CHAPS high-value payment to a conveyancing solicitor's client account on property purchase completion day. The payment is typically £100k–£2m (property purchase price less mortgage advance already released by lender). CHAPS settles same-day via Bank of England RTGS (RT2 infrastructure, live April 2025), is irrevocable once settled, and must be submitted before the CHAPS daily cut-off (16:00 for customer-initiated payments). ISO 20022 enhanced data obligations apply: LEIs for corporate beneficiaries and Purpose Codes are mandatory from 1 May 2025 (GOV-003-R03). Confirmation of Payee (CoP) check is mandatory before submission (GOV-003-R02). Real-time sanctions screening is required (GOV-005-R02).",
+  "phases": [
+    {
+      "id": "PH-077",
+      "name": "Payment Initiation",
+      "description": "PER-001 logs into online banking (CH-001) or mobile app (CH-002) and initiates a CHAPS payment. They enter beneficiary sort code, account number, payment amount, payment reference, and intended completion date. The channel performs client-side validation (format checks, amount range). A PaymentIntent is created in SVC-001 with payment_rail = CHAPS.",
+      "actors": ["PER-001", "CH-001 (Online Banking Portal)", "CH-002 (Mobile Banking App)"],
+      "services": ["SVC-017 (Digital Channels)", "SVC-001 (Retail Banking Core)"],
+      "governance_rules": ["GOV-003-R02", "GOV-003-R03"],
+      "entry_conditions": [
+        "PER-001 is authenticated (SCA — two-factor) in the channel",
+        "Account (ENT-004) status = active",
+        "Account.available_balance >= payment amount (pre-check; definitive check at PH-079)",
+        "Payment date = today (CHAPS is same-day only)"
+      ],
+      "exit_conditions": [
+        "CHAPSPaymentIntentCreated (EVT-108) published",
+        "PaymentIntent.status = initiated",
+        "payment_rail = CHAPS confirmed on PaymentIntent record"
+      ],
+      "chaps_specific_data": {
+        "required_fields": [
+          "beneficiary_sort_code (6 digits, validated via EISCD)",
+          "beneficiary_account_number (8 digits)",
+          "beneficiary_name (for CoP check)",
+          "amount_gbp (positive decimal, max 2dp, no statutory maximum for CHAPS)",
+          "payment_reference (max 35 chars, free text)",
+          "purpose_code (ISO 20022 Purpose Code — mandatory for property: GDDS = goods and services purchase or PROP = property purchase)"
+        ],
+        "amount_threshold": "No regulatory maximum. Bank policy: amounts ≥ £10,000 flagged for enhanced real-time monitoring. Property purchase range typically £100k–£2m."
+      }
+    },
+    {
+      "id": "PH-078",
+      "name": "Confirmation of Payee Check",
+      "description": "SVC-009 proxies a CoP request to the Pay.UK CoP service to verify that the beneficiary name matches the account at the receiving bank. Result (match | partial_match | no_match | unavailable) is returned to the channel. For property transactions, a no_match result requires explicit customer confirmation with fraud risk warning. CoP is mandatory for all CHAPS payments (GOV-003-R02).",
+      "actors": ["PER-001", "CH-001 / CH-002 (channel displays result)", "SVC-009 (CoP proxy)"],
+      "services": ["SVC-009 (Domestic Payments)", "EXT-COP (Pay.UK CoP Service)"],
+      "governance_rules": ["GOV-003-R02"],
+      "entry_conditions": [
+        "CHAPSPaymentIntentCreated (EVT-108) has been published",
+        "Beneficiary sort code and account number captured"
+      ],
+      "exit_conditions": [
+        "CoP result received and recorded on CHAPSPaymentIntent.cop_result",
+        "If no_match: PER-001 has explicitly confirmed intent to proceed (logged for audit)",
+        "If match or partial_match: proceed automatically after customer review",
+        "CHAPSCoPCheckCompleted (EVT-109) published"
+      ]
+    },
+    {
+      "id": "PH-079",
+      "name": "Sanctions Screening",
+      "description": "SVC-014 (KYC/AML) orchestrates real-time sanctions screening of the CHAPS payment beneficiary (account name, account details) against OFSI/UN/EU sanctions lists via SVC-051. This is a hard gate — the payment cannot proceed until sanctions screening returns a clear result. Same sanctions screening pattern as JRN-002 but for CHAPS rail. Property transactions carry elevated AML risk (GOV-003 context: property purchases are a common money laundering vector).",
+      "actors": ["SVC-014 (KYC/AML Service)", "SVC-051 (Sanctions Screening Service)"],
+      "services": ["SVC-014 (KYC/AML Service)", "SVC-051 (Sanctions Screening Service)"],
+      "governance_rules": ["GOV-005-R02", "GOV-003-R03"],
+      "entry_conditions": [
+        "CHAPSCoPCheckCompleted (EVT-109) published",
+        "CoP result is not blocking (PER-001 has confirmed if no_match)"
+      ],
+      "exit_conditions": [
+        "SanctionsScreeningCompleted (EVT-P02 reused) published with result = clear OR",
+        "SanctionsHitDetected (EVT-006 reused) published — payment blocked"
+      ],
+      "sla": "Sanctions screening must complete within 3,000ms (GOV-005-R02 hard limit)"
+    },
+    {
+      "id": "PH-080",
+      "name": "Payment Authorisation",
+      "description": "PER-001 reviews the full payment summary (beneficiary details, CoP result, amount, purpose code, CHAPS cut-off warning if < 30 minutes remaining) and provides strong customer authentication (SCA) to authorise the payment. For amounts ≥ £10,000, the channel displays an enhanced confirmation screen with irrevocability warning. The channel calls CAP-003 API to confirm authorisation.",
+      "actors": ["PER-001", "CH-001 / CH-002 (SCA challenge)"],
+      "services": ["SVC-017 (Digital Channels)", "SVC-001 (Retail Banking Core)", "SVC-100 (IAM)"],
+      "governance_rules": ["GOV-003-R02"],
+      "entry_conditions": [
+        "Sanctions screening returned clear result",
+        "PER-001 has reviewed CoP result and beneficiary details",
+        "Current time is before CHAPS customer cut-off (16:00)"
+      ],
+      "exit_conditions": [
+        "PER-001 completes SCA (biometric or OTP)",
+        "CHAPSPaymentAuthorised (EVT-110) published",
+        "PaymentIntent.status = authorised",
+        "Account.available_balance definitively checked — funds reserved"
+      ]
+    },
+    {
+      "id": "PH-081",
+      "name": "CHAPS Submission and Settlement",
+      "description": "SVC-009 constructs and submits an ISO 20022 pacs.008 CHAPS message to the Bank of England RTGS (RT2). The message includes mandatory ISO 20022 enhanced data: Purpose Code (PROP for property purchase) and structured address fields. For corporate beneficiaries, LEI is included (mandatory from 1 May 2025). SVC-009 monitors the RTGS submission for acceptance or rejection. On acceptance by RTGS, the payment is settled — irrevocable. Settlement typically occurs within minutes on a business day during CHAPS operating hours. SVC-001 debits the customer account on receipt of CHAPSPaymentSettled.",
+      "actors": ["SVC-009 (Domestic Payments)", "EXT-RTGS (Bank of England RTGS/RT2)"],
+      "services": ["SVC-009 (Domestic Payments)", "SVC-001 (Retail Banking Core)"],
+      "governance_rules": ["GOV-003-R03", "GOV-003-R04"],
+      "entry_conditions": [
+        "CHAPSPaymentAuthorised (EVT-110) published",
+        "Current time is before CHAPS bank cut-off (internal technical cut-off, earlier than customer cut-off)",
+        "CHAPSPaymentExecution record created"
+      ],
+      "exit_conditions": [
+        "CHAPSPaymentSettled (EVT-111) published — RTGS acceptance confirmed, funds irrevocably transferred",
+        "Account debited, AccountDebited (EVT-P06 variant) published",
+        "CHAPSPaymentExecutionRecord.settlement_status = settled",
+        "MortgageCompletionPaymentConfirmed (EVT-112) published — notifies JRN-006 mortgage completion flow"
+      ],
+      "chaps_message_fields": {
+        "message_type": "ISO 20022 pacs.008 (FIToFICustomerCreditTransfer)",
+        "purpose_code": "PROP (Property Purchase — mandatory for property completion payments)",
+        "structured_address": "Required from November 2026 (GOV-003-R03 Phase 2); unstructured accepted until then",
+        "lei_requirement": "Mandatory for corporate beneficiaries from 1 May 2025 (GOV-003-R03 Phase 1); not required for individual solicitor client accounts in this scenario unless the beneficiary is a legal entity"
+      }
+    },
+    {
+      "id": "PH-082",
+      "name": "Completion Confirmation and Notifications",
+      "description": "Following successful CHAPS settlement, the customer is notified via push notification, email, and in-app confirmation. The payment appears immediately in the transaction history. The mortgage completion is confirmed to SVC-002 (Mortgage Service) via async event, enabling it to update MortgageAccount status to completed. An audit record is created in the WORM pipeline.",
+      "actors": ["PER-001", "SVC-053 (Notification Service)", "SVC-002 (Mortgage Service, consumer via event)"],
+      "services": ["SVC-001 (Retail Banking Core)", "SVC-053 (Notification Service)", "SVC-103 (Audit)"],
+      "governance_rules": ["GOV-001-R01"],
+      "entry_conditions": [
+        "CHAPSPaymentSettled (EVT-111) published"
+      ],
+      "exit_conditions": [
+        "PER-001 notified of payment completion",
+        "Transaction visible in account history",
+        "MortgageCompletionPaymentConfirmed (EVT-112) consumed by SVC-002",
+        "Audit record written to SVC-111 (WORM)"
+      ]
+    }
+  ],
+  "paths": {
+    "happy_path": {
+      "description": "PER-001 initiates CHAPS payment before cut-off. CoP returns match. Sanctions screening returns clear. PER-001 authorises with SCA. RTGS accepts and settles the payment. Customer and mortgage completion notified.",
+      "phases": ["PH-077", "PH-078", "PH-079", "PH-080", "PH-081", "PH-082"]
+    },
+    "alternative_paths": [
+      {
+        "id": "ALT-001",
+        "name": "CoP Partial Match — Customer Proceeds",
+        "description": "CoP returns partial_match (name differs slightly — e.g. middle name absent). Channel displays partial-match warning with beneficiary details. PER-001 reviews and confirms intent to proceed. Payment continues to PH-079.",
+        "phases": ["PH-077", "PH-078 (partial match)", "PH-079", "PH-080", "PH-081", "PH-082"],
+        "divergence_at": "PH-078",
+        "rejoins_at": "PH-079"
+      },
+      {
+        "id": "ALT-002",
+        "name": "CoP No Match — Customer Proceeds with Explicit Confirmation",
+        "description": "CoP returns no_match. Channel displays high-prominence fraud risk warning (GOV-003-R02). PER-001 must check beneficiary details with their solicitor, then explicitly confirm intent to proceed. Explicit confirmation is logged for audit (Consumer Duty GOV-003-R02 evidence). Payment continues to PH-079.",
+        "phases": ["PH-077", "PH-078 (no match — explicit confirmation)", "PH-079", "PH-080", "PH-081", "PH-082"],
+        "divergence_at": "PH-078",
+        "rejoins_at": "PH-079"
+      },
+      {
+        "id": "ALT-003",
+        "name": "CHAPS Cut-Off Warning — Same-Day Urgency",
+        "description": "PER-001 initiates payment within 30 minutes of CHAPS customer cut-off (16:00). Channel displays cut-off warning. If PH-080 authorisation completes before cut-off, payment is submitted. If authorisation misses cut-off, payment cannot be submitted today — customer is advised to retry next business day.",
+        "phases": ["PH-077", "PH-078", "PH-079", "PH-080 (with cut-off warning)", "PH-081", "PH-082"],
+        "divergence_at": "PH-080",
+        "rejoins_at": "PH-081"
+      }
+    ],
+    "exception_paths": [
+      {
+        "id": "EXC-001",
+        "name": "Sanctions Hit — Payment Blocked",
+        "description": "SVC-051 returns a sanctions match during PH-079. EVT-006 (SanctionsHitDetected) is published. SVC-001 blocks the PaymentIntent. MLRO is alerted. PER-001 is informed the payment cannot be processed (generic message — tipping-off prohibition applies). Payment is not submitted to RTGS.",
+        "phases": ["PH-077", "PH-078", "PH-079 (sanctions hit)"],
+        "divergence_at": "PH-079",
+        "terminal_phase": "PH-079"
+      },
+      {
+        "id": "EXC-002",
+        "name": "Insufficient Funds — Payment Rejected",
+        "description": "Definitive available balance check at PH-080 reveals insufficient cleared funds. PaymentIntent.status = rejected. Customer notified. No CHAPS submission.",
+        "phases": ["PH-077", "PH-078", "PH-079", "PH-080 (insufficient funds)"],
+        "divergence_at": "PH-080",
+        "terminal_phase": "PH-080"
+      },
+      {
+        "id": "EXC-003",
+        "name": "RTGS Rejection — Technical Failure",
+        "description": "Bank of England RTGS rejects the pacs.008 message (e.g. invalid message format, scheme rule violation). SVC-009 receives RTGS rejection. CHAPSPaymentFailed (EVT-113) is published. SVC-001 releases the reserved funds. Customer notified with explanation and guidance to resubmit or contact the bank.",
+        "phases": ["PH-077", "PH-078", "PH-079", "PH-080", "PH-081 (RTGS rejection)"],
+        "divergence_at": "PH-081",
+        "terminal_phase": "PH-081"
+      },
+      {
+        "id": "EXC-004",
+        "name": "Missed CHAPS Cut-Off",
+        "description": "Payment is authorised in PH-080 but CHAPS bank cut-off passes before SVC-009 can submit the pacs.008. CHAPSPaymentFailed (EVT-113) published with reason = cut_off_missed. Reserved funds released. Customer advised to resubmit on the next business day. Particularly critical for property completions — customer must be warned of legal consequences of missing completion.",
+        "phases": ["PH-077", "PH-078", "PH-079", "PH-080", "PH-081 (cut-off missed)"],
+        "divergence_at": "PH-081",
+        "terminal_phase": "PH-081"
+      }
+    ]
+  },
+  "design_decisions": [
+    {
+      "id": "DD-JRN028-01",
+      "decision": "CHAPS is handled within SVC-009 (Domestic Payments, CAP-003) as a retained sub-capability. No separate CHAPS service is introduced.",
+      "rationale": "CAP-003.03 (CHAPS) promotion test yielded 0 criteria met (see payment-operations.json DD-004). SVC-009 already handles FPS and BACS rails. CHAPS is an additional rail within the same service, using the same Form3/Bottomline PTX connectivity layer with a different message format (ISO 20022 pacs.008 to RTGS vs pacs.008 to Vocalink).",
+      "alternatives_considered": ["Separate SVC-CHAPS service within CAP-003"],
+      "rejected_because": "Promotion criteria not met. CHAPS shares the same payment execution lifecycle and operational team."
+    },
+    {
+      "id": "DD-JRN028-02",
+      "decision": "CHAPSPaymentExecution is a new entity (ENT-052) separate from ENT-009 (PaymentExecution) which covers FPS.",
+      "rationale": "CHAPS execution carries additional required fields not present in FPS: ISO 20022 purpose_code, structured_address, LEI, RTGS message reference (UETR), and settlement_status (RTR2 specific). Extending ENT-009 would create a sparse entity with many nullable fields. A separate entity with explicit CHAPS fields is cleaner and easier for future RTGS compliance changes.",
+      "alternatives_considered": ["Extend ENT-009 (PaymentExecution) with CHAPS-specific fields"],
+      "rejected_because": "FPS and CHAPS have diverging compliance data requirements. ENT-009 extension would accumulate technical debt as CHAPS ISO 20022 enhanced data obligations evolve (GOV-003-R03 Phase 2 November 2026)."
+    },
+    {
+      "id": "DD-JRN028-03",
+      "decision": "MortgageCompletionPaymentConfirmed (EVT-112) is published by SVC-009 (not SVC-001) and consumed by SVC-002 (Mortgage Service).",
+      "rationale": "SVC-009 owns the definitive CHAPS settlement fact (CHAPSPaymentExecution.settlement_status = settled). SVC-002 requires this event to transition MortgageAccount.status to completed. The event crosses the CAP-003 → CAP-001 boundary and must flow via the Event Bus (SVC-102). SVC-009 publishes the event because it has the authoritative settlement confirmation from RTGS.",
+      "alternatives_considered": ["SVC-001 publishes the event after AccountDebited", "SVC-002 polls SVC-001 for account debit confirmation"],
+      "rejected_because": "SVC-001 debit is a consequence of settlement, not the settlement itself. Polling would violate the async-first cross-capability communication rule."
+    }
+  ]
+}
