@@ -8,7 +8,7 @@
     {
       "service_id": "SVC-014",
       "name": "KYC/AML Service",
-      "capability_domain": "CAP-005 (Compliance & Regulatory)",
+      "capability_domain": "CAP-005",
       "role_in_journey": "PRIMARY OWNER — orchestrates the entire SAR filing workflow. Owns all SAR entities and events. Enforces tipping-off prohibition at service level.",
       "owned_entities": ["ENT-010", "ENT-011"],
       "owned_entities_added_by_jrn003": [
@@ -24,11 +24,11 @@
         }
       ],
       "published_events_added_by_jrn003": [
-        "EVT-014 (SARInvestigationOpened)",
-        "EVT-015 (SARDecisionMade)",
-        "EVT-016 (SARFiled)",
-        "EVT-017 (SARConsentRequested)",
-        "EVT-018 (SARConsentGranted)"
+        "EVT-014",
+        "EVT-015",
+        "EVT-016",
+        "EVT-017",
+        "EVT-018"
       ],
       "consumed_events_added_by_jrn003": [],
       "new_api_endpoints": [
@@ -52,15 +52,15 @@
       ],
       "data_access_controls": {
         "classification": "auditor_only",
-        "access_granted_to": ["PER-052 (MLRO)", "PER-053 (Deputy MLRO — assigned investigations only)", "SVC-103 (Audit & Logging — write-only)", "SVC-111 (WORM pipeline — write-only)"],
-        "access_denied_to": ["SVC-017 (Digital Channels)", "SVC-001 (Retail Banking Core — read only receives restricted SARFiled payload)", "All customer-facing services", "PER-001 (Customer — absolute prohibition)"]
+        "access_granted_to": ["PER-052", "PER-053", "SVC-103", "SVC-111"],
+        "access_denied_to": ["SVC-017", "SVC-001", "All customer-facing services", "PER-001"]
       },
       "source_journeys": ["JRN-001", "JRN-003"]
     },
     {
       "service_id": "SVC-015",
       "name": "Compliance Core",
-      "capability_domain": "CAP-005 (Compliance & Regulatory)",
+      "capability_domain": "CAP-005",
       "role_in_journey": "MLRO WORKFLOW SUPPORT — provides the case management UI layer used by PER-052 to work through the SAR investigation and preparation steps. SVC-015 does not own SAR entities but orchestrates the MLRO user experience and enforces UI-level tipping-off controls.",
       "owned_entities_added_by_jrn003": [],
       "responsibilities": [
@@ -85,7 +85,7 @@
     {
       "service_id": "SVC-001",
       "name": "Retail Banking Core",
-      "capability_domain": "CAP-001 (Retail Banking)",
+      "capability_domain": "CAP-001",
       "role_in_journey": "CONSUMER — receives SARFiled event (EVT-016) to apply account restrictions and enhanced monitoring flags where the MLRO has determined restrictions are required. SVC-001 has no knowledge of SAR details — it acts only on the restriction_required flag.",
       "owned_entities_added_by_jrn003": [],
       "consumed_events_added_by_jrn003": [
@@ -98,7 +98,7 @@
         }
       ],
       "published_events_added_by_jrn003": [
-        "EVT-019 (AccountRestrictionApplied — published when SVC-001 applies restriction on receipt of SARFiled)"
+        "EVT-019"
       ],
       "boundary_rules": [
         "SVC-001 receives only the minimal SARFiled payload — customer_id and restriction_required flag",
@@ -120,17 +120,17 @@
   ],
   "cross_capability_event_flows": [
     {
-      "from_service": "SVC-014 (CAP-005)",
-      "to_service": "SVC-001 (CAP-001)",
-      "event": "EVT-016 (SARFiled)",
+      "from_service": "SVC-014",
+      "to_service": "SVC-001",
+      "event": "EVT-016",
       "direction": "publish → consume",
       "payload_restriction": "Minimal payload only: { sar_id: UUID (internal reference), customer_id: UUID, restriction_required: boolean, filed_at: timestamp }. No SAR narrative, no NCA reference, no typology codes, no investigation detail.",
       "tipping_off_protection": "Payload is designed so that even if SVC-001 were compromised or its logs accessed by an unauthorised party, no SAR-identifying information would be disclosed to a subject."
     },
     {
-      "from_service": "SVC-001 (CAP-001)",
-      "to_service": "SVC-103 (Shared)",
-      "event": "EVT-019 (AccountRestrictionApplied)",
+      "from_service": "SVC-001",
+      "to_service": "SVC-103",
+      "event": "EVT-019",
       "direction": "publish → consume",
       "purpose": "Audit log of account restriction application. Feeds into MLRO annual report data."
     }

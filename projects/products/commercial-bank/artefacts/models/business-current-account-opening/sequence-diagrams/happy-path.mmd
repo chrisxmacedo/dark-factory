@@ -5,94 +5,86 @@ sequenceDiagram
     autonumber
 
     actor PER002 as PER-002<br/>Business Customer
-    participant SVC017 as SVC-017<br/>Digital Channels
-    participant SVC005 as SVC-005<br/>Commercial Banking Core
+    participant Channel as Channel<br/>Web/Business Portal (CAP-007)
+    participant CAP002 as CAP-002 API<br/>Commercial Banking
     participant CHAPI as Companies House API
-    participant SVC050 as SVC-050<br/>Customer Onboarding
-    participant SVC051 as SVC-051<br/>Sanctions Screening
-    participant SVC014 as SVC-014<br/>KYC/AML Service
-    participant SVC100 as SVC-100<br/>IAM
-    participant EB as SVC-102<br/>Event Bus
-    participant SVC053 as SVC-053<br/>Notifications
+    participant CAP005 as CAP-005 API<br/>Compliance
+    participant EB as Event Bus<br/>SVC-102
 
     rect rgb(230, 245, 255)
-        Note over PER002,SVC005: PH-139 — Application Initiation (Day 1)
-        PER002->>SVC017: Submit business application<br/>(entity_type: limited_company, company_number: 12345678,<br/>applicant name/email, role: director)
-        SVC017->>SVC005: POST /business-applications
-        SVC005->>EB: publish BusinessApplicationStarted<br/>{ application_id, business_customer_id, company_number, entity_type }
-        SVC005-->>SVC017: 201 Created { application_id, application_ref: BCA-2025-00421, status: in_progress }
-        SVC017-->>PER002: Confirmation screen + application reference
+        Note over PER002,CAP002: PH-139 — Application Initiation (Day 1)
+        PER002->>Channel: Submit business application<br/>(entity_type: limited_company, company_number: 12345678,<br/>applicant name/email, role: director)
+        Channel->>CAP002: POST /business-applications<br/>{ entity_type: limited_company, company_number: 12345678,<br/>applicant_name, email, role: director }
+        Note over CAP002: Create ENT-079 BusinessCustomer (prospect)<br/>Create BusinessApplicationRecord<br/>application_ref: BCA-2025-00421
+        CAP002->>EB: Publish BusinessApplicationStarted<br/>{ application_id, business_customer_id,<br/>company_number: 12345678, entity_type: limited_company }
+        CAP002-->>Channel: 201 Created { application_id, application_ref: BCA-2025-00421, status: in_progress }
+        Channel-->>PER002: Confirmation screen + application reference
     end
 
     rect rgb(230, 255, 230)
-        Note over SVC005,CHAPI: PH-140 — Companies House Verification (Day 1, ~seconds)
-        SVC005->>CHAPI: GET /company/12345678 + /officers + /persons-with-significant-control
+        Note over CAP002,CHAPI: PH-140 — Companies House Verification (Day 1, ~seconds)
+        CAP002->>CHAPI: GET /company/12345678 + /officers + /persons-with-significant-control
         Note over CHAPI: Normal response: ~500ms<br/>Returns: company active, 2 directors,<br/>2 PSCs (Sarah 50%, Priya 30%)
-        CHAPI-->>SVC005: 200 OK { company profile, officers, PSCs }
-        Note over SVC005: Create DirectorRecords (Sarah Thornton, James Chen)<br/>Create UBO staging (Sarah 50%, Priya 30%)
-        SVC005->>EB: publish CompaniesHouseVerified<br/>{ legal_name: Example Tech Solutions Ltd, company_status: active,<br/>sic_codes: [62012], director_count: 2, ubo_count: 2 }
-        SVC017-->>PER002: CH verification confirmed — please review company details
+        CHAPI-->>CAP002: 200 OK { company profile, officers, PSCs }
+        Note over CAP002: Create DirectorRecords (Sarah Thornton, James Chen)<br/>Create UBO staging (Sarah 50%, Priya 30%)<br/>legal_name: Example Tech Solutions Ltd | sic_codes: [62012]
+        CAP002->>EB: Publish CompaniesHouseVerified<br/>{ legal_name: Example Tech Solutions Ltd,<br/>company_status: active, sic_codes: [62012],<br/>director_count: 2, ubo_count: 2 }
+        Channel-->>PER002: CH verification confirmed — please review company details
     end
 
     rect rgb(255, 245, 220)
-        Note over PER002,SVC053: PH-141 — Director/UBO Identification (Day 1, ~minutes)
-        PER002->>SVC017: Confirm UBO list<br/>(confirm Sarah 50%, Priya 30% — both UBOs)<br/>Provide Priya Kapoor email for invitation<br/>Confirm James Chen = director, not UBO
-        SVC005->>EB: publish UBOIdentified (x2)<br/>{ ubo_id, ubo_name: Sarah Thornton, ownership: 50% }<br/>{ ubo_id, ubo_name: Priya Kapoor, ownership: 30% }
-        SVC050->>SVC053: Dispatch invitation emails to James Chen + Priya Kapoor
-        SVC017-->>PER002: "Identity checks sent — please complete yours now"
+        Note over PER002,CAP005: PH-141 — Director/UBO Identification (Day 1, ~minutes)
+        PER002->>Channel: Confirm UBO list (Sarah 50%, Priya 30%)<br/>Provide Priya Kapoor email for invitation<br/>Confirm James Chen = director, not UBO
+        Channel->>CAP002: POST /business-applications/{id}/ubo-confirmation<br/>{ ubos: [sarah_thornton_50%, priya_kapoor_30%],<br/>directors: [james_chen] }
+        CAP002->>EB: Publish UBOIdentified (x2)<br/>{ ubo_id, ubo_name: Sarah Thornton, ownership: 50% }<br/>{ ubo_id, ubo_name: Priya Kapoor, ownership: 30% }
+        Note over EB: Route UBOIdentified → Notifications (SVC-053):<br/>Dispatch invitation emails to James Chen + Priya Kapoor
+        Channel-->>PER002: "Identity checks sent — please complete yours now"
     end
 
     rect rgb(245, 230, 255)
-        Note over PER002,SVC050: PH-142 — Identity Verification (Day 1-2, async per individual)
-        PER002->>SVC050: Onfido SDK — document (passport) + liveness check<br/>{ biometric_match_score: 0.94, address: confirmed }
-        Note over SVC050: Persists IdentityVerification (Sarah Thornton)<br/>Biometric template NOT stored — UK GDPR Art.9
-        SVC050->>EB: publish DirectorVerified (Sarah Thornton)<br/>{ individual_type: ubo, outcome: pass, verified_nationality: [GB] }
-        Note over SVC050: Day 2 — James Chen completes via email link
-        SVC050->>EB: publish DirectorVerified (James Chen)<br/>{ individual_type: director, outcome: pass, verified_nationality: [GB] }
-        Note over SVC050: Day 2 — Priya Kapoor completes via email link
-        SVC050->>EB: publish DirectorVerified (Priya Kapoor)<br/>{ individual_type: ubo, outcome: pass, verified_nationality: [GB, IN] }
-        SVC017-->>PER002: "All identity verifications complete — compliance checks in progress"
+        Note over PER002,CAP005: PH-142 — Identity Verification (Day 1-2, async per individual)
+        PER002->>CAP005: Onfido SDK — document (passport) + liveness check<br/>{ biometric_match_score: 0.94, address: confirmed }
+        Note over CAP005: Persist IdentityVerification (Sarah Thornton)<br/>Biometric template NOT stored — UK GDPR Art.9
+        CAP005->>EB: Publish DirectorVerified (Sarah Thornton)<br/>{ individual_type: ubo, outcome: pass, verified_nationality: [GB] }
+        Note over CAP005: Day 2 — James Chen completes via email link
+        CAP005->>EB: Publish DirectorVerified (James Chen)<br/>{ individual_type: director, outcome: pass, verified_nationality: [GB] }
+        Note over CAP005: Day 2 — Priya Kapoor completes via email link
+        CAP005->>EB: Publish DirectorVerified (Priya Kapoor)<br/>{ individual_type: ubo, outcome: pass, verified_nationality: [GB, IN] }
+        Channel-->>PER002: "All identity verifications complete — compliance checks in progress"
     end
 
     rect rgb(255, 230, 220)
-        Note over SVC014,SVC051: PH-143 — KYC/CDD Assessment (Day 2, ~minutes, parallel fan-out)
-        Note over SVC014: Receives all 3 DirectorVerified events — all individuals now verified
-        par Parallel sanctions screening fan-out
-            SVC014->>SVC051: POST /screen { entity: Example Tech Solutions Ltd }
-            SVC014->>SVC051: POST /screen { Sarah Thornton, DOB, nationality: [GB] }
-            SVC014->>SVC051: POST /screen { James Chen, DOB, nationality: [GB] }
-            SVC014->>SVC051: POST /screen { Priya Kapoor, DOB, nationality: [GB, IN] }
-        end
-        Note over SVC051: Hard SLA: <3,000ms per call (GOV-005-R02)<br/>Lists: OFSI + OFAC + UN + EU
-        SVC051-->>SVC014: All 4 results: status CLEAR
-        Note over SVC014: PEP screening — all 3 individuals: CLEAR<br/>Adverse media — company: CLEAR<br/>Sector risk — SIC 62012 (IT consulting): LOW<br/>Jurisdictional risk — GB incorporation: LOW<br/>Risk score: 18/100 → risk_category: standard<br/>EDD not triggered
-        SVC014->>EB: publish BusinessKYCCleared<br/>{ assessment_id, business_customer_id,<br/>risk_category: standard, edd_required: false,<br/>next_review_date: 2028-06-18 }
+        Note over EB,CAP005: PH-143 — KYC/CDD Assessment (Day 2, ~minutes, parallel fan-out)
+        EB-)CAP005: Consume all 3 DirectorVerified events — all individuals verified
+        Note over CAP005: Internal parallel sanctions screening fan-out:<br/>Screen: Example Tech Solutions Ltd<br/>Screen: Sarah Thornton | DOB, nationality: [GB]<br/>Screen: James Chen | DOB, nationality: [GB]<br/>Screen: Priya Kapoor | DOB, nationality: [GB, IN]<br/>Hard SLA: <3,000ms per screen (GOV-005-R02)<br/>Lists: OFSI + OFAC + UN + EU<br/>All 4 results: CLEAR<br/>PEP screening — all 3 individuals: CLEAR<br/>Adverse media — company: CLEAR<br/>Sector risk — SIC 62012 (IT consulting): LOW<br/>Jurisdictional risk — GB incorporation: LOW<br/>Risk score: 18/100 → risk_category: standard<br/>EDD not triggered
+        Note over CAP005: Create KycAssessment (status: cleared)<br/>risk_category: standard | next_review_date: 2028-06-18
+        CAP005->>EB: Publish BusinessKYCCleared<br/>{ assessment_id, business_customer_id,<br/>risk_category: standard, edd_required: false,<br/>next_review_date: 2028-06-18 }
     end
 
     rect rgb(220, 245, 255)
-        Note over SVC005: PH-144 — Account Decision (Day 2, automated)
-        Note over SVC005: Decision engine: CH verified + all verifications PASS<br/>+ risk standard + no sanctions → APPROVED
-        SVC005->>EB: publish BusinessApplicationDecisionMade<br/>{ application_id, decision_outcome: APPROVED, decided_at }
-        SVC053-->>PER002: Email + In-app: "Application approved — setting up your account"
+        Note over EB,CAP002: PH-144 — Account Decision (Day 2, automated)
+        EB-)CAP002: Consume BusinessKYCCleared
+        Note over CAP002: Decision engine: CH verified + all verifications PASS<br/>+ risk standard + no sanctions → APPROVED
+        CAP002->>EB: Publish BusinessApplicationDecisionMade<br/>{ application_id, decision_outcome: APPROVED, decided_at }
+        Note over EB: Route to Notifications (SVC-053):<br/>Email + In-app: "Application approved — setting up your account"
     end
 
     rect rgb(230, 255, 245)
-        Note over SVC005: PH-145 — Account Provisioning (Day 2, automated)
-        Note over SVC005: Create BusinessAccount:<br/>account_number: 62345678 (commercial range)<br/>sort_code: 60-83-21, IBAN: GB29BANK60832162345678<br/>Dual-authorisation: threshold £5,000<br/>Authorised users: Sarah Thornton + James Chen (dual_authoriser)<br/>BusinessCustomer.status → active
-        SVC005->>EB: publish BusinessAccountOpened<br/>{ business_account_id, account_number, sort_code, iban, bic, fscs_eligible: false }
-        SVC005->>EB: publish BusinessAccountProvisioned<br/>{ business_account_id, status: active,<br/>payment_approval_threshold: 5000, authorised_users: 2,<br/>payment_rails: [bacs, fps, chaps] }
-        SVC017-->>PER002: Account details screen<br/>(sort code: 60-83-21, account: 62345678, IBAN, BIC)
+        Note over CAP002,EB: PH-145 — Account Provisioning (Day 2, automated)
+        Note over CAP002: Create ENT-080 BusinessAccount:<br/>account_number: 62345678 (commercial range)<br/>sort_code: 60-83-21<br/>IBAN: GB29BANK60832162345678<br/>Dual-authorisation: threshold £5,000<br/>Authorised users: Sarah Thornton + James Chen (dual_authoriser)<br/>BusinessCustomer.status → active
+        CAP002->>EB: Publish BusinessAccountOpened<br/>{ business_account_id, account_number,<br/>sort_code, iban, bic, fscs_eligible: false }
+        CAP002->>EB: Publish BusinessAccountProvisioned<br/>{ business_account_id, status: active,<br/>payment_approval_threshold: 5000,<br/>authorised_users: 2,<br/>payment_rails: [bacs, fps, chaps] }
+        Channel-->>PER002: Account details screen<br/>(sort code: 60-83-21, account: 62345678, IBAN, BIC)
     end
 
     rect rgb(255, 255, 220)
-        Note over PER002,SVC100: PH-146 — Digital Channel Activation (Day 2)
-        PER002->>SVC017: Set up business portal credentials (username + password)
-        SVC017->>SVC100: Create credentials + register FIDO2/WebAuthn device<br/>{ business_customer_id, email, fido2_credential_id, device_id }
-        Note over SVC100: Biometric assertion stays on device<br/>(FIDO2/WebAuthn + UK GDPR data minimisation)
-        PER002->>SVC017: First login — biometric SCA (Face ID)
-        SVC017->>SVC100: Verify FIDO2 assertion
-        SVC100-->>SVC017: SCA confirmed
-        SVC017->>EB: publish BusinessDigitalChannelActivated<br/>{ business_customer_id, business_account_id, sca_enrolled: true, activated_at }
-        SVC053-->>PER002: Welcome email: account details, IBAN, RM contacts,<br/>terms, account opening confirmation PDF
+        Note over PER002,CAP002: PH-146 — Digital Channel Activation (Day 2)
+        PER002->>Channel: Set up business portal credentials (username + password)
+        Channel->>CAP002: POST /business-customers/{id}/credentials + register FIDO2/WebAuthn device<br/>{ business_customer_id, email, fido2_credential_id, device_id }
+        Note over CAP002: Credentials created; FIDO2 device registered<br/>Biometric assertion stays on device<br/>(FIDO2/WebAuthn + UK GDPR data minimisation)
+        PER002->>Channel: First login — biometric SCA (Face ID)
+        Channel->>CAP002: POST /auth/verify-sca { fido2_assertion, business_customer_id }
+        CAP002-->>Channel: SCA confirmed
+        CAP002->>EB: Publish BusinessDigitalChannelActivated<br/>{ business_customer_id, business_account_id,<br/>sca_enrolled: true, activated_at }
+        Note over EB: Route to Notifications (SVC-053):<br/>Welcome email: account details, IBAN, RM contacts,<br/>terms, account opening confirmation PDF
         Note over PER002: Journey complete — 2 business days (this example)<br/>Business portal active with dual-authorisation payment workflow
     end

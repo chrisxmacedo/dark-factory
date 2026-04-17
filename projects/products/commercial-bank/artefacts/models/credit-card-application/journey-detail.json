@@ -6,9 +6,9 @@
   "status": "Draft",
   "customer_persona": "PER-001",
   "customer_persona_name": "Personal Customer",
-  "primary_capability": "CAP-001 (Retail Banking — Credit Cards sub-capability, SVC-003)",
+  "primary_capability": "CAP-001",
   "supporting_capabilities": [
-    "CAP-004 (Risk Management — credit scoring, SVC-012)"
+    "CAP-004"
   ],
   "description": "A personal customer applies for a personal credit card through the bank's digital channel. The journey covers product selection, automated eligibility and credit check, instant decision, card issuance (virtual and physical), card activation, and entry into the ongoing credit card account management lifecycle. SVC-003 (Credit Card Service) owns the application and account lifecycle; SVC-012 (Risk Engine, CAP-004) provides hard credit scoring exclusively via async events; SVC-001 (Retail Banking Core, same capability) provides customer identity data via synchronous API.",
   "happy_path_duration": "Instant decision (< 5 minutes); virtual card issued same day; physical card 3–5 business days",

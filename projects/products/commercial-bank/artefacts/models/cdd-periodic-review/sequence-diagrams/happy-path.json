@@ -5,15 +5,15 @@
   "scenario": "happy-path",
   "description": "Scheduled CDD review triggered for standard-risk corporate client. Documents collected within 14 days. Screening clear. Risk rating unchanged. Compliance Officer records continue decision. CddReviewCompleted published. Next review scheduled.",
   "participants": [
-    {"id": "Compliance", "label": "SVC-015 (Compliance Core)", "type": "service"},
-    {"id": "KYC", "label": "SVC-014 (KYC/AML Service)", "type": "service"},
-    {"id": "Channel", "label": "SVC-017 (Digital Channels)", "type": "service"},
-    {"id": "EventBus", "label": "SVC-102 (Event Bus)", "type": "infrastructure"},
-    {"id": "CommBanking", "label": "SVC-005 (Commercial Banking Core)", "type": "service"},
-    {"id": "Audit", "label": "SVC-103 (Audit & Logging)", "type": "service"},
-    {"id": "CompOfficer", "label": "PER-052 (Compliance Officer)", "type": "actor"},
-    {"id": "Analyst", "label": "PER-058 (KYC Analyst)", "type": "actor"},
-    {"id": "Client", "label": "PER-003 (Corporate Client)", "type": "actor"}
+    {"id": "Compliance", "label": "SVC-015", "type": "service"},
+    {"id": "KYC", "label": "SVC-014", "type": "service"},
+    {"id": "Channel", "label": "SVC-017", "type": "service"},
+    {"id": "EventBus", "label": "SVC-102", "type": "infrastructure"},
+    {"id": "CommBanking", "label": "SVC-005", "type": "service"},
+    {"id": "Audit", "label": "SVC-103", "type": "service"},
+    {"id": "CompOfficer", "label": "PER-052", "type": "actor"},
+    {"id": "Analyst", "label": "PER-058", "type": "actor"},
+    {"id": "Client", "label": "PER-003", "type": "actor"}
   ],
   "steps": [
     {"step": 1, "from": "Compliance", "to": "Compliance", "type": "internal", "action": "Scheduled job: review_due_date reached for client. Create CddReviewCase (status=triggered).", "phase": "PH-102"},

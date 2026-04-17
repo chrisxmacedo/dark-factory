@@ -18,10 +18,10 @@
     "CAP-003"
   ],
   "sub_capabilities_involved": [
-    "CAP-002.03 (Trade Finance — PROMOTED sub-capability, implemented in SVC-006)",
-    "CAP-002.01 (Business Current Accounts — SVC-005, same-capability: SVC-006 calls SVC-005 directly for facility check and settlement debit)",
-    "CAP-005.01 (KYC/AML — pKYC monitoring, GOV-005-R01 and GOV-005-R02 sanctions gate — cross-capability async only)",
-    "CAP-003.04 (International Payments — SVC-010 SWIFT MT700/MT710 messaging — cross-capability async only)"
+    "CAP-002.03",
+    "CAP-002.01",
+    "CAP-005.01",
+    "CAP-003.04"
   ],
   "phases": [
     {
@@ -29,10 +29,10 @@
       "name": "LC Application",
       "description": "Business Customer (PER-002) submits a Letter of Credit application via the trade finance portal (CH-008 Corporate Banking Portal) or through their Relationship Manager (PER-050). The application captures: beneficiary name and address, beneficiary bank (advising bank), LC type (sight or usance), face value and currency, goods description (HS tariff codes), shipment terms (Incoterms 2020), port of loading, port of discharge, latest shipment date, expiry date, and required documents (commercial invoice, full set of clean on-board bills of lading, packing list, insurance certificate, certificate of origin). SVC-006 creates a LetterOfCredit entity (ENT-036) with status = application_submitted and publishes EVT-075 (LCApplicationSubmitted). The LC application reference number is returned to the customer.",
       "actors": [
-        "PER-002 (SME Business Owner / Director — submits LC application)",
-        "PER-050 (Relationship Manager — may assist or originate on customer behalf)",
-        "SVC-006 (Trade Finance Service — creates LetterOfCredit entity, validates application completeness)",
-        "SVC-005 (Commercial Banking Core — called by SVC-006 same-capability to read BusinessCustomer and check facility headroom)"
+        "PER-002",
+        "PER-050",
+        "SVC-006",
+        "SVC-005"
       ],
       "services": ["SVC-006", "SVC-005"],
       "governance_rules": [
@@ -56,10 +56,10 @@
       "name": "Credit Assessment",
       "description": "SVC-006 calls SVC-005 directly (same-capability within CAP-002) to verify that the applicant's approved trade finance facility has sufficient undrawn headroom to cover the LC face value plus standard bank charges. If the LC amount falls within the customer's approved import LC sub-limit, no new credit decision is required — facility headroom check passes and the journey proceeds. If the LC amount exceeds available headroom, a manual credit referral is raised to the Credit Analyst (PER-056) who reviews the customer's financial position and the specific trade transaction. For standard in-limit requests, SVC-006 updates LetterOfCredit.credit_status = facility_confirmed and proceeds directly to compliance screening.",
       "actors": [
-        "SVC-006 (Trade Finance Service — queries facility headroom via SVC-005 same-capability API)",
-        "SVC-005 (Commercial Banking Core — returns facility headroom for business_customer_id)",
-        "PER-056 (Credit Analyst — reviews out-of-limit or exceptional requests)",
-        "PER-050 (Relationship Manager — escalation point for credit referrals)"
+        "SVC-006",
+        "SVC-005",
+        "PER-056",
+        "PER-050"
       ],
       "services": ["SVC-006", "SVC-005"],
       "governance_rules": [
@@ -81,10 +81,10 @@
       "name": "Compliance Screening",
       "description": "SVC-006 publishes EVT-076 (LCComplianceScreeningRequested) — a cross-capability async event consumed by SVC-051 (Sanctions Screening, CAP-005). The screening payload includes: beneficiary full name, beneficiary country, beneficiary bank name and SWIFT BIC, goods description, HS tariff codes (dual-use export control assessment), and country of origin. SVC-051 screens against OFSI consolidated list, HM Treasury financial sanctions, UN Security Council sanctions, OFAC SDN list, and the UK Strategic Export Controls (Export Control Act 2002 / Export Control Order 2008) dual-use goods database. SVC-051 publishes EVT-077 (LCComplianceCleared) if all screens return CLEAR, or raises an internal compliance alert if a hit is detected. SVC-006 consumes EVT-077 to gate progression to LC issuance. On a sanctions hit, LetterOfCredit.status transitions to compliance_blocked and the MLRO (PER-058) is automatically notified. Trade-based money laundering (TBML) typologies are also assessed: over/under-invoicing, phantom shipments, multiple invoicing.",
       "actors": [
-        "SVC-006 (Trade Finance Service — publishes EVT-076, consumes EVT-077)",
-        "SVC-051 (Sanctions Screening Service, CAP-005 — screens beneficiary, goods, country)",
-        "PER-058 (MLRO — notified and reviews any compliance hit; not in automated happy path)",
-        "SVC-102 (Event Bus — routes cross-capability compliance events)"
+        "SVC-006",
+        "SVC-051",
+        "PER-058",
+        "SVC-102"
       ],
       "services": ["SVC-006", "SVC-051", "SVC-102"],
       "governance_rules": [
@@ -109,11 +109,11 @@
       "name": "LC Issuance",
       "description": "Following compliance clearance, SVC-006 formats and issues the Letter of Credit. For traditional SWIFT-based issuance, SVC-006 publishes an async event to SVC-010 (International Payments Service, CAP-003) which transmits the SWIFT MT700 (Issue of a Documentary Credit) message to the advising bank's SWIFT BIC. For ETDA-compliant electronic LC issuance, SVC-006 generates a digital LC record under ETDA 2023 via an integrated electronic trade document platform (e.g. Bolero, essDOCS, or CONTOUR successor). The LetterOfCredit.status transitions to issued. EVT-078 (LCIssued) is published. The applicant and advising bank receive confirmation. The LC is legally operative: the bank's irrevocable payment undertaking is in force from the issuance date. The LC reference number (SWIFT field 20) and terms are recorded against ENT-036.",
       "actors": [
-        "SVC-006 (Trade Finance Service — generates LC terms, triggers SWIFT or e-LC issuance)",
-        "SVC-010 (International Payments Service, CAP-003 — transmits SWIFT MT700/MT710 — cross-capability async)",
-        "SVC-102 (Event Bus — routes LC issuance event to SVC-010)",
+        "SVC-006",
+        "SVC-010",
+        "SVC-102",
         "Advising Bank (external — receives SWIFT MT700 or e-LC notification)",
-        "PER-002 (SME Business Owner — receives LC issuance confirmation)"
+        "PER-002"
       ],
       "services": ["SVC-006", "SVC-010", "SVC-102"],
       "governance_rules": [
@@ -141,7 +141,7 @@
       "actors": [
         "Beneficiary (external — presents documents to advising bank)",
         "Advising/Presenting Bank (external — forwards documents to issuing bank)",
-        "SVC-006 (Trade Finance Service — receives and records document set)",
+        "SVC-006",
         "Trade Finance Operations Team (PER-059 — receives and logs physical documents if paper-based)"
       ],
       "services": ["SVC-006"],
@@ -166,10 +166,10 @@
       "name": "Document Examination",
       "description": "Trade Finance Operations (PER-059) examines the presented documents against the LC terms within the maximum 5-banking-day examination period mandated by UCP 600 Article 14(b). Each document in the checklist is assessed: commercial invoice (amount, description match), full set of clean on-board bills of lading (not charter party, shipped on board notation, consignee, notify party), insurance certificate (minimum 110% CIF, Institute Cargo Clauses A or marine open cover), packing list, certificate of origin (Rules of Origin compliance post-Brexit). If all documents are compliant, SVC-006 updates DocumentExamination (ENT-039) with result = compliant and publishes EVT-080 (DocumentExamined). If discrepancies are found, SVC-006 records each discrepancy with specific UCP 600 article reference and publishes EVT-080 with result = discrepant. A SWIFT MT734 (Advice of Refusal) or MT750 (Advice of Discrepancy) is transmitted to the presenting bank. The applicant (PER-002) may waive discrepancies — any waiver instruction must be received before the 5-day examination deadline expires.",
       "actors": [
-        "PER-059 (Trade Finance Operations — document examiner, trained under CDCS / UCP 600)",
-        "SVC-006 (Trade Finance Service — stores examination result in ENT-039, enforces 5-day deadline)",
-        "PER-002 (SME Business Owner — may waive discrepancies on behalf of applicant)",
-        "PER-050 (Relationship Manager — advises applicant on discrepancy waiver decisions)"
+        "PER-059",
+        "SVC-006",
+        "PER-002",
+        "PER-050"
       ],
       "services": ["SVC-006"],
       "governance_rules": [
@@ -194,10 +194,10 @@
       "name": "Settlement",
       "description": "On compliant document presentation (or discrepant presentation with applicant waiver), SVC-006 initiates LC settlement. For a sight LC: SVC-006 calls SVC-005 directly (same-capability within CAP-002) to debit the applicant's BusinessAccount (ENT-080) or draw on the trade finance facility. SVC-006 publishes an async event to SVC-010 (International Payments, CAP-003) which transmits SWIFT MT202 (General Financial Institution Transfer) or MT910 reimbursement instruction to the advising/reimbursing bank for payment to the beneficiary. For a usance (deferred payment) LC, the maturity date is determined from the usance period and payment is scheduled accordingly. LetterOfCredit.status transitions to settled. EVT-081 (LCSettled) is published. If the LC expires without a compliant presentation, LetterOfCredit.status transitions to expired and EVT-082 (LCExpired) is published.",
       "actors": [
-        "SVC-006 (Trade Finance Service — initiates settlement instruction, updates LC status)",
-        "SVC-005 (Commercial Banking Core — debits applicant BusinessAccount or facility — same-capability)",
-        "SVC-010 (International Payments Service, CAP-003 — SWIFT reimbursement — cross-capability async)",
-        "SVC-102 (Event Bus — routes settlement event to SVC-010)",
+        "SVC-006",
+        "SVC-005",
+        "SVC-010",
+        "SVC-102",
         "Reimbursing / Advising Bank (external — receives SWIFT MT202/MT910)"
       ],
       "services": ["SVC-006", "SVC-005", "SVC-010", "SVC-102"],
@@ -207,7 +207,7 @@
         "GOV-002-R01 (Basel 3.1 — on settlement, off-balance-sheet LC commitment converts to on-balance-sheet payment obligation; RWA updates required in SVC-012 via downstream event)"
       ],
       "entry_conditions": [
-        "EVT-080 (DocumentExamined) with examination_result = compliant received (or discrepant with formal applicant waiver on file)",
+        "EVT-080",
         "Applicant account has sufficient balance or facility headroom for settlement amount"
       ],
       "exit_conditions": [
@@ -263,7 +263,7 @@
         "name": "LC Expiry Without Presentation",
         "description": "Beneficiary does not present documents before the LC expiry date. LetterOfCredit.status transitions to expired on expiry date. EVT-082 (LCExpired) is published. The bank's payment undertaking lapses. Any blocked facility headroom is released back to the applicant's credit limit. Off-balance-sheet RWA commitment is reversed.",
         "phases": ["PH-055", "PH-056"],
-        "termination_phase": "PH-055 (no presentation received)",
+        "termination_phase": "PH-055",
         "exit_event": "EVT-082"
       },
       {
@@ -272,7 +272,7 @@
         "description": "PH-057: Documents are discrepant and PER-002 refuses to waive. SVC-006 transmits SWIFT MT734 (Advice of Refusal) to presenting bank specifying all discrepancies. Documents are returned (or held at presenting bank's disposal). LetterOfCredit.status = documents_refused. Journey terminates without settlement. The LC may still be available for a fresh compliant presentation if within expiry.",
         "phases": ["PH-056", "PH-057"],
         "termination_phase": "PH-057",
-        "exit_event": "EVT-080 (result=discrepant, no waiver)"
+        "exit_event": "EVT-080"
       },
       {
         "id": "EXC-004",

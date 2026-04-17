@@ -9,7 +9,7 @@
       "id": "PH-115",
       "name": "VRP Consent Request",
       "description": "A PISP/merchant (PER-006) submits a VRP consent request to the bank's Open Banking API (SVC-017) specifying the consent parameters: maximum single payment amount, maximum monthly amount, payment category, and expiry date. The bank's authorisation server (SVC-100) validates the TPP's registration and PISP permissions, and creates a pending VRP consent record. The customer is redirected to the bank's consent portal.",
-      "actors": ["PER-006 (Third Party Provider)", "SVC-017 (Digital Channels — Open Banking API)", "SVC-100 (IAM — Authorisation Server)"],
+      "actors": ["PER-006", "SVC-017", "SVC-100"],
       "services": ["SVC-017", "SVC-100"],
       "governance_rules": ["GOV-007-R01", "GOV-007-R02"],
       "entry_conditions": [
@@ -26,7 +26,7 @@
       "id": "PH-116",
       "name": "Customer Authentication and Consent Authorisation",
       "description": "The customer authenticates via SCA (biometric/OTP) through the bank's digital channels. The bank presents the VRP consent parameters in plain language: payee details, maximum amount per payment, maximum monthly aggregate, payment category, and expiry date. The customer explicitly confirms or rejects the VRP consent. Upon confirmation, the bank issues an authorisation code to the PISP and creates the active VRP consent record.",
-      "actors": ["PER-001 (Customer)", "SVC-017 (Digital Channels)", "SVC-100 (IAM)", "SVC-009 (Domestic Payments)"],
+      "actors": ["PER-001", "SVC-017", "SVC-100", "SVC-009"],
       "services": ["SVC-017", "SVC-100", "SVC-009"],
       "governance_rules": ["GOV-007-R01", "GOV-007-R03"],
       "entry_conditions": [
@@ -43,7 +43,7 @@
       "id": "PH-117",
       "name": "VRP Payment Execution",
       "description": "The PISP submits a VRP payment instruction referencing the active consent. The bank validates the payment against the consent parameters (amount within limits, consent active and not expired). Fraud scoring is applied. If all checks pass, the payment is executed as a Faster Payment. Subsequent VRP payments in the same consent do not require per-payment SCA (the consent acts as the delegated SCA).",
-      "actors": ["PER-006 (Third Party Provider)", "SVC-017 (Digital Channels)", "SVC-009 (Domestic Payments)", "SVC-013 (Fraud Detection)"],
+      "actors": ["PER-006", "SVC-017", "SVC-009", "SVC-013"],
       "services": ["SVC-017", "SVC-009", "SVC-013"],
       "governance_rules": ["GOV-007-R02", "GOV-007-R04"],
       "entry_conditions": [
@@ -61,7 +61,7 @@
       "id": "PH-118",
       "name": "Consent Lifecycle Management",
       "description": "VRP consents are managed throughout their lifecycle: the customer may revoke a consent at any time via the bank's consent dashboard (SCA required); consents expire automatically on the expiry date; the PISP may also delete the consent. The bank must notify the customer on consent expiry. Revoked or expired consents reject future VRP payment instructions immediately.",
-      "actors": ["PER-001 (Customer)", "PER-006 (Third Party Provider)", "SVC-017 (Digital Channels)", "SVC-009 (Domestic Payments)"],
+      "actors": ["PER-001", "PER-006", "SVC-017", "SVC-009"],
       "services": ["SVC-017", "SVC-009"],
       "governance_rules": ["GOV-007-R03"],
       "entry_conditions": [

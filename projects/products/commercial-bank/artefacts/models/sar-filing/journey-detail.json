@@ -29,7 +29,7 @@
       "capability": "CAP-001",
       "service": "SVC-001",
       "interaction_type": "event-driven",
-      "event": "EVT-016 (SARFiled)",
+      "event": "EVT-016",
       "direction": "publish",
       "purpose": "SVC-001 consumes SARFiled to apply account restrictions and enhanced monitoring flags to the customer's accounts where the MLRO determines restrictions are required."
     }
@@ -72,9 +72,9 @@
         "SVC-103 (Audit & Logging) records trigger event immutably",
         "MLRO is notified via secure internal channel (not email)"
       ],
-      "participants": ["PER-052 (MLRO)", "PER-053 (Deputy MLRO, if delegated)"],
+      "participants": ["PER-052", "PER-053"],
       "data_entities_created": ["SARInvestigationRecord (ENT-009)"],
-      "events_published": ["EVT-014 (SARInvestigationOpened)"]
+      "events_published": ["EVT-014"]
     },
     {
       "phase_id": "PH-153",
@@ -89,9 +89,9 @@
         "MLRO documents investigation findings in SARInvestigationRecord.evidence_items",
         "MLRO records timeline entries as investigation progresses"
       ],
-      "participants": ["PER-052 (MLRO)"],
-      "data_entities_accessed": ["ENT-001 (Customer)", "ENT-003 (KycAssessment)", "ENT-008 (SuspiciousActivityReport — prior SARs)", "ENT-009 (SARInvestigationRecord)"],
-      "data_entities_updated": ["ENT-009 (SARInvestigationRecord — evidence_items, timeline)"],
+      "participants": ["PER-052"],
+      "data_entities_accessed": ["ENT-001", "ENT-003", "ENT-008", "ENT-009"],
+      "data_entities_updated": ["ENT-009"],
       "sla_note": "Investigation must be completed in time to allow SAR preparation and filing within 5 business days of the decision to file (GOV-005-R01). Best practice: investigation target completion within 3 business days of trigger to allow 2 days for preparation."
     },
     {
@@ -121,10 +121,10 @@
         "SVC-014 publishes SARDecisionMade (EVT-015)",
         "SVC-103 records decision immutably with MLRO identity and timestamp"
       ],
-      "participants": ["PER-052 (MLRO)"],
-      "data_entities_created": ["ENT-008 (SuspiciousActivityReport — if filing decision)"],
-      "data_entities_updated": ["ENT-009 (SARInvestigationRecord — decision, rationale)"],
-      "events_published": ["EVT-015 (SARDecisionMade)"]
+      "participants": ["PER-052"],
+      "data_entities_created": ["ENT-008"],
+      "data_entities_updated": ["ENT-009"],
+      "events_published": ["EVT-015"]
     },
     {
       "phase_id": "PH-155",
@@ -147,8 +147,8 @@
         "MLRO reviews for tipping-off risk — no customer-facing language that could constitute disclosure",
         "MLRO marks SAR as ready_for_submission"
       ],
-      "participants": ["PER-052 (MLRO)"],
-      "data_entities_updated": ["ENT-008 (SuspiciousActivityReport — all investigation and form fields)"],
+      "participants": ["PER-052"],
+      "data_entities_updated": ["ENT-008"],
       "tipping_off_check": "MLRO must confirm review of tipping-off risk before the submission control is enabled"
     },
     {
@@ -166,9 +166,9 @@
         "SVC-103 records submission immutably",
         "SLA compliance check: filed_date must be within 5 business days of mlro_decision_date"
       ],
-      "participants": ["PER-052 (MLRO)"],
-      "data_entities_updated": ["ENT-008 (SuspiciousActivityReport — nca_reference, filed_date, status = filed)"],
-      "events_published": ["EVT-016 (SARFiled)"],
+      "participants": ["PER-052"],
+      "data_entities_updated": ["ENT-008"],
+      "events_published": ["EVT-016"],
       "sla": "5 business days from MLRO decision date to filed_date (GOV-005-R01 / POCA 2002 s338)"
     },
     {
@@ -177,7 +177,7 @@
       "description": "After filing, the MLRO monitors the NCA consent regime (where applicable), coordinates account restrictions with Retail Banking, and closes the investigation record. If NCA refuses consent or imposes a moratorium, transactions are held. If consent is granted or the 7-day moratorium expires without NCA response, normal account operations resume (subject to ongoing monitoring).",
       "consent_regime": {
         "description": "If the MLRO filed a SAR seeking consent to proceed with a specific transaction (a 'consent SAR'), the bank must await NCA response before processing that transaction. NCA has 7 calendar days from receipt to refuse consent; if no response within 7 days, the bank may proceed. NCA may issue a moratorium notice extending the hold for up to 31 days (plus 31-day renewals).",
-        "events": ["EVT-017 (SARConsentRequested)", "EVT-018 (SARConsentGranted)"]
+        "events": ["EVT-017", "EVT-018"]
       },
       "actions": [
         "If consent SAR: SVC-014 publishes SARConsentRequested (EVT-017); SVC-001 places transaction on hold",
@@ -188,22 +188,22 @@
         "MLRO closes SARInvestigationRecord (status = closed)",
         "Annual MLRO report data aggregation: SAR count, typologies, consent SAR outcomes"
       ],
-      "participants": ["PER-052 (MLRO)"],
-      "data_entities_updated": ["ENT-008 (SuspiciousActivityReport — consent_status)", "ENT-009 (SARInvestigationRecord — status = closed)"],
-      "events_published": ["EVT-017 (SARConsentRequested, conditional)", "EVT-018 (SARConsentGranted, conditional)", "EVT-019 (AccountRestrictionApplied, conditional — published by SVC-001)"]
+      "participants": ["PER-052"],
+      "data_entities_updated": ["ENT-008", "ENT-009"],
+      "events_published": ["EVT-017", "EVT-018", "EVT-019"]
     }
   ],
   "paths": {
     "happy_path": {
       "description": "SAR filed within 5 business days of MLRO decision. No consent regime required. Account restrictions applied as needed.",
-      "phase_sequence": ["PH-152", "PH-153", "PH-154 (file_sar)", "PH-155", "PH-156", "PH-157"]
+      "phase_sequence": ["PH-152", "PH-153", "PH-154", "PH-155", "PH-156", "PH-157"]
     },
     "alternative_paths": [
       {
         "id": "AP-001",
         "name": "Defensive SAR",
         "description": "MLRO's suspicion level is low but the MLRO files for protection. The SAR is labelled defensive in the grounds of suspicion narrative. All other steps identical to happy path.",
-        "phase_sequence": ["PH-152", "PH-153", "PH-154 (file_defensive_sar)", "PH-155", "PH-156", "PH-157"]
+        "phase_sequence": ["PH-152", "PH-153", "PH-154", "PH-155", "PH-156", "PH-157"]
       }
     ],
     "exception_paths": [
@@ -211,14 +211,14 @@
         "id": "EX-001",
         "name": "No SAR Filed — Dismissal",
         "description": "MLRO is satisfied that no money laundering is occurring after investigation. SAR is dismissed with documented rationale. SARInvestigationRecord.status = dismissed.",
-        "phase_sequence": ["PH-152", "PH-153", "PH-154 (dismiss)"],
+        "phase_sequence": ["PH-152", "PH-153", "PH-154"],
         "outcome": "SARInvestigationRecord closed. No SuspiciousActivityReport entity created."
       },
       {
         "id": "EX-002",
         "name": "NCA Consent Hold — Transaction Moratorium",
         "description": "MLRO files a consent SAR (seeking NCA permission before processing a transaction). NCA refuses consent or issues a moratorium. Transaction is held for up to 31+31 days. MLRO must not tip off the customer about the reason for the hold.",
-        "phase_sequence": ["PH-152", "PH-153", "PH-154", "PH-155", "PH-156 (consent SAR)", "PH-157 (consent hold active)"],
+        "phase_sequence": ["PH-152", "PH-153", "PH-154", "PH-155", "PH-156", "PH-157"],
         "outcome": "Transaction held until NCA consent granted, moratorium expires, or NCA extends moratorium. Customer informed only of generic account hold — no SAR reference."
       },
       {

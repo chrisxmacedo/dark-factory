@@ -219,36 +219,36 @@
   ],
   "cross_service_interaction_summary": [
     {
-      "from": "PER-006 (TPP)",
-      "to": "SVC-017 (Digital Channels — channel)",
+      "from": "PER-006",
+      "to": "SVC-017",
       "interaction_type": "HTTPS REST (external — OAuth 2.0 / OBIE API)",
       "phases": ["PH-035", "PH-036", "PH-038", "PH-040"],
       "description": "TPP calls OBIE-compliant endpoints on SVC-017 for DCR, consent creation, payment initiation, and status polling."
     },
     {
-      "from": "SVC-017 (Digital Channels — channel)",
-      "to": "SVC-001 (Retail Banking Core)",
+      "from": "SVC-017",
+      "to": "SVC-001",
       "interaction_type": "Synchronous REST — channel → capability (permitted)",
       "phases": ["PH-036", "PH-038", "PH-040"],
       "description": "SVC-017 calls SVC-001 to create ENT-030 (consent creation), create ENT-008 (payment initiation), and read PaymentIntent status for TPP polling."
     },
     {
-      "from": "SVC-017 (Digital Channels — channel)",
-      "to": "SVC-100 (IAM)",
+      "from": "SVC-017",
+      "to": "SVC-100",
       "interaction_type": "Synchronous REST — channel → IAM (permitted)",
       "phases": ["PH-035", "PH-037", "PH-038"],
       "description": "SVC-017 uses SVC-100 as OAuth 2.0 authorisation server for DCR, SCA orchestration, and token issuance."
     },
     {
-      "from": "SVC-001 (Retail Banking Core — CAP-001)",
+      "from": "SVC-001",
       "to": "SVC-051, SVC-013 (CAP-005, CAP-004)",
       "interaction_type": "Async event — EVT-179 published; EVT-180 and EVT-181 consumed",
       "phases": ["PH-039"],
       "description": "Standard JRN-002 payment screening pattern reused in full."
     },
     {
-      "from": "SVC-001 (Retail Banking Core — CAP-001)",
-      "to": "SVC-009 (Domestic Payments — CAP-003)",
+      "from": "SVC-001",
+      "to": "SVC-009",
       "interaction_type": "Async event — EVT-182 published; EVT-183 consumed",
       "phases": ["PH-039"],
       "description": "Standard JRN-002 FPS execution pattern reused in full."

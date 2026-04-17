@@ -8,7 +8,7 @@
       "name": "InternationalTransfer",
       "description": "Aggregate root for the international wire transfer lifecycle. Created by SVC-010 (International Payments, CAP-003) in PH-029 when PER-002 submits a transfer instruction. Tracks the transfer from initiation through compliance, SWIFT message assembly, nostro processing, and final settlement. Owned exclusively by SVC-010. The gpi_uetr field is the globally unique SWIFT gpi end-to-end reference visible in the SWIFT tracker and to the customer.",
       "owning_service": "SVC-010",
-      "owning_capability": "CAP-003 (Payment Operations — International Payments, promoted)",
+      "owning_capability": "CAP-003",
       "aggregate_root": true,
       "reachable_from_phases": ["PH-029", "PH-030", "PH-031", "PH-032", "PH-033", "PH-034"],
       "fields": [
@@ -192,7 +192,7 @@
       "name": "FXQuotation",
       "description": "An FX rate quotation obtained by SVC-010 from the bank's FX pricing engine for a cross-currency international transfer. Created in PH-030. One or more FXQuotation records may exist per InternationalTransfer (if a quote lapses and is refreshed), but only one can have status = accepted at any time. The FXQuotation locks in the exchange rate and GBP equivalent for the BusinessAccount debit and FATF equivalent value reporting.",
       "owning_service": "SVC-010",
-      "owning_capability": "CAP-003 (Payment Operations — International Payments, promoted)",
+      "owning_capability": "CAP-003",
       "aggregate_root": false,
       "reachable_from_phases": ["PH-030"],
       "fields": [
@@ -288,7 +288,7 @@
       "name": "CorrespondentRouting",
       "description": "Records the correspondent banking chain selected by SVC-010 for routing the SWIFT payment to the beneficiary bank. Created in PH-032 (SWIFT Message Assembly). The correspondent_chain is an ordered array of BICs through which the pacs.008 message will route. The nostro_account is the bank's account at the first correspondent in the chain, which will be debited for the transfer amount. Owned by SVC-010.",
       "owning_service": "SVC-010",
-      "owning_capability": "CAP-003 (Payment Operations — International Payments, promoted)",
+      "owning_capability": "CAP-003",
       "aggregate_root": false,
       "reachable_from_phases": ["PH-032"],
       "fields": [
@@ -356,7 +356,7 @@
       "name": "SWIFTMessage",
       "description": "The SWIFT payment message record. Created by SVC-010 in PH-032 when the pacs.008 ISO 20022 MX message is assembled. Stores the message type, a reference to the raw payload (stored in the bank's secure document store rather than inline — raw_payload_ref is a pointer), submission timestamp, and the SWIFT acknowledgement timestamp. The message_type for JRN-009 is always pacs008 (MT103 is not supported per CBPR+ mandatory MX migration, November 2025). Owned by SVC-010.",
       "owning_service": "SVC-010",
-      "owning_capability": "CAP-003 (Payment Operations — International Payments, promoted)",
+      "owning_capability": "CAP-003",
       "aggregate_root": false,
       "reachable_from_phases": ["PH-032", "PH-033"],
       "fields": [

@@ -5,14 +5,14 @@
   "scenario": "happy-path",
   "description": "Treasury identifies GBP-KES corridor need. Compliance conducts FATF R13 EDD — no sanctions hit. Senior Manager approves. Nostro account created in SVC-007, BIC registered in SVC-010, test SWIFT exchanged. Relationship live.",
   "participants": [
-    {"id": "Treasury", "label": "PER-053 (Treasury Dealer)", "type": "actor"},
-    {"id": "SMF", "label": "PER-059 (Senior Manager)", "type": "actor"},
-    {"id": "Compliance", "label": "SVC-015 (Compliance Core)", "type": "service"},
-    {"id": "KYC", "label": "SVC-014 (KYC/AML)", "type": "service"},
-    {"id": "EventBus", "label": "SVC-102 (Event Bus)", "type": "infrastructure"},
-    {"id": "TreasurySvc", "label": "SVC-007 (Treasury Services)", "type": "service"},
-    {"id": "IntlPay", "label": "SVC-010 (International Payments)", "type": "service"},
-    {"id": "Audit", "label": "SVC-103 (Audit & Logging)", "type": "service"}
+    {"id": "Treasury", "label": "PER-053", "type": "actor"},
+    {"id": "SMF", "label": "PER-059", "type": "actor"},
+    {"id": "Compliance", "label": "SVC-015", "type": "service"},
+    {"id": "KYC", "label": "SVC-014", "type": "service"},
+    {"id": "EventBus", "label": "SVC-102", "type": "infrastructure"},
+    {"id": "TreasurySvc", "label": "SVC-007", "type": "service"},
+    {"id": "IntlPay", "label": "SVC-010", "type": "service"},
+    {"id": "Audit", "label": "SVC-103", "type": "service"}
   ],
   "steps": [
     {"step": 1, "from": "Treasury", "to": "Compliance", "type": "sync", "action": "POST /correspondent-relationships {correspondent_bic: EAFRKENA, jurisdiction: KE, currency_corridor: GBP-KES}", "phase": "PH-127"},

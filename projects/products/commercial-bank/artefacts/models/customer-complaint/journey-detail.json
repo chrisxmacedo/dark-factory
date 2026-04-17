@@ -113,7 +113,7 @@
         "SVC-001 updates ComplaintCase status = closed; records closure_timestamp",
         "SVC-001 publishes ComplaintClosed (EVT-141)",
         "SVC-015 consumes ComplaintClosed; updates DISP half-yearly reporting dataset",
-        "SVC-103 (Audit & Logging) records full complaint lifecycle immutably (record retention: 3 years for retail — DISP 1.9)"
+        "SVC-103"
       ],
       "exit_condition": "Resolution communicated to customer; ComplaintCase status = closed; DISP reporting updated; audit record created",
       "governance_references": ["GOV-001-R01", "GOV-005-R01"],

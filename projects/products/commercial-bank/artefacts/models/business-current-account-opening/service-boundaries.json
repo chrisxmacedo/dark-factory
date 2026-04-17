@@ -16,7 +16,7 @@
     {
       "service_id": "SVC-005",
       "service_name": "Commercial Banking Core",
-      "capability_domain": "CAP-002 (Commercial Banking)",
+      "capability_domain": "CAP-002",
       "tier": "T2",
       "owned_entities": [
         {
@@ -192,7 +192,7 @@
     {
       "service_id": "SVC-014",
       "service_name": "KYC/AML Service",
-      "capability_domain": "CAP-005 (Compliance & Regulatory)",
+      "capability_domain": "CAP-005",
       "tier": "T1",
       "owned_entities": [
         "ENT-003",
@@ -335,7 +335,7 @@
     {
       "service_id": "SVC-017",
       "service_name": "Digital Channels",
-      "capability_domain": "CAP-007 (Digital Channels)",
+      "capability_domain": "CAP-007",
       "tier": "T3",
       "jrn004_role": "SVC-017 orchestrates the business portal UI experience across PH-139 through PH-146. It renders the business application form, Companies House verification confirmation, UBO identification UI, verification status dashboard, KYC waiting state, account decision notification, account details confirmation, and business portal setup. Business portal setup includes role-based access control for authorised users and the payment approval workflow configuration UI.",
       "jrn004_new_capabilities": "Business portal enrollment (distinct from personal banking portal enrollment): multi-user access, payment approval workflow configuration, authorised user invitation management. SVC-017 calls SVC-100 to create separate FIDO2/WebAuthn credentials for each authorised business portal user.",

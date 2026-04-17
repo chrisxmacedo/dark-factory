@@ -5,11 +5,11 @@
   "scenario": "happy-path",
   "description": "CRO initiates annual PRA stress test. Scenarios loaded into risk engine. Projections run and validated. Board approves. CRO confirms PRA submission via BEEDS portal.",
   "participants": [
-    {"id": "CRO", "label": "PER-059 (Senior Manager — CRO)", "type": "actor"},
-    {"id": "Risk", "label": "SVC-012 (Risk Engine)", "type": "service"},
-    {"id": "EventBus", "label": "SVC-102 (Event Bus)", "type": "infrastructure"},
-    {"id": "Compliance", "label": "SVC-015 (Compliance Core)", "type": "service"},
-    {"id": "Audit", "label": "SVC-103 (Audit & Logging)", "type": "service"}
+    {"id": "CRO", "label": "PER-059", "type": "actor"},
+    {"id": "Risk", "label": "SVC-012", "type": "service"},
+    {"id": "EventBus", "label": "SVC-102", "type": "infrastructure"},
+    {"id": "Compliance", "label": "SVC-015", "type": "service"},
+    {"id": "Audit", "label": "SVC-103", "type": "service"}
   ],
   "steps": [
     {"step": 1, "from": "CRO", "to": "Risk", "type": "sync", "action": "POST /stress-tests {exercise_year: 2026, pra_scenario_version: ACS-2026-v1.0, scenario_type: severe_adverse, pra_deadline: 2026-07-31}", "phase": "PH-123"},

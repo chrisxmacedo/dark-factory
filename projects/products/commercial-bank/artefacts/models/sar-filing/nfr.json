@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "status": "Draft",
   "description": "Non-functional requirements for the SAR filing journey and associated services (SVC-014 KYC/AML, SVC-015 Compliance Core). These are driven by POCA 2002 criminal liability, MLR 2017 record-keeping obligations, and the MLRO's personal accountability under SM&CR. Unlike customer-facing journeys, NFRs here are shaped entirely by regulatory and legal obligations rather than commercial experience targets.",
-  "service_scope": ["SVC-014 (KYC/AML Service)", "SVC-015 (Compliance Core)"],
+  "service_scope": ["SVC-014", "SVC-015"],
   "nfrs": [
     {
       "nfr_id": "NFR-JRN003-001",
@@ -56,7 +56,7 @@
       "access_tiers": [
         {
           "tier": "read_write",
-          "personas": ["PER-052 (MLRO)", "PER-053 (Deputy MLRO — assigned investigations only)"],
+          "personas": ["PER-052", "PER-053"],
           "controls": "Step-up MFA (hardware token or biometric), dedicated SAR case management application, separate IAM role from standard compliance desktop"
         },
         {

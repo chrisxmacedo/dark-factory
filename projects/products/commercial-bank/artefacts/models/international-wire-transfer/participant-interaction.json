@@ -79,7 +79,7 @@
       "participant_id": "PER-052",
       "participant_name": "Money Laundering Reporting Officer (MLRO)",
       "participant_type": "persona",
-      "channel": ["SVC-015 (Compliance Core — MLRO dashboard)"],
+      "channel": ["SVC-015"],
       "interactions": [
         {
           "phase": "Exception path EX-001",

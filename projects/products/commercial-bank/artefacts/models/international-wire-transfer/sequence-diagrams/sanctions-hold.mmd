@@ -1,0 +1,36 @@
+---
+title: "JRN-009 Exception Path EX-001 — International Wire Transfer: Sanctions Block"
+---
+sequenceDiagram
+    autonumber
+
+    actor PER002 as PER-002<br/>Corporate Client
+    participant Channel as Channel<br/>Corporate Banking Portal (CAP-007)
+    participant CAP003 as CAP-003 API<br/>Payment Operations
+    participant EB as Event Bus<br/>SVC-102
+    participant CAP005 as CAP-005<br/>Compliance
+    participant CAP004 as CAP-004<br/>Risk Management
+
+    rect rgb(230, 245, 255)
+        Note over PER002,EB: PH-029 — Transfer Initiation (same as happy path)
+        PER002->>Channel: Enter beneficiary details + complete SCA<br/>beneficiary_name: Sanctioned Entity Corp<br/>beneficiary_iban: IR820540102680020817909002<br/>beneficiary_bic: MELIIRTHXXX | amount: €50,000 | currency: EUR
+        Channel->>CAP003: POST /international-transfers<br/>{ beneficiary_iban: IR820540102680020817909002, amount: 50000.00, currency: EUR }
+        Note over CAP003: Validation passes<br/>Create ENT-026 InternationalTransfer<br/>transfer_id: xfer-20260415-0099001 | status: pending_compliance
+        CAP003->>EB: Publish EVT-049 InternationalTransferInitiated<br/>{ transfer_id: xfer-20260415-0099001,<br/>beneficiary details }
+        CAP003-->>Channel: 201 Created { transfer_id, status: pending_compliance }
+        Channel-->>PER002: Transfer submitted — compliance checks in progress
+    end
+
+    rect rgb(255, 210, 210)
+        Note over EB,CAP003: PH-031 — Pre-Execution Compliance — SANCTIONS HIT
+        EB-)CAP005: Consume EVT-049 → sanctions screening (beneficiary + correspondent BICs)
+        EB-)CAP004: Consume EVT-049 → fraud scoring (concurrent — result irrelevant; sanctions overrides)
+        Note over CAP005: Screen: Sanctioned Entity Corp<br/>OFSI Consolidated List: MATCH FOUND<br/>match_type: OFSI_designated_person<br/>match_ref: OFSI-2024-0421
+        CAP005->>EB: Publish EVT-051 TransferSanctionsScreened<br/>{ transfer_id, outcome: hit,<br/>match_ref: OFSI-2024-0421,<br/>result_id: scr-0099001 }
+        EB-)CAP003: Consume EVT-051 (outcome: hit)
+        Note over CAP003: Sanctions hit on beneficiary<br/>Set InternationalTransfer.status = sanctions_blocked<br/>Raise MLRO alert (internal)<br/>OFSI notification required within 14 days (GOV-005-R02)
+        CAP003->>EB: Publish EVT-057 TransferFailed<br/>{ transfer_id, reason: sanctions_block,<br/>sanctions_result_ref: scr-0099001 }
+        Note over EB: Route EVT-057 → Notifications (SVC-053):<br/>Generic decline message (POCA 2002 s333A<br/>tipping-off prohibition — specific reason NOT disclosed)
+        Channel-->>PER002: "We are unable to process this transfer.<br/>Please contact your Relationship Manager."
+        Note over PER002: Journey ends<br/>InternationalTransfer.status: sanctions_blocked<br/>No funds transferred | MLRO alerted<br/>OFSI notification deadline: within 14 days
+    end

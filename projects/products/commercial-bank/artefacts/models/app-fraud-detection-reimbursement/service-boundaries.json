@@ -8,7 +8,7 @@
     {
       "service_id": "SVC-013",
       "service_name": "Fraud Detection",
-      "capability_domain": "CAP-004 (Fraud Detection — promoted standalone capability)",
+      "capability_domain": "CAP-004",
       "tier": "T1",
       "jrn005_changes": "SIGNIFICANT EXTENSION. JRN-002 established SVC-013 as a real-time scoring service with no owned entities. JRN-005 extends SVC-013 to be the full fraud case management service. New entities added: ENT-043 (FraudCase), ENT-044 (FraudEvidence). New APIs added. New event subscriptions added.",
       "owned_entities": ["ENT-043", "ENT-044"],
@@ -86,7 +86,7 @@
     {
       "service_id": "SVC-001",
       "service_name": "Retail Banking Core",
-      "capability_domain": "CAP-001 (Retail Banking)",
+      "capability_domain": "CAP-001",
       "tier": "T2",
       "jrn005_changes": "MINOR EXTENSION. SVC-001 adds reimbursement credit execution capability to its existing payment processing functions. No new entities. New event consumption (FraudReimbursementApproved). New event publication (ReimbursementCredited).",
       "owned_entities": ["ENT-001", "ENT-004", "ENT-008"],
@@ -112,7 +112,7 @@
     {
       "service_id": "SVC-009",
       "service_name": "Domestic Payments",
-      "capability_domain": "CAP-003 (Payment Operations)",
+      "capability_domain": "CAP-003",
       "tier": "T2",
       "jrn005_changes": "MODERATE EXTENSION. SVC-009 adds ReimbursementClaim entity ownership and Pay.UK reimbursement mechanism integration. Previously only owned PaymentExecution (ENT-009) from JRN-002.",
       "owned_entities": ["ENT-009", "ENT-045"],
@@ -150,12 +150,12 @@
     {
       "step": 2,
       "description": "Alternatively: PaymentFraudBlocked (EVT-186) consumed by SVC-013. FraudCase created automatically with trigger_type = realtime_block.",
-      "services_involved": ["SVC-001 (publisher)", "SVC-013 (consumer)"]
+      "services_involved": ["SVC-001", "SVC-013"]
     },
     {
       "step": 3,
       "description": "Fraud Analyst (PER-054) opens case. SVC-013 publishes FraudDataRequested event to Event Bus (SVC-102) containing payment_intent_id. SVC-001 (CAP-001) and SVC-009 (CAP-003) each consume FraudDataRequested from the Event Bus and respond asynchronously: SVC-001 publishes FraudDataProvided (PaymentIntent fields: cop_result, fraud_score, cop_override_confirmed, customer metadata); SVC-009 publishes FraudPaymentExecutionProvided (fps_reference, settlement_status, receiving_sort_code). SVC-013 consumes both response events to hydrate FraudCase with evidence data. SVC-013 also calls SVC-017 (platform) synchronously for device/session data. FraudEvidence records created. FraudCase.status = investigating. Publishes FraudInvestigationStarted (EVT-091).",
-      "services_involved": ["SVC-013", "SVC-102 (Event Bus)", "SVC-001 (async event response)", "SVC-009 (async event response)", "SVC-017 (sync — platform)"],
+      "services_involved": ["SVC-013", "SVC-102", "SVC-001", "SVC-009", "SVC-017"],
       "cross_capability_note": "SVC-013 (CAP-004) must not call SVC-001 (CAP-001) or SVC-009 (CAP-003) synchronously. Async event-request/response via SVC-102 Event Bus is the compliant pattern."
     },
     {
@@ -166,12 +166,12 @@
     {
       "step": 5,
       "description": "SVC-001 consumes FraudReimbursementApproved (EVT-092). Credits reimbursement_amount to customer Account. Publishes ReimbursementCredited (EVT-094). SVC-053 dispatches credit notification.",
-      "services_involved": ["SVC-001 (consumer)", "SVC-053"]
+      "services_involved": ["SVC-001", "SVC-053"]
     },
     {
       "step": 6,
       "description": "SVC-009 consumes FraudReimbursementApproved (EVT-092). Creates ReimbursementClaim (ENT-045). Submits recovery claim to receiving PSP via Pay.UK reimbursement API. Publishes RecoveryInitiated (EVT-095).",
-      "services_involved": ["SVC-009 (consumer)", "Pay.UK Reimbursement API (External)"]
+      "services_involved": ["SVC-009", "Pay.UK Reimbursement API (External)"]
     },
     {
       "step": 7,

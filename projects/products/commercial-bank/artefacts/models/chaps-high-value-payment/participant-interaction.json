@@ -109,7 +109,7 @@
           "mandatory": false
         },
         {
-          "phase_id": "PH-081 (EXC-003, EXC-004)",
+          "phase_id": "PH-081",
           "trigger": "CHAPSPaymentFailed (EVT-113)",
           "channel": "Push notification + in-app + email",
           "content": "We were unable to complete your CHAPS payment. Reason: {failure_reason}. Your funds have not been debited.",

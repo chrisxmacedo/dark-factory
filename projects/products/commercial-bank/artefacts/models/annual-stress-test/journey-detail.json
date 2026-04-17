@@ -9,7 +9,7 @@
       "id": "PH-123",
       "name": "Scenario Loading and Model Initialisation",
       "description": "The PRA publishes the annual concurrent stress test scenarios and data templates (typically Q1). The Chief Risk Officer (PER-059) triggers the stress test exercise. The Risk Management team loads PRA macroeconomic scenarios (GDP growth, unemployment, house price index, interest rate paths) into the stress testing models within SVC-012 (Risk Engine). A StressTestExercise record is created to track the submission lifecycle. Model Validation team confirms model versions are approved per SS1/23 (PRA supervisory statement on model risk).",
-      "actors": ["PER-059 (Senior Manager — CRO)", "SVC-012 (Risk Engine)"],
+      "actors": ["PER-059", "SVC-012"],
       "services": ["SVC-012"],
       "governance_rules": ["GOV-004-R01"],
       "entry_conditions": [
@@ -27,7 +27,7 @@
       "id": "PH-124",
       "name": "Risk Model Projection",
       "description": "SVC-012 (Risk Engine) runs the stress test projections under PRA prescribed scenarios. Credit risk models project 3-year loan loss rates (IFRS 9 ECL under stress). Market risk models project FRTB stressed losses. Operational risk applies Basel SA OpRisk capital. Results are computed as projected stressed CET1 ratio trajectory over 3 years. Model Validation team reviews outputs for reasonableness and signs off per SS1/23.",
-      "actors": ["PER-059 (Senior Manager — CRO)", "SVC-012 (Risk Engine)"],
+      "actors": ["PER-059", "SVC-012"],
       "services": ["SVC-012"],
       "governance_rules": ["GOV-004-R01", "GOV-004-R02"],
       "entry_conditions": [
@@ -44,7 +44,7 @@
       "id": "PH-125",
       "name": "Board Review and Approval",
       "description": "The CFO (PER-059) consolidates risk model outputs with finance projections (stressed P&L, capital ratios). The Board Risk Committee reviews the stress test results and approves the submission package. Any capital management actions proposed (e.g. dividend restriction under stress) are documented. Sign-off from CEO and CRO (both SMF holders) obtained.",
-      "actors": ["PER-059 (Senior Manager — CRO / CFO)"],
+      "actors": ["PER-059"],
       "services": ["SVC-015"],
       "governance_rules": ["GOV-004-R01", "GOV-005-R03"],
       "entry_conditions": [
@@ -61,7 +61,7 @@
       "id": "PH-126",
       "name": "PRA Submission and Feedback",
       "description": "The Compliance team (SVC-015) submits the stress test data package to the PRA via the PRA's regulatory portal (BEEDS or successor). The submission includes completed PRA data templates and a narrative document. PRA provides feedback (typically 6–8 weeks later). Results are incorporated into the ICAAP (Internal Capital Adequacy Assessment Process). StressTestExercise updated to closed.",
-      "actors": ["PER-059 (Senior Manager — Head of Regulatory Reporting)", "SVC-015 (Compliance Core)"],
+      "actors": ["PER-059", "SVC-015"],
       "services": ["SVC-015"],
       "governance_rules": ["GOV-005-R03"],
       "entry_conditions": [

@@ -10,7 +10,7 @@
       "id": "PH-035",
       "name": "TPP Registration and Discovery",
       "description": "A Third Party Provider (TPP) registered with the OBIE Directory (or Open Banking Ltd successor) discovers the bank's Open Banking API endpoints via the bank's developer portal and Well-Known endpoint. The TPP presents a valid OBIE-signed Software Statement Assertion (SSA) and completes Dynamic Client Registration (DCR) against the bank's authorisation server. The bank validates the TPP's FCA authorisation (PISP permission required for payment initiation), verifies the Software Statement, and creates an ENT-031 TPPRegistration record. This phase is a one-time setup per TPP software statement and does not involve the customer.",
-      "actors": ["PER-006 (Third Party Provider)", "SVC-017 (Digital Channels — Open Banking API surface)", "SVC-100 (IAM — Authorisation Server)"],
+      "actors": ["PER-006", "SVC-017", "SVC-100"],
       "services": ["SVC-017", "SVC-100"],
       "governance_rules": ["GOV-006-R01"],
       "entry_conditions": [
@@ -28,7 +28,7 @@
       "id": "PH-036",
       "name": "Consent Request",
       "description": "The TPP constructs a Domestic Payment Consent resource using the OBIE v3.1.x Domestic Payment Consents API (POST /domestic-payment-consents). SVC-017 (channel) validates the request against the OBIE schema, checks the TPP's client credentials, and creates an ENT-030 OpenBankingConsent record with status = awaiting_auth. SVC-017 returns a consent_id and a redirect URL. The TPP redirects the customer's browser to the bank's authorisation endpoint with the consent_id embedded in the authorisation request. The customer arrives at the bank's authentication journey.",
-      "actors": ["PER-006 (TPP)", "PER-001 (Personal Customer — redirected)", "SVC-017 (Digital Channels — Open Banking API)"],
+      "actors": ["PER-006", "PER-001", "SVC-017"],
       "services": ["SVC-017", "SVC-001"],
       "governance_rules": ["GOV-006-R01"],
       "entry_conditions": [
@@ -46,7 +46,7 @@
       "id": "PH-037",
       "name": "Customer Authentication and Consent Confirmation",
       "description": "The customer authenticates with the bank using Strong Customer Authentication (SCA) via SVC-100. SCA must meet PSD2 RTS requirements: possession factor (registered mobile device) plus inherence factor (biometric) or knowledge factor (PIN), with dynamic linking binding the SCA to the specific payment amount and payee. After successful SCA, the bank displays the payment details (amount, payee, reference) for the customer to confirm. On confirmation, SVC-017 calls SVC-100 to issue an authorisation code. ENT-030.status transitions to authorised and ENT-030.sca_completed is set to true. EVT-059 ConsentAuthorised is published. The customer's browser is redirected back to the TPP's redirect_uri with the authorisation code. If the customer declines, ENT-030.status = revoked and EVT-060 ConsentRevoked is published.",
-      "actors": ["PER-001 (Personal Customer)", "SVC-017 (Digital Channels — Consent UI)", "SVC-100 (IAM — SCA)"],
+      "actors": ["PER-001", "SVC-017", "SVC-100"],
       "services": ["SVC-017", "SVC-100", "SVC-001"],
       "governance_rules": ["GOV-006-R01", "GOV-003-R02"],
       "entry_conditions": [
@@ -64,7 +64,7 @@
       "id": "PH-038",
       "name": "Payment Initiation",
       "description": "The TPP exchanges the authorisation code for an access token at SVC-100's token endpoint, then calls POST /domestic-payments on SVC-017 (channel) with the consent_id and the original payment details. SVC-017 validates that the consent_id is authorised, not consumed, and not expired. SVC-017 then makes a synchronous REST call to SVC-001 (Retail Banking Core, CAP-001) to create a PaymentIntent (ENT-008) — this is a channel-to-capability call, explicitly permitted by the architectural principle that channels may call capability REST APIs synchronously. SVC-001 validates account status, available balance, and daily payment limit. On success, SVC-001 creates ENT-008 and publishes EVT-179 (PaymentIntentCreated). SVC-017 updates ENT-030.status = consumed and sets the open_banking_payment_id cross-reference. EVT-061 OpenBankingPaymentInitiated is published by SVC-001. SVC-017 returns a payment_id and status = AcceptedSettlementInProcess to the TPP.",
-      "actors": ["PER-006 (TPP)", "SVC-017 (Digital Channels — Open Banking API)", "SVC-001 (Retail Banking Core)"],
+      "actors": ["PER-006", "SVC-017", "SVC-001"],
       "services": ["SVC-017", "SVC-001"],
       "governance_rules": ["GOV-006-R01", "GOV-003-R01", "GOV-003-R02"],
       "entry_conditions": [
@@ -84,7 +84,7 @@
       "id": "PH-039",
       "name": "Payment Execution",
       "description": "The JRN-002 event-driven payment execution flow is reused in full. EVT-179 (PaymentIntentCreated) is consumed concurrently by SVC-051 (Sanctions Screening) and SVC-013 (Fraud Detection). SVC-051 publishes EVT-180 (SanctionsScreeningCompleted); SVC-013 publishes EVT-181 (FraudScoreCompleted). SVC-001 correlates both results on payment_intent_id: if both clear, it publishes EVT-182 (PaymentCleared); if sanctions hit, it publishes EVT-185 (PaymentFailed) with reason sanctions_review; if fraud block, it publishes EVT-186 (PaymentFraudBlocked). On PaymentCleared, SVC-009 (Domestic Payments, CAP-003) consumes the event, constructs an ISO 20022 pacs.008 message, and submits to Vocalink FPS. SVC-009 creates ENT-009 (PaymentExecution) and publishes EVT-183 (PaymentExecuted). SVC-001 consumes EVT-183, debits the account ledger, updates PaymentIntent.status = completed, and publishes EVT-184 (AccountDebited) and EVT-062 (OpenBankingPaymentCompleted). On any failure path, SVC-001 publishes EVT-063 (OpenBankingPaymentFailed).",
-      "actors": ["SVC-001 (Retail Banking Core)", "SVC-051 (Sanctions Screening)", "SVC-013 (Fraud Detection)", "SVC-009 (Domestic Payments)"],
+      "actors": ["SVC-001", "SVC-051", "SVC-013", "SVC-009"],
       "services": ["SVC-001", "SVC-051", "SVC-013", "SVC-009"],
       "governance_rules": ["GOV-003-R01", "GOV-003-R02", "GOV-005-R02"],
       "entry_conditions": [
@@ -102,7 +102,7 @@
       "id": "PH-040",
       "name": "Status Polling and Confirmation",
       "description": "The TPP polls GET /domestic-payments/{DomesticPaymentId} on SVC-017 (channel) to retrieve the current payment status. SVC-017 maps the internal PaymentIntent.status to the OBIE payment status enum (AcceptedSettlementInProcess | AcceptedSettlementCompleted | Rejected). On completion, SVC-053 (Notification Service) dispatches a push notification or in-app message to PER-001 confirming payment success. On failure, the customer is notified with the failure reason (suitably redacted — fraud block reasons must not be disclosed to the customer). The TPP may also subscribe to the bank's event notification webhook if supported (OBIE Event Notification API).",
-      "actors": ["PER-006 (TPP)", "PER-001 (Personal Customer)", "SVC-017 (Digital Channels — Open Banking API)", "SVC-001 (Retail Banking Core)", "SVC-053 (Notification Service)"],
+      "actors": ["PER-006", "PER-001", "SVC-017", "SVC-001", "SVC-053"],
       "services": ["SVC-017", "SVC-001", "SVC-053"],
       "governance_rules": ["GOV-006-R01", "GOV-003-R01"],
       "entry_conditions": [

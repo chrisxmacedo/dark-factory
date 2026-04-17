@@ -71,7 +71,7 @@
       "description": "SVC-011 sends the authorisation response back to the card network (PER-009) via the card scheme host gateway. The response contains the authorisation code (if approved) or decline reason code (if declined). The card network forwards the response to the acquirer, which relays it to the merchant terminal. The cardholder sees the result (approved/declined) on the merchant terminal within approximately 2-4 seconds of tapping/inserting their card.",
       "channel": ["Card Scheme Network (Visa / Mastercard) — ISO 8583 or ISO 20022 response message"],
       "persona_actions": [
-        "PER-001 (Cardholder): Views authorisation result on merchant terminal (APPROVED or DECLINED)",
+        "PER-001",
         "PER-009 (Card Network): Receives authorisation response and forwards to acquirer"
       ],
       "system_actions": [
@@ -99,8 +99,8 @@
       "system_actions": [
         "SVC-013 consumes CardAuthorisationCompleted (EVT-065): updates real-time transaction velocity counters, enriches cardholder behaviour model, evaluates post-auth fraud patterns",
         "SVC-013 publishes SuspiciousCardActivityDetected (EVT-068) if post-auth pattern analysis identifies suspicious activity — this creates a fraud case for PER-054 investigation",
-        "SVC-001 (debit cards) or SVC-003 (credit cards) consumes CardAuthorisationCompleted (EVT-065): applies balance reservation by debiting available_balance by the authorised amount. Reservation is pending until settlement (PH-045)",
-        "SVC-103 (Audit & Logging) consumes all card authorisation events for immutable WORM audit trail (PCI DSS v4.0 Req 10.2, card scheme dispute evidence)"
+        "SVC-001",
+        "SVC-103"
       ],
       "entry_conditions": ["EVT-065 (CardAuthorisationCompleted) or EVT-066 (CardAuthorisationDeclined) published by SVC-011"],
       "exit_conditions": ["Balance reservation applied on account; fraud model updated; audit log written"],
@@ -153,7 +153,7 @@
       "path_id": "ALT-CA-001",
       "name": "3DS 2.x Challenge Required (CNP Transaction)",
       "description": "For card-not-present (e-commerce) transactions where TRA exemption does not apply or the fraud risk score warrants a challenge, SVC-011 may trigger a 3DS 2.x challenge flow. The ACS (Access Control Server) — co-located within SVC-011's PCI CDE — presents a challenge to the cardholder (biometric, OTP, or knowledge-based). The authorisation request is held pending the 3DS result. On successful authentication, the authorisation proceeds. Challenge adds 20-30 seconds to the CNP transaction but is outside the 500ms card network timeout window (the 3DS challenge occurs before the ISO 8583 authorisation request is sent by the acquirer).",
-      "diverges_at": "PH-041 (before ISO 8583 request received — 3DS challenge completes at acquirer before auth request sent)",
+      "diverges_at": "PH-041",
       "rejoins_at": "PH-042",
       "three_ds_result_values": ["authenticated (Y)", "attempted (A)", "not_authenticated (N)"],
       "sca_exemptions_not_applicable": "Transaction amount above TRA threshold or cardholder risk profile elevated",
@@ -163,8 +163,8 @@
       "path_id": "ALT-CA-002",
       "name": "SCA Contactless Exemption",
       "description": "For contactless debit and credit card transactions below £100 (FCA SCA RTS Article 11 low-value payment exemption), SVC-011 applies the contactless exemption during PH-042 fraud rule evaluation. No 3DS challenge required. Cumulative contactless limit tracking (5 consecutive contactless transactions or cumulative total above £300 since last SCA) is enforced by the local rule engine. When the cumulative limit is reached, SVC-011 flags the next transaction for SCA enforcement (customer must insert card and enter PIN).",
-      "diverges_at": "PH-042 (SCA exemption applied — no 3DS check required)",
-      "rejoins_at": "PH-042 (decision continues without 3DS validation)",
+      "diverges_at": "PH-042",
+      "rejoins_at": "PH-042",
       "cumulative_limit_tracking": "SVC-011 maintains cumulative_contactless_amount and contactless_transaction_count in local card state cache. Resets on each SCA-authenticated transaction.",
       "governance_references": ["FCA SCA PSRs 2017 Regulation 100", "EBA RTS on SCA Article 11"]
     },
@@ -172,8 +172,8 @@
       "path_id": "ALT-CA-003",
       "name": "Referred Transaction — Manual Review",
       "description": "Some authorisation requests produce a 'referred' decision from the automated rule engine — typically because the transaction triggers a review rule (not an outright block) and the rule engine cannot confirm approval without human judgement. The card network receives a referral response code. In some card-present scenarios, the merchant may be prompted to call the bank's authorisation centre. A Payment Operations agent (PER-040) reviews the transaction and can approve or decline. This path is rare in modern card processing — most referrals are resolved by the automated engine.",
-      "diverges_at": "PH-042 (decision = referred)",
-      "rejoins_at": "PH-043 (after manual decision)",
+      "diverges_at": "PH-042",
+      "rejoins_at": "PH-043",
       "volume_note": "< 0.1% of authorisation requests result in a referral. Most are resolved within 60 seconds.",
       "governance_references": ["Visa Core Rules — referral handling", "Mastercard Transaction Processing Rules — referral"]
     }

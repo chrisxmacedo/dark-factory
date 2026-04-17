@@ -9,10 +9,10 @@
     { "id": "BATCH", "label": "SVC-001 Batch Scheduler" },
     { "id": "CAP001", "label": "CAP-001 API (SVC-001)" },
     { "id": "EventBus", "label": "Event Bus (SVC-102)" },
-    { "id": "CAP004", "label": "CAP-004 (SVC-012)" },
+    { "id": "CAP004", "label": "CAP-004" },
     { "id": "EXTBUREAU", "label": "EXT: Credit Bureau" },
-    { "id": "SVC053", "label": "SVC-053 (Notifications)" },
-    { "id": "PER001", "label": "PER-001 (Personal Customer)" }
+    { "id": "SVC053", "label": "SVC-053" },
+    { "id": "PER001", "label": "PER-001" }
   ],
   "steps": [
     { "seq": 1, "from": "BATCH", "to": "CAP001", "label": "Identify accounts with overdraft expiring within 30 days", "type": "internal", "phase": "PH-083" },

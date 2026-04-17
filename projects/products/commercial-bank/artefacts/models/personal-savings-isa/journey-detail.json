@@ -108,7 +108,7 @@
         "On deposit confirmed: SVC-001 updates SavingsAccount.balance and IsaSubscriptionRecord.subscription_used (if ISA)",
         "SVC-001 publishes IsaSubscriptionUpdated (EVT-150) if ISA deposit",
         "SVC-001 publishes SavingsDepositMade (EVT-151)",
-        "SVC-053 (Notifications) dispatches account confirmation: account number, AER, FSCS summary, remaining ISA allowance (if ISA)",
+        "SVC-053",
         "SVC-103 records account opening and deposit in audit log"
       ],
       "exit_condition": "Initial deposit credited; ISA subscription updated if applicable; confirmation dispatched",

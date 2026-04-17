@@ -5,12 +5,12 @@
   "scenario": "insufficient-funds",
   "description": "PER-001 attempts to initiate a Faster Payment for an amount exceeding their available balance. The failure is detected synchronously at PaymentIntent creation time (POST /payments) by SVC-001 — no events are published. The channel receives a 402 error response and immediately shows the customer a specific, informative message with their available balance. No screening or fraud checks are triggered.",
   "participants": [
-    {"id": "Customer", "label": "PER-001 (Customer)", "type": "actor"},
-    {"id": "Channel", "label": "SVC-017 (Digital Channels)", "type": "service"},
-    {"id": "IAM", "label": "SVC-100 (IAM)", "type": "service"},
-    {"id": "DomesticPayments", "label": "SVC-009 (Domestic Payments)", "type": "service"},
-    {"id": "RetailBanking", "label": "SVC-001 (Retail Banking Core)", "type": "service"},
-    {"id": "AuditLog", "label": "SVC-103 (Audit & Logging)", "type": "service"}
+    {"id": "Customer", "label": "PER-001", "type": "actor"},
+    {"id": "Channel", "label": "SVC-017", "type": "service"},
+    {"id": "IAM", "label": "SVC-100", "type": "service"},
+    {"id": "DomesticPayments", "label": "SVC-009", "type": "service"},
+    {"id": "RetailBanking", "label": "SVC-001", "type": "service"},
+    {"id": "AuditLog", "label": "SVC-103", "type": "service"}
   ],
   "steps": [
     {

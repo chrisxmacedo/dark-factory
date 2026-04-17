@@ -5,10 +5,10 @@
   "scenario": "happy-path",
   "description": "Quarterly SM&CR review triggered. Conduct monitoring shows no alerts. Accountability map reviewed — two new Certified Function individuals identified. FCA register updates initiated. Board report prepared. Review closed with SMF16 attestation.",
   "participants": [
-    {"id": "SMF16", "label": "PER-059 (Head of Compliance — SMF16)", "type": "actor"},
-    {"id": "Compliance", "label": "SVC-015 (Compliance Core)", "type": "service"},
-    {"id": "EventBus", "label": "SVC-102 (Event Bus)", "type": "infrastructure"},
-    {"id": "Audit", "label": "SVC-103 (Audit & Logging)", "type": "service"}
+    {"id": "SMF16", "label": "PER-059", "type": "actor"},
+    {"id": "Compliance", "label": "SVC-015", "type": "service"},
+    {"id": "EventBus", "label": "SVC-102", "type": "infrastructure"},
+    {"id": "Audit", "label": "SVC-103", "type": "service"}
   ],
   "steps": [
     {"step": 1, "from": "SMF16", "to": "Compliance", "type": "sync", "action": "POST /smcr/reviews {review_quarter: Q1-2026}", "phase": "PH-131"},

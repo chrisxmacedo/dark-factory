@@ -5,14 +5,14 @@
   "scenario": "happy-path",
   "description": "PER-001 sets up a Direct Debit Instruction (DDI) via the mobile app. AUDDIS validation succeeds. BACS confirms the mandate (active). Originator submits first collection at D-2. Account balance is sufficient at D-0. Account is debited. Customer receives post-collection confirmation. Journey covers PH-046 through PH-050.",
   "participants": [
-    {"id": "Customer", "label": "PER-001 (Customer)", "type": "actor"},
+    {"id": "Customer", "label": "PER-001", "type": "actor"},
     {"id": "Channel", "label": "Mobile App / Web Portal (Channel)", "type": "channel"},
-    {"id": "IAM", "label": "SVC-100 (IAM)", "type": "service"},
+    {"id": "IAM", "label": "SVC-100", "type": "service"},
     {"id": "PayOpsAPI", "label": "CAP-003 Payment Operations API", "type": "capability-api"},
-    {"id": "EventBus", "label": "SVC-102 (Event Bus)", "type": "infrastructure"},
+    {"id": "EventBus", "label": "SVC-102", "type": "infrastructure"},
     {"id": "RetailBankingAPI", "label": "CAP-001 Retail Banking API", "type": "capability-api"},
-    {"id": "Notifications", "label": "SVC-053 (Notification Service)", "type": "service"},
-    {"id": "AuditLog", "label": "SVC-103 (Audit & Logging)", "type": "service"},
+    {"id": "Notifications", "label": "SVC-053", "type": "service"},
+    {"id": "AuditLog", "label": "SVC-103", "type": "service"},
     {"id": "BACS", "label": "BACS / Vocalink (External Scheme)", "type": "external"}
   ],
   "steps": [

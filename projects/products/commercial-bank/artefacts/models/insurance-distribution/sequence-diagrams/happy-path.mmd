@@ -1,0 +1,41 @@
+---
+title: "JRN-030 Happy Path — Insurance Product Distribution (Packaged Account)"
+---
+sequenceDiagram
+    autonumber
+
+    actor PER001 as PER-001<br/>Personal Customer
+    participant Channel as Channel<br/>Mobile App (CAP-007)
+    participant CAP001 as CAP-001 API<br/>Retail Banking
+    participant EB as Event Bus<br/>SVC-102
+
+    rect rgb(230, 245, 255)
+        Note over PER001,CAP001: PH-136 — Target Market Assessment and Fair Value Check
+        PER001->>Channel: Select Premier Account upgrade in mobile app
+        Channel->>CAP001: POST /insurance/target-market-assessment<br/>{ customer_id: "cust-99012", product_id: "PREM-TRAVEL-001", underwriter: "Aviva" }
+        Note over CAP001: Run FCA PROD target market assessment<br/>Age: 34 (within 18–75) | UK resident | Frequent traveller<br/>Result: within_target_market
+        Note over CAP001: Run fair value assessment<br/>Annual premium: £180.00 | Cover: £10,000,000<br/>consumer_duty_evidence_ref: FV-2026-04-15-0042<br/>Result: pass
+        CAP001-->>Channel: 200 OK { assessment_result: within_target_market,<br/>fair_value: pass, ipid_url, kfd_url,<br/>consumer_duty_evidence_ref: FV-2026-04-15-0042 }
+        Channel-->>PER001: Display IPID and Key Features Document for review<br/>(ICOBS — customer must review before acceptance)
+    end
+
+    rect rgb(230, 255, 230)
+        Note over PER001,EB: PH-137 — Customer Acceptance and Policy Binding
+        PER001->>Channel: Confirm acceptance (ipid_acknowledged: true, kfd_acknowledged: true)<br/>accepted_at: 2026-04-15T10:22:34Z
+        Channel->>CAP001: POST /insurance/policies<br/>{ customer_id: "cust-99012", product_id: "PREM-TRAVEL-001",<br/>ipid_acknowledged: true, accepted_at }
+        Note over CAP001: Bind policy with Aviva (external API — internal to CAP-001)<br/>aviva_policy_number: AVP-2026-8841293 | status: active
+        Note over CAP001: Create InsurancePolicy (ENT-078):<br/>policy_id: pol-20260415-8841293<br/>policy_number: AVP-2026-8841293<br/>underwriter: Aviva | status: active
+        CAP001->>EB: Publish EVT-167 InsurancePolicyBound<br/>{ insurance_policy_id: "pol-20260415-8841293",<br/>customer_id: "cust-99012",<br/>policy_number: "AVP-2026-8841293",<br/>underwriter: "Aviva", status: "active",<br/>bound_at: "2026-04-15T10:22:51Z" }
+        CAP001-->>Channel: 201 Created { policy_id, policy_number: AVP-2026-8841293, status: active }
+        Channel-->>PER001: Policy confirmed — certificate of insurance will be sent by email
+    end
+
+    rect rgb(255, 245, 220)
+        Note over EB,CAP001: PH-138 — Account Fee Update and Consumer Duty Recording
+        EB-)CAP001: Consume EVT-167 InsurancePolicyBound<br/>(intra-CAP-001: SVC-001 upgrades account)
+        Note over CAP001: Upgrade account to Premier:<br/>product_type: premier_bundle<br/>monthly_fee: £18.50<br/>Save Consumer Duty evidence trail:<br/>  target_market: within_target_market<br/>  fair_value: pass | ipid_acknowledged: true<br/>  policy_binding_ref: AVP-2026-8841293<br/>  evidence_ref: FV-2026-04-15-0042
+        EB-)Channel: Consume EVT-167 InsurancePolicyBound<br/>(CAP-007: update app to display active insurance policy and management options)
+        Note over EB: Route EVT-167 → Notifications (SVC-053):<br/>Send certificate of insurance email to customer
+        Note over EB: Route EVT-167 → Audit & Logging (SVC-103):<br/>Write immutable insurance distribution record (FCA PROD)
+        Note over PER001: Journey complete<br/>InsurancePolicy status: active | Policy: AVP-2026-8841293<br/>Account upgraded to Premier | Monthly fee: £18.50<br/>Consumer Duty evidence trail saved
+    end

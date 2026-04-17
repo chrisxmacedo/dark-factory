@@ -1,12 +1,12 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Fraud Detection Service API",
-    "description": "Case management API for JRN-005 APP Fraud Detection and Reimbursement. Owned by SVC-013 (Fraud Detection, CAP-004). Provides CRUD operations for FraudCase and FraudEvidence entities. Exposes the reimbursement decision endpoint consumed by Fraud Analysts (PER-054) and Senior Managers (PER-059). All endpoints require JWT bearer authentication with role-based access control enforced by SVC-100 (Identity & Access Management).",
+    "title": "CAP-004 Risk Management API — Fraud Case Management Surface",
+    "description": "CAP-004 Risk Management capability API surface for JRN-005 APP Fraud Detection and Reimbursement. Fraud detection is within CAP-004 (SVC-013 Fraud Detection Service is within the Risk Management capability boundary). Channels (internal portal) and authorised internal tooling call this capability API; they never address SVC-013 directly. Provides case management operations for FraudCase and FraudEvidence entities. Exposes the reimbursement decision endpoint consumed by Fraud Analysts (PER-054) and Senior Managers (PER-059). All endpoints require JWT bearer authentication with role-based access control enforced by the platform IAM service (SVC-100).",
     "version": "1.0.0",
     "contact": {
-      "name": "Fraud Operations Engineering",
-      "email": "fraud-engineering@bank.internal"
+      "name": "Risk Management Capability Team",
+      "email": "cap-004-team@bank.internal"
     }
   },
   "servers": [

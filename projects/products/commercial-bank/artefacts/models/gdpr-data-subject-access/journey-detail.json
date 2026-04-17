@@ -9,7 +9,7 @@
       "id": "PH-119",
       "name": "SAR Submission and Identity Verification",
       "description": "A personal customer submits a Subject Access Request (SAR) under UK GDPR Article 15 via the online banking portal or postal submission. For digital submissions, identity is verified via SCA. For postal submissions, the Compliance team performs document identity verification. A SAR case is created in the compliance workflow system. The 30-day statutory response clock starts from the date of receipt (UK GDPR Article 12(3)).",
-      "actors": ["PER-001 (Customer)", "SVC-017 (Digital Channels)", "SVC-100 (IAM)", "SVC-015 (Compliance Core)"],
+      "actors": ["PER-001", "SVC-017", "SVC-100", "SVC-015"],
       "services": ["SVC-017", "SVC-100", "SVC-015"],
       "governance_rules": ["GOV-005-R01"],
       "entry_conditions": [
@@ -26,7 +26,7 @@
       "id": "PH-120",
       "name": "Data Extraction and Compilation",
       "description": "The Compliance team (DPO function) initiates automated data extraction across all systems holding the customer's personal data: Retail Banking Core (account data, transaction history), KYC/AML records, communications archive. An automated extraction job queries each source system and compiles the data into a structured SAR response pack. Results are stored in the compliance system pending review.",
-      "actors": ["PER-052 (Compliance Officer)", "SVC-015 (Compliance Core)", "SVC-001 (Retail Banking Core)", "SVC-014 (KYC/AML)"],
+      "actors": ["PER-052", "SVC-015", "SVC-001", "SVC-014"],
       "services": ["SVC-015", "SVC-001", "SVC-014"],
       "governance_rules": ["GOV-005-R01", "GOV-005-R02"],
       "entry_conditions": [
@@ -43,7 +43,7 @@
       "id": "PH-121",
       "name": "Legal Review and Redaction",
       "description": "The DPO/legal team reviews the compiled data pack. Third-party data (other customers' account details, fraud investigation data protected under law enforcement exemption) is identified and redacted per UK GDPR Schedule 2 exemptions and FOIA. The reviewed and redacted pack is converted to an encrypted PDF. The team confirms no statutory extension (additional 2 months for complex requests, UK GDPR Article 12(3)) is required.",
-      "actors": ["PER-052 (Compliance Officer)", "SVC-015 (Compliance Core)"],
+      "actors": ["PER-052", "SVC-015"],
       "services": ["SVC-015"],
       "governance_rules": ["GOV-005-R02"],
       "entry_conditions": [
@@ -60,7 +60,7 @@
       "id": "PH-122",
       "name": "Response Delivery and Case Closure",
       "description": "The encrypted response pack is delivered to the customer via a secure download link (digital customers) or recorded post (postal requesters). The download link expires after 14 days. Customer confirms receipt. SarCase is closed. ICO notification log updated (no breach). If the 30-day deadline is approaching and the response is not ready, a holding notice is sent.",
-      "actors": ["PER-001 (Customer)", "SVC-017 (Digital Channels)", "SVC-015 (Compliance Core)", "SVC-053 (Notifications)"],
+      "actors": ["PER-001", "SVC-017", "SVC-015", "SVC-053"],
       "services": ["SVC-017", "SVC-015", "SVC-053"],
       "governance_rules": ["GOV-005-R01"],
       "entry_conditions": [

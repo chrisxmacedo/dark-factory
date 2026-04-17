@@ -5,75 +5,71 @@ sequenceDiagram
     autonumber
 
     actor PER001 as PER-001<br/>Personal Customer
-    participant SVC017 as SVC-017<br/>Digital Channels
-    participant SVC001 as SVC-001<br/>Retail Banking Core
-    participant SVC050 as SVC-050<br/>Customer Onboarding
-    participant SVC051 as SVC-051<br/>Sanctions Screening
-    participant SVC014 as SVC-014<br/>KYC/AML Service
-    participant SVC100 as SVC-100<br/>IAM
-    participant EB as SVC-102<br/>Event Bus
-    participant SVC053 as SVC-053<br/>Notifications
+    participant Channel as Channel<br/>Web/Mobile Portal (CAP-007)
+    participant CAP001 as CAP-001 API<br/>Retail Banking
+    participant CAP005 as CAP-005 API<br/>Compliance
+    participant EB as Event Bus<br/>SVC-102
 
     rect rgb(230, 245, 255)
-        Note over PER001,SVC001: PH-001 — Application Initiation
-        PER001->>SVC017: Submit application form<br/>(name, DOB, address, nationality, account type)
-        SVC017->>SVC001: POST /applications
-        SVC001->>EB: publish ApplicationStarted<br/>{ application_id, customer_id, channel, started_at }
-        SVC001-->>SVC017: 201 Created { application_id, application_ref, status: in_progress }
-        SVC017-->>PER001: Confirmation screen + application reference
+        Note over PER001,CAP001: PH-001 — Application Initiation
+        PER001->>Channel: Submit application form<br/>(name, DOB, address, nationality, account type)
+        Channel->>CAP001: POST /applications<br/>{ account_type: standard_current, channel: mobile_app,<br/>applicant: { first_name: Amara, last_name: Okonkwo,<br/>date_of_birth: 1992-07-15, nationality: [GB],<br/>address: 14 Thornfield Road, Manchester, M14 7PJ } }
+        Note over CAP001: Create ENT-007 ApplicationRecord (status: in_progress)<br/>Create ENT-001 Customer prospect<br/>application_ref: PCA-2026-00042
+        CAP001->>EB: Publish ApplicationStarted<br/>{ application_id, customer_id, channel: mobile_app, started_at }
+        CAP001-->>Channel: 201 Created { application_id, application_ref: PCA-2026-00042, status: in_progress }
+        Channel-->>PER001: Confirmation screen + application reference
     end
 
     rect rgb(230, 255, 230)
-        Note over PER001,SVC050: PH-002 — Identity Verification
-        SVC017->>SVC050: POST /identity-verifications<br/>{ application_id, document_type: passport, customer_name, DOB, address }
-        SVC050-->>SVC017: 201 Created { verification_id, vendor_sdk_token }
-        SVC017-->>PER001: Display Onfido SDK (document capture + liveness check)
-        PER001->>SVC050: Onfido SDK completes — vendor webhook<br/>{ outcome: pass, biometric_match_score: 0.96, address_verification: confirmed }
-        Note over SVC050: Persists IdentityVerification (ENT-002)<br/>Biometric template NOT stored — outcome only (UK GDPR Art.9)
-        SVC050->>EB: publish IdentityVerificationCompleted<br/>{ verification_id, customer_id, document_type: passport, outcome: PASS }
-        SVC017-->>PER001: In-app: "Identity confirmed — background checks in progress"
+        Note over PER001,CAP005: PH-002 — Identity Verification
+        Channel->>CAP005: POST /identity-verifications<br/>{ application_id, document_type: passport,<br/>customer_name: Amara Okonkwo, DOB: 1992-07-15,<br/>address: 14 Thornfield Road, Manchester }
+        Note over CAP005: Create ENT-002 IdentityVerification (status: pending)<br/>Return vendor SDK token (Onfido)
+        CAP005-->>Channel: 201 Created { verification_id, vendor_sdk_token }
+        Channel-->>PER001: Display Onfido SDK (document capture + liveness check)
+        PER001->>CAP005: Onfido SDK completes — vendor webhook<br/>{ outcome: pass, biometric_match_score: 0.96, address_verification: confirmed }
+        Note over CAP005: Persist ENT-002 IdentityVerification (status: pass)<br/>Biometric template NOT stored — outcome only (UK GDPR Art.9)
+        CAP005->>EB: Publish IdentityVerificationCompleted<br/>{ verification_id, customer_id, document_type: passport, outcome: PASS }
+        Channel-->>PER001: In-app: "Identity confirmed — background checks in progress"
     end
 
     rect rgb(255, 245, 220)
-        Note over SVC014,SVC051: PH-003 — KYC/CDD Assessment
-        SVC014->>SVC051: POST /sanctions/screen<br/>{ first_name, last_name, DOB, nationality: [GB], lists: [OFSI, OFAC, UN, EU] }
-        Note over SVC051: Hard SLA: <3,000ms (GOV-005-R02)
-        SVC051-->>SVC014: 200 OK { status: CLEAR, processing_time_ms: 312 }
-        Note over SVC014: PEP screening — ComplyAdvantage: CLEAR<br/>Adverse media screening: CLEAR<br/>Risk scoring: 22/100 → risk_category: simplified
-        SVC014->>EB: publish KYCClearanceGranted<br/>{ assessment_id, customer_id, risk_category: simplified, next_review_date: +5yr }
+        Note over EB,CAP005: PH-003 — KYC/CDD Assessment
+        EB-)CAP005: Consume IdentityVerificationCompleted → initiate CDD
+        Note over CAP005: Internal: sanctions screen (OFSI, OFAC, UN, EU) — <3,000ms SLA<br/>Result: CLEAR (processing_time_ms: 312)<br/>PEP screening — ComplyAdvantage: CLEAR<br/>Adverse media screening: CLEAR<br/>Risk scoring: 22/100 → risk_category: simplified
+        Note over CAP005: Create ENT-003 KycAssessment (status: cleared)<br/>risk_category: simplified | next_review_date: +5yr
+        CAP005->>EB: Publish KYCClearanceGranted<br/>{ assessment_id, customer_id, risk_category: simplified,<br/>next_review_date: 2031-04-15 }
     end
 
     rect rgb(245, 230, 255)
-        Note over SVC001: PH-004 — Account Decision
-        Note over SVC001: Decision engine: identity PASS + KYC CLEAR<br/>+ risk simplified + age 18+ + UK resident → APPROVED
-        SVC001->>EB: publish ApplicationDecisionMade<br/>{ application_id, customer_id, decision_outcome: APPROVED, decided_at }
-        SVC053-->>PER001: In-app + Email: "Application approved — setting up your account"
+        Note over EB,CAP001: PH-004 — Account Decision
+        EB-)CAP001: Consume KYCClearanceGranted
+        Note over CAP001: Decision engine: identity PASS + KYC CLEAR<br/>+ risk simplified + age 18+ + UK resident → APPROVED<br/>Update ENT-007 ApplicationRecord (decision: APPROVED)
+        CAP001->>EB: Publish ApplicationDecisionMade<br/>{ application_id, customer_id, decision_outcome: APPROVED, decided_at }
+        Note over EB: Route to Notifications (SVC-053):<br/>In-app + Email: "Application approved — setting up your account"
     end
 
     rect rgb(255, 230, 230)
-        Note over SVC001: PH-005 — Account Provisioning
-        Note over SVC001: Create Account (ENT-004): sort_code: 40-47-84<br/>account_number: 87654321, balance: £0.00<br/>FSCS SCV updated, CASS registration initiated
-        SVC001->>EB: publish AccountOpened<br/>{ account_id, customer_id, sort_code, account_number, iban, fscs_eligible: true }
-        SVC001->>EB: publish AccountProvisioned<br/>{ account_id, customer_id, status: active, cass_registered: false, provisioned_at }
-        SVC001->>EB: publish CardIssuanceTriggered<br/>{ card_id, account_id, card_type: debit, delivery_address }
-        Note over SVC001: PCI DSS: no PAN or CVV2 in event payload<br/>Card delivery: 3–5 working days
+        Note over CAP001,EB: PH-005 — Account Provisioning
+        Note over CAP001: Create ENT-004 Account:<br/>sort_code: 40-47-84<br/>account_number: 87654321<br/>balance: £0.00<br/>FSCS SCV updated<br/>Create ENT-005 CardIssuance (delivery: 3–5 working days)<br/>PCI DSS: no PAN or CVV2 in event payload
+        CAP001->>EB: Publish AccountOpened<br/>{ account_id, customer_id, sort_code: 40-47-84,<br/>account_number: 87654321, iban, fscs_eligible: true }
+        CAP001->>EB: Publish AccountProvisioned<br/>{ account_id, customer_id, status: active,<br/>cass_registered: false, provisioned_at }
+        CAP001->>EB: Publish CardIssuanceTriggered<br/>{ card_id, account_id, card_type: debit, delivery_address }
     end
 
     rect rgb(230, 255, 245)
-        Note over PER001,SVC100: PH-006 — Digital Channel Activation
-        PER001->>SVC017: Set up credentials (username + password)
-        SVC017->>SVC100: Create credentials + register FIDO2/WebAuthn device<br/>{ customer_id, hashed_password, fido2_credential_id, device_id }
-        Note over SVC100: Biometric assertion only — template stays on device<br/>(FIDO2/WebAuthn + UK GDPR data minimisation)
-        PER001->>SVC017: First login — SCA (Face ID + registered device)
-        SVC017->>SVC100: Verify SCA (FIDO2 assertion)
-        SVC100-->>SVC017: SCA confirmed
-        SVC017->>EB: publish DigitalChannelActivated<br/>{ customer_id, account_id, sca_enrolled: true, activated_at }
+        Note over PER001,CAP001: PH-006 — Digital Channel Activation
+        PER001->>Channel: Set up credentials (username + password)
+        Channel->>CAP001: POST /customers/{id}/credentials + register FIDO2/WebAuthn device<br/>{ customer_id, hashed_password, fido2_credential_id, device_id }
+        Note over CAP001: Credential created; FIDO2 device registered<br/>Biometric assertion only — template stays on device<br/>(FIDO2/WebAuthn + UK GDPR data minimisation)
+        PER001->>Channel: First login — SCA (Face ID + registered device)
+        Channel->>CAP001: POST /auth/verify-sca { fido2_assertion, customer_id }
+        CAP001-->>Channel: SCA confirmed
+        CAP001->>EB: Publish DigitalChannelActivated<br/>{ customer_id, account_id, sca_enrolled: true, activated_at }
     end
 
     rect rgb(255, 255, 220)
-        Note over PER001,SVC053: PH-007 — Welcome and Onboarding
-        SVC053-->>PER001: Welcome email: account details, sort code, FSCS info sheet
-        SVC053-->>PER001: In-app: initial funding prompt + CASS switching option<br/>+ vulnerability wellbeing questions (FCA FG21/1)
-        SVC001->>EB: publish WelcomePackDispatched<br/>{ customer_id, account_id, dispatched_at }
+        Note over PER001,Channel: PH-007 — Welcome and Onboarding
+        Note over EB: Route AccountOpened/DigitalChannelActivated → Notifications (SVC-053):<br/>Welcome email: account details, sort code, FSCS info sheet<br/>In-app: initial funding prompt + CASS switching option<br/>+ vulnerability wellbeing questions (FCA FG21/1)
+        CAP001->>EB: Publish WelcomePackDispatched<br/>{ customer_id, account_id, dispatched_at }
         Note over PER001: Journey complete — customer is active account holder<br/>Total elapsed: <10 minutes (automated path)
     end

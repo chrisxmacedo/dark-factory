@@ -81,23 +81,23 @@
   ],
   "cross_service_interaction_summary": [
     {
-      "from": "SVC-001 (CAP-001)",
-      "to": "SVC-012 (CAP-004)",
+      "from": "SVC-001",
+      "to": "SVC-012",
       "pattern": "Async event via Event Bus — OverdraftReviewTriggered (EVT-114)",
       "phase": "PH-083 -> PH-084",
       "cross_capability": true,
       "note": "CAP-001 -> CAP-004 boundary. Triggers credit assessment."
     },
     {
-      "from": "SVC-012 (CAP-004)",
-      "to": "SVC-001 (CAP-001)",
+      "from": "SVC-012",
+      "to": "SVC-001",
       "pattern": "Async event via Event Bus — OverdraftAssessmentCompleted (EVT-115)",
       "phase": "PH-084 -> PH-085",
       "cross_capability": true,
       "note": "CAP-004 -> CAP-001 boundary. Returns assessment results."
     },
     {
-      "from": "SVC-012 (CAP-004)",
+      "from": "SVC-012",
       "to": "EXT-BUREAU",
       "pattern": "Synchronous REST — Credit bureau API call",
       "phase": "PH-084",
@@ -105,8 +105,8 @@
       "note": "External system call. SVC-012 -> Experian/Equifax/TransUnion."
     },
     {
-      "from": "SVC-001 (CAP-001)",
-      "to": "SVC-053 (Notifications)",
+      "from": "SVC-001",
+      "to": "SVC-053",
       "pattern": "Async — notification dispatch",
       "phase": "PH-087",
       "cross_capability": false,

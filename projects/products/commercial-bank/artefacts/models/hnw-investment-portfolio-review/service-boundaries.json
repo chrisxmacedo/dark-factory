@@ -22,7 +22,7 @@
           "capability_boundary": "cross-capability (CAP-005 → CAP-006)",
           "purpose": "JRN-015 PH-071 start: SVC-016 checks KYC status is current before scheduling the review. Reuses EVT-004 from prior journeys (JRN-001/JRN-006 pattern). If KYC has lapsed, review scheduling is suspended until KYC is refreshed.",
           "maps_to": {
-            "entity": "ENT-046 (PortfolioReviewRecord)",
+            "entity": "ENT-046",
             "field_mappings": [
               {"event_field": "customer_id", "entity_field": "client_id", "notes": "Confirms KYC is current for this client_id before review is scheduled"}
             ]
@@ -35,7 +35,7 @@
           "capability_boundary": "cross-capability (CAP-001 → CAP-006)",
           "purpose": "JRN-015 ALT-002 (PH-073): Response to ClientAccountDataRequested (EVT-101). SVC-001 returns a point-in-time cash balance summary for the HNW client. SVC-016 uses this to populate the liquidity buffer in the RebalancingRecommendation.",
           "maps_to": {
-            "entity": "ENT-048 (RebalancingRecommendation)",
+            "entity": "ENT-048",
             "field_mappings": [
               {"event_field": "available_balance_gbp", "entity_field": "cash_balance_snapshot_gbp", "notes": "Point-in-time cash balance for liquidity buffer assessment"},
               {"event_field": "account_type", "entity_field": "n/a — context only", "notes": "Logged for audit; not persisted on ENT-048"}
@@ -177,7 +177,7 @@
           "capability_boundary": "cross-capability (CAP-006 → CAP-001)",
           "purpose": "JRN-015 ALT-002 (PH-073): SVC-001 receives the account data request, assembles a minimal account summary (available balance, account type), and publishes ClientAccountSummaryProvided (EVT-107). This is the sole mechanism for SVC-016 to access CAP-001 account data.",
           "maps_to": {
-            "entity": "ENT-004 (Account)",
+            "entity": "ENT-004",
             "field_mappings": [
               {"event_field": "client_id", "entity_field": "customer_id", "notes": "Lookup customer accounts by customer_id"},
               {"event_field": "account_types_requested", "entity_field": "account_type", "notes": "Filter to requested account types (savings, current)"}
@@ -198,26 +198,26 @@
   ],
   "cross_service_interaction_summary": [
     {
-      "from_service": "SVC-016 (CAP-006)",
-      "to_service": "SVC-014 (CAP-005)",
+      "from_service": "SVC-016",
+      "to_service": "SVC-014",
       "interaction_type": "async event",
-      "events": ["EVT-103 (SuitabilityReportIssued)", "EVT-106 (ConsumerDutyEvidenceCompleted)"],
+      "events": ["EVT-103", "EVT-106"],
       "phase": "PH-074, PH-076",
       "rationale": "MiFID II COBS 9A and Consumer Duty compliance records must be registered in CAP-005's central compliance audit trail. Async events preserve the capability boundary."
     },
     {
-      "from_service": "SVC-016 (CAP-006)",
-      "to_service": "SVC-001 (CAP-001)",
+      "from_service": "SVC-016",
+      "to_service": "SVC-001",
       "interaction_type": "async event request-response",
-      "events": ["EVT-101 (ClientAccountDataRequested → SVC-001)", "EVT-107 (ClientAccountSummaryProvided ← SVC-001)"],
-      "phase": "PH-073 (ALT-002 only)",
+      "events": ["EVT-101", "EVT-107"],
+      "phase": "PH-073",
       "rationale": "Holistic wealth review requires the client's retail banking cash balance for liquidity buffer assessment. Async event request-response is the only valid cross-capability data access pattern."
     },
     {
-      "from_service": "SVC-014 (CAP-005)",
-      "to_service": "SVC-016 (CAP-006)",
+      "from_service": "SVC-014",
+      "to_service": "SVC-016",
       "interaction_type": "async event",
-      "events": ["EVT-004 (KYCClearanceGranted)"],
+      "events": ["EVT-004"],
       "phase": "PH-071",
       "rationale": "SVC-016 checks KYC status before scheduling the review. Reuses existing EVT-004 cross-capability event."
     }

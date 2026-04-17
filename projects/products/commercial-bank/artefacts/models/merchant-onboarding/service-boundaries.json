@@ -89,10 +89,10 @@
     }
   ],
   "cross_service_interaction_summary": [
-    {"from_service": "SVC-008", "from_capability": "CAP-002", "to_service": "SVC-014", "to_capability": "CAP-005", "interaction_type": "async_event", "event": "EVT-130 (MerchantApplicationSubmitted)", "description": "Merchant application triggers KYC in CAP-005"},
-    {"from_service": "SVC-014", "from_capability": "CAP-005", "to_service": "SVC-008", "to_capability": "CAP-002", "interaction_type": "async_event", "event": "EVT-131 (MerchantKYCCompleted)", "description": "KYC outcome flows back to merchant onboarding"},
-    {"from_service": "SVC-008", "from_capability": "CAP-002", "to_service": "SVC-009", "to_capability": "CAP-003", "interaction_type": "async_event", "event": "EVT-134 (MerchantApproved)", "description": "Approval triggers scheme registration in CAP-003"},
-    {"from_service": "SVC-009", "from_capability": "CAP-003", "to_service": "SVC-008", "to_capability": "CAP-002", "interaction_type": "async_event", "event": "EVT-136 (MerchantSchemeRegistered)", "description": "Scheme registration confirmation flows back to merchant onboarding"},
+    {"from_service": "SVC-008", "from_capability": "CAP-002", "to_service": "SVC-014", "to_capability": "CAP-005", "interaction_type": "async_event", "event": "EVT-130", "description": "Merchant application triggers KYC in CAP-005"},
+    {"from_service": "SVC-014", "from_capability": "CAP-005", "to_service": "SVC-008", "to_capability": "CAP-002", "interaction_type": "async_event", "event": "EVT-131", "description": "KYC outcome flows back to merchant onboarding"},
+    {"from_service": "SVC-008", "from_capability": "CAP-002", "to_service": "SVC-009", "to_capability": "CAP-003", "interaction_type": "async_event", "event": "EVT-134", "description": "Approval triggers scheme registration in CAP-003"},
+    {"from_service": "SVC-009", "from_capability": "CAP-003", "to_service": "SVC-008", "to_capability": "CAP-002", "interaction_type": "async_event", "event": "EVT-136", "description": "Scheme registration confirmation flows back to merchant onboarding"},
     {"from_service": "SVC-005", "from_capability": "CAP-002", "to_service": "SVC-008", "to_capability": "CAP-002", "interaction_type": "intra_capability", "description": "Credit assessment within same capability — synchronous call permitted"}
   ]
 }

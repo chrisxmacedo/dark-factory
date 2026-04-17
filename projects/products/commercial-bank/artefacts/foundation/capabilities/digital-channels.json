@@ -227,5 +227,6 @@
       "rejected_because": "An omnichannel 'Customer Channels' capability at this scope would be too large to be a coherent deployment unit. Branch digital enablement (kiosks, tablets) is a branch investment decision, not a digital channel product decision \u2014 including it conflates the physical and digital investment cycles. The industry direction (declining branch count, digital substitution) makes the separation increasingly clean over the planning horizon."
     }
   ],
-  "deployment_notes": "Digital Channels is NOT a capability in the architectural sense. It is a channel layer sitting outside the system boundary. Online Banking, Mobile Banking, and Customer Communications are channel services that call capability REST APIs synchronously. Open Banking APIs (CAP-007.03) remains a distinct capability if promoted."
+  "deployment_notes": "Digital Channels is NOT a capability in the architectural sense. It is a channel grouping sitting outside the system boundary. SVC-017 is classified as a channel service in service-dependencies.json. The sub-capabilities here (Online Banking, Mobile Banking, Customer Communications) are channel concerns, not business capabilities. Open Banking APIs (CAP-007.03) is the only sub-capability that could be a capability \u2014 see its promotion review trigger.",
+  "classification": "channel_grouping"
 }

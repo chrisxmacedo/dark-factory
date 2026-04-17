@@ -26,7 +26,7 @@
         "Submit transfer instruction"
       ],
       "system_actions": [
-        "SVC-017 (corporate portal) calls SVC-010 POST /international-transfers to create InternationalTransfer (ENT-026)",
+        "SVC-017",
         "SVC-010 validates: BusinessAccount.status = active; available balance >= gbp_equivalent (estimated); BIC in SWIFT BIC directory; purpose code valid per SWIFT code set; amount within daily limit",
         "SVC-010 sets InternationalTransfer.status = pending_compliance",
         "SVC-010 publishes InternationalTransferInitiated (EVT-049) to topic payments.international"
@@ -113,7 +113,7 @@
         "SVC-010 updates SWIFTMessage.sent_timestamp; sets InternationalTransfer.status = in_transit",
         "SVC-010 publishes SWIFTMessageSent (EVT-054)",
         "SVC-010 publishes cross-capability async event to SVC-005 (CAP-002) requesting account debit for gbp_equivalent amount from the originating BusinessAccount",
-        "SVC-005 (CAP-002) consumes the debit event; debits BusinessAccount.balance; publishes BusinessAccountDebited (handled within CAP-002 — not a JRN-009 event)",
+        "SVC-005",
         "First correspondent bank in the chain receives the pacs.008; processes and forwards",
         "On SWIFT gpi confirmation of correspondent acknowledgement: SVC-010 receives ACK; updates SWIFTMessage.ack_timestamp",
         "SVC-010 publishes CorrespondentAcknowledged (EVT-055) with gpi_uetr and accepting_correspondent_bic"
@@ -171,7 +171,7 @@
       "path_id": "ALT-002",
       "name": "Dual Authorisation for High-Value Transfer",
       "description": "Transfer amount exceeds BusinessAccount.payment_approval_threshold. First authorised user initiates the transfer (reaches PH-029 exit with status = pending_second_authorisation). A second authorised user reviews and approves via the corporate portal. On second approval, SCA is completed by the second user. Transfer proceeds to PH-030/PH-031.",
-      "diverges_at": "PH-029 (at payment_approval_threshold check)",
+      "diverges_at": "PH-029",
       "rejoins_at": "PH-030 or PH-031",
       "conditions": "transfer.amount > BusinessAccount.payment_approval_threshold",
       "governance_references": ["GOV-005-R01"]

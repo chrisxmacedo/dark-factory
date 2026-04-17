@@ -6,10 +6,10 @@
   "status": "Draft",
   "customer_persona": "PER-001",
   "customer_persona_name": "Personal Customer",
-  "primary_capability": "CAP-001 (Retail Banking — Mortgages sub-capability, SVC-002)",
+  "primary_capability": "CAP-001",
   "supporting_capabilities": [
-    "CAP-004 (Risk Management — credit risk assessment, SVC-012)",
-    "CAP-005 (Compliance & Regulatory — KYC if new customer, AML property checks, SVC-014)"
+    "CAP-004",
+    "CAP-005"
   ],
   "description": "A personal customer applies for a residential mortgage to purchase or remortgage a UK residential property. The journey spans enquiry through to completion, crossing multiple capability boundaries. SVC-002 (Mortgage Service) owns the application lifecycle; SVC-012 (Risk Engine) provides credit scoring via async events; SVC-014 (KYC/AML) provides identity verification for new customers and AML property checks via async events.",
   "happy_path_duration": "4–8 weeks",

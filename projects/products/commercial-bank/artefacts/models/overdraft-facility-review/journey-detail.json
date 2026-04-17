@@ -14,8 +14,8 @@
       "id": "PH-083",
       "name": "Automated Review Trigger",
       "description": "The batch scheduling system identifies accounts with overdraft facilities expiring within 30 days. For each qualifying account, it publishes an OverdraftReviewTriggered event. This runs as a nightly batch process scanning Account.overdraft_expiry_date against current date + 30 days.",
-      "actors": ["SVC-001 (Retail Banking Core — batch scheduler)"],
-      "services": ["SVC-001 (Retail Banking Core)"],
+      "actors": ["SVC-001"],
+      "services": ["SVC-001"],
       "governance_rules": ["GOV-001-R03"],
       "entry_conditions": [
         "Account (ENT-004) has overdraft_facility_status = active",
@@ -31,8 +31,8 @@
       "id": "PH-084",
       "name": "Credit Bureau Refresh and Behavioural Analysis",
       "description": "SVC-012 (Risk Engine, CAP-004) consumes the OverdraftReviewTriggered event and initiates a credit bureau data refresh from Experian/Equifax/TransUnion. Simultaneously analyses 12-month account behaviour: average balance, overdraft utilisation frequency, missed payment count, income pattern stability. Produces an affordability assessment score and updated credit risk grade.",
-      "actors": ["SVC-012 (Risk Engine)", "EXT-BUREAU (Credit Bureau)"],
-      "services": ["SVC-012 (Risk Engine)", "EXT-BUREAU (Credit Bureau API)"],
+      "actors": ["SVC-012", "EXT-BUREAU (Credit Bureau)"],
+      "services": ["SVC-012", "EXT-BUREAU (Credit Bureau API)"],
       "governance_rules": ["GOV-001-R03", "GOV-001-R01"],
       "entry_conditions": [
         "OverdraftReviewTriggered (EVT-114) consumed by SVC-012",
@@ -49,8 +49,8 @@
       "id": "PH-085",
       "name": "Persistent Debt Screening",
       "description": "SVC-001 checks whether the customer meets the FCA CONC 6.7 persistent debt criteria: customer has paid more in interest/charges than in principal repayment over the trailing 18 months. If persistent debt is detected, the review outcome must include an intervention pathway (reduced limit, repayment plan, or facility suspension). At 36 months of persistent debt, the facility must be suspended.",
-      "actors": ["SVC-001 (Retail Banking Core)"],
-      "services": ["SVC-001 (Retail Banking Core)"],
+      "actors": ["SVC-001"],
+      "services": ["SVC-001"],
       "governance_rules": ["GOV-001-R03"],
       "entry_conditions": [
         "OverdraftAssessmentCompleted (EVT-115) consumed by SVC-001",
@@ -67,8 +67,8 @@
       "id": "PH-086",
       "name": "Review Decision and Terms Update",
       "description": "SVC-001 consolidates the credit assessment, behavioural analysis, and persistent debt screening to reach a review decision: renew (same terms), modify (adjust limit or APR), or withdraw (facility removal with 30-day notice). Updated terms are applied to Account.overdraft_limit, Account.overdraft_apr, Account.overdraft_expiry_date. Consumer Duty fair value evidence is recorded.",
-      "actors": ["SVC-001 (Retail Banking Core)"],
-      "services": ["SVC-001 (Retail Banking Core)"],
+      "actors": ["SVC-001"],
+      "services": ["SVC-001"],
       "governance_rules": ["GOV-001-R01", "GOV-001-R03"],
       "entry_conditions": [
         "PersistentDebtScreeningCompleted (EVT-116) consumed",
@@ -88,8 +88,8 @@
       "id": "PH-087",
       "name": "Customer Notification",
       "description": "PER-001 is notified of the overdraft review outcome via push notification, in-app message, and email. For renewals: confirmation of continued facility and terms. For modifications: clear explanation of changes, new terms, and effective date. For withdrawals: 30-day notice with explanation, guidance on managing without overdraft, and signposting to debt advice services (FCA requirement). Persistent debt customers receive the CONC 6.7 intervention letter.",
-      "actors": ["PER-001", "SVC-053 (Notification Service)"],
-      "services": ["SVC-001 (Retail Banking Core)", "SVC-053 (Notification Service)"],
+      "actors": ["PER-001", "SVC-053"],
+      "services": ["SVC-001", "SVC-053"],
       "governance_rules": ["GOV-001-R01", "GOV-001-R03"],
       "entry_conditions": [
         "OverdraftReviewDecided (EVT-117) published"
@@ -114,7 +114,7 @@
         "id": "ALT-001",
         "name": "Modified Terms — Reduced Limit",
         "description": "Credit assessment or behavioural analysis indicates increased risk (missed payments, reduced income). Facility renewed but limit reduced and/or APR adjusted. Customer notified of changed terms with 30-day advance notice.",
-        "phases": ["PH-083", "PH-084", "PH-085", "PH-086 (modified terms)", "PH-087"],
+        "phases": ["PH-083", "PH-084", "PH-085", "PH-086", "PH-087"],
         "divergence_at": "PH-086",
         "rejoins_at": "PH-087"
       },
@@ -122,7 +122,7 @@
         "id": "ALT-002",
         "name": "Persistent Debt — 18-Month Intervention",
         "description": "Persistent debt screening identifies customer paying more in interest/charges than principal over 18 months. Facility renewed but with intervention: reduced limit, repayment plan offered, and CONC 6.7 intervention communication sent. Customer advised of options including debt advice.",
-        "phases": ["PH-083", "PH-084", "PH-085 (18-month trigger)", "PH-086 (intervention terms)", "PH-087 (intervention letter)"],
+        "phases": ["PH-083", "PH-084", "PH-085", "PH-086", "PH-087"],
         "divergence_at": "PH-085",
         "rejoins_at": "PH-087"
       }
@@ -132,7 +132,7 @@
         "id": "EXC-001",
         "name": "Facility Withdrawal — Adverse Credit",
         "description": "Credit bureau refresh reveals significant adverse data (CCJ, IVA, bankruptcy, or severely deteriorated score). Facility withdrawn with 30-day notice. Customer notified with explanation, debt advice signposting, and details of how to manage without the overdraft.",
-        "phases": ["PH-083", "PH-084", "PH-085", "PH-086 (withdrawal)", "PH-087 (withdrawal notice)"],
+        "phases": ["PH-083", "PH-084", "PH-085", "PH-086", "PH-087"],
         "divergence_at": "PH-086",
         "terminal_phase": "PH-087"
       },
@@ -140,7 +140,7 @@
         "id": "EXC-002",
         "name": "Persistent Debt — 36-Month Facility Suspension",
         "description": "Customer has been in persistent debt for 36 months with no resolution despite 18-month intervention. FCA CONC 6.7 mandates facility suspension. Overdraft facility suspended with immediate effect. Customer notified and signposted to free debt advice services (StepChange, Citizens Advice, National Debtline).",
-        "phases": ["PH-083", "PH-084", "PH-085 (36-month trigger)", "PH-086 (suspension)", "PH-087 (suspension notice)"],
+        "phases": ["PH-083", "PH-084", "PH-085", "PH-086", "PH-087"],
         "divergence_at": "PH-085",
         "terminal_phase": "PH-087"
       },
@@ -148,7 +148,7 @@
         "id": "EXC-003",
         "name": "Credit Bureau Unavailable",
         "description": "Credit bureau API returns an error or timeout during PH-084. SVC-012 retries once after 30 seconds. If still unavailable: review is deferred by 7 days. OverdraftReview status set to deferred. No customer notification at this stage. Automated retry scheduled.",
-        "phases": ["PH-083", "PH-084 (bureau unavailable)"],
+        "phases": ["PH-083", "PH-084"],
         "divergence_at": "PH-084",
         "terminal_phase": "PH-084"
       }

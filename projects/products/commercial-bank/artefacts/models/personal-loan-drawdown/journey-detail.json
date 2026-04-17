@@ -95,7 +95,7 @@
         "SVC-001 creates LoanAgreement: status = executed, agreement_date, repayment_schedule",
         "SVC-001 updates LoanApplication status = agreement_executed",
         "SVC-001 publishes LoanAgreementExecuted (EVT-154)",
-        "SVC-015 (Compliance) consumes LoanAgreementExecuted for regulatory reporting (CONC consumer credit register)"
+        "SVC-015"
       ],
       "exit_condition": "LoanAgreement created with status = executed; LoanAgreementExecuted published",
       "governance_references": ["GOV-001-R01", "GOV-001-R05"]

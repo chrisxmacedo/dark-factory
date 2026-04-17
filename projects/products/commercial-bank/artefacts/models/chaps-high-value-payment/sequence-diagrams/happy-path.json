@@ -6,16 +6,16 @@
   "title": "JRN-028 CHAPS High-Value Payment — Happy Path",
   "description": "Full happy path: PER-001 initiates CHAPS payment, CoP returns match, sanctions clears, PER-001 authorises with SCA, RTGS settles, account debited, mortgage completion confirmed.",
   "participants": [
-    { "id": "PER001", "label": "PER-001 (Personal Customer)" },
+    { "id": "PER001", "label": "PER-001" },
     { "id": "CH001", "label": "CH-001 (Online Banking Portal)" },
     { "id": "CAP001", "label": "CAP-001 API (SVC-001)" },
     { "id": "EventBus", "label": "Event Bus (SVC-102)" },
     { "id": "CAP003", "label": "CAP-003 API (SVC-009)" },
-    { "id": "CAP005", "label": "CAP-005 (SVC-014 / SVC-051)" },
+    { "id": "CAP005", "label": "CAP-005" },
     { "id": "EXTCOP", "label": "EXT: Pay.UK CoP Service" },
     { "id": "EXTRTGS", "label": "EXT: Bank of England RTGS (RT2)" },
-    { "id": "SVC002", "label": "SVC-002 (Mortgage Service)" },
-    { "id": "SVC053", "label": "SVC-053 (Notification Service)" }
+    { "id": "SVC002", "label": "SVC-002" },
+    { "id": "SVC053", "label": "SVC-053" }
   ],
   "steps": [
     { "seq": 1, "from": "PER001", "to": "CH001", "label": "Enters beneficiary details, amount (£450k), purpose=PROP", "type": "sync", "phase": "PH-077" },

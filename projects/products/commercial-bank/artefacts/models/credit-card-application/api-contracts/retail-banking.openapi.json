@@ -1,12 +1,12 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Credit Card Service API",
-    "description": "SVC-003 Credit Card Service — API for the credit card application and issuance journey (JRN-008). Covers the credit card application lifecycle from submission through to account activation and ongoing statement retrieval. All cross-capability integrations (credit scoring via SVC-012, CAP-004) are mediated exclusively via async events through SVC-102 and are not exposed as synchronous API endpoints. PCI DSS v4.0 compliance: no raw PAN (Primary Account Number) is returned in any API response. card_number_token is used exclusively.",
+    "title": "CAP-001 Retail Banking API — Credit Card Application Surface",
+    "description": "CAP-001 Retail Banking capability API surface for the credit card application and issuance journey (JRN-008). Credit cards are within CAP-001 (SVC-003 Credit Card Service is within the Retail Banking capability boundary). Channels and internal tooling call this capability API; they never address SVC-003 directly. Covers the credit card application lifecycle from submission through to account activation and ongoing statement retrieval. All cross-capability integrations (credit scoring via CAP-004 Risk Management) are mediated exclusively via async events and are not exposed as synchronous API endpoints. PCI DSS v4.0 compliance: no raw PAN (Primary Account Number) is returned in any API response. card_number_token is used exclusively.",
     "version": "1.0.0",
     "contact": {
-      "name": "Credit Cards Engineering Team",
-      "email": "credit-cards-engineering@bank.internal"
+      "name": "Retail Banking Capability Team",
+      "email": "cap-001-team@bank.internal"
     }
   },
   "servers": [

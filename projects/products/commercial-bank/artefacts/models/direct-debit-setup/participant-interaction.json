@@ -136,7 +136,7 @@
           "interaction": "Monitors AUDDIS validation failures and BACS rejection notifications. Escalates to customer service for customer notification on validation failures."
         },
         {
-          "phase": "PH-050 (exception)",
+          "phase": "PH-050",
           "channel": "Internal operations platform",
           "interaction": "Manages bulk ARUDD returns if systemic issues arise. Monitors unpaid DD volumes."
         },

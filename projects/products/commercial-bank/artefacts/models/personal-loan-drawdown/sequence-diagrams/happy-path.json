@@ -5,17 +5,17 @@
   "scenario": "happy-path",
   "description": "Existing customer applies for £10,000 personal loan over 36 months. Automated credit assessment approves at APR 6.9%. Customer accepts offer and signs agreement via SCA. Funds disbursed within 60 seconds.",
   "participants": [
-    {"id": "Customer", "label": "PER-001 (Customer)", "type": "actor"},
-    {"id": "Channel", "label": "SVC-017 (Digital Channels)", "type": "service"},
-    {"id": "RetailBanking", "label": "SVC-001 (Retail Banking Core)", "type": "service"},
-    {"id": "IAM", "label": "SVC-100 (IAM)", "type": "service"},
-    {"id": "EventBus", "label": "SVC-102 (Event Bus)", "type": "infrastructure"},
-    {"id": "RiskEngine", "label": "SVC-012 (Risk Engine)", "type": "service"},
-    {"id": "KYC", "label": "SVC-014 (KYC/AML)", "type": "service"},
-    {"id": "DomPay", "label": "SVC-009 (Domestic Payments)", "type": "service"},
-    {"id": "Compliance", "label": "SVC-015 (Compliance Core)", "type": "service"},
-    {"id": "Notifications", "label": "SVC-053 (Notifications)", "type": "service"},
-    {"id": "Audit", "label": "SVC-103 (Audit & Logging)", "type": "service"}
+    {"id": "Customer", "label": "PER-001", "type": "actor"},
+    {"id": "Channel", "label": "SVC-017", "type": "service"},
+    {"id": "RetailBanking", "label": "SVC-001", "type": "service"},
+    {"id": "IAM", "label": "SVC-100", "type": "service"},
+    {"id": "EventBus", "label": "SVC-102", "type": "infrastructure"},
+    {"id": "RiskEngine", "label": "SVC-012", "type": "service"},
+    {"id": "KYC", "label": "SVC-014", "type": "service"},
+    {"id": "DomPay", "label": "SVC-009", "type": "service"},
+    {"id": "Compliance", "label": "SVC-015", "type": "service"},
+    {"id": "Notifications", "label": "SVC-053", "type": "service"},
+    {"id": "Audit", "label": "SVC-103", "type": "service"}
   ],
   "steps": [
     {"step": 1, "from": "Customer", "to": "Channel", "type": "sync", "action": "Select loan amount £10,000, term 36 months, purpose home_improvement", "phase": "PH-111"},

@@ -5,16 +5,16 @@
   "scenario": "happy-path",
   "description": "PISP submits VRP consent request for a £500/month subscription. Customer authenticates via SCA and grants consent. PISP immediately submits first VRP payment of £49.99 within consent limits. Payment executed as Faster Payment.",
   "participants": [
-    {"id": "TPP", "label": "PER-006 (PISP)", "type": "actor"},
-    {"id": "Customer", "label": "PER-001 (Customer)", "type": "actor"},
-    {"id": "Channel", "label": "SVC-017 (Digital Channels)", "type": "service"},
-    {"id": "IAM", "label": "SVC-100 (IAM)", "type": "service"},
-    {"id": "DomPay", "label": "SVC-009 (Domestic Payments)", "type": "service"},
-    {"id": "Fraud", "label": "SVC-013 (Fraud Detection)", "type": "service"},
-    {"id": "EventBus", "label": "SVC-102 (Event Bus)", "type": "infrastructure"},
-    {"id": "Retail", "label": "SVC-001 (Retail Banking Core)", "type": "service"},
-    {"id": "Notifications", "label": "SVC-053 (Notifications)", "type": "service"},
-    {"id": "Audit", "label": "SVC-103 (Audit & Logging)", "type": "service"}
+    {"id": "TPP", "label": "PER-006", "type": "actor"},
+    {"id": "Customer", "label": "PER-001", "type": "actor"},
+    {"id": "Channel", "label": "SVC-017", "type": "service"},
+    {"id": "IAM", "label": "SVC-100", "type": "service"},
+    {"id": "DomPay", "label": "SVC-009", "type": "service"},
+    {"id": "Fraud", "label": "SVC-013", "type": "service"},
+    {"id": "EventBus", "label": "SVC-102", "type": "infrastructure"},
+    {"id": "Retail", "label": "SVC-001", "type": "service"},
+    {"id": "Notifications", "label": "SVC-053", "type": "service"},
+    {"id": "Audit", "label": "SVC-103", "type": "service"}
   ],
   "steps": [
     {"step": 1, "from": "TPP", "to": "Channel", "type": "sync", "action": "POST /consents {payee, max_single: 500, max_monthly: 500, category: subscription, valid_to: 2027-04-15}", "phase": "PH-115"},

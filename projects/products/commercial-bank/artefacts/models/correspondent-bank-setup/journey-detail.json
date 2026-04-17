@@ -9,7 +9,7 @@
       "id": "PH-127",
       "name": "FATF EDD and KYC Assessment",
       "description": "The Treasury team (PER-053) identifies the need for a new correspondent banking relationship. The Compliance team (SVC-015) conducts FATF Recommendation 13 Enhanced Due Diligence: SWIFT KYC Registry lookup, regulatory status verification, AML controls review, sanctions screening programme assessment. SVC-014 runs sanctions screening on the correspondent bank entity. A CorrespondentRelationship record is created in status = under_assessment. Senior Management approval is required per MLR 2017 Regulation 34.",
-      "actors": ["PER-053 (Treasury Dealer)", "PER-052 (Compliance Officer)", "SVC-015 (Compliance Core)", "SVC-014 (KYC/AML)"],
+      "actors": ["PER-053", "PER-052", "SVC-015", "SVC-014"],
       "services": ["SVC-015", "SVC-014"],
       "governance_rules": ["GOV-005-R04"],
       "entry_conditions": [
@@ -27,7 +27,7 @@
       "id": "PH-128",
       "name": "Senior Management Approval",
       "description": "The Head of Compliance (SMF16) and MLRO (SMF17) review the EDD documentation and risk assessment. Senior Management approval obtained per MLR 2017 Regulation 34 requirement. CorrespondentRelationship updated to status = approved.",
-      "actors": ["PER-059 (Senior Manager — Head of Compliance / MLRO)", "SVC-015 (Compliance Core)"],
+      "actors": ["PER-059", "SVC-015"],
       "services": ["SVC-015"],
       "governance_rules": ["GOV-005-R04"],
       "entry_conditions": [
@@ -44,7 +44,7 @@
       "id": "PH-129",
       "name": "Nostro Account Setup and SWIFT Registration",
       "description": "The Treasury team (SVC-007) creates the nostro account for the new correspondent relationship. SWIFT BIC for the correspondent is registered in the payment routing table (SVC-010). A test SWIFT MT202 message is exchanged to confirm the channel is live.",
-      "actors": ["PER-053 (Treasury Dealer)", "SVC-007 (Treasury Services)", "SVC-010 (International Payments)"],
+      "actors": ["PER-053", "SVC-007", "SVC-010"],
       "services": ["SVC-007", "SVC-010"],
       "governance_rules": ["GOV-003-R01"],
       "entry_conditions": [
@@ -62,7 +62,7 @@
       "id": "PH-130",
       "name": "Annual EDD Review Scheduling",
       "description": "The Compliance system (SVC-015) schedules the annual EDD review for the new correspondent relationship per MLR 2017 Regulation 34 ongoing monitoring requirement. CorrespondentRelationship updated to status = active. Annual review due date set to 12 months from onboarding date.",
-      "actors": ["SVC-015 (Compliance Core)"],
+      "actors": ["SVC-015"],
       "services": ["SVC-015"],
       "governance_rules": ["GOV-005-R04"],
       "entry_conditions": [

@@ -15,7 +15,7 @@
     {
       "service_id": "SVC-001",
       "service_name": "Retail Banking Core",
-      "capability_domain": "CAP-001 (Retail Banking)",
+      "capability_domain": "CAP-001",
       "tier": "T2",
       "owned_entities": [
         {
@@ -132,7 +132,7 @@
     {
       "service_id": "SVC-014",
       "service_name": "KYC/AML Service",
-      "capability_domain": "CAP-005 (Compliance & Regulatory)",
+      "capability_domain": "CAP-005",
       "tier": "T1",
       "owned_entities": [
         {
@@ -276,7 +276,7 @@
     {
       "service_id": "SVC-017",
       "service_name": "Digital Channels",
-      "capability_domain": "CAP-007 (Digital Channels)",
+      "capability_domain": "CAP-007",
       "tier": "T3",
       "owned_entities": [
         {

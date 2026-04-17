@@ -180,7 +180,7 @@
       "consumed_events": [],
       "api_consumed_by_svc011": {
         "call_type": "Synchronous intra-capability (CAP-003 → CAP-003 permitted per architectural principles)",
-        "timing": "PH-045 (batch, end of day — not real-time authorisation path)",
+        "timing": "PH-045",
         "purpose": "Settlement funds disbursement: SVC-011 instructs SVC-009 to make a BACS or CHAPS payment from the bank's card scheme settlement account to settle the net position with the card scheme. SVC-009 processes the instruction via its existing domestic payment execution capability."
       },
       "source_journeys": ["JRN-002", "JRN-005", "JRN-011"]
@@ -189,7 +189,7 @@
   "cross_service_interaction_summary": [
     {
       "interaction_type": "synchronous — external",
-      "caller": "PER-009 (Card Network — Visa/Mastercard)",
+      "caller": "PER-009",
       "callee": "SVC-011",
       "protocol": "ISO 8583 / ISO 20022 card authorisation request",
       "timing": "PH-041 — real-time, <500ms total budget",

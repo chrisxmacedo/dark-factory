@@ -11,7 +11,7 @@
       "id": "PH-071",
       "name": "Review Scheduling and Pre-Meeting Preparation",
       "description": "The Wealth Advisor schedules the annual suitability review meeting, retrieves and assembles the client's current portfolio position, recent performance data, suitability record from the prior review, and any material change flags (life event triggers, risk score drift alerts, ESG preference updates). The system pre-populates a review pack for the advisor.",
-      "actors": ["PER-004 (HNW Client — notified)", "PER-057 (Wealth Advisor — leads)"],
+      "actors": ["PER-004", "PER-057"],
       "services": ["SVC-016"],
       "governance_rules": ["GOV-007-R01 — annual suitability review obligation (COBS 9A)", "GOV-007-R03 — Consumer Duty ongoing service evidence"],
       "entry_conditions": [
@@ -27,7 +27,7 @@
       "id": "PH-072",
       "name": "Client Risk Profile and Objectives Reassessment",
       "description": "During the review meeting, the Wealth Advisor walks the client through an updated suitability questionnaire to reassess financial situation, investment objectives, risk tolerance, investment knowledge, and sustainability preferences. Any material changes are recorded. The system scores the questionnaire and produces an updated risk profile. If the risk profile has changed, the system flags portfolio suitability gaps versus the current mandate.",
-      "actors": ["PER-004 (HNW Client — responds to questionnaire)", "PER-057 (Wealth Advisor — leads assessment)"],
+      "actors": ["PER-004", "PER-057"],
       "services": ["SVC-016"],
       "governance_rules": ["GOV-007-R01 — suitability assessment mandate", "GOV-007-R02 — SDR ESG preference capture", "GOV-007-R03 — Consumer Duty fair value outcome evidence"],
       "entry_conditions": [
@@ -45,7 +45,7 @@
       "id": "PH-073",
       "name": "Portfolio Performance Review and Rebalancing Recommendation",
       "description": "The Wealth Advisor presents the portfolio's performance against the agreed benchmark (ARC/WMA index), attribution analysis, and costs-and-charges ex-post disclosure (MiFID II COBS 9A). Based on the reassessed risk profile and current portfolio allocation, the system generates a draft rebalancing recommendation. The advisor reviews, adjusts, and finalises the recommendation. If cross-capability data is needed (e.g. cash savings account balance for liquidity buffer, or mortgage outstanding for net worth), it is retrieved via an async event request.",
-      "actors": ["PER-004 (HNW Client — reviews and questions)", "PER-057 (Wealth Advisor — presents and recommends)"],
+      "actors": ["PER-004", "PER-057"],
       "services": ["SVC-016", "SVC-001"],
       "governance_rules": ["GOV-007-R01 — recommendation must be based on updated suitability record", "GOV-007-R02 — SDR fund labels displayed", "GOV-007-R03 — ex-post costs and charges disclosure"],
       "entry_conditions": [
@@ -63,7 +63,7 @@
       "id": "PH-074",
       "name": "Client Instructions and Suitability Report Issuance",
       "description": "The client gives formal instructions to proceed with the rebalancing (or declines). The system generates a MiFID II-compliant suitability report documenting the basis for each recommendation, the client's updated circumstances, and the charges applicable. The suitability report is provided to the client before any trade execution. The advisor countersigns. A cross-capability event is published to CAP-005 (Compliance) to register the suitability record in the central compliance audit trail.",
-      "actors": ["PER-004 (HNW Client — approves or declines)", "PER-057 (Wealth Advisor — issues suitability report, countersigns)"],
+      "actors": ["PER-004", "PER-057"],
       "services": ["SVC-016", "SVC-014"],
       "governance_rules": ["GOV-007-R01 — suitability report must be issued before execution", "GOV-007-R03 — Consumer Duty fair value documentation", "FCA COBS 9A.3.2 — written suitability report required"],
       "entry_conditions": [
@@ -81,7 +81,7 @@
       "id": "PH-075",
       "name": "Rebalancing Trade Execution",
       "description": "Following client approval, the Wealth Platform Service instructs the custody platform (FNZ/SEI) to execute the approved rebalancing trades: sell overweight positions, buy underweight instruments, and reinvest cash. MiFID II best execution obligations apply. Trade confirmations are received and matched to the order records. The portfolio allocation is updated to reflect post-rebalancing positions.",
-      "actors": ["PER-057 (Wealth Advisor — initiates execution)", "SVC-016 (automated trade routing)"],
+      "actors": ["PER-057", "SVC-016"],
       "services": ["SVC-016"],
       "governance_rules": ["GOV-007-R01 — execution only after suitability report issued", "UK MiFID best execution obligations (COBS 11.2)", "FCA PROD target market check before each instrument purchase"],
       "entry_conditions": [
@@ -100,7 +100,7 @@
       "id": "PH-076",
       "name": "Post-Review Reporting and Consumer Duty Evidence",
       "description": "The system generates the final post-review report including updated portfolio valuation, transaction confirmations, updated asset allocation chart, and a Consumer Duty fair value evidence record. The annual suitability report is stored in the compliance system with a minimum 5-year retention period. The next review date is set. A cross-capability event signals to CAP-005 that the Consumer Duty fair value evidence record has been completed.",
-      "actors": ["PER-004 (HNW Client — receives reports)", "PER-057 (Wealth Advisor — validates and dispatches)"],
+      "actors": ["PER-004", "PER-057"],
       "services": ["SVC-016", "SVC-014"],
       "governance_rules": ["GOV-007-R01 — 5-year retention of suitability records", "GOV-007-R03 — Consumer Duty annual service evidence", "GOV-007-R02 — SDR annual label review"],
       "entry_conditions": [

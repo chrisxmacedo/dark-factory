@@ -98,7 +98,7 @@
       "to_service": "SVC-015",
       "to_capability": "CAP-005",
       "interaction_type": "async_event",
-      "event": "EVT-123 (CapitalDataPackageAssembled)",
+      "event": "EVT-123",
       "description": "Risk Engine Service publishes the assembled capital data package. Compliance Core Service consumes it to begin COREP return consolidation. This is the primary cross-capability data flow in this journey."
     },
     {

@@ -712,7 +712,7 @@
       "name": "Digital Channels Service",
       "classification": "channel",
       "tier": "T3",
-      "capability_domain": "Digital Channels (CAP-007)",
+      "capability_domain": "Channel Grouping (not a capability)",
       "dependencies": [
         {
           "service_id": "SVC-009",

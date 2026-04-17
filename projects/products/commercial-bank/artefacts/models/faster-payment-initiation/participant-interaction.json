@@ -143,7 +143,7 @@
       "channel_access": ["Internal Fraud Operations Platform (INTL-003)"],
       "touchpoints": [
         {
-          "phase_id": "PH-149 (exception path EX-002)",
+          "phase_id": "PH-149",
           "phase_name": "Fraud Block Investigation",
           "interaction_type": "active (exception handling)",
           "description": "Fraud Analyst receives a case alert when SVC-001 publishes PaymentFraudBlocked. Reviews the fraud score, transaction details, customer profile, and device/behavioural signals to determine if the block is a true positive or false positive.",
@@ -182,7 +182,7 @@
       "channel_access": ["Financial Crime Platform (INTL-001)", "Secure email for OFSI reporting"],
       "touchpoints": [
         {
-          "phase_id": "PH-149 (exception path EX-001)",
+          "phase_id": "PH-149",
           "phase_name": "Sanctions Hit Review",
           "interaction_type": "active (exception handling)",
           "description": "MLRO receives immediate alert when SanctionsScreeningCompleted returns outcome = hit. Reviews the match details against the OFSI Consolidated List. Determines whether the match is a false positive (name collision) or a true sanctions target. If true positive, must report to OFSI within 14 days. Account freeze may be warranted (Account.status = frozen).",

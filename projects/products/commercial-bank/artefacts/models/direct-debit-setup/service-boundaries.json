@@ -262,7 +262,7 @@
     },
     {
       "from_service": "Channel (SVC-017)",
-      "to_service": "SVC-009 (via CAP-003 Payment Operations API)",
+      "to_service": "SVC-009",
       "interaction_type": "sync",
       "description": "Channel calls CAP-003 Payment Operations API for DDI setup, list, cancellation, and indemnity claims. Persona \u2192 Channel \u2192 CAP-003 API pattern strictly followed. Channel never calls SVC-009 directly \u2014 it calls the capability API endpoint.",
       "boundary_crossed": "CAP-007 \u2192 CAP-003"

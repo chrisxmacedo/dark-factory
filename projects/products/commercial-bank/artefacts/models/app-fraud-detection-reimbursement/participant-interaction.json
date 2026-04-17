@@ -167,7 +167,7 @@
             {
               "interaction_id": "PER054-INT-001",
               "action": "Analyst opens assigned FraudCase from queue in SVC-013 case management UI",
-              "systems_used": ["SVC-013 (FraudCase detail)", "SVC-001 (PaymentIntent and Account read)", "SVC-009 (PaymentExecution read)"],
+              "systems_used": ["SVC-013", "SVC-001", "SVC-009"],
               "data_accessed": [
                 "PaymentIntent: amount, payee_sort_code, payee_account_number, cop_result, cop_override_confirmed, fraud_score, fraud_risk_level",
                 "PaymentExecution: fps_reference, settlement_status, receiving_sort_code",
@@ -185,7 +185,7 @@
             {
               "interaction_id": "PER054-INT-002",
               "action": "Full investigation against PSR eligibility framework",
-              "systems_used": ["SVC-013", "SVC-017 (device/session data)", "SVC-014 (vulnerability/KYC data)", "Cifas National Fraud Database", "Internal mule account database"],
+              "systems_used": ["SVC-013", "SVC-017", "SVC-014", "Cifas National Fraud Database", "Internal mule account database"],
               "decisions_made": [
                 "PSR eligibility assessment documented",
                 "Gross negligence assessment with evidence references",
@@ -242,7 +242,7 @@
       "persona_id": "PER-052",
       "persona_name": "MLRO (Money Laundering Reporting Officer)",
       "role_in_journey": "Receives SAR referrals from the fraud investigation where organised fraud, mule networks, or internal collusion indicators are identified. Responsible for SAR decision (file or no further action) under POCA 2002 s330.",
-      "system_access": ["SVC-013 (FraudCase read — redacted, no customer-facing tipping-off risk)", "SVC-014 (full SAR and KYC/AML access)", "SVC-015 (MLRO case management UI)", "NCA SAR Online (via SVC-014)"],
+      "system_access": ["SVC-013", "SVC-014", "SVC-015", "NCA SAR Online (via SVC-014)"],
       "interactions_by_phase": [
         {
           "phase_id": "PH-066",
@@ -287,7 +287,7 @@
       "persona_id": "PER-059",
       "persona_name": "Senior Manager (Fraud Operations)",
       "role_in_journey": "Mandatory escalation point for high-value cases (reimbursement > £25,000) and all gross negligence decline decisions. Also authorises stop-the-clock decisions (EX-005) and Pay.UK dispute escalations (EX-002).",
-      "system_access": ["SVC-013 (full case access including decision approval workflow)", "SVC-001 (read)", "SVC-009 (ReimbursementClaim approval)"],
+      "system_access": ["SVC-013", "SVC-001", "SVC-009"],
       "interactions_by_phase": [
         {
           "phase_id": "PH-067",

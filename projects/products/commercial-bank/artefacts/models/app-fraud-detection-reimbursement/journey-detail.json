@@ -70,7 +70,7 @@
       "phase_id": "PH-065",
       "phase_name": "Case Creation",
       "description": "A Fraud Analyst (PER-054) is assigned to the case from the fraud operations queue. The analyst retrieves the original PaymentIntent (ENT-008) and PaymentExecution (ENT-009) records. Device data, session logs, and CoP result are gathered as initial evidence. A FraudEvidence record is created for each evidence item. The case status transitions to investigating.",
-      "responsible_persona": "PER-054 (Fraud Analyst)",
+      "responsible_persona": "PER-054",
       "activities": [
         "Retrieve PaymentIntent record from SVC-001 — confirms payment amount, payee details, CoP result, cop_override_confirmed, fraud_score, fraud_risk_level",
         "Retrieve PaymentExecution record from SVC-009 — confirms fps_reference, settlement status, receiving sort code",
@@ -87,7 +87,7 @@
       "phase_id": "PH-066",
       "phase_name": "Investigation",
       "description": "The Fraud Analyst conducts a full investigation, reviewing all available evidence against the PSR PS23/3 eligibility criteria. Key investigative questions: (1) Did the customer ignore explicit fraud warnings? (2) Did the CoP return a no_match that was overridden without reasonable justification? (3) Is there evidence the customer was acting in concert with the fraudster (professional fraud)? (4) Is the customer a vulnerable consumer requiring additional support? (5) Are there mule network indicators at the receiving sort code? The analyst also checks if a SAR referral is required to the MLRO (PER-052).",
-      "responsible_persona": "PER-054 (Fraud Analyst)",
+      "responsible_persona": "PER-054",
       "investigation_framework": {
         "psr_eligibility_criteria": [
           "Customer did not act with gross negligence (ignored explicit warnings, proceeded with no_match CoP without justification)",
@@ -113,7 +113,7 @@
       "phase_name": "Reimbursement Decision",
       "description": "The Fraud Analyst (or Senior Manager PER-059 for high-value or gross negligence cases) records the formal reimbursement decision. Three outcomes are possible: (1) Approve — full reimbursement up to £85,000. (2) Partial — contributory negligence applies; reimbursement reduced by a documented percentage. (3) Decline — gross negligence with documented evidence that meets the PSR standard of proof. The decision must be communicated to the customer within 5 business days of the original report via a regulated outcome letter.",
       "responsible_personas": {
-        "standard_cases": "PER-054 (Fraud Analyst)",
+        "standard_cases": "PER-054",
         "high_value_or_gross_negligence": "PER-059 (Senior Manager) — mandatory escalation for any case where: (a) reimbursement amount > £25,000, or (b) decision is Decline on gross negligence grounds"
       },
       "decision_outcomes": [
@@ -156,7 +156,7 @@
       "phase_id": "PH-069",
       "phase_name": "Recovery",
       "description": "SVC-009 manages the recovery of funds from the receiving PSP. The receiving PSP has a symmetric obligation under PSR PS23/3 to cooperate with the sending PSP's recovery claim. Outcomes: Full recovery (receiving PSP returns 50% share), Partial recovery, or Failed (receiving PSP disputes liability, mule account empty). For disputed claims, the bank can escalate to Pay.UK scheme dispute resolution. Recovery does not affect the customer's reimbursement — the customer has already been credited.",
-      "responsible_service": "SVC-009 (Domestic Payments)",
+      "responsible_service": "SVC-009",
       "activities": [
         "Receiving PSP responds to recovery claim (typically within 15 business days under scheme rules).",
         "SVC-009 updates ReimbursementClaim.recovery_status and recovery_amount.",
@@ -172,7 +172,7 @@
       "phase_id": "PH-070",
       "phase_name": "Case Closure",
       "description": "The Fraud Analyst records the final case outcome. FraudCase.status transitions to closed. The fraud pattern indicators from this case are fed back to SVC-013's ML model via a FraudPatternDetected event — this closes the loop between investigation outcomes and real-time detection accuracy. The PSR quarterly regulatory reporting counter is incremented. If a SAR was raised, the MLRO is notified of case closure.",
-      "responsible_persona": "PER-054 (Fraud Analyst)",
+      "responsible_persona": "PER-054",
       "activities": [
         "Record final case outcome and recovery result.",
         "Publish FraudPatternDetected event — payload contains anonymised pattern features (payee sort code patterns, social engineering typology, device indicators) as ML model training input to SVC-013.",
@@ -188,20 +188,20 @@
   "paths": {
     "happy_path": {
       "description": "Customer reports APP fraud via mobile app → FraudCase created (trigger_type = customer_report) → Fraud Analyst assigned within 4 hours → Investigation completed within 4 business days → Reimbursement approved (full) → Customer account credited within 5 business days → ReimbursementClaim raised against receiving PSP → Recovery attempted → Case closed → Pattern fed back to ML model.",
-      "phases": ["PH-064 (TR-002)", "PH-065", "PH-066", "PH-067 (approve)", "PH-068", "PH-069", "PH-070"]
+      "phases": ["PH-064", "PH-065", "PH-066", "PH-067", "PH-068", "PH-069", "PH-070"]
     },
     "alternative_paths": [
       {
         "path_id": "AP-001",
         "name": "Real-time Block — No Financial Loss",
         "description": "Payment is blocked in JRN-002 (fraud_risk_level = block). FraudCase created with trigger_type = realtime_block and total_loss_amount = 0. Customer is notified of the blocked payment in the mobile app. Fraud Analyst reviews the case for pattern quality and false-positive assessment. No reimbursement required. Case closed; FraudPatternDetected event published.",
-        "phases": ["PH-064 (TR-001)", "PH-065 (evidence review only)", "PH-070"]
+        "phases": ["PH-064", "PH-065", "PH-070"]
       },
       {
         "path_id": "AP-002",
         "name": "Partial Reimbursement — Contributory Negligence",
         "description": "Investigation establishes that the customer overrode a CoP no_match warning but is not fully grossly negligent (e.g. elderly customer with vulnerability indicators). Decision = partial reimbursement. Reimbursement amount documented with percentage justification. ReimbursementClaim raised for the partial amount. Customer receives outcome letter explaining the contributory negligence finding and FOS signpost.",
-        "phases": ["PH-064", "PH-065", "PH-066", "PH-067 (partial)", "PH-068", "PH-069", "PH-070"]
+        "phases": ["PH-064", "PH-065", "PH-066", "PH-067", "PH-068", "PH-069", "PH-070"]
       }
     ],
     "exception_paths": [
@@ -210,7 +210,7 @@
         "name": "Gross Negligence Decline",
         "description": "Investigation establishes gross negligence to the PSR standard (e.g. customer ignored multiple explicit fraud warnings, overrode no_match CoP without vulnerability factors, provided false claim details). Decision = decline. gross_negligence_evidence documented and immutably stored. Outcome letter dispatched within 5 business days with clear explanation and FOS signpost. Senior Manager (PER-059) must co-sign the decline. Case escalated to Senior Manager for sign-off before outcome letter is issued.",
         "escalation_required": true,
-        "escalating_persona": "PER-059 (Senior Manager)",
+        "escalating_persona": "PER-059",
         "regulatory_note": "PSR PS23/3 — bank bears burden of proof for gross negligence. FOS receives a significant volume of APP fraud complaints. Evidence must be complete and proportionate."
       },
       {
@@ -218,21 +218,21 @@
         "name": "Receiving PSP Disputes Liability",
         "description": "Receiving PSP contests the 50/50 cost split, claiming the sending bank failed to perform adequate fraud controls. SVC-009 escalates the ReimbursementClaim to Pay.UK scheme dispute resolution. Senior Manager (PER-059) authorises the dispute submission. Timeline extends beyond standard recovery window. Customer is unaffected — reimbursement has already been credited.",
         "escalation_required": true,
-        "escalating_persona": "PER-059 (Senior Manager)"
+        "escalating_persona": "PER-059"
       },
       {
         "path_id": "EX-003",
         "name": "Repeat Victim — Enhanced Vulnerability Assessment",
         "description": "PER-001 has submitted a previous APP fraud claim within 12 months. Mandatory enhanced vulnerability assessment performed before proceeding to standard investigation. MLRO (PER-052) notified. Investigation considers whether this bank's safeguards are adequate for this customer's vulnerability level. If confirmed vulnerable: standard gross negligence threshold does not apply; full reimbursement subject only to fraud-by-customer exclusion.",
         "escalation_required": true,
-        "escalating_persona": "PER-052 (MLRO)"
+        "escalating_persona": "PER-052"
       },
       {
         "path_id": "EX-004",
         "name": "Mule Account Detected at This Bank",
         "description": "Investigation reveals that the receiving account is held at this bank (identified via the receiving sort code matching the bank's own sort code range). The receiving account is an internal mule. This triggers a separate financial crime investigation by the MLRO (PER-052). The receiving account is immediately frozen (Account.status = frozen). SAR is raised to NCA UKFIU. The fraud case proceeds to reimbursement on the normal timeline — the internal mule account investigation is parallel.",
         "escalation_required": true,
-        "escalating_persona": "PER-052 (MLRO)",
+        "escalating_persona": "PER-052",
         "parallel_process": "JRN-003 (SAR Filing) is triggered in parallel"
       },
       {
@@ -240,7 +240,7 @@
         "name": "Stop-the-Clock — Suspected Fraud-by-Customer",
         "description": "During investigation, the Fraud Analyst identifies indicators that the customer may have made the payment knowingly and is making a false claim. The PSR allows the 5-business-day clock to be stopped pending further investigation. Senior Manager (PER-059) must authorise the stop-the-clock decision. Customer must be notified that additional time is needed. If fraud-by-customer is established: case declined with full documentation; referral to Action Fraud.",
         "escalation_required": true,
-        "escalating_persona": "PER-059 (Senior Manager)"
+        "escalating_persona": "PER-059"
       }
     ]
   }

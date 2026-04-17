@@ -5,9 +5,9 @@
   "scenario": "isa-allowance-exceeded",
   "description": "Customer attempts to deposit to Cash ISA but the amount would exceed the £20,000 annual allowance. Deposit rejected with regulatory explanation.",
   "participants": [
-    {"id": "Customer", "label": "PER-001 (Customer)", "type": "actor"},
-    {"id": "Channel", "label": "SVC-017 (Digital Channels)", "type": "service"},
-    {"id": "RetailBanking", "label": "SVC-001 (Retail Banking Core)", "type": "service"}
+    {"id": "Customer", "label": "PER-001", "type": "actor"},
+    {"id": "Channel", "label": "SVC-017", "type": "service"},
+    {"id": "RetailBanking", "label": "SVC-001", "type": "service"}
   ],
   "steps": [
     {"step": 1, "from": "Customer", "to": "Channel", "type": "sync", "action": "POST /savings/accounts/{id}/deposits {amount: '6000.00'} — subscription_used already £15,000", "phase": "PH-110"},

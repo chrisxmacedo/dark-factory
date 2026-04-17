@@ -5,12 +5,12 @@
   "scenario": "sanctions-hit",
   "description": "Sanctions screening during CDD review returns a hit on a UBO. Account suspended. MLRO notified. OFSI notification workflow initiated. Relationship exit escalated.",
   "participants": [
-    {"id": "Compliance", "label": "SVC-015 (Compliance Core)", "type": "service"},
-    {"id": "KYC", "label": "SVC-014 (KYC/AML Service)", "type": "service"},
-    {"id": "EventBus", "label": "SVC-102 (Event Bus)", "type": "infrastructure"},
-    {"id": "CommBanking", "label": "SVC-005 (Commercial Banking Core)", "type": "service"},
-    {"id": "Audit", "label": "SVC-103 (Audit & Logging)", "type": "service"},
-    {"id": "CompOfficer", "label": "PER-052 (Compliance Officer)", "type": "actor"}
+    {"id": "Compliance", "label": "SVC-015", "type": "service"},
+    {"id": "KYC", "label": "SVC-014", "type": "service"},
+    {"id": "EventBus", "label": "SVC-102", "type": "infrastructure"},
+    {"id": "CommBanking", "label": "SVC-005", "type": "service"},
+    {"id": "Audit", "label": "SVC-103", "type": "service"},
+    {"id": "CompOfficer", "label": "PER-052", "type": "actor"}
   ],
   "steps": [
     {"step": 1, "from": "KYC", "to": "KYC", "type": "internal", "action": "Sanctions screening returns OFSI hit on UBO", "phase": "PH-104"},

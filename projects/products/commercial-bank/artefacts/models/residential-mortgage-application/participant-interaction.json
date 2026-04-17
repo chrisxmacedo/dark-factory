@@ -151,13 +151,13 @@
         "phase_id": "PH-010",
         "active_participants": ["PER-001"],
         "primary_actor": "PER-001",
-        "automated_services": ["SVC-002 (affordability)", "SVC-012 (credit check via EVT-022/EVT-023)"]
+        "automated_services": ["SVC-002", "SVC-012"]
       },
       {
         "phase_id": "PH-011",
         "active_participants": ["PER-001"],
         "primary_actor": "PER-001",
-        "automated_services": ["SVC-002", "SVC-012 (hard credit check)", "SVC-014 (AML check)"]
+        "automated_services": ["SVC-002", "SVC-012", "SVC-014"]
       },
       {
         "phase_id": "PH-012",
@@ -167,15 +167,15 @@
       },
       {
         "phase_id": "PH-013",
-        "active_participants": ["PER-055", "PER-051 (complex cases only)"],
+        "active_participants": ["PER-055", "PER-051"],
         "primary_actor": "PER-055",
-        "observer_participants": ["PER-001 (notified of outcome only)"]
+        "observer_participants": ["PER-001"]
       },
       {
         "phase_id": "PH-014",
         "active_participants": ["PER-001", "PER-055", "EXT-002"],
         "primary_actor": "PER-001",
-        "automated_services": ["SVC-002 (offer generation)"]
+        "automated_services": ["SVC-002"]
       },
       {
         "phase_id": "PH-015",

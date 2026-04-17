@@ -5,13 +5,13 @@
   "scenario": "deadline-breach",
   "description": "Complaint not resolved within 8 weeks. A Holding Response is dispatched to the customer granting immediate FOS referral rights. Compliance incident raised.",
   "participants": [
-    {"id": "Agent", "label": "PER-062 (Customer Service Agent)", "type": "actor"},
-    {"id": "Channel", "label": "SVC-017 (Digital Channels)", "type": "service"},
-    {"id": "RetailBanking", "label": "SVC-001 (Retail Banking Core)", "type": "service"},
-    {"id": "EventBus", "label": "SVC-102 (Event Bus)", "type": "infrastructure"},
-    {"id": "Compliance", "label": "SVC-015 (Compliance Core)", "type": "service"},
-    {"id": "Notifications", "label": "SVC-053 (Notifications)", "type": "service"},
-    {"id": "ComplianceOfficer", "label": "PER-052 (Compliance Officer)", "type": "actor"}
+    {"id": "Agent", "label": "PER-062", "type": "actor"},
+    {"id": "Channel", "label": "SVC-017", "type": "service"},
+    {"id": "RetailBanking", "label": "SVC-001", "type": "service"},
+    {"id": "EventBus", "label": "SVC-102", "type": "infrastructure"},
+    {"id": "Compliance", "label": "SVC-015", "type": "service"},
+    {"id": "Notifications", "label": "SVC-053", "type": "service"},
+    {"id": "ComplianceOfficer", "label": "PER-052", "type": "actor"}
   ],
   "steps": [
     {

@@ -9,7 +9,7 @@
       "id": "PH-136",
       "name": "Target Market Assessment and Fair Value Check",
       "description": "A personal customer selects a Premier Account upgrade in the mobile app which includes travel insurance underwritten by a third-party insurer (Aviva). SVC-004 (Insurance Distribution Service) performs the FCA PROD target market assessment: verifying the customer fits the identified target market (age 18-75, UK resident, frequent traveller). A fair value assessment confirms the insurance premium provides adequate cover relative to cost. The customer is presented with the IPID (Insurance Product Information Document) and Key Features Document per ICOBS.",
-      "actors": ["PER-001 (Customer)", "SVC-017 (Digital Channels)", "SVC-004 (Insurance Distribution Service)"],
+      "actors": ["PER-001", "SVC-017", "SVC-004"],
       "services": ["SVC-017", "SVC-004"],
       "governance_rules": ["GOV-001-R06"],
       "entry_conditions": [
@@ -27,7 +27,7 @@
       "id": "PH-137",
       "name": "Customer Acceptance and Policy Binding",
       "description": "Customer reviews IPID and Key Features Document and accepts. SVC-004 binds the insurance policy with the underwriter (Aviva) via an API call. A policy number is issued. SVC-004 creates an InsurancePolicy record. EVT-167 InsurancePolicyBound is published.",
-      "actors": ["PER-001 (Customer)", "SVC-017 (Digital Channels)", "SVC-004 (Insurance Distribution Service)"],
+      "actors": ["PER-001", "SVC-017", "SVC-004"],
       "services": ["SVC-017", "SVC-004"],
       "governance_rules": ["GOV-001-R06"],
       "entry_conditions": [
@@ -45,7 +45,7 @@
       "id": "PH-138",
       "name": "Account Fee Update and Consumer Duty Recording",
       "description": "SVC-001 (Retail Banking Core) updates the current account to Premier Account with the monthly fee reflecting the insurance bundle. The Consumer Duty evidence trail is saved: target market assessment result, fair value assessment result, IPID acknowledgement, and policy binding confirmation. Customer can view and cancel the insurance policy within the bank's app.",
-      "actors": ["PER-001 (Customer)", "SVC-001 (Retail Banking Core)", "SVC-004 (Insurance Distribution Service)"],
+      "actors": ["PER-001", "SVC-001", "SVC-004"],
       "services": ["SVC-001", "SVC-004"],
       "governance_rules": ["GOV-001-R06"],
       "entry_conditions": [

@@ -141,8 +141,8 @@
     }
   ],
   "cross_service_interaction_summary": [
-    "SVC-017 (CAP-007) → SVC-009 (CAP-003): VRP consent creation and payment execution requests — internal sync via capability boundary (Channel → Capability API pattern)",
-    "SVC-009 (CAP-003) → SVC-013 (CAP-004): Fraud scoring for VRP payment — real-time inline call for latency reasons (within payment execution critical path)",
+    "SVC-017",
+    "SVC-009",
     "SVC-009 (CAP-003) → EVT-156/157/158 → SVC-001 (CAP-001), SVC-053 (CAP-007), SVC-103 (CAP-008): All post-processing async via Event Bus"
   ]
 }

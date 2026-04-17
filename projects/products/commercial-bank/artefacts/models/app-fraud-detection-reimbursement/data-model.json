@@ -9,7 +9,7 @@
       "name": "FraudCase",
       "description": "The aggregate root for an APP fraud investigation. Created by SVC-013 (Fraud Detection) on either a real-time payment block (trigger_type = realtime_block) or a customer report (trigger_type = customer_report). Tracks the full investigation lifecycle from creation through to case closure. Acts as the parent record for all FraudEvidence and the source for the ReimbursementClaim. Retained in WORM storage for 7 years from case closure.",
       "owning_service": "SVC-013",
-      "capability_domain": "CAP-004 (Fraud Detection)",
+      "capability_domain": "CAP-004",
       "aggregate_root": true,
       "fields": [
         {
@@ -253,7 +253,7 @@
       "name": "FraudEvidence",
       "description": "Represents a single piece of evidence collected during the fraud investigation. Each FraudEvidence record belongs to one FraudCase. Evidence is created by the Fraud Analyst (PER-054) during PH-065 (Case Creation) and PH-066 (Investigation). Evidence records are append-only — existing records cannot be modified or deleted (immutable audit trail requirement). All evidence archived to WORM store on case closure.",
       "owning_service": "SVC-013",
-      "capability_domain": "CAP-004 (Fraud Detection)",
+      "capability_domain": "CAP-004",
       "aggregate_root": false,
       "fields": [
         {
@@ -334,7 +334,7 @@
       "name": "ReimbursementClaim",
       "description": "Tracks the 50/50 cost split between the sending bank and the receiving PSP under PSR PS23/3. Created by SVC-009 (Domestic Payments) on receipt of the FraudReimbursementApproved event. SVC-009 owns this entity because it is the service responsible for FPS scheme interactions — including the Pay.UK reimbursement mechanism used to submit recovery claims to the receiving PSP. One ReimbursementClaim per FraudCase. Receiving PSP recovery status is tracked from submission through to completion or failure.",
       "owning_service": "SVC-009",
-      "capability_domain": "CAP-003 (Payment Operations)",
+      "capability_domain": "CAP-003",
       "aggregate_root": false,
       "fields": [
         {

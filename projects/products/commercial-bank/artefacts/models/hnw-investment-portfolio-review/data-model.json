@@ -30,12 +30,12 @@
         {"name": "updated_at", "type": "ISO 8601 UTC datetime", "validation": "not null; updated on each status transition", "source": "JRN-015 PH-071"}
       ],
       "relationships": [
-        {"entity": "ENT-047 (SuitabilityAssessment)", "type": "one-to-one", "note": "One PortfolioReviewRecord has one SuitabilityAssessment per review cycle"},
-        {"entity": "ENT-048 (RebalancingRecommendation)", "type": "one-to-one", "note": "One PortfolioReviewRecord has one RebalancingRecommendation"},
-        {"entity": "ENT-049 (InvestmentInstruction)", "type": "one-to-one", "note": "One PortfolioReviewRecord has one InvestmentInstruction capturing the client's decision"},
-        {"entity": "ENT-050 (PortfolioSnapshot)", "type": "one-to-many", "note": "Multiple snapshots per review: pre-review and post-rebalancing"},
-        {"entity": "ENT-051 (ConsumerDutyEvidenceRecord)", "type": "one-to-one", "note": "One Consumer Duty evidence record per review cycle"},
-        {"entity": "ENT-001 (Customer)", "type": "reference", "note": "CAP-001 entity; referenced by client_id; not owned by SVC-016"}
+        {"entity": "ENT-047", "type": "one-to-one", "note": "One PortfolioReviewRecord has one SuitabilityAssessment per review cycle"},
+        {"entity": "ENT-048", "type": "one-to-one", "note": "One PortfolioReviewRecord has one RebalancingRecommendation"},
+        {"entity": "ENT-049", "type": "one-to-one", "note": "One PortfolioReviewRecord has one InvestmentInstruction capturing the client's decision"},
+        {"entity": "ENT-050", "type": "one-to-many", "note": "Multiple snapshots per review: pre-review and post-rebalancing"},
+        {"entity": "ENT-051", "type": "one-to-one", "note": "One Consumer Duty evidence record per review cycle"},
+        {"entity": "ENT-001", "type": "reference", "note": "CAP-001 entity; referenced by client_id; not owned by SVC-016"}
       ],
       "design_decisions": [
         {
@@ -86,8 +86,8 @@
         {"name": "issued_at", "type": "ISO 8601 UTC datetime", "validation": "nullable; set when suitability report is issued to client", "source": "JRN-015 PH-074"}
       ],
       "relationships": [
-        {"entity": "ENT-046 (PortfolioReviewRecord)", "type": "belongs-to", "note": "Each SuitabilityAssessment belongs to one PortfolioReviewRecord"},
-        {"entity": "ENT-048 (RebalancingRecommendation)", "type": "one-to-one", "note": "The suitability assessment provides the basis for the rebalancing recommendation"}
+        {"entity": "ENT-046", "type": "belongs-to", "note": "Each SuitabilityAssessment belongs to one PortfolioReviewRecord"},
+        {"entity": "ENT-048", "type": "one-to-one", "note": "The suitability assessment provides the basis for the rebalancing recommendation"}
       ],
       "design_decisions": [
         {
@@ -129,9 +129,9 @@
         {"name": "updated_at", "type": "ISO 8601 UTC datetime", "validation": "not null", "source": "JRN-015 PH-073"}
       ],
       "relationships": [
-        {"entity": "ENT-046 (PortfolioReviewRecord)", "type": "belongs-to"},
-        {"entity": "ENT-047 (SuitabilityAssessment)", "type": "belongs-to"},
-        {"entity": "ENT-049 (InvestmentInstruction)", "type": "one-to-one", "note": "Client instructions reference the recommendation"}
+        {"entity": "ENT-046", "type": "belongs-to"},
+        {"entity": "ENT-047", "type": "belongs-to"},
+        {"entity": "ENT-049", "type": "one-to-one", "note": "Client instructions reference the recommendation"}
       ],
       "design_decisions": [
         {
@@ -166,9 +166,9 @@
         {"name": "created_at", "type": "ISO 8601 UTC datetime", "validation": "not null; immutable", "source": "JRN-015 PH-074"}
       ],
       "relationships": [
-        {"entity": "ENT-046 (PortfolioReviewRecord)", "type": "belongs-to"},
-        {"entity": "ENT-048 (RebalancingRecommendation)", "type": "belongs-to"},
-        {"entity": "ENT-050 (PortfolioSnapshot)", "type": "one-to-one", "note": "Post-execution snapshot taken after all orders confirmed"}
+        {"entity": "ENT-046", "type": "belongs-to"},
+        {"entity": "ENT-048", "type": "belongs-to"},
+        {"entity": "ENT-050", "type": "one-to-one", "note": "Post-execution snapshot taken after all orders confirmed"}
       ],
       "design_decisions": [
         {
@@ -215,8 +215,8 @@
         {"name": "cash_balance_gbp", "type": "decimal", "validation": "nullable; populated from ALT-002 cross-capability event if included in holistic view", "source": "JRN-015 ALT-002"}
       ],
       "relationships": [
-        {"entity": "ENT-046 (PortfolioReviewRecord)", "type": "belongs-to"},
-        {"entity": "ENT-049 (InvestmentInstruction)", "type": "referenced-by", "note": "Post-rebalancing snapshot is linked from the InvestmentInstruction"}
+        {"entity": "ENT-046", "type": "belongs-to"},
+        {"entity": "ENT-049", "type": "referenced-by", "note": "Post-rebalancing snapshot is linked from the InvestmentInstruction"}
       ],
       "design_decisions": [
         {
@@ -256,7 +256,7 @@
         {"name": "created_at", "type": "ISO 8601 UTC datetime", "validation": "not null; immutable", "source": "JRN-015 PH-076"}
       ],
       "relationships": [
-        {"entity": "ENT-046 (PortfolioReviewRecord)", "type": "belongs-to"}
+        {"entity": "ENT-046", "type": "belongs-to"}
       ],
       "design_decisions": [
         {

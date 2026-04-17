@@ -114,7 +114,7 @@
         "Channel renders confirmation screen: payee name (CoP-verified), amount, currency, FPS reference, timestamp",
         "SVC-053 dispatches payment confirmation notification (push notification to mobile, email confirmation to registered email address)",
         "SVC-103 records completed payment in audit log",
-        "SVC-014 (KYC/AML) consumes AccountDebited for ongoing transaction monitoring (GOV-005-R01)"
+        "SVC-014"
       ],
       "exit_condition": "Customer views confirmation screen; payment confirmation notification dispatched",
       "governance_references": ["GOV-003-R01", "GOV-003-R02"]
@@ -139,7 +139,7 @@
       "name": "Scheduled Payment (Future-Dated)",
       "description": "Customer selects a future payment date. PaymentIntent is created with status = scheduled and payment_date set to a future date. No immediate screening is triggered. On the payment_date, a scheduled job re-triggers the screening flow (PH-148 → PH-151). Customer can cancel at any time before processing begins.",
       "diverges_at": "PH-147",
-      "rejoins_at": "PH-148 (on scheduled execution date)",
+      "rejoins_at": "PH-148",
       "additional_events": ["PaymentScheduled (variant of PaymentIntentCreated with future payment_date)"],
       "governance_references": ["GOV-003-R01"]
     },
@@ -147,8 +147,8 @@
       "path_id": "ALT-002",
       "name": "Confirmation of Payee — Partial Match",
       "description": "CoP returns a partial match (payee name similar but not exact). The channel displays a PSR SD17-compliant risk warning. Customer must actively confirm intent to proceed — passive timeout is not acceptable (GOV-003-R02). Customer proceeds → payment creation flow continues from SCA step.",
-      "diverges_at": "PH-147 (at CoP result display)",
-      "rejoins_at": "PH-147 (after active customer confirmation)",
+      "diverges_at": "PH-147",
+      "rejoins_at": "PH-147",
       "customer_action_required": "Explicit confirmation click — cannot be a timeout or passive action",
       "governance_references": ["GOV-003-R02"]
     },
@@ -156,8 +156,8 @@
       "path_id": "ALT-003",
       "name": "Confirmation of Payee — No Match",
       "description": "CoP returns a no match. Channel displays prominent APP fraud risk warning. Customer must read and explicitly confirm to proceed. Channel records the customer override decision in the PaymentIntent audit trail (required for PSR APP fraud reimbursement gross negligence defence assessment).",
-      "diverges_at": "PH-147 (at CoP result display)",
-      "rejoins_at": "PH-147 (after active customer override)",
+      "diverges_at": "PH-147",
+      "rejoins_at": "PH-147",
       "customer_action_required": "Explicit 'I understand the risk and want to proceed' confirmation — with recorded timestamp",
       "governance_references": ["GOV-003-R01", "GOV-003-R02"],
       "app_fraud_reimbursement_note": "CoP override is not automatic disqualification from APP fraud reimbursement. Gross negligence standard under PSR PS23/3 requires the customer to have explicitly been warned and to have acted unreasonably. Override is audit-recorded but does not automatically forfeit reimbursement entitlement."

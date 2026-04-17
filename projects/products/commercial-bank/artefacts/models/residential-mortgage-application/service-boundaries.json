@@ -14,7 +14,7 @@
     {
       "service_id": "SVC-002",
       "service_name": "Mortgage Service",
-      "capability_domain": "CAP-001 (Retail Banking — Mortgages sub-capability)",
+      "capability_domain": "CAP-001",
       "tier": "T2",
       "description": "Owns the end-to-end mortgage application lifecycle. Created as a promoted sub-capability of CAP-001. Holds all mortgage-specific entities. Communicates with SVC-001 (same capability) via direct API for customer data. Communicates with SVC-012 (Risk Engine, CAP-004) and SVC-014 (KYC/AML, CAP-005) exclusively via async events through SVC-102.",
       "owned_entities": [
@@ -48,7 +48,7 @@
           "event_id": "EVT-023",
           "event_name": "CreditCheckCompleted",
           "provider_service_id": "SVC-012",
-          "provider_capability": "CAP-004 (Risk Management)",
+          "provider_capability": "CAP-004",
           "communication_pattern": "async — cross-capability boundary. SVC-002 subscribes via SVC-102 event bus.",
           "purpose": "SVC-002 receives the credit score and credit decision from the Risk Engine. Updates MortgageApplication with credit outcome. For DIP: if pass, proceeds to issue DIP (EVT-021). For full application: credit result stored for underwriter review. Idempotent on application_id + check_type (soft|hard)."
         }
@@ -57,7 +57,7 @@
         {
           "provider_service_id": "SVC-001",
           "provider_service_name": "Retail Banking Core",
-          "capability": "CAP-001 (same capability)",
+          "capability": "CAP-001",
           "call_pattern": "Synchronous (direct API call — same-capability permitted)",
           "purpose": "SVC-002 calls SVC-001 GET /customers/{id} to fetch Customer data (name, address, date of birth) required for mortgage application, ESIS document generation, and offer issuance. No local copy of Customer fields maintained in SVC-002.",
           "dependency_criticality": "hard"
@@ -112,7 +112,7 @@
     {
       "service_id": "SVC-012",
       "service_name": "Risk Engine",
-      "capability_domain": "CAP-004 (Risk Management)",
+      "capability_domain": "CAP-004",
       "tier": "T1",
       "description": "Provides credit scoring and risk assessment services. Consumed by SVC-002 exclusively via async events. SVC-012 receives CreditCheckRequested (EVT-022) from SVC-002, calls the credit bureau, and publishes CreditCheckCompleted (EVT-023) back to SVC-102.",
       "owned_entities": [],
@@ -122,7 +122,7 @@
           "event_id": "EVT-022",
           "event_name": "CreditCheckRequested",
           "provider_service_id": "SVC-002",
-          "provider_capability": "CAP-001 (Retail Banking)",
+          "provider_capability": "CAP-001",
           "communication_pattern": "async — cross-capability boundary. SVC-012 subscribes via SVC-102 event bus.",
           "purpose": "SVC-012 receives a credit check request from SVC-002. Calls the credit bureau (Experian/Equifax/TransUnion) with customer identity data. Publishes CreditCheckCompleted (EVT-023) with the credit score, credit decision, and credit report reference. Supports both soft check (DIP, no bureau footprint) and hard check (full application, footprint recorded)."
         }
@@ -133,7 +133,7 @@
     {
       "service_id": "SVC-014",
       "service_name": "KYC/AML Service",
-      "capability_domain": "CAP-005 (Compliance & Regulatory)",
+      "capability_domain": "CAP-005",
       "tier": "T1",
       "description": "Provides KYC identity checks for new mortgage applicants who are not existing bank customers, and AML property source-of-funds checks required under MLR 2017 for property transactions. All communication with SVC-002 is via async events across the CAP-001 / CAP-005 boundary.",
       "owned_entities": ["ENT-003"],
@@ -143,7 +143,7 @@
           "event_id": "EVT-020",
           "event_name": "MortgageEnquiryStarted",
           "provider_service_id": "SVC-002",
-          "provider_capability": "CAP-001 (Retail Banking)",
+          "provider_capability": "CAP-001",
           "communication_pattern": "async — cross-capability boundary",
           "purpose": "JRN-006: SVC-014 checks whether the customer_id is an existing bank customer with active KYC. If new customer, SVC-014 initiates KYC workflow. If existing customer with valid KYC, SVC-014 publishes KYCClearanceGranted (EVT-004) without requiring new CDD."
         },
@@ -151,7 +151,7 @@
           "event_id": "EVT-022",
           "event_name": "CreditCheckRequested",
           "provider_service_id": "SVC-002",
-          "provider_capability": "CAP-001 (Retail Banking)",
+          "provider_capability": "CAP-001",
           "communication_pattern": "async — cross-capability boundary",
           "purpose": "JRN-006: SVC-014 listens for full application credit check requests to trigger AML source-of-funds check on the property purchase amount. AML check runs in parallel with credit check."
         }
@@ -162,7 +162,7 @@
     {
       "service_id": "SVC-001",
       "service_name": "Retail Banking Core",
-      "capability_domain": "CAP-001 (Retail Banking)",
+      "capability_domain": "CAP-001",
       "tier": "T2",
       "description": "Same-capability peer to SVC-002. SVC-002 may call SVC-001 directly (synchronous) to read Customer data. SVC-001 links MortgageAccount (ENT-016) to the customer's current Account (ENT-004) for direct debit purposes via the Bacs mandate reference. No entity ownership crosses between the two services.",
       "integration_with_svc002": {
@@ -189,19 +189,19 @@
         "from": "SVC-002",
         "to": "SVC-012",
         "boundary": "CAP-001 → CAP-004",
-        "events": ["EVT-022 (published by SVC-002)", "EVT-023 (consumed by SVC-002)"]
+        "events": ["EVT-022", "EVT-023"]
       },
       {
         "from": "SVC-002",
         "to": "SVC-014",
         "boundary": "CAP-001 → CAP-005",
-        "events": ["EVT-020 (consumed by SVC-014)", "EVT-004/EVT-005/EVT-006 (consumed by SVC-002)"]
+        "events": ["EVT-020", "EVT-004/EVT-005/EVT-006 (consumed by SVC-002)"]
       },
       {
         "from": "SVC-002",
         "to": "SVC-001",
         "boundary": "CAP-001 intra — event notification only",
-        "events": ["EVT-029 (MortgageCompleted)", "EVT-030 (MortgageAccountOpened) consumed by SVC-001 via event bus"]
+        "events": ["EVT-029", "EVT-030 (MortgageAccountOpened) consumed by SVC-001 via event bus"]
       }
     ]
   }

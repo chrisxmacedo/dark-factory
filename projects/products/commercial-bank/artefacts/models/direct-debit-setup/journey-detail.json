@@ -160,7 +160,7 @@
       "path_id": "ALT-DD-001",
       "name": "Paper Mandate / Originator-Initiated AUDDIS",
       "description": "Customer completes a paper mandate with the originator. The originator submits via AUDDIS directly to the bank's BACS infrastructure. PH-046 begins with AUDDIS 0N receipt by SVC-009 rather than a digital channel API call. No SCA required (originator is the initiating party). Bank still notifies customer on DDI activation (PH-048).",
-      "diverges_at": "PH-046 (AUDDIS-initiated rather than channel-initiated)",
+      "diverges_at": "PH-046",
       "rejoins_at": "PH-047",
       "governance_references": ["AUDDIS scheme rules"]
     },
@@ -168,7 +168,7 @@
       "path_id": "ALT-DD-002",
       "name": "Variable Amount Direct Debit",
       "description": "DirectDebitInstruction.amount_type = variable. Originator submits different amounts for different collections. Validation at PH-049 checks that the amount is within any agreed parameters. Customer receives advance notice of each collection amount at D-2 (Consumer Duty best practice for variable DDs).",
-      "diverges_at": "PH-049 (variable amount validation)",
+      "diverges_at": "PH-049",
       "rejoins_at": "PH-050",
       "governance_references": ["Consumer Duty — advance notice for variable amounts"]
     },

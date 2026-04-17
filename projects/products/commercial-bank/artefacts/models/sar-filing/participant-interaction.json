@@ -15,7 +15,7 @@
       "authentication_requirements": "Step-up MFA required for SAR workflow access — beyond standard employee authentication. Hardware token or biometric required. Separate role-gated application — not accessible from standard compliance desktop.",
       "interactions_by_phase": [
         {
-          "phase": "PH-152 (Suspicion Trigger)",
+          "phase": "PH-152",
           "actions": [
             "Receives secure internal notification of new trigger (automated event or staff disclosure)",
             "Reviews trigger details in SARInvestigationRecord",
@@ -37,7 +37,7 @@
           ]
         },
         {
-          "phase": "PH-153 (MLRO Investigation)",
+          "phase": "PH-153",
           "actions": [
             "Reads Customer record (ENT-001) — full identity data",
             "Reads KycAssessment (ENT-003) — PEP/sanctions screening results, risk score, EDD history",
@@ -59,7 +59,7 @@
           "data_masked": []
         },
         {
-          "phase": "PH-154 (SAR Decision)",
+          "phase": "PH-154",
           "actions": [
             "Records formal decision (file_sar | file_defensive_sar | dismiss)",
             "Documents decision rationale — must be specific and legally defensible",
@@ -70,7 +70,7 @@
           "data_created": ["SuspiciousActivityReport (ENT-008) — if filing decision"]
         },
         {
-          "phase": "PH-155 (SAR Preparation)",
+          "phase": "PH-155",
           "actions": [
             "Completes NCA SAR form fields in SVC-014 case management",
             "Reviews draft SAR for completeness and accuracy",
@@ -87,7 +87,7 @@
           ]
         },
         {
-          "phase": "PH-156 (SAR Submission)",
+          "phase": "PH-156",
           "actions": [
             "Triggers SAR submission to NCA SAR Online",
             "Reviews NCA acknowledgement and reference number",
@@ -103,7 +103,7 @@
           ]
         },
         {
-          "phase": "PH-157 (Post-Filing Actions)",
+          "phase": "PH-157",
           "actions": [
             "Monitors NCA consent response via SAR Online (if consent SAR)",
             "Determines whether account restrictions are required",
@@ -184,28 +184,28 @@
     "description": "Summary of all notifications in this journey — confirms customer receives nothing",
     "notifications": [
       {
-        "recipient": "PER-052 (MLRO)",
+        "recipient": "PER-052",
         "trigger": "SARInvestigationOpened (EVT-014)",
         "channel": "Secure internal case management system",
         "content_summary": "New investigation trigger alert",
         "customer_facing": false
       },
       {
-        "recipient": "PER-052 (MLRO)",
+        "recipient": "PER-052",
         "trigger": "NCA submission acknowledgement",
         "channel": "Secure internal case management system",
         "content_summary": "SAR submission confirmation with NCA reference",
         "customer_facing": false
       },
       {
-        "recipient": "PER-052 (MLRO)",
+        "recipient": "PER-052",
         "trigger": "SLA warning — 4 business days elapsed since decision",
         "channel": "Secure internal case management system — automated SLA alert",
         "content_summary": "SAR SLA warning: 1 business day remaining to file",
         "customer_facing": false
       },
       {
-        "recipient": "PER-001 (Customer)",
+        "recipient": "PER-001",
         "trigger": "ANY",
         "channel": "ANY",
         "content_summary": "NO NOTIFICATION — tipping-off prohibition strictly applied. Zero communications to customer.",

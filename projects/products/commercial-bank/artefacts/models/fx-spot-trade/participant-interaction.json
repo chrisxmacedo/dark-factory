@@ -82,7 +82,7 @@
       "participant_id": "SVC-007",
       "participant_name": "Treasury Services",
       "participant_type": "service",
-      "capability": "CAP-002 (Commercial Banking — Treasury Services CAP-002.04 PROMOTED)",
+      "capability": "CAP-002",
       "role_in_journey": "Primary orchestrating service for JRN-014. Creates and manages FXTrade (ENT-040), FXQuote (ENT-041), FXSettlement (ENT-042). Enforces 30-second quote validity. Gates settlement on sanctions clearance. Triggers MiFIR transaction reporting.",
       "phases_active": ["PH-059", "PH-060", "PH-061", "PH-062", "PH-063"]
     },
@@ -90,7 +90,7 @@
       "participant_id": "SVC-005",
       "participant_name": "Commercial Banking Core",
       "participant_type": "service",
-      "capability": "CAP-002 (Commercial Banking)",
+      "capability": "CAP-002",
       "role_in_journey": "Called synchronously by SVC-007 (same-capability) for: BusinessCustomer status validation at enquiry; sell-currency account balance check before execution; account debit (sell leg) and credit (buy leg) at settlement.",
       "phases_active": ["PH-059", "PH-061", "PH-063"]
     },
@@ -98,7 +98,7 @@
       "participant_id": "SVC-051",
       "participant_name": "Sanctions Screening Service",
       "participant_type": "service",
-      "capability": "CAP-005 (Compliance & Regulatory)",
+      "capability": "CAP-005",
       "role_in_journey": "Consumes EVT-089 (FXCounterpartySanctionsScreened) — cross-capability async event. Screens the counterparty against OFSI, OFAC, UN, and HM Treasury sanctions lists. Publishes result; if hit detected, SVC-007 receives notification and blocks FXSettlement.",
       "phases_active": ["PH-061", "PH-062"],
       "communication_pattern": "Cross-capability async only — event-driven via SVC-102"
@@ -107,7 +107,7 @@
       "participant_id": "SVC-010",
       "participant_name": "International Payments",
       "participant_type": "service",
-      "capability": "CAP-003 (Payment Operations — International Payments CAP-003.04)",
+      "capability": "CAP-003",
       "role_in_journey": "Consumes EVT-086 (FXTradeConfirmed) to transmit SWIFT MT300 confirmation. Consumes EVT-087 (FXSettlementInitiated) to execute nostro-to-nostro settlement on value_date. Publishes EVT-088 (FXSettlementCompleted) back to SVC-007.",
       "phases_active": ["PH-062", "PH-063"],
       "communication_pattern": "Cross-capability async only — event-driven via SVC-102"

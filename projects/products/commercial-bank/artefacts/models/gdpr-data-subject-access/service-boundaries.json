@@ -126,7 +126,7 @@
   "cross_service_interaction_summary": [
     "SVC-017 (CAP-007) → SVC-015 (CAP-005): SAR submission via Channel→Capability API pattern",
     "SVC-015 (CAP-005) → EVT-159 → SVC-001 (CAP-001): Cross-capability data extraction request; SVC-001 responds with data extract event",
-    "SVC-014 (CAP-005) ↔ SVC-015 (CAP-005): Intra-capability KYC data extraction (direct call within CAP-005)",
+    "SVC-014",
     "SVC-015 (CAP-005) → EVT-160 → SVC-017 (CAP-007), SVC-053 (CAP-007), SVC-103 (CAP-008): Case closure notifications all async via Event Bus"
   ]
 }

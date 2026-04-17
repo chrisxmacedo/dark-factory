@@ -1,12 +1,12 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Mortgage Service API",
-    "description": "SVC-002 Mortgage Service — API for the residential mortgage application journey (JRN-006). Covers mortgage application lifecycle from enquiry through to account opening. All cross-capability integrations (credit checks via SVC-012, KYC via SVC-014) are mediated via async events and are not exposed as synchronous API endpoints.",
+    "title": "CAP-001 Retail Banking API — Mortgage Application Surface",
+    "description": "CAP-001 Retail Banking capability API surface for the residential mortgage application journey (JRN-006). Mortgages are within CAP-001 (SVC-002 Mortgage Service is a promoted sub-capability of CAP-001). Channels and internal tooling call this capability API; they never address SVC-002 directly. Covers mortgage application lifecycle from enquiry through to account opening. All cross-capability integrations (credit checks via CAP-004 Risk Management, KYC/CDD via CAP-005 Compliance) are mediated exclusively via async events and are not exposed as synchronous API endpoints.",
     "version": "1.0.0",
     "contact": {
-      "name": "Mortgage Engineering Team",
-      "email": "mortgage-engineering@bank.internal"
+      "name": "Retail Banking Capability Team",
+      "email": "cap-001-team@bank.internal"
     }
   },
   "servers": [

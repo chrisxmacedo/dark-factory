@@ -51,9 +51,9 @@
         { "name": "updated_at", "type": "ISO 8601 UTC timestamp", "description": "Last modification timestamp — updated on every status transition.", "required": true }
       ],
       "relationships": [
-        { "type": "has_many", "target": "ENT-037 (LCAmendment)", "description": "An LC may have zero or more amendments. Each amendment references lc_id." },
-        { "type": "has_many", "target": "ENT-038 (TradeDocument)", "description": "An LC has one or more document presentations. Each TradeDocument set references lc_id." },
-        { "type": "has_many", "target": "ENT-039 (DocumentExamination)", "description": "An LC has one DocumentExamination per presentation event." },
+        { "type": "has_many", "target": "ENT-037", "description": "An LC may have zero or more amendments. Each amendment references lc_id." },
+        { "type": "has_many", "target": "ENT-038", "description": "An LC has one or more document presentations. Each TradeDocument set references lc_id." },
+        { "type": "has_many", "target": "ENT-039", "description": "An LC has one DocumentExamination per presentation event." },
         { "type": "references", "target": "ENT-079 (BusinessCustomer) — SVC-005", "description": "FK reference to applicant. No local copy. Read via SVC-005 GET /business-customers/{id}." },
         { "type": "references", "target": "ENT-080 (BusinessAccount) — SVC-005", "description": "FK reference to settlement account. No local copy. Read via SVC-005 GET /business-accounts/{id}." }
       ],
@@ -84,7 +84,7 @@
         { "name": "created_at", "type": "ISO 8601 UTC timestamp", "description": "Record creation timestamp.", "required": true }
       ],
       "relationships": [
-        { "type": "belongs_to", "target": "ENT-036 (LetterOfCredit)", "description": "Amendment belongs to one LetterOfCredit." }
+        { "type": "belongs_to", "target": "ENT-036", "description": "Amendment belongs to one LetterOfCredit." }
       ],
       "design_decisions": [
         "Under UCP 600 Article 10(b), an amendment is irrevocable once issued but does NOT take effect until the beneficiary accepts it. The pending_acceptance status models this intermediate state.",
@@ -111,8 +111,8 @@
         { "name": "created_at", "type": "ISO 8601 UTC timestamp", "description": "Record creation timestamp.", "required": true }
       ],
       "relationships": [
-        { "type": "belongs_to", "target": "ENT-036 (LetterOfCredit)", "description": "Presentation belongs to one LC." },
-        { "type": "has_one", "target": "ENT-039 (DocumentExamination)", "description": "Each presentation has exactly one examination record." }
+        { "type": "belongs_to", "target": "ENT-036", "description": "Presentation belongs to one LC." },
+        { "type": "has_one", "target": "ENT-039", "description": "Each presentation has exactly one examination record." }
       ],
       "design_decisions": [
         "document storage references point to SVC-054 (Document Management) — the actual document images/PDFs are stored in SVC-054, not in SVC-006's PostgreSQL database. ENT-038 holds the metadata and checklist, SVC-054 holds the binary content.",
@@ -142,8 +142,8 @@
         { "name": "created_at", "type": "ISO 8601 UTC timestamp", "description": "Record creation timestamp.", "required": true }
       ],
       "relationships": [
-        { "type": "belongs_to", "target": "ENT-038 (TradeDocument)", "description": "Examination belongs to one document presentation." },
-        { "type": "belongs_to", "target": "ENT-036 (LetterOfCredit)", "description": "Examination references the parent LC directly." }
+        { "type": "belongs_to", "target": "ENT-038", "description": "Examination belongs to one document presentation." },
+        { "type": "belongs_to", "target": "ENT-036", "description": "Examination references the parent LC directly." }
       ],
       "design_decisions": [
         "DocumentExamination is immutable once examination_result is set. Any post-examination waiver creates a separate waiver record referenced by waiver_instruction_reference — the examination finding itself is never modified.",

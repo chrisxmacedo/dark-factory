@@ -24,7 +24,7 @@
         "occurred_at": "string (ISO 8601 UTC) — event publication timestamp"
       },
       "derived_from": {
-        "entity": "ENT-046 (PortfolioReviewRecord)",
+        "entity": "ENT-046",
         "field_mappings": [
           {"entity_field": "review_id", "event_field": "review_id"},
           {"entity_field": "client_id", "event_field": "client_id"},
@@ -71,7 +71,7 @@
         "occurred_at": "string (ISO 8601 UTC)"
       },
       "derived_from": {
-        "entity": "ENT-047 (SuitabilityAssessment)",
+        "entity": "ENT-047",
         "field_mappings": [
           {"entity_field": "assessment_id", "event_field": "assessment_id"},
           {"entity_field": "review_id", "event_field": "review_id"},
@@ -116,7 +116,7 @@
         "occurred_at": "string (ISO 8601 UTC)"
       },
       "derived_from": {
-        "entity": "ENT-048 (RebalancingRecommendation) + ENT-046 (PortfolioReviewRecord)",
+        "entity": "ENT-048",
         "field_mappings": [
           {"entity_field": "ENT-046.client_id", "event_field": "client_id"},
           {"entity_field": "ENT-046.review_id", "event_field": "review_id"},
@@ -157,7 +157,7 @@
         "occurred_at": "string (ISO 8601 UTC)"
       },
       "derived_from": {
-        "entity": "ENT-047 (SuitabilityAssessment)",
+        "entity": "ENT-047",
         "field_mappings": [
           {"entity_field": "assessment_id", "event_field": "assessment_id"},
           {"entity_field": "review_id", "event_field": "review_id"},
@@ -204,7 +204,7 @@
         "occurred_at": "string (ISO 8601 UTC)"
       },
       "derived_from": {
-        "entity": "ENT-047 (SuitabilityAssessment) + ENT-046 (PortfolioReviewRecord)",
+        "entity": "ENT-047",
         "field_mappings": [
           {"entity_field": "ENT-047.assessment_id", "event_field": "assessment_id"},
           {"entity_field": "ENT-046.review_id", "event_field": "review_id"},
@@ -251,7 +251,7 @@
         "occurred_at": "string (ISO 8601 UTC)"
       },
       "derived_from": {
-        "entity": "ENT-049 (InvestmentInstruction)",
+        "entity": "ENT-049",
         "field_mappings": [
           {"entity_field": "instruction_id", "event_field": "instruction_id"},
           {"entity_field": "review_id", "event_field": "review_id"},
@@ -297,7 +297,7 @@
         "occurred_at": "string (ISO 8601 UTC)"
       },
       "derived_from": {
-        "entity": "ENT-049 (InvestmentInstruction) + ENT-046 (PortfolioReviewRecord)",
+        "entity": "ENT-049",
         "field_mappings": [
           {"entity_field": "ENT-046.review_id", "event_field": "review_id"},
           {"entity_field": "ENT-049.instruction_id", "event_field": "instruction_id"},
@@ -347,7 +347,7 @@
         "occurred_at": "string (ISO 8601 UTC)"
       },
       "derived_from": {
-        "entity": "ENT-051 (ConsumerDutyEvidenceRecord)",
+        "entity": "ENT-051",
         "field_mappings": [
           {"entity_field": "evidence_id", "event_field": "evidence_id"},
           {"entity_field": "review_id", "event_field": "review_id"},

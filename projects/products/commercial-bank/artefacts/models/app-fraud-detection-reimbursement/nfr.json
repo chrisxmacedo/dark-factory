@@ -16,7 +16,7 @@
           "breach_consequence": "PSR enforcement action under Payment Systems Act 2013. Financial penalty up to 10% of annual turnover. Mandatory remediation plan.",
           "stop_the_clock_exception": "The 5-business-day SLA may be stopped only where suspected fraud-by-customer is under active investigation (EX-005). Senior Manager (PER-059) must authorise the stop-the-clock. Maximum stop-the-clock extension: 35 business days (PSR guidance).",
           "governance_reference": "GOV-003-R01",
-          "owned_by": "SVC-013 (case lifecycle), SVC-001 (credit execution)"
+          "owned_by": "SVC-013"
         },
         {
           "nfr_id": "NFR-005-REG-002",
@@ -42,7 +42,7 @@
           "target": "100% data completeness. Zero material restatements in PSR quarterly returns.",
           "measurement": "Quarterly reconciliation of FraudCase counts against PSR submission",
           "governance_reference": "GOV-003-R01",
-          "owned_by": "SVC-013 (reporting data source)"
+          "owned_by": "SVC-013"
         }
       ]
     },
@@ -75,7 +75,7 @@
           "description": "The 'Report Fraud' journey within CH-002 (Mobile App) must be available 99.9% of the time. Fraud reporting is a time-sensitive function — a customer who cannot report in the app may call the fraud line (CH-004), but app unavailability must be minimised. App unavailability during a fraud incident increases case complexity.",
           "target": "99.9% availability for the mobile app fraud reporting flow",
           "fallback": "If mobile app is unavailable: telephony channel (CH-004) must remain available 24/7 at 99.9% availability",
-          "owned_by": "SVC-017 (Digital Channels)"
+          "owned_by": "SVC-017"
         }
       ]
     },
@@ -107,7 +107,7 @@
           "description": "Customer-provided evidence documents (screenshots, communication logs) uploaded via CH-002 or CH-004 must be encrypted at rest (AES-256), access-controlled to PER-054 and above, and retained for the same 7-year WORM period as the FraudCase record. Documents must not be accessible to PER-001 post-submission (to prevent tampering).",
           "target": "100% of uploaded documents encrypted at rest. Zero unauthorised access. 7-year retention.",
           "data_classification": "restricted — fraud investigation evidence",
-          "owned_by": "SVC-013 (document store)"
+          "owned_by": "SVC-013"
         }
       ]
     },

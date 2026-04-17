@@ -5,12 +5,12 @@
   "scenario": "happy-path",
   "description": "Customer deposits £12,000 cash at branch. Staff verify identity. Cash counted. Deposit posted. AML threshold report generated (>£10,000). Account credited. Vault reconciled at close.",
   "participants": [
-    {"id": "Customer", "label": "PER-001 (Customer)", "type": "actor"},
-    {"id": "Staff", "label": "PER-056 (Branch Staff)", "type": "actor"},
-    {"id": "Retail", "label": "SVC-001 (Retail Banking Core)", "type": "service"},
-    {"id": "EventBus", "label": "SVC-102 (Event Bus)", "type": "infrastructure"},
-    {"id": "Compliance", "label": "SVC-015 (Compliance Core)", "type": "service"},
-    {"id": "Audit", "label": "SVC-103 (Audit & Logging)", "type": "service"}
+    {"id": "Customer", "label": "PER-001", "type": "actor"},
+    {"id": "Staff", "label": "PER-056", "type": "actor"},
+    {"id": "Retail", "label": "SVC-001", "type": "service"},
+    {"id": "EventBus", "label": "SVC-102", "type": "infrastructure"},
+    {"id": "Compliance", "label": "SVC-015", "type": "service"},
+    {"id": "Audit", "label": "SVC-103", "type": "service"}
   ],
   "steps": [
     {"step": 1, "from": "Customer", "to": "Staff", "type": "sync", "action": "Present £12,000 cash for deposit; provide ID", "phase": "PH-134"},

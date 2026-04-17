@@ -5,15 +5,15 @@
   "scenario": "happy-path",
   "description": "PER-001 initiates a Faster Payment via web or mobile channel. CoP returns a match. SCA succeeds. Sanctions screen is clear. Fraud score is non-block. FPS execution succeeds. Account is debited. Customer sees confirmation. Total elapsed time < 15 seconds from SCA completion.",
   "participants": [
-    {"id": "Customer", "label": "PER-001 (Customer)", "type": "actor"},
-    {"id": "Channel", "label": "SVC-017 (Digital Channels)", "type": "service"},
-    {"id": "IAM", "label": "SVC-100 (IAM)", "type": "service"},
-    {"id": "DomesticPayments", "label": "SVC-009 (Domestic Payments)", "type": "service"},
-    {"id": "RetailBanking", "label": "SVC-001 (Retail Banking Core)", "type": "service"},
-    {"id": "EventBus", "label": "SVC-102 (Event Bus)", "type": "infrastructure"},
-    {"id": "Sanctions", "label": "SVC-051 (Sanctions Screening)", "type": "service"},
-    {"id": "Fraud", "label": "SVC-013 (Fraud Detection)", "type": "service"},
-    {"id": "AuditLog", "label": "SVC-103 (Audit & Logging)", "type": "service"}
+    {"id": "Customer", "label": "PER-001", "type": "actor"},
+    {"id": "Channel", "label": "SVC-017", "type": "service"},
+    {"id": "IAM", "label": "SVC-100", "type": "service"},
+    {"id": "DomesticPayments", "label": "SVC-009", "type": "service"},
+    {"id": "RetailBanking", "label": "SVC-001", "type": "service"},
+    {"id": "EventBus", "label": "SVC-102", "type": "infrastructure"},
+    {"id": "Sanctions", "label": "SVC-051", "type": "service"},
+    {"id": "Fraud", "label": "SVC-013", "type": "service"},
+    {"id": "AuditLog", "label": "SVC-103", "type": "service"}
   ],
   "steps": [
     {

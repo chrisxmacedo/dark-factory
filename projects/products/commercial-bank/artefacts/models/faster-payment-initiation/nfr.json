@@ -81,7 +81,7 @@
       "target": "100% CoP coverage rate on all FPS payment instructions",
       "reporting": "CoP coverage rate reported to PSR annually per GOV-003-R02 disclosure obligation.",
       "regulatory_basis": "GOV-003-R02 — PSR Specific Direction 17 (SD17); PSR Group 2 mandatory from October 2024.",
-      "services_in_scope": ["SVC-009 (CoP proxy)", "SVC-017 (channel CoP UI)"]
+      "services_in_scope": ["SVC-009", "SVC-017"]
     },
     {
       "nfr_id": "NFR-JRN002-008",
@@ -90,7 +90,7 @@
       "target": "100% of payment instructions SCA-authenticated with dynamic linking",
       "sca_methods_supported": ["FIDO2/WebAuthn biometric (FaceID, TouchID, Android biometric)", "TOTP (authenticator app — fallback)"],
       "regulatory_basis": "PSRs 2017 Regulation 71 (strong customer authentication) and Regulation 100 (dynamic linking for credit transfers). EBA/FCA SCA technical standards.",
-      "services_in_scope": ["SVC-100 (IAM — SCA validation)", "SVC-017 (channel — SCA presentation)"]
+      "services_in_scope": ["SVC-100", "SVC-017"]
     },
     {
       "nfr_id": "NFR-JRN002-009",

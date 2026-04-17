@@ -6,13 +6,13 @@
   "title": "JRN-028 CHAPS — EXC-003 RTGS Rejection",
   "description": "Exception path: RTGS rejects the pacs.008 message. Funds reserved are released. Customer notified. Payment can be resubmitted after correcting the issue.",
   "participants": [
-    { "id": "PER001", "label": "PER-001 (Personal Customer)" },
+    { "id": "PER001", "label": "PER-001" },
     { "id": "CH001", "label": "CH-001 (Online Banking Portal)" },
     { "id": "CAP001", "label": "CAP-001 API (SVC-001)" },
     { "id": "EventBus", "label": "Event Bus (SVC-102)" },
     { "id": "CAP003", "label": "CAP-003 API (SVC-009)" },
     { "id": "EXTRTGS", "label": "EXT: Bank of England RTGS (RT2)" },
-    { "id": "SVC053", "label": "SVC-053 (Notifications)" }
+    { "id": "SVC053", "label": "SVC-053" }
   ],
   "steps": [
     { "seq": 1, "from": "PER001", "to": "CH001", "label": "Enter payment details", "type": "sync", "phase": "PH-077" },

@@ -19,10 +19,10 @@
     "CAP-003"
   ],
   "sub_capabilities_involved": [
-    "CAP-002.04 (Treasury Services — PROMOTED sub-capability, implemented in SVC-007)",
-    "CAP-002.01 (Business Current Accounts — SVC-005, same-capability: SVC-007 calls SVC-005 directly for account balance and settlement debit/credit)",
-    "CAP-005.01 (KYC/AML — SVC-051 sanctions screening on counterparty — cross-capability async only)",
-    "CAP-003.04 (International Payments / Nostro Settlement — SVC-010 SWIFT MT300 and pacs.009 — cross-capability async only)"
+    "CAP-002.04",
+    "CAP-002.01",
+    "CAP-005.01",
+    "CAP-003.04"
   ],
   "phases": [
     {
@@ -30,10 +30,10 @@
       "name": "Trade Enquiry",
       "description": "The Corporate Client (PER-003) contacts the Treasury Dealer (PER-053) via the treasury portal (CH-008) or by phone to request an indicative FX spot rate for a currency pair. PER-053 uses the SVC-007 Treasury Services API to retrieve a real-time indicative rate sourced from Bloomberg FXGO / ECN interbank feed. SVC-007 applies the bank's FX mark-up for the client's tier to derive the all-in indicative rate. SVC-007 creates an FXTrade record (ENT-040) with status = enquiry and publishes EVT-083 (FXQuoteRequested). The indicative rate and a recommended trade size are returned to the dealer and relayed to the client.",
       "actors": [
-        "PER-003 (Corporate Client — requests indicative rate via treasury portal or phone)",
-        "PER-053 (Treasury Dealer — retrieves indicative rate; PER-003 may self-serve via portal)",
-        "SVC-007 (Treasury Services — fetches interbank rate, applies mark-up, creates ENT-040 with status=enquiry)",
-        "SVC-005 (Commercial Banking Core — called by SVC-007 same-capability to validate BusinessCustomer status and account standing)"
+        "PER-003",
+        "PER-053",
+        "SVC-007",
+        "SVC-005"
       ],
       "services": ["SVC-007", "SVC-005"],
       "governance_rules": [
@@ -57,9 +57,9 @@
       "name": "Price Quotation",
       "description": "PER-053 (or the automated portal pricing engine) generates a firm FX spot quote with a hard validity window of 30 seconds. SVC-007 creates an FXQuote entity (ENT-041) with: indicative_rate (from PH-059), firm_rate (current interbank mid-rate + mark-up at quote time), spread (half-spread applied either side of mid), valid_until (now + 30 seconds), and status = quoted. SVC-007 links ENT-041 to ENT-040 via the trade_id FK. SVC-007 publishes EVT-084 (FXQuoteProvided). The firm quote is displayed on the treasury portal with a countdown timer. MiFIR best execution disclosure is embedded in the quote screen: all-in rate, spread from mid, and the interbank reference rate at time of quote.",
       "actors": [
-        "PER-053 (Treasury Dealer — validates quote parameters; may override spread for relationship pricing within delegated authority)",
-        "PER-003 (Corporate Client — reviews firm quote on treasury portal before acceptance)",
-        "SVC-007 (Treasury Services — creates FXQuote entity, enforces 30-second validity window)"
+        "PER-053",
+        "PER-003",
+        "SVC-007"
       ],
       "services": ["SVC-007"],
       "governance_rules": [
@@ -83,11 +83,11 @@
       "name": "Trade Execution",
       "description": "PER-003 accepts the firm quote within the 30-second validity window by confirming on the treasury portal (or verbally via phone, recorded under COBS/MiFID call recording obligations). SVC-007 validates the quote has not expired (FXQuote.valid_until > now), transitions FXQuote.status = accepted, calculates buy_amount and sell_amount using the firm_rate, sets FXTrade.value_date to spot (T+2), and transitions FXTrade.status = booked. SVC-007 publishes EVT-085 (FXTradeExecuted). Simultaneously, SVC-007 publishes EVT-089 (FXCounterpartySanctionsScreened) — a cross-capability event consumed by SVC-051 (CAP-005) to perform a real-time counterparty sanctions check. Settlement instructions are queued (pending EVT-087 after sanctions clear). A pre-settlement sanctions hold is NOT applied by default unless a sanctions hit is returned.",
       "actors": [
-        "PER-003 (Corporate Client — accepts quote; confirmation is binding under FX master agreement)",
-        "PER-053 (Treasury Dealer — confirms trade on behalf of client if phone-dealt; call recording active)",
-        "SVC-007 (Treasury Services — validates quote, books trade, creates binding FXTrade record, publishes events)",
-        "SVC-005 (Commercial Banking Core — called same-capability to verify sell-currency account balance)",
-        "SVC-102 (Event Bus — routes EVT-089 to CAP-005 for sanctions screening)"
+        "PER-003",
+        "PER-053",
+        "SVC-007",
+        "SVC-005",
+        "SVC-102"
       ],
       "services": ["SVC-007", "SVC-005", "SVC-102"],
       "governance_rules": [
@@ -113,10 +113,10 @@
       "name": "Confirmation",
       "description": "Following trade booking, SVC-007 generates a trade confirmation document in SWIFT MT300 format (or ISO 20022 fxtr.014 equivalent) and dispatches it to the corporate client via SVC-053 (Notification Service) and SVC-010 (International Payments, CAP-003) for SWIFT delivery. The confirmation contains: trade_id, currency pair, buy/sell amounts, agreed rate, value_date (T+2), settlement account details (nostro BIC for buy leg, client account for sell leg). FXTrade.confirmation_sent is set to true and EVT-086 (FXTradeConfirmed) is published. The MiFIR transaction report is also generated at this phase and queued for submission to the FCA trade repository by end-of-day T. SVC-007 publishes EVT-086 (FXTradeConfirmed). FXTrade.status transitions to confirmed.",
       "actors": [
-        "SVC-007 (Treasury Services — generates confirmation, transitions status to confirmed, publishes EVT-086)",
-        "SVC-053 (Notification Service — delivers email/portal confirmation to PER-003)",
-        "SVC-010 (International Payments, CAP-003 — SWIFT MT300 dispatch — cross-capability async)",
-        "PER-003 (Corporate Client — receives confirmation; has right to dispute within confirmation window)"
+        "SVC-007",
+        "SVC-053",
+        "SVC-010",
+        "PER-003"
       ],
       "services": ["SVC-007", "SVC-102", "SVC-010"],
       "governance_rules": [
@@ -140,10 +140,10 @@
       "name": "Settlement",
       "description": "On value_date (T+2), SVC-007 initiates settlement of both trade legs. SVC-007 publishes EVT-087 (FXSettlementInitiated) — a cross-capability event consumed by SVC-010 (International Payments, CAP-003) to execute the nostro-to-nostro FX settlement. SVC-007 creates an FXSettlement entity (ENT-042) with buy_leg_nostro, sell_leg_nostro, and settlement_status = pending. Simultaneously, SVC-007 calls SVC-005 (same-capability) to debit the client's sell-currency BusinessAccount. The buy-currency amount is credited to the client's BusinessAccount (or a nominated account) via SVC-005. On settlement completion, SVC-010 publishes EVT-088 (FXSettlementCompleted) which SVC-007 consumes to update FXSettlement.settlement_status = settled, set FXTrade.status = settled, and record the FX P&L mark.",
       "actors": [
-        "SVC-007 (Treasury Services — creates FXSettlement entity, debits sell leg via SVC-005, publishes EVT-087)",
-        "SVC-005 (Commercial Banking Core — same-capability account debit/credit for both settlement legs)",
-        "SVC-010 (International Payments, CAP-003 — nostro settlement execution; publishes EVT-088 on completion)",
-        "SVC-102 (Event Bus — routes EVT-087 to CAP-003 and EVT-088 back to CAP-002)"
+        "SVC-007",
+        "SVC-005",
+        "SVC-010",
+        "SVC-102"
       ],
       "services": ["SVC-007", "SVC-005", "SVC-102", "SVC-010"],
       "governance_rules": [

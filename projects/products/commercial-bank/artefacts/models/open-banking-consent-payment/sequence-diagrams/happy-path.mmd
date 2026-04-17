@@ -1,0 +1,108 @@
+---
+title: "JRN-010 Happy Path — Open Banking Consent and Payment Initiation"
+---
+sequenceDiagram
+    autonumber
+
+    actor PER006 as PER-006<br/>Third Party Provider (TPP)
+    actor PER001 as PER-001<br/>Personal Customer
+    participant Channel as Channel<br/>Open Banking API Surface (CAP-007)
+    participant CAP001 as CAP-001 API<br/>Retail Banking
+    participant IAM as IAM<br/>SVC-100 (Platform)
+    participant EB as Event Bus<br/>SVC-102
+    participant CAP005 as CAP-005<br/>Compliance
+    participant CAP004 as CAP-004<br/>Risk Management
+    participant CAP003 as CAP-003 API<br/>Payment Operations
+    participant Vocalink as Vocalink FPS<br/>External
+
+    rect rgb(230, 245, 255)
+        Note over PER006,CAP001: PH-035 — TPP Registration and Discovery (one-time)
+        PER006->>Channel: GET /.well-known/openid-configuration
+        Channel-->>PER006: 200 OK { issuer, endpoints, supported_scopes }
+        PER006->>Channel: POST /register<br/>{ software_statement: <OBIE-signed SSA JWT>,<br/>redirect_uris, grant_types, scope: openid payments }
+        Channel->>IAM: Validate SSA signature (OBIE Directory public key);<br/>confirm FCA PISP authorisation
+        IAM-->>Channel: SSA valid; FCA PISP authorisation confirmed
+        Channel->>CAP001: POST /tpp-registrations<br/>{ tpp_id, obie_org_id, fca_reference_number,<br/>software_statement_id, redirect_uris }
+        Note over CAP001: Create ENT-031 TPPRegistration:<br/>tpp_id: tpp-fintech-001 | status: active
+        CAP001-->>Channel: 201 Created { tpp_id }
+        Channel-->>PER006: 201 Created { client_id: tpp-fintech-001,<br/>client_secret, token_endpoint, authorization_endpoint }
+    end
+
+    rect rgb(230, 255, 230)
+        Note over PER006,EB: PH-036 — Consent Request
+        PER006->>Channel: POST /domestic-payment-consents<br/>{ InstructedAmount: {Amount: "150.00", Currency: "GBP"},<br/>CreditorAccount: {SortCodeAccountNumber: "20-00-00/12345678",<br/>Name: "Jane Smith"},<br/>RemittanceInformation: {Reference: "INV-2024-001"} }
+        Channel->>CAP001: POST /open-banking-consents<br/>{ tpp_id: tpp-fintech-001, amount: 150.00, currency: GBP,<br/>payee_sort_code: 200000,<br/>payee_account_number: 12345678,<br/>payee_name: Jane Smith,<br/>payment_reference: INV-2024-001 }
+        Note over CAP001: Validate ENT-031 (status=active)<br/>Create ENT-030 OpenBankingConsent:<br/>consent_id: <UUID><br/>status: awaiting_auth<br/>expires_at: now+24h
+        CAP001->>EB: Publish EVT-058 ConsentRequested { consent_id, tpp_id }
+        CAP001-->>Channel: 201 Created { consent_id }
+        Channel-->>PER006: 201 Created { Data: { ConsentId, Status: AwaitingAuthorisation,<br/>ExpirationDateTime } }
+        PER006->>PER001: Redirect browser to bank authorisation URL<br/>{ client_id, response_type: code, scope: openid payments,<br/>state: <nonce>, request: <signed JAR JWT with consent_id> }
+    end
+
+    rect rgb(255, 245, 220)
+        Note over PER001,EB: PH-037 — Customer Authentication and Consent Confirmation
+        PER001->>Channel: GET /authorise (consent screen loads)
+        Channel->>CAP001: GET /open-banking-consents/{consent_id}
+        CAP001-->>Channel: { amount: 150.00, payee_name: Jane Smith,<br/>payee_sort_code: 200000,<br/>payee_account_number: 12345678,<br/>cop_result: match }
+        Channel-->>PER001: Display consent screen:<br/>"Jane Smith is about to receive £150.00 from your account.<br/>Reference: INV-2024-001. Payee verified (CoP: match).<br/>[Confirm] [Decline]"
+        PER001->>Channel: Click Confirm → initiate SCA
+        Channel->>IAM: Initiate SCA challenge<br/>{ customer_id, sca_method: biometric_mobile,<br/>dynamic_link: {amount: 150.00,<br/>payee_sort_code: 200000,<br/>payee_account_number: 12345678} }
+        IAM-)PER001: Push notification: "Confirm £150.00 to Jane Smith"
+        PER001->>IAM: Biometric confirmation (Face ID / Touch ID)
+        IAM-->>Channel: SCA verified; dynamic linking confirmed
+        Channel->>CAP001: PATCH /open-banking-consents/{consent_id}<br/>{ status: authorised, customer_id, account_id,<br/>sca_completed: true, sca_method: biometric_mobile,<br/>authorised_at, expires_at: now+90min }
+        Note over CAP001: Atomic update: ENT-030.status = authorised<br/>sca_completed = true
+        CAP001->>EB: Publish EVT-059 ConsentAuthorised<br/>{ consent_id, customer_id, account_id }
+        Note over EB: Route EVT-059 → Notifications (SVC-053):<br/>Push to PER-001: "You've authorised a payment of<br/>£150.00 to Jane Smith via [TPP Name]"
+        IAM-->>Channel: Issue authorisation code { code, state: <nonce> }
+        Channel-->>PER001: 302 Redirect → TPP redirect_uri?code=<auth_code>&state=<nonce>
+        PER001->>PER006: Browser follows redirect (delivers auth code to TPP)
+    end
+
+    rect rgb(245, 230, 255)
+        Note over PER006,EB: PH-038 — Payment Initiation
+        PER006->>IAM: POST /token<br/>{ grant_type: authorization_code, code: <auth_code>,<br/>client_id: tpp-fintech-001, client_secret }
+        IAM-->>PER006: 200 OK { access_token, token_type: Bearer, expires_in: 300 }
+        PER006->>Channel: POST /domestic-payments<br/>Authorization: Bearer <access_token><br/>{ Data: { ConsentId: <consent_id>,<br/>Initiation: <same as consent> } }
+        Channel->>IAM: Token introspection { access_token }
+        IAM-->>Channel: { active: true, scope: payments, consent_id, sub: tpp-fintech-001 }
+        Channel->>CAP001: POST /payments<br/>{ consent_id, amount: 150.00, currency: GBP,<br/>payee_sort_code: 200000,<br/>payee_account_number: 12345678,<br/>payee_name: Jane Smith,<br/>payment_reference: INV-2024-001,<br/>origination_channel: open_banking,<br/>tpp_id: tpp-fintech-001 }
+        Note over CAP001: Validate ENT-030 (authorised, sca_completed, not expired, details match)<br/>Validate ENT-004 Account (active, balance £2,340.00 >= £150.00, daily limit OK)<br/>ATOMIC TRANSACTION:<br/>  Create ENT-008 PaymentIntent {payment_intent_id: pi-20260415-0042,<br/>  status: pending_screening, origination: open_banking}<br/>  Update ENT-030.status = consumed
+        CAP001->>EB: Publish EVT-179 PaymentIntentCreated<br/>{ payment_intent_id: pi-20260415-0042, account_id,<br/>amount: 150.00, payee_sort_code: 200000,<br/>payee_account_number: 12345678 }
+        CAP001->>EB: Publish EVT-061 OpenBankingPaymentInitiated<br/>{ payment_intent_id, consent_id, tpp_id }
+        Note over EB: Route EVT-061 → Notifications:<br/>Push to PER-001: "Your Open Banking payment of<br/>£150.00 to Jane Smith is being processed"
+        CAP001-->>Channel: 201 Created { payment_intent_id: pi-20260415-0042 }
+        Channel-->>PER006: 201 Created { Data: { DomesticPaymentId: pi-20260415-0042,<br/>ConsentId, Status: AcceptedSettlementInProcess } }
+    end
+
+    rect rgb(255, 230, 230)
+        Note over EB,Vocalink: PH-039 — Payment Execution (JRN-002 event-driven pattern reused)
+        EB-)CAP005: Consume EVT-179 PaymentIntentCreated<br/>→ sanctions screen payee (OFSI, UN, EU, OFAC)
+        EB-)CAP004: Consume EVT-179 PaymentIntentCreated<br/>→ ML fraud scoring (features: tpp_id, consent_id, payee, amount, customer behaviour)
+        Note over CAP005: Screen payee: Jane Smith / 200000 / 12345678<br/>All lists: CLEAR
+        CAP005->>EB: Publish EVT-180 SanctionsScreeningCompleted<br/>{ payment_intent_id, outcome: clear }
+        Note over CAP004: Score: risk_level = low<br/>tpp_id: tpp-fintech-001 (established TPP, low fraud rate)<br/>payee: known recipient | amount: normal range
+        CAP004->>EB: Publish EVT-181 FraudScoreCompleted<br/>{ payment_intent_id, risk_level: low }
+        EB-)CAP001: Consume EVT-180 (clear) + EVT-181 (low)<br/>Both clear — correlation on payment_intent_id
+        CAP001->>EB: Publish EVT-182 PaymentCleared<br/>{ payment_intent_id, account_id, amount: 150.00,<br/>payee_sort_code: 200000, payee_account_number: 12345678 }
+        EB-)CAP003: Consume EVT-182 PaymentCleared → FPS submission
+        Note over CAP003: Create ENT-009 PaymentExecution<br/>execution_id: pe-0042 | status: fps_submitted<br/>Construct pacs.008:<br/>UETR: <UUID> | InstrAmt: 150.00 GBP<br/>Cdtr: Jane Smith | Acct: 200000/12345678
+        CAP003->>Vocalink: Submit pacs.008 to FPS
+        Vocalink-->>CAP003: pacs.002 ACCP { FpsReference: FPS-20260415-09912, TxSts: ACCP }
+        Note over CAP003: Update ENT-009 status=settled<br/>fps_reference: FPS-20260415-09912
+        CAP003->>EB: Publish EVT-183 PaymentExecuted<br/>{ payment_intent_id, execution_id, fps_reference: FPS-20260415-09912 }
+        EB-)CAP001: Consume EVT-183 PaymentExecuted
+        Note over CAP001: Atomic debit: Account.available_balance -= 150.00<br/>Update daily_payment_total<br/>Set PaymentIntent.status = completed
+        CAP001->>EB: Publish EVT-184 AccountDebited { account_id, amount: 150.00 }
+        CAP001->>EB: Publish EVT-062 OpenBankingPaymentCompleted<br/>{ payment_intent_id, consent_id, tpp_id,<br/>fps_reference: FPS-20260415-09912,<br/>amount: 150.00, payee_name: Jane Smith,<br/>completed_at }
+        EB-)Channel: Route EVT-062 → Channel status cache:<br/>pi-20260415-0042 → AcceptedSettlementCompleted
+        Note over EB: Route EVT-062 → Notifications (SVC-053):<br/>Push to PER-001: "Payment of £150.00 to Jane Smith<br/>was successful. FPS Ref: FPS-20260415-09912"
+    end
+
+    rect rgb(230, 255, 245)
+        Note over PER006,Channel: PH-040 — Status Polling and Confirmation
+        PER006->>Channel: GET /domestic-payments/pi-20260415-0042<br/>Authorization: Bearer <access_token>
+        Note over Channel: Read status cache: AcceptedSettlementCompleted
+        Channel-->>PER006: 200 OK { Data: { DomesticPaymentId: pi-20260415-0042,<br/>Status: AcceptedSettlementCompleted,<br/>CompletionDateTime: <ISO8601>,<br/>Initiation: {...} } }
+        Note over PER006: Journey complete<br/>ENT-030.status: consumed (terminal)<br/>PaymentIntent.status: completed<br/>FPS Ref: FPS-20260415-09912<br/>Account debited: £150.00
+    end

@@ -134,7 +134,7 @@
       "step": 4,
       "from_capability": "CAP-006",
       "to_capability": "CAP-001",
-      "event": "EVT-101 (ClientAccountDataRequested)",
+      "event": "EVT-101",
       "mechanism": "async event via SVC-102",
       "note": "CAP-006 requests minimal account summary from CAP-001. SVC-016 must not call SVC-001 synchronously."
     },
@@ -142,7 +142,7 @@
       "step": 8,
       "from_capability": "CAP-001",
       "to_capability": "CAP-006",
-      "event": "EVT-107 (ClientAccountSummaryProvided)",
+      "event": "EVT-107",
       "mechanism": "async event via SVC-102",
       "note": "CAP-001 responds with minimal payload: available_balance_gbp, account_type, snapshot_at. Full account history excluded."
     }

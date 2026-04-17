@@ -5,17 +5,17 @@
   "scenario": "fraud-block",
   "description": "PER-001 initiates a Faster Payment. CoP returns a no_match (customer overrides with explicit confirmation). Sanctions screen is clear. Fraud score exceeds the block threshold (e.g. new payee + no-match CoP + unusual amount). SVC-001 publishes PaymentFraudBlocked. Customer sees a generic decline. Fraud Analyst (PER-054) receives a case for investigation.",
   "participants": [
-    {"id": "Customer", "label": "PER-001 (Customer)", "type": "actor"},
-    {"id": "FraudAnalyst", "label": "PER-054 (Fraud Analyst)", "type": "actor"},
-    {"id": "Channel", "label": "SVC-017 (Digital Channels)", "type": "service"},
-    {"id": "IAM", "label": "SVC-100 (IAM)", "type": "service"},
-    {"id": "DomesticPayments", "label": "SVC-009 (Domestic Payments)", "type": "service"},
-    {"id": "RetailBanking", "label": "SVC-001 (Retail Banking Core)", "type": "service"},
-    {"id": "EventBus", "label": "SVC-102 (Event Bus)", "type": "infrastructure"},
-    {"id": "Sanctions", "label": "SVC-051 (Sanctions Screening)", "type": "service"},
-    {"id": "Fraud", "label": "SVC-013 (Fraud Detection)", "type": "service"},
+    {"id": "Customer", "label": "PER-001", "type": "actor"},
+    {"id": "FraudAnalyst", "label": "PER-054", "type": "actor"},
+    {"id": "Channel", "label": "SVC-017", "type": "service"},
+    {"id": "IAM", "label": "SVC-100", "type": "service"},
+    {"id": "DomesticPayments", "label": "SVC-009", "type": "service"},
+    {"id": "RetailBanking", "label": "SVC-001", "type": "service"},
+    {"id": "EventBus", "label": "SVC-102", "type": "infrastructure"},
+    {"id": "Sanctions", "label": "SVC-051", "type": "service"},
+    {"id": "Fraud", "label": "SVC-013", "type": "service"},
     {"id": "FraudPlatform", "label": "Fraud Operations Platform (INTL-003)", "type": "system"},
-    {"id": "AuditLog", "label": "SVC-103 (Audit & Logging)", "type": "service"}
+    {"id": "AuditLog", "label": "SVC-103", "type": "service"}
   ],
   "steps": [
     {
@@ -224,7 +224,7 @@
       "to": "FraudPlatform",
       "type": "sync",
       "action": "(Out of band) Review case: full fraud score, model features, account history, device metadata. Determine true positive vs false positive.",
-      "phase": "PH-149 (exception handling)"
+      "phase": "PH-149"
     }
   ],
   "outcome": "Payment blocked. Customer notified with generic message. Fraud Analyst investigates. If false positive, analyst may release — triggering PaymentCleared re-emission. If true positive, block confirmed and case closed.",

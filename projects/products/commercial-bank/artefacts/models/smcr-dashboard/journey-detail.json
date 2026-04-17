@@ -9,7 +9,7 @@
       "id": "PH-131",
       "name": "Conduct Monitoring and Surveillance Review",
       "description": "The quarterly SM&CR review is triggered by the compliance calendar. The Compliance system (SVC-015) generates a conduct monitoring report: communications surveillance scan results (Behavox/NICE), training completion rates, and any open conduct investigations. The Head of Compliance (SMF16) reviews the report via the SM&CR dashboard.",
-      "actors": ["PER-059 (Senior Manager — Head of Compliance SMF16)", "SVC-015 (Compliance Core)"],
+      "actors": ["PER-059", "SVC-015"],
       "services": ["SVC-015"],
       "governance_rules": ["GOV-005-R05"],
       "entry_conditions": [
@@ -26,7 +26,7 @@
       "id": "PH-132",
       "name": "Accountability Map and SoR Review",
       "description": "The compliance team reviews the SM&CR accountability map for role changes since the last review. New Senior Managers or Certified Function individuals are identified. Statements of Responsibilities (SoR) are reviewed for material changes. FCA register updated for any new or changed SMF holders.",
-      "actors": ["PER-059 (Senior Manager — Head of Compliance SMF16)", "SVC-015 (Compliance Core)"],
+      "actors": ["PER-059", "SVC-015"],
       "services": ["SVC-015"],
       "governance_rules": ["GOV-005-R05"],
       "entry_conditions": [
@@ -42,7 +42,7 @@
       "id": "PH-133",
       "name": "Board Reporting and Review Closure",
       "description": "The Head of Compliance prepares the SM&CR section of the Board Compliance Report. No conduct breaches or notifications required this quarter. SmscrReview updated to status = closed. EVT-165 SmscrReviewCompleted published.",
-      "actors": ["PER-059 (Senior Manager — Head of Compliance SMF16)", "SVC-015 (Compliance Core)"],
+      "actors": ["PER-059", "SVC-015"],
       "services": ["SVC-015"],
       "governance_rules": ["GOV-005-R05"],
       "entry_conditions": [

@@ -6,21 +6,78 @@
   "owning_capability": "CAP-006",
   "source_journey": "JRN-015",
   "fields": [
-    {"name": "instruction_id", "type": "UUID", "validation": "globally unique, immutable"},
-    {"name": "review_id", "type": "UUID", "validation": "FK to ENT-046; not null"},
-    {"name": "recommendation_id", "type": "UUID", "validation": "FK to ENT-048; not null"},
-    {"name": "instruction_type", "type": "enum", "validation": "proceed_full | proceed_partial | decline"},
-    {"name": "instructions_given_at", "type": "ISO 8601 UTC datetime", "validation": "not null; immutable"},
-    {"name": "orders", "type": "JSON array", "validation": "not null if instruction_type != decline"},
-    {"name": "custody_platform", "type": "enum", "validation": "FNZ | SEI | other"},
-    {"name": "mifid_transaction_refs", "type": "JSON array", "validation": "UTI strings; one per executed order"},
-    {"name": "execution_status", "type": "enum", "validation": "not_started | in_progress | fully_executed | partially_executed | failed | not_required"},
-    {"name": "execution_completed_at", "type": "ISO 8601 UTC datetime", "validation": "nullable"},
-    {"name": "created_at", "type": "ISO 8601 UTC datetime", "validation": "not null; immutable"}
+    {
+      "name": "instruction_id",
+      "type": "UUID",
+      "validation": "globally unique, immutable"
+    },
+    {
+      "name": "review_id",
+      "type": "UUID",
+      "validation": "FK to ENT-046; not null"
+    },
+    {
+      "name": "recommendation_id",
+      "type": "UUID",
+      "validation": "FK to ENT-048; not null"
+    },
+    {
+      "name": "instruction_type",
+      "type": "enum",
+      "validation": "proceed_full | proceed_partial | decline"
+    },
+    {
+      "name": "instructions_given_at",
+      "type": "ISO 8601 UTC datetime",
+      "validation": "not null; immutable"
+    },
+    {
+      "name": "orders",
+      "type": "JSON array",
+      "validation": "not null if instruction_type != decline"
+    },
+    {
+      "name": "custody_platform",
+      "type": "enum",
+      "validation": "FNZ | SEI | other"
+    },
+    {
+      "name": "mifid_transaction_refs",
+      "type": "JSON array",
+      "validation": "UTI strings; one per executed order"
+    },
+    {
+      "name": "execution_status",
+      "type": "enum",
+      "validation": "not_started | in_progress | fully_executed | partially_executed | failed | not_required"
+    },
+    {
+      "name": "execution_completed_at",
+      "type": "ISO 8601 UTC datetime",
+      "validation": "nullable"
+    },
+    {
+      "name": "created_at",
+      "type": "ISO 8601 UTC datetime",
+      "validation": "not null; immutable"
+    }
   ],
   "relationships": [
-    {"entity_id": "ENT-046", "type": "belongs-to"},
-    {"entity_id": "ENT-048", "type": "belongs-to"},
-    {"entity_id": "ENT-050", "type": "one-to-one", "note": "Post-execution snapshot"}
+    {
+      "entity_id": "ENT-046",
+      "type": "belongs-to"
+    },
+    {
+      "entity_id": "ENT-048",
+      "type": "belongs-to"
+    },
+    {
+      "entity_id": "ENT-050",
+      "type": "one-to-one",
+      "note": "Post-execution snapshot"
+    }
+  ],
+  "source_journeys": [
+    "unknown \u2014 added retroactively"
   ]
 }

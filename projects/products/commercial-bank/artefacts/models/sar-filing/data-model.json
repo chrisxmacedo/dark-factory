@@ -383,26 +383,26 @@
     "description": "How JRN-003 entities relate to existing central model entities",
     "relationships": [
       {
-        "from": "ENT-008 (SuspiciousActivityReport)",
-        "to": "ENT-001 (Customer)",
+        "from": "ENT-008",
+        "to": "ENT-001",
         "cardinality": "many-to-one",
         "description": "A customer may be subject to multiple SARs over time"
       },
       {
-        "from": "ENT-008 (SuspiciousActivityReport)",
-        "to": "ENT-009 (SARInvestigationRecord)",
+        "from": "ENT-008",
+        "to": "ENT-009",
         "cardinality": "one-to-one",
         "description": "Each SAR originates from one investigation record"
       },
       {
-        "from": "ENT-009 (SARInvestigationRecord)",
-        "to": "ENT-001 (Customer)",
+        "from": "ENT-009",
+        "to": "ENT-001",
         "cardinality": "many-to-one",
         "description": "A customer may be the subject of multiple investigations"
       },
       {
-        "from": "ENT-009 (SARInvestigationRecord)",
-        "to": "ENT-003 (KycAssessment)",
+        "from": "ENT-009",
+        "to": "ENT-003",
         "cardinality": "many-to-one",
         "description": "Investigation optionally references the current KYC assessment"
       }

@@ -229,40 +229,40 @@
       "note": "Channel calls CAP-001 API to create CHAPSPaymentIntent and submit SCA authorisation."
     },
     {
-      "from": "SVC-001 (CAP-001)",
-      "to": "SVC-009 (CAP-003)",
+      "from": "SVC-001",
+      "to": "SVC-009",
       "pattern": "Async event via Event Bus — CHAPSPaymentIntentCreated (EVT-108)",
       "phase": "PH-077 → PH-078",
       "cross_capability": true,
       "note": "CAP-001 → CAP-003 boundary. Triggers CoP and sanctions orchestration."
     },
     {
-      "from": "SVC-001 (CAP-001)",
-      "to": "SVC-009 (CAP-003)",
+      "from": "SVC-001",
+      "to": "SVC-009",
       "pattern": "Async event via Event Bus — CHAPSPaymentAuthorised (EVT-110)",
       "phase": "PH-080 → PH-081",
       "cross_capability": true,
       "note": "CAP-001 → CAP-003 boundary. Triggers RTGS submission."
     },
     {
-      "from": "SVC-001 (CAP-001)",
-      "to": "SVC-014 (CAP-005)",
+      "from": "SVC-001",
+      "to": "SVC-014",
       "pattern": "Async event via Event Bus — CHAPSPaymentIntentCreated (EVT-108) consumed by SVC-014",
       "phase": "PH-077 → PH-079",
       "cross_capability": true,
       "note": "CAP-001 → CAP-005 boundary. SVC-014 subscribes to high-value payment intents for AML monitoring."
     },
     {
-      "from": "SVC-009 (CAP-003)",
-      "to": "SVC-001 (CAP-001)",
+      "from": "SVC-009",
+      "to": "SVC-001",
       "pattern": "Async event via Event Bus — CHAPSPaymentSettled (EVT-111)",
       "phase": "PH-081 → PH-082",
       "cross_capability": true,
       "note": "CAP-003 → CAP-001 boundary. Triggers account debit."
     },
     {
-      "from": "SVC-009 (CAP-003)",
-      "to": "SVC-002 (CAP-001)",
+      "from": "SVC-009",
+      "to": "SVC-002",
       "pattern": "Async event via Event Bus — MortgageCompletionPaymentConfirmed (EVT-112)",
       "phase": "PH-082",
       "cross_capability": true,

@@ -17,10 +17,10 @@
     "CAP-005"
   ],
   "sub_capabilities_involved": [
-    "CAP-002.01 (Business Transaction Banking)",
-    "CAP-002.02 (Business Lending — RETAINED within CAP-002/SVC-005)",
-    "CAP-004.01 (Credit Risk Scoring — SVC-012, cross-capability async only)",
-    "CAP-005.01 (KYC/AML — pKYC monitoring, no new CDD unless triggered)"
+    "CAP-002.01",
+    "CAP-002.02",
+    "CAP-004.01",
+    "CAP-005.01"
   ],
   "phases": [
     {
@@ -28,9 +28,9 @@
       "name": "Loan Enquiry",
       "description": "Relationship Manager (PER-050) holds initial discussion with the business customer (PER-002) to understand borrowing requirements, purpose, security availability, and indicative loan size. RM conducts a preliminary assessment using the customer's existing profile in SVC-005 (financial performance, sector, existing facilities). A non-binding indicative terms letter may be issued. No formal application is created at this stage.",
       "actors": [
-        "PER-002 (SME Business Owner / Director)",
-        "PER-050 (Relationship Manager)",
-        "SVC-005 (Commercial Banking Core — read access to BusinessCustomer, BusinessAccount)"
+        "PER-002",
+        "PER-050",
+        "SVC-005"
       ],
       "services": ["SVC-005"],
       "governance_rules": [
@@ -51,9 +51,9 @@
       "name": "Loan Application",
       "description": "PER-002 submits a formal loan application via the RM or business portal. SVC-005 creates a LoanApplication entity (ENT-017) with status = submitted. Customer uploads supporting financial statements (last 3 years audited accounts, management accounts, cash flow projections) and a business plan. RM validates completeness and submits to credit team. EVT-031 (LoanApplicationSubmitted) is published.",
       "actors": [
-        "PER-002 (SME Business Owner / Director)",
-        "PER-050 (Relationship Manager)",
-        "SVC-005 (Commercial Banking Core — creates LoanApplication)"
+        "PER-002",
+        "PER-050",
+        "SVC-005"
       ],
       "services": ["SVC-005"],
       "governance_rules": [
@@ -75,9 +75,9 @@
       "name": "Credit Assessment",
       "description": "SVC-012 (Risk Engine, CAP-004) receives EVT-032 (CreditAssessmentRequested) and runs automated credit scoring: Probability of Default (PD), Loss Given Default (LGD), Exposure at Default (EAD), and Expected Credit Loss (ECL) provision under IFRS 9 and Basel 3.1 IRB approach. SVC-012 publishes EVT-033 (CreditAssessmentCompleted) with risk_rating and pd_score. Back in SVC-005, a Credit Analyst (PER-056) receives the automated score and prepares a full credit paper incorporating sector analysis, management quality, financial ratios, and security valuation. The CreditAssessment entity (ENT-018) is created with the analyst's narrative and risk rating.",
       "actors": [
-        "SVC-012 (Risk Engine — automated PD/LGD/EAD scoring)",
-        "PER-056 (Credit Analyst — manual review and credit paper)",
-        "SVC-005 (Commercial Banking Core — stores CreditAssessment)"
+        "SVC-012",
+        "PER-056",
+        "SVC-005"
       ],
       "services": ["SVC-012", "SVC-005"],
       "governance_rules": [
@@ -99,10 +99,10 @@
       "name": "Underwriting",
       "description": "For loan amounts above the Relationship Manager's credit authority threshold, the credit paper is referred to the Credit Committee for approval. The committee reviews risk rating, proposed pricing (margin over SONIA), security structure, and covenant package. Committee may approve, approve with conditions, or decline. For amounts within RM authority, RM/Senior RM approves directly. EVT-034 (LoanApproved) or EVT-035 (LoanDeclined) is published. For conditional approvals, conditions precedent are recorded on the facility record.",
       "actors": [
-        "PER-050 (Relationship Manager — approvals within RM authority)",
-        "PER-056 (Credit Analyst — presents credit paper)",
+        "PER-050",
+        "PER-056",
         "Credit Committee (for amounts above RM credit authority threshold)",
-        "SVC-005 (Commercial Banking Core — records committee decision on CreditAssessment.committee_decision)"
+        "SVC-005"
       ],
       "services": ["SVC-005"],
       "governance_rules": [
@@ -124,10 +124,10 @@
       "name": "Facility Agreement",
       "description": "Following credit approval, the bank's legal team issues a Facility Agreement (ENT-019) to the business customer. The agreement specifies: approved amount, interest rate (SONIA + margin), repayment schedule, security requirements, financial covenants (e.g. minimum DSCR, maximum leverage ratio), and conditions precedent to drawdown. PER-002 reviews, negotiates if required, and signs. Conditions precedent (e.g. debenture, personal guarantee, charge registration at Companies House) are tracked and perfected. EVT-036 (FacilityAgreed) is published on signing.",
       "actors": [
-        "PER-002 (SME Business Owner / Director — signs the agreement)",
-        "PER-050 (Relationship Manager — coordinates legal documentation)",
+        "PER-002",
+        "PER-050",
         "Legal Team (prepares and negotiates facility agreement)",
-        "SVC-005 (Commercial Banking Core — creates FacilityAgreement entity)"
+        "SVC-005"
       ],
       "services": ["SVC-005"],
       "governance_rules": [
@@ -151,9 +151,9 @@
       "name": "Drawdown",
       "description": "Customer requests drawdown of some or all of the approved facility. SVC-005 verifies all conditions precedent are met, creates a LoanAccount (ENT-020) for the facility, and instructs SVC-009 (Domestic Payments Service) to credit the drawdown amount to the customer's BusinessAccount (ENT-080). CHAPS is used for same-day settlement for amounts above the BACS threshold. EVT-037 (LoanDrawnDown) and EVT-038 (LoanAccountOpened) are published. The LoanAccount is linked to the FacilityAgreement and begins accruing interest from the drawdown date.",
       "actors": [
-        "PER-002 (SME Business Owner / Director — initiates drawdown request)",
-        "SVC-005 (Commercial Banking Core — creates LoanAccount, instructs payment)",
-        "SVC-009 (Domestic Payments Service — executes CHAPS/BACS credit to BusinessAccount)"
+        "PER-002",
+        "SVC-005",
+        "SVC-009"
       ],
       "services": ["SVC-005", "SVC-009"],
       "governance_rules": [
@@ -178,11 +178,11 @@
       "name": "Ongoing Monitoring",
       "description": "Post-drawdown, SVC-005 monitors covenant compliance throughout the loan term. Financial covenants (e.g. minimum Debt Service Coverage Ratio, maximum Gross Leverage) are tested at agreed intervals (typically quarterly or semi-annually) using financial information submitted by the borrower. CovenantMonitoring entities (ENT-021) record each test result. Automated early-warning signals flag deterioration in the borrower's trading account turnover or missed repayments. Annual reviews are conducted by the RM and Credit Analyst. EVT-039 (CovenantBreachDetected) is published on any covenant failure, triggering internal escalation and borrower notification.",
       "actors": [
-        "PER-002 (SME Business Owner / Director — submits periodic financial information)",
-        "PER-050 (Relationship Manager — annual review)",
-        "PER-056 (Credit Analyst — reviews covenant test results, prepares watch-list papers)",
-        "SVC-005 (Commercial Banking Core — automates covenant testing, monitors BusinessAccount activity)",
-        "SVC-012 (Risk Engine — re-scores PD on annual review events via async event)"
+        "PER-002",
+        "PER-050",
+        "PER-056",
+        "SVC-005",
+        "SVC-012"
       ],
       "services": ["SVC-005", "SVC-012"],
       "governance_rules": [

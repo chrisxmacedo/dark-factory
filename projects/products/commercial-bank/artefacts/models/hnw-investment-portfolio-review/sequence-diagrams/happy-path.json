@@ -409,7 +409,7 @@
       "step": 1,
       "from_capability": "CAP-005",
       "to_capability": "CAP-006",
-      "event": "EVT-004 (KYCClearanceGranted)",
+      "event": "EVT-004",
       "mechanism": "async event via SVC-102",
       "note": "Reuses existing event. SVC-016 validates KYC is current before scheduling review."
     },
@@ -417,7 +417,7 @@
       "step": 22,
       "from_capability": "CAP-006",
       "to_capability": "CAP-005",
-      "event": "EVT-103 (SuitabilityReportIssued)",
+      "event": "EVT-103",
       "mechanism": "async event via SVC-102",
       "note": "Cross-capability compliance record registration. SVC-014 creates SuitabilityRecord."
     },
@@ -425,7 +425,7 @@
       "step": 41,
       "from_capability": "CAP-006",
       "to_capability": "CAP-005",
-      "event": "EVT-106 (ConsumerDutyEvidenceCompleted)",
+      "event": "EVT-106",
       "mechanism": "async event via SVC-102",
       "note": "Consumer Duty fair value evidence registered in CAP-005 compliance store."
     }

@@ -1,0 +1,75 @@
+---
+title: "JRN-009 Happy Path — International Wire Transfer (Corporate)"
+---
+sequenceDiagram
+    autonumber
+
+    actor PER002 as PER-002<br/>Corporate Client
+    participant Channel as Channel<br/>Corporate Banking Portal (CAP-007)
+    participant CAP003 as CAP-003 API<br/>Payment Operations
+    participant EB as Event Bus<br/>SVC-102
+    participant CAP005 as CAP-005<br/>Compliance
+    participant CAP004 as CAP-004<br/>Risk Management
+    participant CAP002 as CAP-002<br/>Commercial Banking
+    participant SWIFT as SWIFT Network<br/>SAA Cloud
+
+    rect rgb(230, 245, 255)
+        Note over PER002,EB: PH-029 — Transfer Initiation
+        PER002->>Channel: Enter beneficiary details + complete SCA (FIDO2/WebAuthn)<br/>beneficiary_name: Müller Industrietechnik GmbH<br/>beneficiary_iban: DE89370400440532013000 | beneficiary_bic: COBADEFFXXX<br/>amount: €250,000 | purpose_code: SUPP | charges_type: SHA
+        Channel->>CAP003: POST /international-transfers<br/>{ beneficiary_name, beneficiary_iban: DE89370400440532013000,<br/>beneficiary_bic: COBADEFFXXX, amount: 250000.00,<br/>currency: EUR, purpose_code: SUPP, charges_type: SHA }
+        Note over CAP003: Validate: BusinessAccount.status=active<br/>available_balance GBP 1,850,000 OK<br/>BIC COBADEFFXXX in SWIFT directory | purpose_code valid<br/>Create ENT-026 InternationalTransfer<br/>transfer_id: xfer-20260415-0088421 | status: pending_compliance
+        CAP003->>EB: Publish EVT-049 InternationalTransferInitiated<br/>{ transfer_id: xfer-20260415-0088421,<br/>beneficiary_iban: DE89370400440532013000,<br/>beneficiary_bic: COBADEFFXXX,<br/>amount: 250000.00, currency: EUR }
+        CAP003-->>Channel: 201 Created { transfer_id: xfer-20260415-0088421, status: pending_compliance }
+        Channel-->>PER002: Transfer submitted — compliance checks in progress
+    end
+
+    rect rgb(230, 255, 230)
+        Note over PER002,CAP003: PH-030 — FX Quotation
+        Note over CAP003: Detect cross-currency (EUR ≠ GBP)<br/>Call internal FX pricing engine (intra-CAP-003, synchronous)<br/>Create ENT-027 FXQuotation:<br/>sell_currency: GBP | buy_currency: EUR<br/>rate: 1.1623 | gbp_equivalent: £215,107.46<br/>validity_seconds: 60 | status: pending_acceptance
+        CAP003->>EB: Publish EVT-050 FXQuoteProvided<br/>{ fx_quotation_id, rate: 1.1623,<br/>gbp_equivalent: 215107.46, validity_seconds: 60 }
+        Channel-->>PER002: Display FX rate: EUR/GBP 1.1623<br/>GBP equivalent: £215,107.46 | Valid 60 seconds
+        PER002->>Channel: Accept FX quote (within validity window)
+        Channel->>CAP003: POST /fx-quotations/{fx_quotation_id}/accept
+        Note over CAP003: FXQuotation.status = accepted<br/>InternationalTransfer.fx_rate = 1.1623<br/>InternationalTransfer.gbp_equivalent = 215,107.46
+    end
+
+    rect rgb(255, 245, 220)
+        Note over EB,CAP003: PH-031 — Pre-Execution Compliance (concurrent)
+        EB-)CAP005: Consume EVT-049 InternationalTransferInitiated<br/>→ sanctions screening (beneficiary + correspondent chain)
+        EB-)CAP004: Consume EVT-049 InternationalTransferInitiated<br/>→ fraud scoring (corporate wire ML model)
+        Note over CAP005: Fan-out sanctions screens (concurrent):<br/>Müller Industrietechnik GmbH | DE89370400440532013000<br/>COBADEFFXXX (Commerzbank)<br/>Lists: OFSI + UN + EU + OFAC<br/>All 2 entities: CLEAR | 1,840ms
+        CAP005->>EB: Publish EVT-051 TransferSanctionsScreened<br/>{ transfer_id, outcome: clear,<br/>screened_entities: 2, result_id: scr-0088421 }
+        Note over CAP004: Score transfer: amount GBP 215,107<br/>Jurisdiction DE (low risk) | COBADEFFXXX established BIC<br/>Normal business hours | Established authoriser<br/>risk_score: 0.12 | risk_level: low | model: corp-wire-v3.1
+        CAP004->>EB: Publish EVT-052 TransferFraudScored<br/>{ transfer_id, risk_score: 0.12,<br/>risk_level: low, model_version: corp-wire-v3.1 }
+        EB-)CAP003: Consume EVT-051 (outcome: clear) + EVT-052 (risk_level: low)<br/>Correlation map keyed on transfer_id — both events received
+        Note over CAP003: Both clear → set InternationalTransfer.status = compliance_cleared
+    end
+
+    rect rgb(245, 230, 255)
+        Note over CAP003: PH-032 — SWIFT Message Assembly
+        Note over CAP003: Determine correspondent chain for COBADEFFXXX<br/>Create ENT-028 CorrespondentRouting:<br/>correspondent_chain: [COBADEFFXXX] | nostro_account: NOSTRO-EUR-001<br/>Assign SWIFT gpi UETR: 550e8400-e29b-41d4-a716-446655440000<br/>Assemble pacs.008 ISO 20022 MX (CBPR+ mandatory post Nov 2025)<br/>LEI: 529900T8BM49AURSDO55 | purpose_code: SUPP<br/>Create ENT-029 SWIFTMessage:<br/>message_id: swift-msg-20260415-0088421 | type: pacs008<br/>Set InternationalTransfer.status = message_assembled
+        CAP003->>EB: Publish EVT-053 TransferCleared<br/>{ transfer_id, gpi_uetr: 550e8400-e29b-41d4-a716-446655440000,<br/>message_id: swift-msg-20260415-0088421 }
+    end
+
+    rect rgb(255, 230, 230)
+        Note over CAP003,CAP002: PH-033 — Nostro/Correspondent Processing
+        CAP003->>SWIFT: Submit pacs.008 to SWIFT network via SAA Cloud<br/>{ gpi_uetr: 550e8400-..., message_type: pacs008 }
+        SWIFT-->>CAP003: Submission acknowledgement
+        Note over CAP003: Update SWIFTMessage.sent_timestamp<br/>Set InternationalTransfer.status = in_transit
+        CAP003->>EB: Publish EVT-054 SWIFTMessageSent<br/>{ transfer_id, gpi_uetr, sent_at: 2026-04-15T10:25:18Z }
+        EB-)CAP002: Consume EVT-054 SWIFTMessageSent<br/>→ debit BusinessAccount by GBP 215,107.46 (idempotent on transfer_id)
+        Note over CAP003: Call SVC-009 Domestic Payments (same-capability CAP-003, synchronous)<br/>for nostro account settlement mechanics
+        SWIFT-)CAP003: gpi tracker: ACSP — correspondent ACK received<br/>accepting_correspondent_bic: COBADEFFXXX<br/>ack_timestamp: 2026-04-15T10:48:12Z
+        CAP003->>EB: Publish EVT-055 CorrespondentAcknowledged<br/>{ transfer_id, gpi_uetr, accepting_correspondent_bic: COBADEFFXXX }
+    end
+
+    rect rgb(230, 255, 245)
+        Note over SWIFT,PER002: PH-034 — Confirmation and Tracking
+        SWIFT-)CAP003: gpi tracker: ACCC — AcceptedCreditSettlementCompleted<br/>completed_at: 2026-04-15T11:22:09Z
+        Note over CAP003: Set InternationalTransfer.status = completed
+        CAP003->>EB: Publish EVT-056 TransferCompleted<br/>{ transfer_id, gpi_uetr: 550e8400-e29b-41d4-a716-446655440000,<br/>completed_at: 2026-04-15T11:22:09Z }
+        Note over EB: Route EVT-056 → Notifications (SVC-053):<br/>Push + email to PER-002: Transfer completed.<br/>UETR: 550e8400-... | Credit confirmed at Commerzbank
+        Note over EB: Route EVT-056 → Audit (SVC-103) + WORM Store (SVC-111):<br/>Archive per FATF travel rule retention obligations
+        Channel-)PER002: Push notification + email: "Transfer complete.<br/>€250,000 credited to Müller Industrietechnik GmbH.<br/>UETR: 550e8400-e29b-41d4-a716-446655440000"
+        Note over PER002: Journey complete<br/>InternationalTransfer.status: completed<br/>BusinessAccount debited: GBP 215,107.46<br/>Total elapsed: ~1 hour (EU corridor, business hours)
+    end

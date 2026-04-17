@@ -9,7 +9,7 @@
       "name": "BusinessCustomer",
       "description": "The commercial banking aggregate root for a legal entity customer. Created by SVC-005 (Commercial Banking Core) at PH-139 as a prospect record and promoted to 'active' at PH-145 (Account Provisioning) once a BusinessAccount is opened. This is the foundational entity consumed by all downstream commercial journeys (JRN-007 Business Loan, JRN-013 Trade Finance, JRN-014 International Wire, JRN-023 Merchant Onboarding). Analogous in role to ENT-001 (Customer) in the retail domain but is a completely separate entity owned by a separate capability (CAP-002). The BusinessCustomer holds the legal entity identity; individual directors and UBOs are referenced via DirectorRecord and UltimateBeneficialOwner entities respectively.",
       "owning_service": "SVC-005",
-      "owning_capability": "CAP-002 (Commercial Banking)",
+      "owning_capability": "CAP-002",
       "reachable_from_phases": ["PH-139", "PH-140", "PH-141", "PH-142", "PH-143", "PH-144", "PH-145", "PH-146"],
       "aggregate_root": true,
       "fields": [
@@ -170,7 +170,7 @@
       "name": "BusinessAccount",
       "description": "The business current account entity. Created by SVC-005 (Commercial Banking Core) in PH-145 (Account Provisioning) upon an approved BusinessApplicationDecisionMade event. The central financial entity in the commercial ledger. Extends the core account concept (see ENT-004 Account for the retail equivalent) with multi-signatory configuration, payment approval workflows, and business-specific payment rail access. Triggers FSCS SCV update (for sole traders only) and CASS registration upon creation.",
       "owning_service": "SVC-005",
-      "owning_capability": "CAP-002 (Commercial Banking)",
+      "owning_capability": "CAP-002",
       "reachable_from_phases": ["PH-145", "PH-146"],
       "aggregate_root": false,
       "fields": [
@@ -302,7 +302,7 @@
       "name": "UltimateBeneficialOwner",
       "description": "Records the identity and verification status of each natural person identified as a beneficial owner of the BusinessCustomer under MLR 2017 Regulation 5 (natural persons with >25% direct or indirect ownership or control of shares, voting rights, or right to appoint/remove majority of directors). A BusinessCustomer may have zero or more UBO records. Where no natural person meets the >25% threshold, the senior managing official(s) are recorded as UBO of last resort under MLR 2017 Regulation 5(4). Each UBO record links to the SVC-050 IdentityVerification record for that individual once their identity has been verified. This entity is the audit trail for UBO identification compliance under MLR 2017 Regulation 40.",
       "owning_service": "SVC-005",
-      "owning_capability": "CAP-002 (Commercial Banking)",
+      "owning_capability": "CAP-002",
       "reachable_from_phases": ["PH-141", "PH-142", "PH-143"],
       "aggregate_root": false,
       "fields": [
@@ -427,7 +427,7 @@
       "name": "DirectorRecord",
       "description": "Records each appointed director of the BusinessCustomer as identified from Companies House officer list at PH-140. All current directors must be identified and individually verified (PH-142) regardless of ownership percentage. Directors are separately screened for PEP/sanctions status in PH-143 even where they hold no ownership stake. The DirectorRecord links to the SVC-050 IdentityVerification record for the individual and to the Companies House officer identifier for audit trail continuity.",
       "owning_service": "SVC-005",
-      "owning_capability": "CAP-002 (Commercial Banking)",
+      "owning_capability": "CAP-002",
       "reachable_from_phases": ["PH-140", "PH-141", "PH-142", "PH-143"],
       "aggregate_root": false,
       "fields": [
@@ -536,7 +536,7 @@
       "name": "BusinessKycAssessment",
       "description": "Company-level KYC/CDD assessment record produced by SVC-014 (KYC/AML Service) in PH-143. Extends the KycAssessment pattern established in ENT-003 (KycAssessment) for natural persons to cover the additional complexity of a legal entity assessment: company-level PEP/sanctions/adverse media screening, sector risk assessment, jurisdictional risk, UBO ownership chain screening, and aggregated risk scoring that combines company-level and individual-level findings. The MLRO (PER-052) holds accountability for this assessment. The BusinessKycAssessment is the primary audit record for the bank's MLR 2017 Regulation 28 compliance for this business customer.",
       "owning_service": "SVC-014",
-      "owning_capability": "CAP-005 (Compliance & Regulatory)",
+      "owning_capability": "CAP-005",
       "reachable_from_phases": ["PH-143", "PH-144"],
       "aggregate_root": false,
       "fields": [

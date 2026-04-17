@@ -7,54 +7,55 @@ sequenceDiagram
     actor PER002 as PER-002<br/>Business Customer
     actor PER050 as PER-050<br/>Relationship Manager
     actor PER052 as PER-052<br/>MLRO
-    participant SVC017 as SVC-017<br/>Digital Channels
-    participant SVC005 as SVC-005<br/>Commercial Banking Core
+    participant Channel as Channel<br/>Web/Business Portal (CAP-007)
+    participant CAP002 as CAP-002 API<br/>Commercial Banking
     participant CHAPI as Companies House API
-    participant SVC014 as SVC-014<br/>KYC/AML Service
-    participant EB as SVC-102<br/>Event Bus
-    participant SVC053 as SVC-053<br/>Notifications
+    participant CAP005 as CAP-005 API<br/>Compliance
+    participant EB as Event Bus<br/>SVC-102
 
     rect rgb(230, 245, 255)
-        Note over PER002,SVC005: PH-139 + PH-140 — Application + Companies House (Day 1)
-        PER002->>SVC017: Submit application (Holdco Ventures Ltd, company: 99887766)
-        SVC017->>SVC005: POST /business-applications
-        SVC005->>EB: publish BusinessApplicationStarted
-        SVC005->>CHAPI: GET company + officers + PSC
+        Note over PER002,CAP002: PH-139 + PH-140 — Application + Companies House (Day 1)
+        PER002->>Channel: Submit application (Holdco Ventures Ltd, company: 99887766)
+        Channel->>CAP002: POST /business-applications { company_number: 99887766 }
+        CAP002->>EB: Publish BusinessApplicationStarted
+        CAP002->>CHAPI: GET company + officers + PSC
         Note over CHAPI: Returns: 1 director (Alice Pemberton)<br/>PSC = Holdco International BV (80%, Netherlands)<br/>NO natural person on PSC register
-        CHAPI-->>SVC005: 200 OK { corporate_psc: Holdco International BV, jurisdiction: NL }
-        Note over SVC005: corporate_psc_detected = true<br/>ubo_count_from_psc = 0 (no natural persons identified)
-        SVC005->>EB: publish CompaniesHouseVerified<br/>{ corporate_psc_detected: true, corporate_psc: Holdco International BV }
+        CHAPI-->>CAP002: 200 OK { corporate_psc: Holdco International BV, jurisdiction: NL }
+        Note over CAP002: corporate_psc_detected = true<br/>ubo_count_from_psc = 0 (no natural persons identified)
+        CAP002->>EB: Publish CompaniesHouseVerified<br/>{ corporate_psc_detected: true, corporate_psc: Holdco International BV }
     end
 
     rect rgb(255, 230, 220)
         Note over PER002,PER052: PH-141 — UBO Identification Failure (EX-B004, Day 1)
-        SVC017-->>PER002: Prompt: "One of your registered beneficial owners is<br/>a company (Holdco International BV). We need to<br/>identify the natural persons behind it."
-        PER002->>SVC017: Cannot provide UBO details online — requests RM assistance
-        SVC005->>EB: publish UBOIdentificationException<br/>{ exception_type: corporate_psc_look_through_required,<br/>corporate_psc: Holdco International BV, jurisdiction: NL }
-        SVC053-->>PER002: Email: "Additional information required.<br/>A Relationship Manager will contact you within 1 business day."
-        Note over SVC053: Generic language only — no AML details disclosed<br/>Tipping-off prevention applied
-        SVC014-->>PER052: MLRO case alert: UBO look-through required<br/>Dutch corporate PSC — document gathering needed
-        SVC053-->>PER050: CRM alert: assigned to Holdco Ventures Ltd<br/>Action: gather corporate structure evidence
+        Channel-->>PER002: Prompt: "One of your registered beneficial owners is<br/>a company (Holdco International BV). We need to<br/>identify the natural persons behind it."
+        PER002->>Channel: Cannot provide UBO details online — requests RM assistance
+        Channel->>CAP002: POST /business-applications/{id}/ubo-exception { exception_type: corporate_psc }
+        CAP002->>EB: Publish UBOIdentificationException<br/>{ exception_type: corporate_psc_look_through_required,<br/>corporate_psc: Holdco International BV, jurisdiction: NL }
+        Note over EB: Route to Notifications (SVC-053):<br/>Email to PER-002: "Additional information required.<br/>A Relationship Manager will contact you within 1 business day."<br/>(Generic language only — tipping-off prevention applied)
+        EB-)CAP005: Consume UBOIdentificationException<br/>→ MLRO case alert: UBO look-through required; Dutch corporate PSC
+        CAP005--)PER052: MLRO case alert: UBO look-through required<br/>Dutch corporate PSC — document gathering needed
+        Note over EB: Route to CRM notification → PER-050 (RM):<br/>Assigned to Holdco Ventures Ltd | Action: gather corporate structure evidence
     end
 
     rect rgb(255, 245, 220)
         Note over PER050,PER002: EX-B004 Investigation (Days 2-3)
         PER050->>PER002: RM calls customer (Day 2)<br/>Requests: corporate structure chart,<br/>UBO names/DOB/nationality for Holdco Int'l BV,<br/>Dutch KvK (KvK = Dutch company register) extract
-        PER002->>SVC017: Upload documents (Day 3):<br/>Corporate structure chart + Dutch UBO register extract<br/>Jan van den Berg 60%, Marieke van den Berg 40%
-        PER050->>SVC017: RM reviews and submits to MLRO case (Day 3)
+        PER002->>Channel: Upload documents (Day 3):<br/>Corporate structure chart + Dutch UBO register extract<br/>Jan van den Berg 60%, Marieke van den Berg 40%
+        PER050->>Channel: RM reviews and submits to MLRO case (Day 3)
+        Channel->>CAP005: POST /kyc-cases/{id}/ubo-documents { documents, mlro_reviewer: PER-050 }
     end
 
     rect rgb(230, 255, 230)
-        Note over PER052,SVC005: MLRO UBO Approval (Day 4)
-        PER052->>SVC005: MLRO approves UBO identification<br/>(Dutch documentation accepted — reliable independent source)
-        Note over SVC005: Create UltimateBeneficialOwner entities:<br/>Jan van den Berg (60%, NL national)<br/>Marieke van den Berg (40%, NL national)<br/>source: Dutch_UBO_register + corporate_structure_chart
-        SVC005->>EB: publish UBOIdentified (x2)<br/>{ ubo_id, Jan van den Berg, ownership: 60%, jurisdiction: NL }<br/>{ ubo_id, Marieke van den Berg, ownership: 40%, jurisdiction: NL }
+        Note over PER052,CAP002: MLRO UBO Approval (Day 4)
+        PER052->>CAP005: MLRO approves UBO identification<br/>(Dutch documentation accepted — reliable independent source)
+        CAP005->>EB: Publish MLROUBOApproved { case_id, ubos_confirmed: 2 }
+        EB-)CAP002: Consume MLROUBOApproved
+        Note over CAP002: Create UltimateBeneficialOwner entities:<br/>Jan van den Berg (60%, NL national)<br/>Marieke van den Berg (40%, NL national)<br/>source: Dutch_UBO_register + corporate_structure_chart
+        CAP002->>EB: Publish UBOIdentified (x2)<br/>{ ubo_id, ubo_name: Jan van den Berg, ownership: 60%, jurisdiction: NL }<br/>{ ubo_id, ubo_name: Marieke van den Berg, ownership: 40%, jurisdiction: NL }
     end
 
     rect rgb(245, 230, 255)
-        Note over SVC053,PER002: Journey Resumes — PH-142 Identity Verification (Days 4-6)
-        SVC053-->>PER002: In-app: "Beneficial owners identified. Identity<br/>verification links sent to Jan and Marieke van den Berg."
-        Note over SVC053: Verification invitations dispatched to<br/>Jan van den Berg + Marieke van den Berg (email)
-        Note over SVC005: Alice Pemberton (director) also requires verification
-        Note over SVC005: Journey continues: PH-142 → PH-143 → PH-144 → PH-145 → PH-146<br/>via normal happy path (not shown here)<br/>Total elapsed: ~6-8 business days
+        Note over Channel,PER002: Journey Resumes — PH-142 Identity Verification (Days 4-6)
+        Note over EB: Route UBOIdentified → Notifications (SVC-053):<br/>In-app to PER-002: "Beneficial owners identified.<br/>Identity verification links sent to Jan and Marieke van den Berg."<br/>Verification invitations dispatched (email)
+        Note over CAP002: Alice Pemberton (director) also requires verification<br/>Journey continues: PH-142 → PH-143 → PH-144 → PH-145 → PH-146<br/>via normal happy path (not shown here)<br/>Total elapsed: ~6-8 business days
     end

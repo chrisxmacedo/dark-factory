@@ -59,28 +59,28 @@
       "name": "Trade Finance Service",
       "type": "service",
       "role_in_journey": "Primary service owner for JRN-013. Owns all LC lifecycle entities. Orchestrates all phases. Enforces UCP 600 deadlines.",
-      "capability": "CAP-002.03 (Trade Finance, PROMOTED)"
+      "capability": "CAP-002.03"
     },
     {
       "participant_id": "SVC-005",
       "name": "Commercial Banking Core",
       "type": "service",
       "role_in_journey": "Same-capability peer service. Provides facility headroom data and account debit for settlement.",
-      "capability": "CAP-002 (Commercial Banking)"
+      "capability": "CAP-002"
     },
     {
       "participant_id": "SVC-051",
       "name": "Sanctions Screening Service",
       "type": "service",
       "role_in_journey": "Cross-capability compliance gate. Screens beneficiary and goods on EVT-076. Returns EVT-077 on clearance.",
-      "capability": "CAP-005 (Compliance & Regulatory)"
+      "capability": "CAP-005"
     },
     {
       "participant_id": "SVC-010",
       "name": "International Payments Service",
       "type": "service",
       "role_in_journey": "Cross-capability SWIFT adapter. Transmits MT700 on EVT-078 and MT202 reimbursement on EVT-081.",
-      "capability": "CAP-003 (Payment Operations)"
+      "capability": "CAP-003"
     },
     {
       "participant_id": "Advising Bank",
