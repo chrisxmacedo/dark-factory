@@ -1,0 +1,192 @@
+{
+  "journey_id": "JRN-005",
+  "journey_name": "APP Fraud Detection and Reimbursement",
+  "document_version": "0.1.0",
+  "status": "Draft",
+  "architectural_principle": "A service owns its entities exclusively — no shared databases between services. Cross-service reads are performed via synchronous API calls or asynchronous event consumption. FraudCase and FraudEvidence are exclusively owned by SVC-013. ReimbursementClaim is exclusively owned by SVC-009. SVC-001 (Retail Banking Core) executes the reimbursement credit but does not own any new entities — it acts on its existing Account entity.",
+  "service_boundaries": [
+    {
+      "service_id": "SVC-013",
+      "service_name": "Fraud Detection",
+      "capability_domain": "CAP-004 (Fraud Detection — promoted standalone capability)",
+      "tier": "T1",
+      "jrn005_changes": "SIGNIFICANT EXTENSION. JRN-002 established SVC-013 as a real-time scoring service with no owned entities. JRN-005 extends SVC-013 to be the full fraud case management service. New entities added: ENT-043 (FraudCase), ENT-044 (FraudEvidence). New APIs added. New event subscriptions added.",
+      "owned_entities": ["ENT-043", "ENT-044"],
+      "owned_entities_note": "SVC-013 previously owned no entities (JRN-002). JRN-005 adds FraudCase and FraudEvidence as new aggregates. These are exclusively owned by SVC-013 — no other service may write to these entities.",
+      "new_api_endpoints": [
+        "POST /fraud-cases",
+        "GET /fraud-cases/{id}",
+        "GET /fraud-cases/customer/{customer_id}",
+        "PATCH /fraud-cases/{id}",
+        "POST /fraud-cases/{id}/decision",
+        "POST /fraud-cases/{id}/evidence",
+        "GET /fraud-cases/{id}/evidence",
+        "GET /fraud-cases/{id}/evidence/{evidence_id}"
+      ],
+      "new_published_events": [
+        "EVT-090 FraudCaseCreated",
+        "EVT-091 FraudInvestigationStarted",
+        "EVT-092 FraudReimbursementApproved",
+        "EVT-093 FraudReimbursementDeclined",
+        "EVT-097 FraudCaseClosed",
+        "EVT-098 FraudPatternDetected"
+      ],
+      "new_consumed_events": [
+        {
+          "event_id": "EVT-P08",
+          "name": "PaymentFraudBlocked",
+          "provider_service_id": "SVC-001",
+          "purpose": "JRN-005 sub-flow 1: Triggers automatic FraudCase creation with trigger_type = realtime_block. SVC-013 already consumed this in JRN-002 to create a fraud operations platform case — JRN-005 formalises this as a FraudCase entity write with full lifecycle management."
+        }
+      ],
+      "new_consumed_events_cross_capability": [
+        {
+          "provider_service_id": "SVC-001",
+          "provider_service_name": "Retail Banking Core",
+          "call_pattern": "Async event via Event Bus (SVC-102)",
+          "dependency_criticality": "soft",
+          "purpose": "SVC-013 (CAP-004) must not call SVC-001 (CAP-001) synchronously — cross-capability boundary. Instead, when SVC-013 requires PaymentIntent or Customer data, it publishes a FraudDataRequested event (internal) to the Event Bus. SVC-001 publishes a FraudDataProvided event in response, containing the required payment details (cop_result, fraud_score, cop_override_confirmed) and customer metadata. SVC-013 consumes FraudDataProvided to hydrate the FraudCase record during PH-065.",
+          "event_request": "FraudDataRequested (SVC-013 → Event Bus → SVC-001 consumer)",
+          "event_response": "FraudDataProvided (SVC-001 → Event Bus → SVC-013 consumer)",
+          "design_note": "This pattern replaces the prior synchronous GET /payments/{id} and GET /customers/{id} calls. Data is enriched asynchronously after FraudCase creation. The FraudCase enters a data_enrichment sub-state while awaiting the FraudDataProvided event."
+        },
+        {
+          "provider_service_id": "SVC-009",
+          "provider_service_name": "Domestic Payments",
+          "call_pattern": "Async event via Event Bus (SVC-102)",
+          "dependency_criticality": "soft",
+          "purpose": "SVC-013 (CAP-004) must not call SVC-009 (CAP-003) synchronously — cross-capability boundary. SVC-013 publishes a FraudDataRequested event including the payment_intent_id. SVC-009 consumes this and publishes a FraudPaymentExecutionProvided event containing fps_reference, settlement_status, and receiving_sort_code. SVC-013 consumes FraudPaymentExecutionProvided to create the PaymentExecution evidence record during PH-065.",
+          "event_request": "FraudDataRequested (SVC-013 → Event Bus → SVC-009 consumer)",
+          "event_response": "FraudPaymentExecutionProvided (SVC-009 → Event Bus → SVC-013 consumer)",
+          "design_note": "This pattern replaces the prior synchronous GET /executions/{id} call. Both SVC-001 and SVC-009 data responses are consolidated before PH-065 (Case Creation) is marked complete."
+        }
+      ],
+      "new_consumed_apis": [
+        {
+          "provider_service_id": "SVC-017",
+          "provider_service_name": "Digital Channels",
+          "call_pattern": "Synchronous (blocking read at investigation phase)",
+          "dependency_criticality": "soft",
+          "purpose": "SVC-013 reads device data and session metadata from SVC-017 for the session at which the fraudulent payment was made. Used as FraudEvidence (evidence_type = device_data). Read-only. SVC-017 is a platform service — synchronous cross-capability calls to platform services are permitted.",
+          "architecture_note": "SVC-017 is classified as a platform service. Cross-capability synchronous calls to platform services are permitted per architectural standards."
+        },
+        {
+          "provider_service_id": "SVC-EXT-CIFAS",
+          "provider_service_name": "Cifas National Fraud Database (External)",
+          "call_pattern": "Synchronous (blocking at investigation phase)",
+          "dependency_criticality": "soft",
+          "purpose": "SVC-013 checks the receiving account details and customer identifiers against the Cifas National Fraud Database for mule account indicators and confirmed fraud victim flags."
+        }
+      ],
+      "fraud_investigation_platform": {
+        "build_vs_buy": "Buy candidate — Featurespace ARIC or NetGuardians as the underlying ML detection and case management platform. SVC-013 is the bank-owned API wrapper. The bank owns fraud strategy, rules governance, and case lifecycle APIs. The vendor platform provides the ML model, behavioural analytics engine, and investigator UI.",
+        "ml_model_governance": "All ML models used in SVC-013 fall under GOV-004-R01 (PRA SS1/23 Model Risk Management). Model must be in the bank's model inventory, independently validated annually, and have an assigned model owner. Fraud score outputs must be explainable at case level for PSR gross negligence assessment purposes."
+      }
+    },
+    {
+      "service_id": "SVC-001",
+      "service_name": "Retail Banking Core",
+      "capability_domain": "CAP-001 (Retail Banking)",
+      "tier": "T2",
+      "jrn005_changes": "MINOR EXTENSION. SVC-001 adds reimbursement credit execution capability to its existing payment processing functions. No new entities. New event consumption (FraudReimbursementApproved). New event publication (ReimbursementCredited).",
+      "owned_entities": ["ENT-001", "ENT-004", "ENT-008"],
+      "new_owned_entities": "None. SVC-001 does not take ownership of any new entities for JRN-005.",
+      "new_published_events": [
+        "EVT-094 ReimbursementCredited"
+      ],
+      "new_consumed_events": [
+        {
+          "event_id": "EVT-092",
+          "name": "FraudReimbursementApproved",
+          "provider_service_id": "SVC-013",
+          "purpose": "Triggers reimbursement credit execution. SVC-001 credits FraudCase.reimbursement_amount to the customer Account identified by FraudCase.account_id. Debits the bank's APP fraud loss suspense account. Publishes ReimbursementCredited (EVT-094). P99 < 30 minutes from event receipt to credit applied (NFR-005-PERF-002)."
+        }
+      ],
+      "reimbursement_credit_mechanics": {
+        "credit_source": "APP Fraud Loss Suspense Account (internal bank ledger account maintained for PSR reimbursement reserve)",
+        "credit_description": "APP Fraud Reimbursement — Case {case_id}",
+        "idempotency": "SVC-001 must implement idempotent credit execution. Duplicate FraudReimbursementApproved events for the same case_id must not result in double credits. Idempotency key: case_id on the reimbursement credit transaction.",
+        "failure_handling": "If credit fails: retry with exponential backoff (3 attempts: 1min, 5min, 15min). If all retries fail: escalate to Fraud Operations duty manager. Alert monitoring: ReimbursementCreditFailed alert threshold."
+      }
+    },
+    {
+      "service_id": "SVC-009",
+      "service_name": "Domestic Payments",
+      "capability_domain": "CAP-003 (Payment Operations)",
+      "tier": "T2",
+      "jrn005_changes": "MODERATE EXTENSION. SVC-009 adds ReimbursementClaim entity ownership and Pay.UK reimbursement mechanism integration. Previously only owned PaymentExecution (ENT-009) from JRN-002.",
+      "owned_entities": ["ENT-009", "ENT-045"],
+      "new_api_endpoints": [
+        "POST /reimbursement-claims",
+        "GET /reimbursement-claims/{claim_id}",
+        "GET /reimbursement-claims/case/{case_id}",
+        "PATCH /reimbursement-claims/{claim_id}"
+      ],
+      "new_published_events": [
+        "EVT-095 RecoveryInitiated",
+        "EVT-096 RecoveryCompleted"
+      ],
+      "new_consumed_events": [
+        {
+          "event_id": "EVT-092",
+          "name": "FraudReimbursementApproved",
+          "provider_service_id": "SVC-013",
+          "purpose": "Triggers ReimbursementClaim creation. SVC-009 reads the case_id, reimbursement_amount, and payment_intent_id from the event payload. Reads PaymentExecution (its own entity) for the receiving_sort_code. Creates ReimbursementClaim. Submits recovery claim to receiving PSP via Pay.UK reimbursement API. Publishes RecoveryInitiated (EVT-095)."
+        }
+      ],
+      "pay_uk_reimbursement_integration": {
+        "mechanism": "Pay.UK APP fraud reimbursement API (scheme-level claim submission)",
+        "build_vs_buy": "Buy — Form3 or Bottomline PTX managed scheme connectivity already in place for FPS. Pay.UK reimbursement API access added as an extension to the existing scheme connectivity layer. SVC-009 owns the orchestration logic; the connectivity vendor handles the scheme protocol.",
+        "claim_lifecycle": "Submit claim → Receive Pay.UK claim reference → Poll for receiving PSP response (or receive async callback) → Update ReimbursementClaim.recovery_status → Publish RecoveryCompleted or escalate dispute"
+      }
+    }
+  ],
+  "cross_service_event_flows": [
+    {
+      "step": 1,
+      "description": "Customer reports fraud via mobile app (CH-002). SVC-017 calls SVC-013 POST /fraud-cases. SVC-013 creates FraudCase (ENT-043). Publishes FraudCaseCreated (EVT-090). SVC-053 sends case confirmation notification to PER-001.",
+      "services_involved": ["SVC-017", "SVC-013", "SVC-053"]
+    },
+    {
+      "step": 2,
+      "description": "Alternatively: PaymentFraudBlocked (EVT-P08) consumed by SVC-013. FraudCase created automatically with trigger_type = realtime_block.",
+      "services_involved": ["SVC-001 (publisher)", "SVC-013 (consumer)"]
+    },
+    {
+      "step": 3,
+      "description": "Fraud Analyst (PER-054) opens case. SVC-013 publishes FraudDataRequested event to Event Bus (SVC-102) containing payment_intent_id. SVC-001 (CAP-001) and SVC-009 (CAP-003) each consume FraudDataRequested from the Event Bus and respond asynchronously: SVC-001 publishes FraudDataProvided (PaymentIntent fields: cop_result, fraud_score, cop_override_confirmed, customer metadata); SVC-009 publishes FraudPaymentExecutionProvided (fps_reference, settlement_status, receiving_sort_code). SVC-013 consumes both response events to hydrate FraudCase with evidence data. SVC-013 also calls SVC-017 (platform) synchronously for device/session data. FraudEvidence records created. FraudCase.status = investigating. Publishes FraudInvestigationStarted (EVT-091).",
+      "services_involved": ["SVC-013", "SVC-102 (Event Bus)", "SVC-001 (async event response)", "SVC-009 (async event response)", "SVC-017 (sync — platform)"],
+      "cross_capability_note": "SVC-013 (CAP-004) must not call SVC-001 (CAP-001) or SVC-009 (CAP-003) synchronously. Async event-request/response via SVC-102 Event Bus is the compliant pattern."
+    },
+    {
+      "step": 4,
+      "description": "Investigation complete. Decision recorded via POST /fraud-cases/{id}/decision. SVC-013 publishes FraudReimbursementApproved (EVT-092) or FraudReimbursementDeclined (EVT-093). SVC-053 dispatches outcome letter.",
+      "services_involved": ["SVC-013", "SVC-053"]
+    },
+    {
+      "step": 5,
+      "description": "SVC-001 consumes FraudReimbursementApproved (EVT-092). Credits reimbursement_amount to customer Account. Publishes ReimbursementCredited (EVT-094). SVC-053 dispatches credit notification.",
+      "services_involved": ["SVC-001 (consumer)", "SVC-053"]
+    },
+    {
+      "step": 6,
+      "description": "SVC-009 consumes FraudReimbursementApproved (EVT-092). Creates ReimbursementClaim (ENT-045). Submits recovery claim to receiving PSP via Pay.UK reimbursement API. Publishes RecoveryInitiated (EVT-095).",
+      "services_involved": ["SVC-009 (consumer)", "Pay.UK Reimbursement API (External)"]
+    },
+    {
+      "step": 7,
+      "description": "Recovery resolved. SVC-009 updates ReimbursementClaim.recovery_status. Publishes RecoveryCompleted (EVT-096) or updates to disputed status. SVC-013 consumes for case closure context.",
+      "services_involved": ["SVC-009", "SVC-013"]
+    },
+    {
+      "step": 8,
+      "description": "Analyst closes case via PATCH /fraud-cases/{id} (status = closed). SVC-013 publishes FraudCaseClosed (EVT-097) and FraudPatternDetected (EVT-098). SVC-111 archives full case record. SVC-053 sends closure notification.",
+      "services_involved": ["SVC-013", "SVC-111", "SVC-053"]
+    }
+  ],
+  "service_dependency_impact": {
+    "svc_013_tier_rationale": "T1 retained — Fraud Detection is a PSR-mandated service. The reimbursement decision function makes SVC-013 critical path for the 5-business-day SLA. SVC-013 unavailability directly triggers PSR enforcement risk.",
+    "svc_001_dependency_on_svc_013": "SVC-001 consumes FraudReimbursementApproved event — soft async dependency. SVC-001 does not need to call SVC-013 synchronously. This avoids adding a hard synchronous dependency from T2 to T1 on the reimbursement credit path.",
+    "svc_009_dependency_on_svc_013": "SVC-009 consumes FraudReimbursementApproved event — soft async dependency. Same pattern as SVC-001."
+  }
+}

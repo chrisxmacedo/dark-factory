@@ -1,0 +1,414 @@
+{
+  "diagram_id": "SEQ-JRN007-01",
+  "journey_id": "JRN-007",
+  "path": "happy_path",
+  "title": "JRN-007 Happy Path: SME Term Loan — Enquiry to Drawdown",
+  "description": "Full happy-path flow from initial RM conversation through credit assessment, committee approval, facility agreement execution, and CHAPS drawdown to the business account. Credit assessment request and completion cross the CAP-002/CAP-004 boundary via async events only. Drawdown disbursement crosses CAP-002/CAP-003 via synchronous payment API.",
+  "document_version": "1.0.0",
+  "participants": [
+    { "id": "PER002", "label": "PER-002\nBusiness Owner" },
+    { "id": "PER050", "label": "PER-050\nRelationship Manager" },
+    { "id": "PER056", "label": "PER-056\nCredit Analyst" },
+    { "id": "SVC005", "label": "SVC-005\nCommercial Banking Core\n(CAP-002)" },
+    { "id": "SVC102", "label": "SVC-102\nEvent Bus" },
+    { "id": "SVC012", "label": "SVC-012\nRisk Engine\n(CAP-004)" },
+    { "id": "SVC009", "label": "SVC-009\nDomestic Payments\n(CAP-003)" },
+    { "id": "SVC053", "label": "SVC-053\nNotification Service" }
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "phase": "PH-016",
+      "type": "note",
+      "description": "PH-016: Loan Enquiry"
+    },
+    {
+      "step": 2,
+      "phase": "PH-016",
+      "from": "PER002",
+      "to": "PER050",
+      "type": "sync",
+      "label": "Discusses borrowing requirements\n(purpose, amount, term, security)"
+    },
+    {
+      "step": 3,
+      "phase": "PH-016",
+      "from": "PER050",
+      "to": "SVC005",
+      "type": "sync",
+      "label": "Reads BusinessCustomer (ENT-B001)\nand BusinessAccount (ENT-B002) profile"
+    },
+    {
+      "step": 4,
+      "phase": "PH-016",
+      "from": "SVC005",
+      "to": "PER050",
+      "type": "return",
+      "label": "Customer profile and existing\nfacility data"
+    },
+    {
+      "step": 5,
+      "phase": "PH-016",
+      "from": "PER050",
+      "to": "PER002",
+      "type": "sync",
+      "label": "Issues indicative terms letter\n(non-binding)"
+    },
+    {
+      "step": 6,
+      "phase": "PH-017",
+      "type": "note",
+      "description": "PH-017: Loan Application"
+    },
+    {
+      "step": 7,
+      "phase": "PH-017",
+      "from": "PER002",
+      "to": "PER050",
+      "type": "sync",
+      "label": "Submits formal application\n+ financial statements + business plan"
+    },
+    {
+      "step": 8,
+      "phase": "PH-017",
+      "from": "PER050",
+      "to": "SVC005",
+      "type": "sync",
+      "label": "POST /loan-applications\n{business_customer_id, requested_amount,\nterm_months, purpose, security_type}"
+    },
+    {
+      "step": 9,
+      "phase": "PH-017",
+      "from": "SVC005",
+      "to": "SVC005",
+      "type": "internal",
+      "label": "Creates ENT-017 (LoanApplication)\nstatus = submitted"
+    },
+    {
+      "step": 10,
+      "phase": "PH-017",
+      "from": "SVC005",
+      "to": "SVC102",
+      "type": "async",
+      "label": "EVT-031: LoanApplicationSubmitted\ntopic: commercial.loan-applications"
+    },
+    {
+      "step": 11,
+      "phase": "PH-017",
+      "from": "SVC005",
+      "to": "SVC102",
+      "type": "async",
+      "label": "EVT-032: CreditAssessmentRequested\ntopic: commercial.credit-assessments\n[CROSS-CAPABILITY: CAP-002 → CAP-004]"
+    },
+    {
+      "step": 12,
+      "phase": "PH-017",
+      "from": "SVC005",
+      "to": "PER050",
+      "type": "return",
+      "label": "201 Created\n{application_id, status: submitted}"
+    },
+    {
+      "step": 13,
+      "phase": "PH-017",
+      "from": "SVC102",
+      "to": "SVC053",
+      "type": "async",
+      "label": "Delivers EVT-031\n→ SVC-053 sends acknowledgement\nto PER-002"
+    },
+    {
+      "step": 14,
+      "phase": "PH-018",
+      "type": "note",
+      "description": "PH-018: Credit Assessment (automated scoring in SVC-012)"
+    },
+    {
+      "step": 15,
+      "phase": "PH-018",
+      "from": "SVC102",
+      "to": "SVC012",
+      "type": "async",
+      "label": "Delivers EVT-032 to SVC-012\n[CAP-004 receives cross-capability event]"
+    },
+    {
+      "step": 16,
+      "phase": "PH-018",
+      "from": "SVC012",
+      "to": "SVC012",
+      "type": "internal",
+      "label": "Runs IRB PD/LGD/EAD/ECL models\nCreates ENT-018 (CreditAssessment)\nrisk_rating=4, pd_score=0.0215,\nlgd=0.35, ead=500000, ecl=3762.50"
+    },
+    {
+      "step": 17,
+      "phase": "PH-018",
+      "from": "SVC012",
+      "to": "SVC102",
+      "type": "async",
+      "label": "EVT-033: CreditAssessmentCompleted\ntopic: commercial.credit-assessments\n[CROSS-CAPABILITY: CAP-004 → CAP-002]"
+    },
+    {
+      "step": 18,
+      "phase": "PH-018",
+      "from": "SVC102",
+      "to": "SVC005",
+      "type": "async",
+      "label": "Delivers EVT-033 to SVC-005"
+    },
+    {
+      "step": 19,
+      "phase": "PH-018",
+      "from": "SVC005",
+      "to": "SVC005",
+      "type": "internal",
+      "label": "Stores assessment_id reference\nRoutes to Credit Analyst queue\nrisk_rating=4 → RM authority path"
+    },
+    {
+      "step": 20,
+      "phase": "PH-018",
+      "from": "SVC005",
+      "to": "PER056",
+      "type": "sync",
+      "label": "Credit Analyst assigned to\nprepare credit paper"
+    },
+    {
+      "step": 21,
+      "phase": "PH-018",
+      "from": "PER056",
+      "to": "SVC012",
+      "type": "sync",
+      "label": "Reads ENT-018 (CreditAssessment)\nautomated scores"
+    },
+    {
+      "step": 22,
+      "phase": "PH-018",
+      "from": "PER056",
+      "to": "PER056",
+      "type": "internal",
+      "label": "Prepares full credit paper:\nsector analysis, DSCR calculation,\nsecurity coverage, recommendation"
+    },
+    {
+      "step": 23,
+      "phase": "PH-019",
+      "type": "note",
+      "description": "PH-019: Underwriting (within RM authority — no committee required for this amount)"
+    },
+    {
+      "step": 24,
+      "phase": "PH-019",
+      "from": "PER050",
+      "to": "SVC005",
+      "type": "sync",
+      "label": "Records approval decision\n(amount within RM authority)\ncommittee_decision = approved"
+    },
+    {
+      "step": 25,
+      "phase": "PH-019",
+      "from": "SVC005",
+      "to": "SVC005",
+      "type": "internal",
+      "label": "Updates LoanApplication.status = approved\nSets CreditAssessment.committee_decision\n= approved (via SVC-012 API)"
+    },
+    {
+      "step": 26,
+      "phase": "PH-019",
+      "from": "SVC005",
+      "to": "SVC102",
+      "type": "async",
+      "label": "EVT-034: LoanApproved\n{approved_amount: 500000,\ndecision: approved, risk_rating: 4}"
+    },
+    {
+      "step": 27,
+      "phase": "PH-019",
+      "from": "SVC102",
+      "to": "SVC053",
+      "type": "async",
+      "label": "Delivers EVT-034\n→ SVC-053 sends approval letter\nwith APRC disclosure to PER-002"
+    },
+    {
+      "step": 28,
+      "phase": "PH-020",
+      "type": "note",
+      "description": "PH-020: Facility Agreement"
+    },
+    {
+      "step": 29,
+      "phase": "PH-020",
+      "from": "SVC005",
+      "to": "SVC005",
+      "type": "internal",
+      "label": "Creates ENT-019 (FacilityAgreement)\napproved_amount=500000,\nrate={sonia + 280bps},\ncovenants=[dscr_min:1.25, leverage_max:3.0],\nconditions_precedent=[debenture, personal_guarantee]"
+    },
+    {
+      "step": 30,
+      "phase": "PH-020",
+      "from": "PER050",
+      "to": "PER002",
+      "type": "sync",
+      "label": "Issues facility agreement\nfor customer review and signature"
+    },
+    {
+      "step": 31,
+      "phase": "PH-020",
+      "from": "PER002",
+      "to": "PER050",
+      "type": "sync",
+      "label": "Executes facility agreement\n(ETDA-compliant e-signature)\nProvides debenture + personal guarantee"
+    },
+    {
+      "step": 32,
+      "phase": "PH-020",
+      "from": "PER050",
+      "to": "SVC005",
+      "type": "sync",
+      "label": "Confirms all conditions_precedent\nsatisfied. Sets signed_date."
+    },
+    {
+      "step": 33,
+      "phase": "PH-020",
+      "from": "SVC005",
+      "to": "SVC005",
+      "type": "internal",
+      "label": "Updates FacilityAgreement.signed_date\nAll CP satisfied → all_conditions_precedent_satisfied = true\nUpdates LoanApplication.status = facility_agreed"
+    },
+    {
+      "step": 34,
+      "phase": "PH-020",
+      "from": "SVC005",
+      "to": "SVC102",
+      "type": "async",
+      "label": "EVT-036: FacilityAgreed\n{agreement_id, approved_amount: 500000,\nall_conditions_precedent_satisfied: true}"
+    },
+    {
+      "step": 35,
+      "phase": "PH-021",
+      "type": "note",
+      "description": "PH-021: Drawdown"
+    },
+    {
+      "step": 36,
+      "phase": "PH-021",
+      "from": "PER002",
+      "to": "SVC005",
+      "type": "sync",
+      "label": "POST /loan-applications/{id}/drawdown\n{drawdown_instruction_id, drawdown_amount: 500000,\ndestination_account_id, payment_rail: chaps}"
+    },
+    {
+      "step": 37,
+      "phase": "PH-021",
+      "from": "SVC005",
+      "to": "SVC005",
+      "type": "internal",
+      "label": "Validates: FacilityAgreed ✓,\nall CPs satisfied ✓,\namount <= facility ✓,\nCHAPS cut-off check ✓"
+    },
+    {
+      "step": 38,
+      "phase": "PH-021",
+      "from": "SVC005",
+      "to": "SVC009",
+      "type": "sync",
+      "label": "CHAPS payment instruction\n(sync — awaits settlement confirmation)\n[CROSS-CAPABILITY: CAP-002 → CAP-003]"
+    },
+    {
+      "step": 39,
+      "phase": "PH-021",
+      "from": "SVC009",
+      "to": "SVC009",
+      "type": "internal",
+      "label": "Executes CHAPS payment\nto BusinessAccount (ENT-B002)\nBank of England RT2 settlement"
+    },
+    {
+      "step": 40,
+      "phase": "PH-021",
+      "from": "SVC009",
+      "to": "SVC005",
+      "type": "return",
+      "label": "Settlement confirmed\n{settlement_reference, settlement_date}"
+    },
+    {
+      "step": 41,
+      "phase": "PH-021",
+      "from": "SVC005",
+      "to": "SVC005",
+      "type": "internal",
+      "label": "Creates ENT-020 (LoanAccount)\noutstanding_balance=500000,\ndrawdown_date=today,\nstatus=active\nUpdates LoanApplication.status=drawn_down"
+    },
+    {
+      "step": 42,
+      "phase": "PH-021",
+      "from": "SVC005",
+      "to": "SVC102",
+      "type": "async",
+      "label": "EVT-037: LoanDrawnDown\n{account_id, drawdown_amount: 500000,\noutstanding_balance_after: 500000}"
+    },
+    {
+      "step": 43,
+      "phase": "PH-021",
+      "from": "SVC005",
+      "to": "SVC102",
+      "type": "async",
+      "label": "EVT-038: LoanAccountOpened\n{account_id, outstanding_balance: 500000,\ncovenant_count: 2}"
+    },
+    {
+      "step": 44,
+      "phase": "PH-021",
+      "from": "SVC005",
+      "to": "PER002",
+      "type": "return",
+      "label": "200 OK\n{account_id, settlement_reference,\nfirst_payment_date}"
+    },
+    {
+      "step": 45,
+      "phase": "PH-021",
+      "from": "SVC102",
+      "to": "SVC012",
+      "type": "async",
+      "label": "Delivers EVT-037 + EVT-038\n→ SVC-012 updates RWA + IFRS 9 ECL register\n[CROSS-CAPABILITY: CAP-002 events → CAP-004]"
+    },
+    {
+      "step": 46,
+      "phase": "PH-021",
+      "from": "SVC102",
+      "to": "SVC053",
+      "type": "async",
+      "label": "Delivers EVT-037\n→ SVC-053 sends drawdown confirmation\nletter to PER-002"
+    },
+    {
+      "step": 47,
+      "phase": "PH-022",
+      "type": "note",
+      "description": "PH-022: Ongoing Monitoring (first quarterly covenant test — all pass)"
+    },
+    {
+      "step": 48,
+      "phase": "PH-022",
+      "from": "SVC102",
+      "to": "SVC005",
+      "type": "async",
+      "label": "Delivers EVT-038\n→ SVC-005 activates covenant schedule\nCreates ENT-021 records (not_yet_tested)"
+    },
+    {
+      "step": 49,
+      "phase": "PH-022",
+      "from": "PER002",
+      "to": "SVC005",
+      "type": "sync",
+      "label": "Submits Q1 financial statements\nfor covenant testing"
+    },
+    {
+      "step": 50,
+      "phase": "PH-022",
+      "from": "SVC005",
+      "to": "SVC005",
+      "type": "internal",
+      "label": "Calculates covenant values:\nDSCR_actual=1.45 >= 1.25 ✓\nLeverage_actual=2.3 <= 3.0 ✓\nUpdates ENT-021 compliance_status=compliant"
+    },
+    {
+      "step": 51,
+      "phase": "PH-022",
+      "from": "SVC005",
+      "to": "PER002",
+      "type": "sync",
+      "label": "Covenant compliance confirmation\nsent via SVC-053"
+    }
+  ]
+}

@@ -1,0 +1,146 @@
+{
+  "journey_id": "JRN-003",
+  "name": "SAR Filing by MLRO — Non-Functional Requirements",
+  "version": "1.0.0",
+  "status": "Draft",
+  "description": "Non-functional requirements for the SAR filing journey and associated services (SVC-014 KYC/AML, SVC-015 Compliance Core). These are driven by POCA 2002 criminal liability, MLR 2017 record-keeping obligations, and the MLRO's personal accountability under SM&CR. Unlike customer-facing journeys, NFRs here are shaped entirely by regulatory and legal obligations rather than commercial experience targets.",
+  "service_scope": ["SVC-014 (KYC/AML Service)", "SVC-015 (Compliance Core)"],
+  "nfrs": [
+    {
+      "nfr_id": "NFR-JRN003-001",
+      "category": "SLA — Regulatory Filing",
+      "name": "SAR Filing SLA",
+      "requirement": "The SuspiciousActivityReport.status must transition to 'filed' within 5 business days of the MLRO recording their formal decision to file (SARDecisionMade event timestamp). The system must enforce this SLA with automated warnings and escalation.",
+      "target": "5 business days from SARDecisionMade to SARFiled",
+      "warning_threshold": "4 business days (system generates SLA warning notification to MLRO)",
+      "breach_threshold": "5 business days (system flags SLA breach; auto-escalates to Head of Financial Crime and records breach in SVC-103)",
+      "measurement": "SuspiciousActivityReport.filed_date minus SARDecisionMade event timestamp, excluding UK public holidays and weekends (ISO 8601 business day calculation using GOV.UK bank holidays API)",
+      "regulatory_basis": "POCA 2002 s338 / GOV-005-R01 / MLR 2017 Regulation 21",
+      "breach_consequence": "Criminal offence under POCA 2002 s331. Potential FCA prohibition of MLRO. Mandatory voluntary disclosure to NCA and FCA.",
+      "monitoring": "SVC-014 monitors open SARs with filed_date = null and age > warning_threshold. SVC-103 receives SLA status events."
+    },
+    {
+      "nfr_id": "NFR-JRN003-002",
+      "category": "SLA — Investigation",
+      "name": "Investigation Completion Target",
+      "requirement": "SARInvestigationRecord should reach decision status within 3 business days of creation (best practice target, not statutory). This preserves 2 business days for SAR preparation and submission within the 5-day window.",
+      "target": "3 business days from SARInvestigationOpened to SARDecisionMade (best practice target)",
+      "measurement": "SARDecisionMade timestamp minus SARInvestigationOpened timestamp, excluding weekends and UK public holidays",
+      "regulatory_basis": "GOV-005-R01 (supporting target — not statutory)",
+      "monitoring": "Dashboard metric in MLRO case management. Reported in annual MLRO report."
+    },
+    {
+      "nfr_id": "NFR-JRN003-003",
+      "category": "Data Retention",
+      "name": "SAR Records WORM Retention",
+      "requirement": "All SAR-related records — SuspiciousActivityReport, SARInvestigationRecord, all associated events, audit logs, and evidence items — must be retained in WORM (Write Once, Read Many) storage for a minimum of 7 years from the date of the SAR decision (file or dismiss). Records must be immutable after creation; no field-level update or deletion is permitted. Only new versions may be appended.",
+      "target": "7 years WORM retention from decision date",
+      "statutory_minimum": "5 years (MLR 2017 Regulation 40)",
+      "bank_policy_extension": "7 years (bank AML policy — accounts for regulatory examination windows and potential criminal proceedings timelines)",
+      "storage_requirement": "WORM-compliant object storage (e.g. AWS S3 Object Lock in Compliance mode, or equivalent). No delete capability, no overwrite capability.",
+      "regulatory_basis": "MLR 2017 Regulation 40 / GOV-005-R01",
+      "applies_to": [
+        "SuspiciousActivityReport (ENT-008) — all fields including NCA reference",
+        "SARInvestigationRecord (ENT-009) — all evidence items and timeline entries",
+        "All SAR-related domain events (EVT-014 through EVT-019) in SVC-111 WORM pipeline",
+        "MLRO audit log entries in SVC-103",
+        "NCA acknowledgement receipts"
+      ]
+    },
+    {
+      "nfr_id": "NFR-JRN003-004",
+      "category": "Access Control",
+      "name": "SAR Data Access Classification",
+      "requirement": "All SAR records are classified as 'auditor_only' — the highest data access tier. Access is restricted to: MLRO (PER-052), Deputy MLRO (PER-053) for assigned investigations only, and external auditors under dual-person integrity controls. No operational staff, relationship managers, or general compliance staff may access SAR records. Access to dismissed investigations is restricted to MLRO only.",
+      "data_classification": "auditor_only",
+      "access_tiers": [
+        {
+          "tier": "read_write",
+          "personas": ["PER-052 (MLRO)", "PER-053 (Deputy MLRO — assigned investigations only)"],
+          "controls": "Step-up MFA (hardware token or biometric), dedicated SAR case management application, separate IAM role from standard compliance desktop"
+        },
+        {
+          "tier": "read_only_audit",
+          "personas": ["External auditors (FCA, PRA, NCA, internal audit)"],
+          "controls": "Dual-person integrity required — two senior compliance officers must authorise access. Access is time-limited and fully logged. Access event itself is stored in WORM audit pipeline."
+        },
+        {
+          "tier": "no_access",
+          "personas": ["All other bank staff", "Customer (PER-001) — absolute prohibition", "Third-party vendors", "SVC-017 (Digital Channels) — explicit block at API gateway"],
+          "controls": "IAM deny policies — no role grants access. API gateway rate-limit and deny rules for SAR endpoints. SARFiled event payload does not carry SAR-identifying data to downstream services."
+        }
+      ],
+      "regulatory_basis": "POCA 2002 s333A (tipping-off) / MLR 2017 Regulation 40 / SM&CR MLRO personal accountability"
+    },
+    {
+      "nfr_id": "NFR-JRN003-005",
+      "category": "Availability",
+      "name": "SAR Workflow Availability",
+      "requirement": "SVC-014 SAR case management workflow must be available 99.95% of the time (measured monthly), reflecting the criminal liability consequences of inability to file within the 5-business-day window. Planned maintenance windows must be excluded from SLA calculations and must not occur during the final 48 hours of an open SLA window.",
+      "target": "99.95% monthly availability",
+      "downtime_budget": "Maximum 21.9 minutes unplanned downtime per month",
+      "rto": "Recovery Time Objective: 15 minutes (SAR workflow is a T1 service — any outage triggers immediate incident response)",
+      "rpo": "Recovery Point Objective: 0 — no SAR investigation data may be lost. All writes must be synchronously persisted to durable storage before acknowledgement.",
+      "degraded_mode": "If SAR Online (NCA) is unavailable, MLRO can complete SAR preparation offline using NCA web portal directly and manually record the NCA reference. SVC-014 must support manual NCA reference entry.",
+      "regulatory_basis": "GOV-005-R01 / PRA SS1/21 (Operational Resilience)"
+    },
+    {
+      "nfr_id": "NFR-JRN003-006",
+      "category": "Availability",
+      "name": "Consent Regime Response Window",
+      "requirement": "When a consent SAR is filed and NCA issues a moratorium, SVC-014 must maintain the transaction hold for the exact moratorium duration. The system must not release a transaction hold early due to a system failure — conservative fail-closed design: if SVC-014 is uncertain of consent status, the transaction remains held.",
+      "fail_mode": "fail-closed",
+      "description": "Transaction hold persists in the absence of a positive NCA consent confirmation. This is a safety-first design to protect against inadvertent processing of a transaction that NCA has refused consent for.",
+      "regulatory_basis": "POCA 2002 s338 — authorised disclosure consent regime"
+    },
+    {
+      "nfr_id": "NFR-JRN003-007",
+      "category": "Auditability",
+      "name": "Immutable MLRO Action Log",
+      "requirement": "Every action taken by PER-052 or PER-053 in the SAR workflow — including reads, writes, decision records, and NCA submission events — must be logged to SVC-103 with full MLRO identity, timestamp (UTC, millisecond precision), action type, and affected entity/field. Log entries are immutable and stored in WORM pipeline.",
+      "log_fields": ["mlro_id", "action_type", "affected_entity_id", "affected_entity_type", "field_changed", "old_value_hash", "new_value_hash", "client_ip", "session_id", "timestamp_utc_ms"],
+      "retention": "7 years WORM (co-located with SAR records in SVC-111)",
+      "regulatory_basis": "MLR 2017 Regulation 40 / SM&CR conduct rule — record-keeping obligation"
+    },
+    {
+      "nfr_id": "NFR-JRN003-008",
+      "category": "Performance",
+      "name": "SAR Case Management Response Time",
+      "requirement": "SAR case management API responses must complete within 2,000ms at p99. Evidence item uploads must complete within 5,000ms for documents up to 25MB. NCA SAR Online submission must be retried automatically on network failure — up to 3 retries with exponential backoff, maximum total time 30 seconds before MLRO is prompted to retry manually.",
+      "api_response_p99": "2,000ms",
+      "document_upload_p99": "5,000ms (up to 25MB)",
+      "nca_submission_retry": "3 retries, exponential backoff (1s, 2s, 4s), max 30s total",
+      "rationale": "SAR workflow is used under time pressure — slow interfaces increase SLA breach risk. However, correctness (data integrity, WORM writes) takes priority over speed."
+    },
+    {
+      "nfr_id": "NFR-JRN003-009",
+      "category": "Security",
+      "name": "SAR Data Encryption",
+      "requirement": "All SAR-related data must be encrypted at rest using AES-256. All inter-service communication carrying SAR data must use TLS 1.3. SAR event payloads on the event bus (SVC-102) must be envelope-encrypted — only SVC-014, SVC-103, and SVC-111 hold decryption keys. SVC-001 receives only the SARFiled event with a minimal non-identifying payload (customer_id, restriction_required flag) — no SAR narrative, no NCA reference.",
+      "encryption_at_rest": "AES-256",
+      "encryption_in_transit": "TLS 1.3",
+      "event_payload_encryption": "Envelope encryption for sensitive SAR fields on event bus",
+      "regulatory_basis": "UK GDPR Article 32 (appropriate technical measures) / POCA 2002 tipping-off prohibition / GOV-005-R01"
+    },
+    {
+      "nfr_id": "NFR-JRN003-010",
+      "category": "Resilience",
+      "name": "SAR Workflow DR and Backup",
+      "requirement": "SAR case management data must be replicated synchronously to a secondary availability zone. In the event of primary zone failure, the SAR workflow must failover to the secondary zone within 15 minutes (RTO) with no data loss (RPO = 0). The MLRO must be able to continue filing SARs from the secondary zone. Annual DR test required.",
+      "rto": "15 minutes",
+      "rpo": "0 (synchronous replication required)",
+      "dr_test_frequency": "Annual",
+      "regulatory_basis": "PRA SS1/21 (Operational Resilience) / GOV-005-R01 (SAR filing obligation must be maintainable at all times)"
+    }
+  ],
+  "sla_summary": {
+    "filing_sla_business_days": 5,
+    "retention_years": 7,
+    "retention_type": "WORM",
+    "availability_target": "99.95%",
+    "data_classification": "auditor_only",
+    "rto_minutes": 15,
+    "rpo": "zero"
+  },
+  "source_journeys": ["JRN-003"]
+}

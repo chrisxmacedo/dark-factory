@@ -1,0 +1,79 @@
+{
+  "journey_id": "JRN-010",
+  "document_version": "1.0.0",
+  "status": "Draft",
+  "participants": [
+    {
+      "persona_id": "PER-006",
+      "persona_name": "Third Party Provider (TPP / PISP)",
+      "description": "An FCA-authorised Payment Initiation Service Provider that has completed OBIE Dynamic Client Registration with the bank. Initiates the payment journey on behalf of PER-001 (Personal Customer) via the bank's Open Banking API. PER-006 is an institutional actor — it interacts exclusively with SVC-017 (channel) via OBIE REST APIs. PER-006 does not interact with the customer-facing authentication UI directly; that interaction is with PER-001.",
+      "touchpoints": [
+        {
+          "phase": "PH-035",
+          "interaction": "POST /register (DCR) — presents OBIE Software Statement Assertion, receives client_id and client_secret. One-time setup per software statement."
+        },
+        {
+          "phase": "PH-036",
+          "interaction": "POST /domestic-payment-consents — submits payment details (amount, payee, reference), receives consent_id and redirect URL."
+        },
+        {
+          "phase": "PH-037",
+          "interaction": "Redirects customer browser to bank's authorisation URL. Receives authorisation code via redirect to TPP's redirect_uri after customer SCA."
+        },
+        {
+          "phase": "PH-038",
+          "interaction": "POST to token endpoint (SVC-100) — exchanges authorisation code for access token. POST /domestic-payments — submits payment instruction with consent_id, receives DomesticPaymentId."
+        },
+        {
+          "phase": "PH-040",
+          "interaction": "GET /domestic-payments/{DomesticPaymentId} — polls for payment status. Receives AcceptedSettlementInProcess → AcceptedSettlementCompleted or Rejected."
+        }
+      ],
+      "pain_points": [
+        "Consent expiry within 90 minutes of authorisation — TPPs with slow back-end flows must initiate promptly",
+        "FPS rejection errors surfaced as generic OBIE error codes — limited diagnostic information for debugging",
+        "No real-time webhook event notification in v1 (poll-only) — creates unnecessary API call volume"
+      ],
+      "regulatory_obligations": [
+        "Must hold a current FCA PISP authorisation (or transitional EEA passport)",
+        "Must present a valid OBIE-signed Software Statement Assertion",
+        "Payment details submitted at PH-038 must exactly match those in the ENT-030 consent — OBIE v3.1.x requirement"
+      ]
+    },
+    {
+      "persona_id": "PER-001",
+      "persona_name": "Personal Customer",
+      "description": "An existing bank customer who has chosen to initiate a payment via a TPP's application (e.g. a fintech app, merchant checkout). PER-001 does not directly interact with the bank's API — they interact with the bank's authentication and consent confirmation UI (served by SVC-017 via SVC-100) during PH-037. PER-001 must hold an active Account (ENT-004) with sufficient available balance.",
+      "touchpoints": [
+        {
+          "phase": "PH-036",
+          "interaction": "Customer is redirected from the TPP's application to the bank's authorisation URL. The bank's consent screen loads, displaying the payment details submitted by the TPP."
+        },
+        {
+          "phase": "PH-037",
+          "interaction": "Customer authenticates using SCA (biometric on registered mobile device, or SMS OTP, or hardware OTP). Reviews payment details (amount, payee name, sort code, account number, reference, CoP result). Confirms or declines."
+        },
+        {
+          "phase": "PH-037",
+          "interaction": "On confirmation: redirected back to TPP's redirect_uri with authorisation code. On decline: redirected back to TPP with access_denied error code."
+        },
+        {
+          "phase": "PH-040",
+          "interaction": "Receives push notification via SVC-053: payment confirmation (success) or customer-safe failure message. May also view consent history in the bank's consent dashboard."
+        }
+      ],
+      "pain_points": [
+        "SCA interrupts the TPP checkout flow — additional friction vs saved card payment",
+        "Payment details displayed at consent screen must be legible and clear (Consumer Duty — Understanding outcome)",
+        "CoP mismatch warnings must be prominent but not cause excessive drop-off on legitimate partial-match scenarios",
+        "Failure notifications must not disclose sensitive reasons (fraud/sanctions) but must be informative enough to prompt appropriate action"
+      ],
+      "regulatory_protections": [
+        "PSR 2017 Reg. 68–71: customer's consent must be explicit, informed, and revocable at any time via the consent dashboard",
+        "PSD2 RTS dynamic linking: SCA must be bound to the specific amount and payee — customer cannot be tricked into consenting to different payment details",
+        "Consumer Duty — Understanding outcome: payment details must be presented clearly and legibly",
+        "PSR APP Fraud reimbursement (GOV-003-R01): OB-initiated payments are covered by the mandatory reimbursement scheme up to £85,000"
+      ]
+    }
+  ]
+}

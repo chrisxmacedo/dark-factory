@@ -1,220 +1,423 @@
 {
   "$schema": "../../schemas/technical-service.schema.json",
+  "document_version": "0.1.0",
+  "status": "Draft",
+  "classification_filter": "foundation",
+  "description": "Foundation platform services: the infrastructure layer consumed by all domain and cross-cutting services. Foundation services have no capability_mapping to a business capability — they are platform concerns. Each is a buy candidate; the bank does not build competitive advantage in foundational infrastructure.",
   "services": [
     {
       "id": "SVC-100",
       "name": "Identity & Access Management",
-      "description": "Provides centralised identity, authentication, and authorisation services for all internal staff, external customers, and machine-to-machine service identities. Manages customer profiles, session tokens, OAuth 2.0/OIDC flows, role-based access control, and privileged access for operations teams.",
+      "description": "The authoritative platform service for digital identity, authentication, and authorisation across all bank systems and channels. Provides: customer authentication (biometric, SCA-compliant 2FA under PSD2 RTS), employee and service account identity, OAuth 2.0 / OIDC token issuance for API access, role-based and attribute-based access control (RBAC/ABAC) for internal systems and SM&CR role assignments, TPP (Third Party Provider) certificate validation for Open Banking, and single sign-on (SSO) across internal banking applications. SCA compliance and the bank's digital identity posture are owned here.",
       "classification": "foundation",
-      "capability_mappings": [],
-      "dependencies": ["SVC-103"],
-      "technology_constraints": [
-        "FCA SYSC 8: outsourcing of critical functions requires contractual guarantees of service continuity; if IAM is cloud-hosted, PRA operational resilience rules apply",
-        "PSD2 SCA: customer authentication flows must support FIDO2/WebAuthn and OTP as second factors for payment initiation",
-        "UK GDPR: customer identity data is personal data; cross-border transfer to non-UK processors requires appropriate safeguards",
-        "Privileged access management (PAM): all privileged system access must be brokered through a just-in-time access mechanism with full session recording for PRA SS1/21 operational resilience compliance",
-        "Zero-trust architecture: service-to-service authentication must use short-lived mTLS certificates, not long-lived shared secrets"
+      "status": "Draft",
+      "capability_mappings": [
+        {
+          "capability_id": "PLATFORM",
+          "capability_name": "Platform Infrastructure",
+          "realisation_type": "realises_parent"
+        }
       ],
+      "dependencies": [
+        {
+          "service_id": "SVC-103",
+          "service_name": "Audit & Logging",
+          "dependency_type": "platform",
+          "rationale": "All authentication events, access grants, and denial decisions are immutably logged for SM&CR compliance, fraud investigation, and FCA operational resilience evidence."
+        }
+      ],
+      "technology_constraints": {
+        "deployment_model": "cloud_native",
+        "data_residency": "UK only — customer credential data, employee identity records",
+        "latency_class": "real_time_sub_100ms",
+        "availability_target": "99.99%",
+        "pci_dss_scope": false,
+        "regulatory_data_obligations": ["PSD2 RTS SCA compliance records", "SM&CR role assignment records", "UK GDPR authentication data", "CMA Open Banking TPP certificate validation records", "FCA operational resilience impact tolerance (authentication as important business service component)"]
+      },
+      "market_context": {
+        "build_vs_buy_assessment": "strong_buy",
+        "build_rationale": "IAM is a commodity infrastructure capability with specialist vendors that provide enterprise-grade SCA compliance, TPP certificate management, and OIDC standards support that would take years to build in-house. The bank owns the access policy and SM&CR role assignments; the platform provides the enforcement engine.",
+        "vendor_options": [
+          {
+            "vendor_name": "ForgeRock (Ping Identity)",
+            "product_name": "ForgeRock Identity Platform",
+            "fit_assessment": "preferred",
+            "notes": "UK financial services market leader for customer IAM and Open Banking TPP validation. Used by multiple CMA9 banks for OBIE API access management."
+          },
+          {
+            "vendor_name": "Okta",
+            "product_name": "Customer Identity Cloud (Auth0)",
+            "fit_assessment": "shortlisted",
+            "notes": "Strong for developer-friendly OIDC/OAuth 2.0 implementation. Auth0 acquisition gives good support for financial services SCA requirements."
+          },
+          {
+            "vendor_name": "AWS",
+            "product_name": "Cognito",
+            "fit_assessment": "shortlisted",
+            "notes": "Native AWS IAM for cloud-native deployments on AWS. Lower vendor lock-in risk if bank is predominantly AWS-hosted."
+          }
+        ]
+      },
       "design_decisions": [
         {
-          "id": "DD-SVC100-1",
-          "decision": "Adopt a federated identity model with a single authoritative identity store, serving both customer-facing (OIDC) and internal staff (SAML/OIDC) flows from the same core identity record.",
-          "rationale": "A single identity store ensures that customer KYC status, consent records, and access rights are consistent across all products and channels. Separate identity stores for different channels create reconciliation risk and complicate FSCS SCV extraction.",
-          "alternatives_considered": ["Separate identity stores per channel (retail app, online banking, branch)", "Federated identity with per-channel identity providers"],
-          "rejected_because": "Per-channel stores create divergent customer records, inconsistent KYC status, and multiple consent stores that cannot be reconciled in real time."
-        },
-        {
-          "id": "DD-SVC100-2",
-          "decision": "Issue short-lived JWT access tokens (15-minute expiry) with refresh token rotation, rather than long-lived session cookies or long-lived tokens.",
-          "rationale": "Short-lived tokens limit the blast radius of a token compromise. Refresh token rotation (rotating refresh token on each use) detects token theft by identifying duplicate use. This aligns with NCSC guidance on token-based authentication.",
-          "alternatives_considered": ["Long-lived session cookies with server-side session invalidation", "Long-lived bearer tokens with a revocation list"],
-          "rejected_because": "Long-lived cookies require server-side session stores that are difficult to scale; revocation lists require synchronous lookup on every request, creating a latency dependency."
+          "id": "SDD-007",
+          "decision": "SVC-100 implements UK Digital Identity and Attributes Trust Framework (DIATF) certified identity verification for new customer onboarding journeys alongside traditional eKYC.",
+          "rationale": "DSIT's DIATF (Data (Use and Access) Act 2025) creates a certified digital identity ecosystem. Banks that accept DIATF-certified identity proofs at onboarding reduce friction while meeting MLR 2017 CDD obligations. SVC-100 acts as the DIATF relying party; certified identity providers (e.g. Yoti, Onfido-certified schemes) present identity claims to SVC-100 which validates the DIATF certificate before passing the identity assertion to SVC-050 (Customer Onboarding).",
+          "alternatives_considered": ["Build proprietary identity verification without DIATF integration"],
+          "rejected_because": "DIATF is the UK government's strategic digital identity infrastructure. Early adoption reduces onboarding friction and positions the bank as a digital identity relying party rather than a laggard."
         }
       ]
     },
     {
       "id": "SVC-101",
       "name": "API Gateway",
-      "description": "Entry point for all external and internal API traffic. Provides TLS termination, authentication enforcement, rate limiting, request routing, protocol translation, and API lifecycle management. Serves as the technical enforcement point for Open Banking, PSD2, and partner API policies.",
+      "description": "The authoritative platform service for external and internal API management. Provides: inbound API rate limiting and throttling (protection against Open Banking API abuse), TLS termination and certificate management, API versioning and routing, TPP certificate validation for Open Banking FAPI compliance, consumer (mobile app, TPP, corporate ERP) authentication and authorisation delegation (token validation), API product catalogue, usage analytics and quota management, developer portal for fintech partners, and API monitoring with SLA alerting. Sits at the edge of all external-facing API surfaces: Open Banking APIs, corporate banking APIs, and internal service-to-service calls crossing security domains.",
       "classification": "foundation",
-      "capability_mappings": [],
-      "dependencies": ["SVC-100", "SVC-103"],
-      "technology_constraints": [
-        "PSD2 RTS Article 30: dedicated Open Banking API interface must have equivalent availability and performance to the customer-facing channel",
-        "FCA SYSC 13: the gateway must support DDoS mitigation controls; unmitigated attack volume must not degrade availability of regulated services",
-        "All TLS termination must use TLS 1.2 minimum; TLS 1.0/1.1 and SSLv3 must be disabled per NCSC guidance",
-        "API keys and OAuth tokens must never be logged in access logs; headers containing credentials must be masked before log ingestion",
-        "Change management: API breaking changes must go through a deprecation period with minimum 6-month notice to consumers, per Open Banking operational guidelines"
-      ],
-      "design_decisions": [
+      "status": "Draft",
+      "capability_mappings": [
         {
-          "id": "DD-SVC101-1",
-          "decision": "Deploy the API Gateway as the sole external ingress point; no service is permitted to expose a public endpoint that bypasses the gateway.",
-          "rationale": "A single ingress point ensures all external traffic is subject to authentication, rate limiting, and monitoring controls. Bypassing the gateway creates uncontrolled attack surfaces and makes DDoS mitigation and API policy enforcement impossible.",
-          "alternatives_considered": ["Service mesh with mTLS for all traffic including external", "Per-capability API gateways"],
-          "rejected_because": "Service mesh alone does not provide the API management features (rate limiting, developer portal, policy enforcement) needed for Open Banking; per-capability gateways fragment policy enforcement and create inconsistent security postures."
+          "capability_id": "PLATFORM",
+          "capability_name": "Platform Infrastructure",
+          "realisation_type": "realises_parent"
+        }
+      ],
+      "dependencies": [
+        {
+          "service_id": "SVC-100",
+          "service_name": "Identity & Access Management",
+          "dependency_type": "hard_blocking",
+          "rationale": "Token validation and TPP certificate verification delegate to SVC-100. API Gateway enforces access policy defined by IAM."
         },
         {
-          "id": "DD-SVC101-2",
-          "decision": "Implement a strict inbound request schema validation layer at the gateway for all public APIs, rejecting malformed requests before they reach downstream services.",
-          "rationale": "Gateway-level schema validation provides a first line of defence against injection attacks and malformed payloads. It also reduces load on downstream services from invalid requests and makes API contract enforcement consistent.",
-          "alternatives_considered": ["Schema validation within each downstream service only", "No schema validation, rely on service-level error handling"],
-          "rejected_because": "Service-level validation only means invalid requests consume downstream resources before rejection; no validation exposes services to injection attack patterns and inconsistent error responses."
+          "service_id": "SVC-103",
+          "service_name": "Audit & Logging",
+          "dependency_type": "platform",
+          "rationale": "All inbound API calls, rate limit breaches, and authentication failures are logged for CMA Open Banking performance reporting, FCA supervisory inspection, and security incident investigation."
         }
-      ]
+      ],
+      "technology_constraints": {
+        "deployment_model": "cloud_native",
+        "data_residency": "UK — API call metadata and analytics",
+        "latency_class": "real_time_sub_100ms",
+        "availability_target": "99.99%",
+        "pci_dss_scope": false,
+        "regulatory_data_obligations": ["CMA Order Open Banking API performance reporting", "OBIE API availability and incident records", "FCA operational resilience important business service boundary monitoring"]
+      },
+      "market_context": {
+        "build_vs_buy_assessment": "strong_buy",
+        "build_rationale": "API gateway is infrastructure commodity. CAP-007 build_vs_buy identifies Apigee or AWS API Gateway as buy candidates. The bank's differentiation is in the API products (Open Banking, corporate banking) not the gateway infrastructure.",
+        "vendor_options": [
+          {
+            "vendor_name": "Google Cloud",
+            "product_name": "Apigee API Management",
+            "fit_assessment": "preferred",
+            "notes": "Enterprise API management with strong Open Banking and FAPI support. API product catalogue, developer portal, analytics. Used by several UK banks for Open Banking compliance."
+          },
+          {
+            "vendor_name": "AWS",
+            "product_name": "API Gateway",
+            "fit_assessment": "shortlisted",
+            "notes": "Native AWS API management. Lower operational overhead if bank is predominantly AWS-hosted. Strong for serverless and microservice architectures."
+          },
+          {
+            "vendor_name": "Kong",
+            "product_name": "Kong Gateway",
+            "fit_assessment": "shortlisted",
+            "notes": "Open-source API gateway with enterprise support. Cloud-agnostic. Strong plugin ecosystem for rate limiting, auth, and logging."
+          }
+        ]
+      },
+      "design_decisions": []
     },
     {
       "id": "SVC-102",
       "name": "Event Bus",
-      "description": "Provides durable, ordered, at-least-once event delivery infrastructure for asynchronous inter-service communication. Supports domain event publication, event replay, consumer group management, and schema registry for event contracts.",
+      "description": "The authoritative platform service for asynchronous, durable event streaming across all bank services. Provides: publish-subscribe event delivery with guaranteed delivery semantics, event schema registry and schema evolution management, event sourcing support for domain event logs, consumer group management and offset tracking, dead letter queue handling for failed event processing, and cross-domain event routing. The event bus is the primary integration mechanism between domain services — it replaces point-to-point synchronous calls for non-blocking communication and enables event-driven architecture patterns (event sourcing, CQRS, saga orchestration).",
       "classification": "foundation",
-      "capability_mappings": [],
-      "dependencies": ["SVC-100", "SVC-103"],
-      "technology_constraints": [
-        "Events carrying personal data must be encrypted at rest within the event store; encryption keys must be managed via SVC-105 (Secrets Management)",
-        "PRA operational resilience: the event bus is a critical shared dependency; its impact tolerance must be defined and tested under PRA SS1/21 requirements",
-        "Event retention must support at least 7 days of replay for operational recovery scenarios and up to 1 year for events that feed regulatory reporting pipelines",
-        "Schema changes to event contracts must be backwards-compatible; breaking changes require a versioned event type with a deprecation period",
-        "Consumer lag monitoring is mandatory; unprocessed event backlogs must trigger operational alerts before they breach SLA thresholds"
+      "status": "Draft",
+      "capability_mappings": [
+        {
+          "capability_id": "PLATFORM",
+          "capability_name": "Platform Infrastructure",
+          "realisation_type": "realises_parent"
+        }
       ],
+      "dependencies": [
+        {
+          "service_id": "SVC-103",
+          "service_name": "Audit & Logging",
+          "dependency_type": "platform",
+          "rationale": "Event publication and consumption events are logged for audit trail, regulatory replay capability, and operational debugging."
+        }
+      ],
+      "technology_constraints": {
+        "deployment_model": "cloud_native",
+        "data_residency": "UK only — financial events may contain customer PII and transaction data",
+        "latency_class": "near_real_time_sub_1s",
+        "availability_target": "99.99%",
+        "pci_dss_scope": false,
+        "regulatory_data_obligations": ["Financial event replay capability for PRA supervisory investigation", "UK GDPR personal data in event payloads (data minimisation required)", "FCA operational resilience event pipeline availability requirements"]
+      },
+      "market_context": {
+        "build_vs_buy_assessment": "strong_buy",
+        "build_rationale": "Event streaming infrastructure is commodity. Apache Kafka (Confluent managed service) or AWS Kinesis are proven at financial services scale. Building event streaming infrastructure in-house is not justified — the bank competes on the events it produces and the services that consume them, not on the message broker.",
+        "vendor_options": [
+          {
+            "vendor_name": "Confluent",
+            "product_name": "Confluent Cloud (Managed Kafka)",
+            "fit_assessment": "preferred",
+            "notes": "Managed Apache Kafka with schema registry, RBAC, audit logging. Used at financial services scale. UK-hosted cloud option. Strong operational tooling."
+          },
+          {
+            "vendor_name": "AWS",
+            "product_name": "Kinesis / MSK (Managed Kafka)",
+            "fit_assessment": "shortlisted",
+            "notes": "AWS-native event streaming. Lower operational overhead if bank is AWS-hosted. MSK (Managed Kafka) for Kafka compatibility."
+          }
+        ]
+      },
       "design_decisions": [
         {
-          "id": "DD-SVC102-1",
-          "decision": "Adopt a schema registry with mandatory schema validation on publish, making it a compile-time or deploy-time contract check rather than a runtime surprise.",
-          "rationale": "As the number of event producers and consumers grows, schema drift causes silent runtime failures that are hard to diagnose. A schema registry with publish-time validation catches contract violations before they reach consumers.",
-          "alternatives_considered": ["Ad-hoc JSON without schema enforcement", "Consumer-side schema validation only"],
-          "rejected_because": "Unschema'd JSON produces undetectable breaking changes at the producer; consumer-side validation discovers breakages only after events are published and consumed, causing downstream failures."
-        },
-        {
-          "id": "DD-SVC102-2",
-          "decision": "Partition events by aggregate ID (e.g. customer ID, account ID) rather than by event type, to guarantee ordering per entity without global ordering constraints.",
-          "rationale": "Per-entity ordering is the relevant invariant for banking events (e.g. debit then credit on the same account must be ordered). Global ordering is unnecessary and limits throughput; per-event-type partitioning does not guarantee ordering for the same entity across event types.",
-          "alternatives_considered": ["Global ordered log (single partition)", "Partition by event type"],
-          "rejected_because": "Global ordering creates a throughput bottleneck; event-type partitioning cannot guarantee that related events about the same account (of different types) are processed in order."
+          "id": "SDD-008",
+          "decision": "All domain events must be published with a schema version and must be backward-compatible for a minimum of two versions. Breaking schema changes require a new event type.",
+          "rationale": "Domain services are deployed independently. A schema change in a producing service must not break consuming services that have not yet been updated. Financial events (PaymentSettled, LoanOriginated) may need to be replayed for regulatory investigation — the schema must support historical replay without data loss.",
+          "alternatives_considered": ["No schema versioning; consumer and producer deploy simultaneously"],
+          "rejected_because": "Coordinated deployment of all services is operationally impractical at scale and eliminates the independent deployability that is the primary benefit of event-driven architecture."
         }
       ]
     },
     {
       "id": "SVC-103",
-      "name": "Audit & Logging Service",
-      "description": "Centralised, tamper-evident collection, storage, and querying of audit logs, application logs, and security events from all services. Provides the forensic and regulatory audit trail required by FCA, PRA, and GDPR obligations.",
+      "name": "Audit & Logging",
+      "description": "The authoritative platform service for immutable audit logging, security event management, and compliance evidence across all bank systems. Provides: immutable append-only audit log storage (tamper-evident, cryptographically sealed), security information and event management (SIEM) with real-time correlation and alerting, structured log aggregation across all services, log retention policy enforcement aligned to regulatory requirements (minimum 5 years for AML records; 7 years for financial records), and audit query API for compliance investigations and FCA supervisory data requests. Supports SM&CR individual accountability evidence, Consumer Duty outcomes monitoring, and FCA/PRA supervisory data delivery.",
       "classification": "foundation",
-      "capability_mappings": [],
-      "dependencies": ["SVC-105"],
-      "technology_constraints": [
-        "FCA SYSC 10A: MiFID II transaction records must be retained for 5 years; audit logs supporting those records must be retained for the same period",
-        "Logs containing personal data must have a retention schedule aligned to GDPR data minimisation; personal data in logs must not be retained beyond the operational need",
-        "Audit logs must be immutable after ingestion; no log modification or deletion must be technically possible except via a formally approved legal hold release process",
-        "NCSC Cyber Essentials Plus: security event logs must be centralised and reviewed; alerts for privileged access and authentication anomalies are mandatory",
-        "Log ingestion must not fail silently; if the logging pipeline is degraded, services must queue logs locally and retry rather than dropping them"
-      ],
-      "design_decisions": [
+      "status": "Draft",
+      "capability_mappings": [
         {
-          "id": "DD-SVC103-1",
-          "decision": "Implement a two-tier log storage model: hot storage (30 days, queryable index) for operational investigation, and cold WORM storage (7 years) for regulatory retention.",
-          "rationale": "Operational queries (incident investigation, FCA information requests) predominantly access recent logs; cold storage for the full retention period would be prohibitively expensive at banking log volumes. WORM cold storage satisfies immutability requirements at low cost.",
-          "alternatives_considered": ["Single queryable store for full retention period", "Compressed archive with no queryability for historical logs"],
-          "rejected_because": "A single queryable store for 7 years of logs is cost-prohibitive at enterprise log volumes; non-queryable archives cannot satisfy FCA information request timelines."
-        },
-        {
-          "id": "DD-SVC103-2",
-          "decision": "Enforce structured log formats (JSON with mandatory fields: timestamp, service_id, trace_id, actor_id, event_type) at the service SDK level, with unstructured logs rejected at ingestion.",
-          "rationale": "Structured logs enable automated querying and alerting without log parsing. Mandatory fields ensure every log entry can be correlated across services (via trace_id) and attributed to an actor (actor_id), both required for regulatory audit.",
-          "alternatives_considered": ["Free-text logs with pattern extraction at query time", "Per-service log format with gateway normalisation"],
-          "rejected_because": "Pattern extraction is fragile and fails on format variations; per-service formats with gateway normalisation create normalisation errors that corrupt the audit trail."
+          "capability_id": "PLATFORM",
+          "capability_name": "Platform Infrastructure",
+          "realisation_type": "realises_parent"
         }
-      ]
+      ],
+      "dependencies": [],
+      "technology_constraints": {
+        "deployment_model": "cloud_native",
+        "data_residency": "UK only — audit logs contain PII, financial transaction data, and MLRO-protected SAR metadata",
+        "latency_class": "near_real_time_sub_1s",
+        "availability_target": "99.99%",
+        "pci_dss_scope": true,
+        "regulatory_data_obligations": ["MLR 2017 five-year minimum audit record retention", "PRA seven-year financial records retention", "SM&CR individual conduct evidence trail", "FCA operational resilience incident evidence", "PCI DSS cardholder data access log retention", "UK GDPR processing activity records (ROPA inputs)"]
+      },
+      "market_context": {
+        "build_vs_buy_assessment": "strong_buy",
+        "build_rationale": "Audit logging and SIEM are infrastructure commodities with specialist vendors that provide regulatory-grade immutability guarantees, compliance reporting, and 24/7 security operations support. Building bespoke audit infrastructure risks compliance gaps; specialist platforms maintain regulatory content and detection rule libraries.",
+        "vendor_options": [
+          {
+            "vendor_name": "Splunk (Cisco)",
+            "product_name": "Splunk Enterprise Security (SIEM)",
+            "fit_assessment": "preferred",
+            "notes": "Dominant SIEM in UK financial services. Pre-built compliance dashboards for PCI DSS, SOX, GDPR. Real-time correlation, threat hunting. FCA operational resilience incident reporting support."
+          },
+          {
+            "vendor_name": "Microsoft",
+            "product_name": "Microsoft Sentinel",
+            "fit_assessment": "shortlisted",
+            "notes": "Cloud-native SIEM/SOAR. Strong if bank is Azure-hosted. Cost model (consumption-based) competitive at scale."
+          },
+          {
+            "vendor_name": "AWS",
+            "product_name": "CloudTrail + Security Hub",
+            "fit_assessment": "shortlisted",
+            "notes": "AWS-native immutable audit trail and security event management. Lower overhead if bank is AWS-hosted."
+          }
+        ]
+      },
+      "design_decisions": []
     },
     {
       "id": "SVC-104",
       "name": "Data Platform",
-      "description": "Enterprise data warehouse and analytics platform providing consolidated, quality-assured data for regulatory reporting, management information, risk analytics, and customer analytics. Acts as the system of record for analytical workloads, separate from operational transactional systems.",
+      "description": "The authoritative platform service for enterprise data aggregation, analytics, and ML model serving. Provides: data lake and data warehouse capabilities for cross-domain analytical queries, feature store for ML model inputs (fraud detection, credit scoring, AML transaction monitoring), data cataloguing and lineage tracking (UK GDPR ROPA support, PRA data quality supervision), regulatory reporting data aggregation (COREP, FINREP, PRA statistical returns), customer data product for Consumer Duty outcomes analytics, and API-accessible data services for approved consumers. Implements the bank's data governance framework including data quality rules, PII classification, and retention enforcement.",
       "classification": "foundation",
-      "capability_mappings": [],
-      "dependencies": ["SVC-100", "SVC-103", "SVC-105"],
-      "technology_constraints": [
-        "PRA DARS (Data Standards): the Data Platform must support PRA's bank-specific data collection requirements with documented data lineage from source to reported metric",
-        "BCBS 239: risk data aggregation principles require the platform to produce risk reports within defined timelines with full data lineage, auditability, and accuracy assurance",
-        "UK GDPR: analytics data must be pseudonymised or anonymised before use in non-operational workloads; re-identification risk must be assessed for each analytical dataset",
-        "Regulatory reports (COREP, FINREP) generated from the platform must be reproducible: given the same input snapshot, the same report must always be produced",
-        "Data quality controls must be enforced at ingestion: records failing quality checks must be quarantined, not silently loaded, with automated alerts to data owners"
-      ],
-      "design_decisions": [
+      "status": "Draft",
+      "capability_mappings": [
         {
-          "id": "DD-SVC104-1",
-          "decision": "Implement a medallion architecture (raw / curated / analytical layers) with immutable raw layer, transformation-tracked curated layer, and business-logic-applied analytical layer.",
-          "rationale": "An immutable raw layer ensures regulatory reproducibility: any analytical result can be re-derived from the raw data. Separate transformation layers make data lineage traceable from source to regulatory report, satisfying BCBS 239 requirements.",
-          "alternatives_considered": ["Single unified data store with in-place transformations", "Separate operational data store per reporting type"],
-          "rejected_because": "In-place transformations destroy the ability to reproduce historical reports; per-reporting-type stores duplicate ingestion pipelines and prevent cross-domain analytics required for risk aggregation."
+          "capability_id": "PLATFORM",
+          "capability_name": "Platform Infrastructure",
+          "realisation_type": "realises_parent"
+        }
+      ],
+      "dependencies": [
+        {
+          "service_id": "SVC-102",
+          "service_name": "Event Bus",
+          "dependency_type": "async_event",
+          "rationale": "Domain events from all services are streamed into the data platform via the event bus. This is the primary ingestion mechanism — the data platform does not query operational databases directly."
         },
         {
-          "id": "DD-SVC104-2",
-          "decision": "Publish a governed data catalogue with ownership, quality SLAs, and classification (personal/non-personal, regulatory/non-regulatory) for every dataset in the platform.",
-          "rationale": "Without a catalogue, data consumers build ad-hoc queries on undocumented datasets, leading to inconsistent metrics in regulatory reports. A governed catalogue with quality SLAs enables FCA-level accountability for data accuracy.",
-          "alternatives_considered": ["Informal wiki documentation of available datasets", "No catalogue, consumers query the platform directly"],
-          "rejected_because": "Wiki documentation becomes stale and has no ownership enforcement; no catalogue produces multiple competing definitions of the same metric, creating regulatory reporting inconsistency."
+          "service_id": "SVC-103",
+          "service_name": "Audit & Logging",
+          "dependency_type": "platform",
+          "rationale": "Data access and data query events are logged for UK GDPR ROPA obligations and PRA data quality audit."
+        }
+      ],
+      "technology_constraints": {
+        "deployment_model": "cloud_native",
+        "data_residency": "UK only — consolidated customer and financial data",
+        "latency_class": "batch_daily",
+        "availability_target": "99.5%",
+        "pci_dss_scope": true,
+        "regulatory_data_obligations": ["UK GDPR data minimisation and purpose limitation in analytical processing", "PRA data quality supervision requirements", "FCA Consumer Duty outcomes analytics data", "FSCS eligibility data aggregation", "COREP/FINREP regulatory return data derivation", "PRA SS1/23 model data lineage requirements"]
+      },
+      "market_context": {
+        "build_vs_buy_assessment": "strong_buy",
+        "build_rationale": "Data platform infrastructure (data lake, data warehouse, feature store) is a well-established cloud commodity. Cloud-native data platforms (Databricks, Snowflake, AWS Redshift) provide the scale, governance, and ML integration that would take years to build in-house. The bank owns the data products, data models, and governance policies; the platform provides the infrastructure.",
+        "vendor_options": [
+          {
+            "vendor_name": "Databricks",
+            "product_name": "Databricks Lakehouse Platform",
+            "fit_assessment": "preferred",
+            "notes": "Unified data + ML platform. Delta Lake for ACID-compliant data lake. MLflow for model lifecycle management. Strong for feature store (SVC-013 fraud ML, SVC-052 credit ML, SVC-014 AML ML). Growing UK FS adoption."
+          },
+          {
+            "vendor_name": "Snowflake",
+            "product_name": "Data Cloud",
+            "fit_assessment": "shortlisted",
+            "notes": "Cloud-native data warehouse. Strong governance and data sharing capabilities. Less integrated ML tooling than Databricks."
+          },
+          {
+            "vendor_name": "AWS",
+            "product_name": "Redshift + SageMaker",
+            "fit_assessment": "shortlisted",
+            "notes": "AWS-native data warehouse and ML platform. Strong integration with other AWS services. Preferred if bank is AWS-native."
+          }
+        ]
+      },
+      "design_decisions": [
+        {
+          "id": "SDD-009",
+          "decision": "The data platform is the only system permitted to query across domain service data for analytics. Domain services do not query each other's operational databases directly.",
+          "rationale": "Direct cross-domain database queries create tight operational coupling, violate bounded context boundaries, and create race conditions between analytical queries and operational transactions. The event stream provides an eventually consistent analytical replica in the data platform, which is the correct integration point for analytics. This pattern enables domain services to evolve their data schemas independently.",
+          "alternatives_considered": ["Allow direct cross-service database queries for regulatory reporting"],
+          "rejected_because": "Cross-service database queries create schema coupling and would prevent independent service evolution. Regulatory reporting latency (daily batch) is compatible with event-driven data platform ingestion."
         }
       ]
     },
     {
       "id": "SVC-105",
       "name": "Secrets Management",
-      "description": "Centralised management of secrets, cryptographic keys, certificates, and credentials used by all services. Provides dynamic secret generation, lease-based access, automatic rotation, and audit of secret access events.",
+      "description": "The authoritative platform service for storing, rotating, and auditing access to cryptographic keys, API credentials, database passwords, certificates, and other sensitive configuration. Provides: hardware security module (HSM) backed key storage, automatic secrets rotation without service downtime, dynamic secrets (short-lived credentials generated on-demand for database access), secrets access policies tied to SVC-100 service identities, and full audit trail of every secret access event. Prevents hard-coded credentials in application code or configuration files across all services. Critical for PCI DSS key management requirements and GDPR encryption obligations.",
       "classification": "foundation",
-      "capability_mappings": [],
-      "dependencies": ["SVC-103"],
-      "technology_constraints": [
-        "PCI-DSS Requirement 3: cryptographic keys for cardholder data must be stored in a hardware security module (HSM) or equivalent; software-only key storage is prohibited for PCI in-scope keys",
-        "UK GDPR: encryption keys for personal data must be managed independently of the encrypted data; key and data must not be co-located",
-        "NCSC guidance on secrets management: no hard-coded credentials in source code or configuration files; all secrets must be injected at runtime from the secrets store",
-        "Key rotation: encryption keys must have defined rotation schedules; rotation must not require service downtime",
-        "Access to secrets must be logged per access event with the requesting service identity; access logs must flow to SVC-103"
-      ],
-      "design_decisions": [
+      "status": "Draft",
+      "capability_mappings": [
         {
-          "id": "DD-SVC105-1",
-          "decision": "Use a dedicated secrets management platform (e.g. HashiCorp Vault or cloud-native equivalent) with HSM-backed key storage for PCI and GDPR-classified keys, rather than environment variables or configuration files.",
-          "rationale": "Environment variables and config files are frequently leaked via logging, error messages, or repository commits. A dedicated platform with HSM backing provides the tamper-resistance and access control required by PCI-DSS and GDPR.",
-          "alternatives_considered": ["Environment variables injected at deployment", "Encrypted configuration files in source control"],
-          "rejected_because": "Environment variables are visible in process listings and system logs; encrypted config files require managing the decryption key, which re-introduces the secret storage problem."
+          "capability_id": "PLATFORM",
+          "capability_name": "Platform Infrastructure",
+          "realisation_type": "realises_parent"
+        }
+      ],
+      "dependencies": [
+        {
+          "service_id": "SVC-100",
+          "service_name": "Identity & Access Management",
+          "dependency_type": "hard_blocking",
+          "rationale": "Service identity (machine identity) is verified via SVC-100 before any secret is granted. Only authenticated service accounts with the correct IAM role receive secrets."
         },
         {
-          "id": "DD-SVC105-2",
-          "decision": "Implement dynamic, short-lived database credentials generated per-service-instance rather than static shared credentials, with automatic revocation on instance termination.",
-          "rationale": "Static shared database credentials are a common breach vector; if leaked, they provide persistent access until manually rotated. Dynamic per-instance credentials limit the blast radius to a single instance's lifetime.",
-          "alternatives_considered": ["Static credentials rotated quarterly", "Per-service static credentials rotated at deployment"],
-          "rejected_because": "Quarterly rotation leaves a 90-day exposure window; deployment-time rotation still creates shared credentials with a longer-than-necessary lifetime and requires deployment for rotation."
+          "service_id": "SVC-103",
+          "service_name": "Audit & Logging",
+          "dependency_type": "platform",
+          "rationale": "Every secret access event is logged immutably for PCI DSS key management audit and security incident investigation."
         }
-      ]
+      ],
+      "technology_constraints": {
+        "deployment_model": "cloud_native",
+        "data_residency": "UK only — cryptographic key material must not leave UK jurisdiction",
+        "latency_class": "near_real_time_sub_1s",
+        "availability_target": "99.99%",
+        "pci_dss_scope": true,
+        "regulatory_data_obligations": ["PCI DSS key management and HSM requirements", "UK GDPR encryption key management for personal data at rest", "FCA operational resilience cryptographic key availability requirements", "PRA DORA-equivalent ICT security key management controls"]
+      },
+      "market_context": {
+        "build_vs_buy_assessment": "strong_buy",
+        "build_rationale": "Secrets management is a security infrastructure commodity. HashiCorp Vault (now owned by IBM) and cloud-native secrets managers (AWS Secrets Manager, Azure Key Vault) provide HSM-backed key storage, automatic rotation, and dynamic secrets at PCI DSS grade. Building a proprietary secrets vault is not justified and creates security risk from undiscovered implementation flaws.",
+        "vendor_options": [
+          {
+            "vendor_name": "HashiCorp (IBM)",
+            "product_name": "Vault Enterprise",
+            "fit_assessment": "preferred",
+            "notes": "Industry-standard secrets management. HSM integration, dynamic secrets, fine-grained access policies. Widely deployed in UK financial services. Cloud-agnostic."
+          },
+          {
+            "vendor_name": "AWS",
+            "product_name": "Secrets Manager + KMS",
+            "fit_assessment": "shortlisted",
+            "notes": "AWS-native secrets management with HSM-backed key storage (CloudHSM). Lower operational overhead if AWS-native deployment."
+          }
+        ]
+      },
+      "design_decisions": []
     },
     {
       "id": "SVC-106",
       "name": "Service Mesh",
-      "description": "Provides transparent, infrastructure-level service-to-service communication controls including mutual TLS (mTLS) enforcement, traffic management, circuit breaking, retries, observability (distributed tracing, service-level metrics), and policy enforcement for all east-west traffic within the platform.",
+      "description": "The authoritative platform service providing secure, observable, and resilient service-to-service communication for all internal microservices. Provides: mutual TLS (mTLS) for all service-to-service calls (zero-trust network model), traffic management (load balancing, circuit breaking, retry policies, timeouts), service discovery and health checking, distributed tracing for end-to-end request observability across service boundaries, security policy enforcement (which services are permitted to call which other services), and rate limiting for internal API calls. Transparent to application code — implemented as a sidecar proxy (Envoy-based) injected alongside each service container.",
       "classification": "foundation",
-      "capability_mappings": [],
-      "dependencies": ["SVC-100", "SVC-103", "SVC-105"],
-      "technology_constraints": [
-        "mTLS must be enforced for all service-to-service communication; plaintext east-west traffic must be technically blocked at the mesh policy level",
-        "PRA operational resilience: the mesh must support traffic shifting for zero-downtime deployments and circuit breaking to contain cascading failures within impact tolerances",
-        "Certificate rotation within the mesh must be automatic and must not require service restarts; certificate lifetimes must be short (24-hour maximum) per NCSC zero-trust guidance",
-        "Distributed tracing must propagate trace context (trace_id) across all service calls to enable end-to-end request correlation in SVC-103",
-        "Mesh policy changes (e.g. blocking a traffic path) must be auditable and subject to change management approval"
-      ],
-      "design_decisions": [
+      "status": "Draft",
+      "capability_mappings": [
         {
-          "id": "DD-SVC106-1",
-          "decision": "Adopt a sidecar-proxy service mesh pattern (e.g. Istio/Envoy) with mesh-enforced mTLS at the infrastructure layer, making TLS transparent to application code.",
-          "rationale": "Application-layer TLS requires each service to implement certificate management correctly. Sidecar-proxy enforcement means TLS is guaranteed regardless of application implementation quality, removing a class of security misconfiguration risk.",
-          "alternatives_considered": ["Application-layer mTLS implemented per service", "Network-layer encryption only (IPSec between nodes)"],
-          "rejected_because": "Per-service application-layer TLS creates inconsistent implementation quality; IPSec at the node level does not provide service-identity-based authentication needed for zero-trust east-west traffic policy."
+          "capability_id": "PLATFORM",
+          "capability_name": "Platform Infrastructure",
+          "realisation_type": "realises_parent"
+        }
+      ],
+      "dependencies": [
+        {
+          "service_id": "SVC-100",
+          "service_name": "Identity & Access Management",
+          "dependency_type": "hard_blocking",
+          "rationale": "Service mesh identity certificates (SPIFFE/SPIRE) are issued by or coordinated with the bank's PKI in SVC-100."
         },
         {
-          "id": "DD-SVC106-2",
-          "decision": "Configure circuit breakers with service-specific thresholds rather than global defaults, tuned based on observed latency SLAs for each service dependency.",
-          "rationale": "A global circuit breaker threshold trips too early for slow-but-SLA-compliant services (e.g. SVC-015 overnight batch) and too late for fast services (e.g. SVC-051 sanctions screening). Service-specific thresholds prevent false trips and premature cascading failure containment.",
-          "alternatives_considered": ["Global circuit breaker thresholds applied uniformly", "No circuit breakers, rely on timeout configuration only"],
-          "rejected_because": "Global thresholds create unnecessary circuit trips for legitimately slow services and insufficient protection for latency-sensitive services; timeout-only approaches do not prevent connection pool exhaustion during partial downstream failures."
+          "service_id": "SVC-103",
+          "service_name": "Audit & Logging",
+          "dependency_type": "platform",
+          "rationale": "Distributed traces and service-to-service call metrics are exported to SVC-103 for operational monitoring and FCA operational resilience important business service mapping."
+        }
+      ],
+      "technology_constraints": {
+        "deployment_model": "cloud_native",
+        "data_residency": "N/A — service mesh operates at the infrastructure layer; it does not store application data",
+        "latency_class": "real_time_sub_100ms",
+        "availability_target": "99.99%",
+        "pci_dss_scope": false,
+        "regulatory_data_obligations": ["FCA operational resilience service dependency mapping (SS1/21 important business service decomposition)", "PRA DORA-equivalent ICT network security controls (mTLS, zero trust)", "PCI DSS network segmentation evidence (service mesh enforces segment boundaries)"]
+      },
+      "market_context": {
+        "build_vs_buy_assessment": "strong_buy",
+        "build_rationale": "Service mesh is platform infrastructure commodity. Istio and Linkerd are open-source projects maintained by CNCF with cloud-managed variants (GKE, EKS). Building a bespoke service mesh is not appropriate — this is a solved infrastructure problem.",
+        "vendor_options": [
+          {
+            "vendor_name": "Google / CNCF",
+            "product_name": "Istio",
+            "fit_assessment": "preferred",
+            "notes": "CNCF graduated project. Envoy-based sidecar proxy. Strong policy, observability, and mTLS. Widely adopted in financial services. Managed variant available on GKE (Anthos Service Mesh)."
+          },
+          {
+            "vendor_name": "Buoyant",
+            "product_name": "Linkerd",
+            "fit_assessment": "shortlisted",
+            "notes": "Simpler alternative to Istio. Lower operational overhead. CNCF graduated. Rust-based proxy with minimal latency overhead."
+          }
+        ]
+      },
+      "design_decisions": [
+        {
+          "id": "SDD-010",
+          "decision": "The service mesh enforces explicit allow-list policies for all service-to-service calls. Services that are not explicitly permitted to communicate are blocked by default (deny-all baseline).",
+          "rationale": "The PCI DSS cardholder data environment (CDE) boundary requires demonstrable network segmentation between CDE-scoped services (SVC-003, SVC-008, SVC-011) and non-CDE services. The service mesh explicit allow-list policy provides this segmentation at the application network layer, supporting PCI DSS audit evidence. The FCA operational resilience important business service decomposition also benefits from the service mesh dependency map.",
+          "alternatives_considered": ["Allow-all baseline with explicit deny policies for sensitive services"],
+          "rejected_because": "Allow-all baseline creates an insecure default where new services can freely call sensitive financial services. PCI DSS requires demonstrable segmentation; deny-all with explicit allow-list is the only defensible posture."
         }
       ]
     }

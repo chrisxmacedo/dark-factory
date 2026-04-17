@@ -1,0 +1,87 @@
+---
+title: "JRN-001 AP-003 — Account Switching via CASS (7-Working-Day SLA)"
+---
+sequenceDiagram
+    autonumber
+
+    actor PER001 as PER-001<br/>Personal Customer
+    participant SVC017 as SVC-017<br/>Digital Channels
+    participant SVC001 as SVC-001<br/>Retail Banking Core
+    participant SVC050 as SVC-050<br/>Customer Onboarding
+    participant SVC051 as SVC-051<br/>Sanctions Screening
+    participant SVC014 as SVC-014<br/>KYC/AML Service
+    participant CASS as CASS<br/>Pay.UK CASS Service
+    participant PREVBANK as Previous Bank<br/>(e.g. Barclays)
+    participant EB as SVC-102<br/>Event Bus
+    participant SVC053 as SVC-053<br/>Notifications
+
+    rect rgb(230, 245, 255)
+        Note over PER001,SVC001: PH-001 — Application Initiation (CASS switch selected)
+        PER001->>SVC017: Submit application form<br/>switching: true<br/>intended_switch_date: 2026-04-24<br/>previous_bank: Barclays 20-00-00 / 12345678
+        SVC017->>SVC001: POST /applications<br/>{ switching: true, cass_switch: { intended_switch_date,<br/>previous_bank_name, previous_sort_code,<br/>previous_account_number } }
+        Note over SVC001: Validate: intended_switch_date >= 7 working days from today
+        SVC001->>EB: publish ApplicationStarted { switching: true }
+        SVC001-->>SVC017: 201 Created { application_id, application_ref }
+        SVC017-->>PER001: Confirmation + CASS switch details summary
+    end
+
+    rect rgb(230, 255, 230)
+        Note over SVC050,SVC014: PH-002 + PH-003 — Identity Verification + KYC/CDD<br/>(same as happy path)
+        Note over SVC050: PH-002: IdentityVerificationCompleted (PASS) published
+        SVC014->>SVC051: POST /sanctions/screen (Hard SLA: <3,000ms)
+        SVC051-->>SVC014: 200 OK — CLEAR
+        SVC014->>EB: publish KYCClearanceGranted { risk_category: simplified }
+    end
+
+    rect rgb(245, 230, 255)
+        Note over SVC001: PH-004 — Account Decision: APPROVED
+        SVC001->>EB: publish ApplicationDecisionMade { outcome: APPROVED }
+    end
+
+    rect rgb(255, 230, 230)
+        Note over SVC001,CASS: PH-005 — Account Provisioning + CASS Registration
+        Note over SVC001: Create Account (ENT-004):<br/>sort_code: 40-47-84, account_number: 87654321<br/>balance: £0.00, fscs_eligible: true
+        SVC001->>CASS: Register new account with Pay.UK CASS<br/>{ new_sort_code: 40-47-84, new_account_number: 87654321,<br/>customer_name, DOB, intended_switch_date: 2026-04-24,<br/>previous_sort_code: 20-00-00, previous_account: 12345678 }
+        Note over CASS: SLA: Must register within 2 business days<br/>of account opening (CASS rules)
+        CASS-->>SVC001: CASS registration confirmed<br/>{ switch_ref: CASS-2026-0042391, switch_date: 2026-04-24 }
+        Note over SVC001: Account.cass_registered = true
+        SVC001->>EB: publish AccountProvisioned<br/>{ cass_registered: true, switch_ref: CASS-2026-0042391,<br/>switch_date: 2026-04-24 }
+        SVC001->>EB: publish CardIssuanceTriggered
+    end
+
+    rect rgb(230, 255, 245)
+        Note over PER001,SVC017: PH-006 — Digital Channel Activation (same as happy path)
+        Note over SVC017: Credentials, FIDO2 biometric SCA, first login — per happy path
+        SVC017->>EB: publish DigitalChannelActivated
+    end
+
+    rect rgb(255, 255, 220)
+        Note over PER001,SVC053: PH-007 — Welcome + CASS Switch Confirmation
+        SVC053-->>PER001: Welcome email + in-app:<br/>Account details (40-47-84 / 87654321)<br/>CASS Switch Reference: CASS-2026-0042391<br/>Switch Date: 24 April 2026<br/>What will move: Direct Debits + Standing Orders<br/>+ incoming payments<br/>CASS guarantee: 7-working-day SLA confirmed
+    end
+
+    rect rgb(220, 235, 255)
+        Note over PER001,SVC017: Customer authorises CASS switch form in-app
+        PER001->>SVC017: Authorise CASS switch form (SCA: biometric + device)<br/>Consent: move DDs + SOs + incoming payments<br/>Consent: close old account on Switch Date
+        Note over SVC017: SCA required (PSR 2017 Regulation 100)
+        SVC017->>CASS: Transmit authorised CASS switch instruction<br/>{ switch_ref: CASS-2026-0042391, authorised_at,<br/>switch_date: 2026-04-24 }
+    end
+
+    rect rgb(200, 240, 220)
+        Note over CASS,PREVBANK: CASS 7-Working-Day Switch Window<br/>(Day 0 to Switch Date: 2026-04-24)
+        CASS->>PREVBANK: Request mandate list<br/>(Direct Debits + Standing Orders)
+        PREVBANK-->>CASS: Mandate list returned
+        CASS->>CASS: Redirect all mandates to<br/>40-47-84 / 87654321
+        Note over CASS,PREVBANK: ⏱ SLA: Must complete within 7 working days<br/>of Switch Date (CASS guarantee)
+    end
+
+    rect rgb(200, 220, 255)
+        Note over CASS,PREVBANK: Switch Date: 2026-04-24
+        CASS->>PREVBANK: Instruct: close old account (20-00-00 / 12345678)<br/>Transfer remaining balance to new account
+        PREVBANK-->>CASS: Old account closed, balance transferred
+        CASS-->>SVC001: Switch completion notification<br/>{ switch_ref: CASS-2026-0042391,<br/>switch_completed_at: 2026-04-24T17:00:00Z, status: completed }
+        SVC001->>EB: publish CassSwitchCompleted<br/>{ account_id, switch_ref, switch_completed_at, within_sla: true }
+        SVC053-->>PER001: Email + in-app: "Your switch is complete<br/>Your Barclays account has been closed<br/>Sort code/account: 40-47-84 / 87654321"
+    end
+
+    Note over PER001,SVC053: AP-003 complete — CASS switch finished within 7-working-day SLA<br/>CASS redirect protection active for 3 years from Switch Date

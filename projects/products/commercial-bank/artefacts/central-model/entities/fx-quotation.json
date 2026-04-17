@@ -1,0 +1,96 @@
+{
+  "entity_id": "ENT-027",
+  "name": "FXQuotation",
+  "description": "An FX rate quotation obtained by SVC-010 (International Payments, CAP-003) from the bank's FX pricing engine for a cross-currency international transfer. Created in PH-030. One or more FXQuotation records may exist per InternationalTransfer (when quotes lapse and are refreshed), but only one may have status = accepted at any time. The accepted FXQuotation locks in the exchange rate for the BusinessAccount debit and FATF travel rule GBP equivalent reporting. Not created for GBP-denominated transfers. Introduced by JRN-009.",
+  "owning_service": "SVC-010",
+  "owning_capability": "CAP-003 (Payment Operations — International Payments, promoted sub-capability CAP-003.04)",
+  "reachable_from_phases": ["PH-030"],
+  "aggregate_root": false,
+  "fields": [
+    {
+      "name": "quote_id",
+      "type": "UUID",
+      "validation_rule": "RFC 4122 UUID v4. System-generated. Immutable.",
+      "source": "PH-030",
+      "governed_by": null
+    },
+    {
+      "name": "transfer_id",
+      "type": "UUID",
+      "validation_rule": "Required. FK → InternationalTransfer.transfer_id. Immutable.",
+      "source": "PH-030",
+      "governed_by": null
+    },
+    {
+      "name": "sell_currency",
+      "type": "string",
+      "validation_rule": "Required. ISO 4217 3-letter currency code. For UK corporate transfers, always GBP. Immutable.",
+      "source": "PH-030",
+      "governed_by": null
+    },
+    {
+      "name": "buy_currency",
+      "type": "string",
+      "validation_rule": "Required. ISO 4217 3-letter currency code. Must equal InternationalTransfer.currency. Immutable.",
+      "source": "PH-030",
+      "governed_by": null
+    },
+    {
+      "name": "rate",
+      "type": "decimal",
+      "validation_rule": "Required. Positive decimal. 6 decimal places. All-in rate inclusive of FX margin. GBP per 1 unit of buy_currency. Immutable after status = accepted.",
+      "source": "PH-030",
+      "governed_by": null
+    },
+    {
+      "name": "validity_seconds",
+      "type": "integer",
+      "validation_rule": "Required. Positive integer. Duration in seconds for which the rate is guaranteed. Minimum 30 for large amounts (> £1M); minimum 120 for standard amounts. The quote expires at created_at + validity_seconds.",
+      "source": "PH-030",
+      "governed_by": null
+    },
+    {
+      "name": "status",
+      "type": "enum",
+      "validation_rule": "Required. Enum: pending_acceptance | accepted | lapsed | cancelled. Transitions: pending_acceptance → accepted (customer accepts within validity window); pending_acceptance → lapsed (validity_seconds exceeded); accepted → cancelled (transfer cancelled after FX acceptance).",
+      "source": "PH-030",
+      "governed_by": null
+    },
+    {
+      "name": "quoted_gbp_equivalent",
+      "type": "decimal",
+      "validation_rule": "Required. Positive decimal, max 2 dp. InternationalTransfer.amount / rate. GBP cost of the transfer at this quote rate. Immutable.",
+      "source": "PH-030",
+      "governed_by": null
+    },
+    {
+      "name": "created_at",
+      "type": "timestamp",
+      "validation_rule": "System-generated. ISO 8601 UTC. Immutable. Quote expires at created_at + validity_seconds.",
+      "source": "PH-030",
+      "governed_by": null
+    },
+    {
+      "name": "accepted_at",
+      "type": "timestamp",
+      "validation_rule": "Conditional. ISO 8601 UTC. Set when status transitions to accepted. Must be <= created_at + validity_seconds.",
+      "source": "PH-030",
+      "governed_by": null
+    }
+  ],
+  "relationships": [
+    {
+      "target_entity": "ENT-026",
+      "type": "many-to-one",
+      "description": "FXQuotation belongs to one InternationalTransfer via transfer_id."
+    }
+  ],
+  "design_decisions": [
+    {
+      "id": "DD-ENT027-01",
+      "decision": "FXQuotation is a separate entity from InternationalTransfer rather than inline FX fields on the transfer record.",
+      "rationale": "A transfer may generate multiple quotations (lapse-refresh cycle). A dedicated entity with its own lifecycle (status, validity window, created_at) cleanly models the quotation lifecycle. The accepted quotation's rate is denormalised onto InternationalTransfer.fx_rate for downstream calculations."
+    }
+  ],
+  "source_journeys": ["JRN-009"]
+}

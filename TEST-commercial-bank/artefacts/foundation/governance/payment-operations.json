@@ -4,123 +4,152 @@
   "capability_name": "Payment Operations",
   "rules": [
     {
-      "rule_id": "RULE-PO-001",
-      "name": "Payment Execution Time Limits",
-      "source_legislation": "Payment Services Regulations 2017 (PSR 2017) — Regulation 86 (implementing PSD2 Article 83)",
-      "description": "The bank must ensure that the amount of a payment transaction is credited to the payee's payment service provider's account by the end of the next business day (D+1) following receipt of the payment order. For paper-initiated transactions an additional business day is permitted. Intra-bank transfers between accounts at the same institution must be credited same-day. Faster Payments transactions must complete within two hours under the Faster Payments scheme rules.",
-      "authority_level": "automated",
-      "approval_chain": [
-        "Head of Payment Operations",
-        "Chief Operating Officer"
-      ],
-      "disclosure_obligations": [
-        "Maximum execution time disclosed in the Payment Services Framework Contract (Terms and Conditions)",
-        "PSR 2017 periodic statement of key fees and execution times provided annually",
-        "Payment service complaints reported in the FCA Product Sales Data return",
-        "Scheme breach reporting to Faster Payments, CHAPS, or BACS operator within prescribed timescales"
-      ],
-      "constraints": [
-        "Domestic credit transfers must reach the payee PSP by end of next business day (D+1) at the latest",
-        "EEA currency transfers (where still applicable) must meet D+1 for euro payments",
-        "Cut-off times for same-day processing must be clearly published and not changed without 60 days prior notice to customers",
-        "Paper-based payments may use D+2 but this must be disclosed in the framework contract"
-      ]
-    },
-    {
-      "rule_id": "RULE-PO-002",
-      "name": "Strong Customer Authentication",
-      "source_legislation": "Payment Services Regulations 2017 Schedule 6 (UK SCA-RTS); FCA Policy Statement PS19/26",
-      "description": "The bank must apply Strong Customer Authentication (SCA) whenever a customer initiates an electronic payment transaction or accesses their payment account online. SCA requires two independent authentication elements from: something the customer knows, something the customer has, and something the customer is. Exemptions (e.g. low-value transactions below £30, trusted beneficiaries, corporate payment processes) must be governed by documented exemption policies and subject to real-time transaction risk analysis (TRA) where applicable.",
+      "rule_id": "GOV-003-R01",
+      "name": "APP Fraud Mandatory Reimbursement",
+      "source_legislation": "PSR APP Fraud Reimbursement Policy (PS23/3); Payment Systems Act 2013; FPS Scheme Rules (Pay.UK)",
+      "description": "From 7 October 2024, the bank as a PSP must reimburse victims of Authorised Push Payment (APP) fraud up to £85,000 per claim. Reimbursement must be made to the sending customer within 5 business days of a claim being submitted unless a stop-the-clock provision applies. The total reimbursement cost is split 50/50 between the sending PSP and the receiving PSP. The scheme is funded by a per-transaction levy on FPS payments. The bank must maintain a claims decisioning process, a reimbursement reserve, and a fraud reporting process to the PSR.",
       "authority_level": "senior_manager",
       "approval_chain": [
-        "Authentication Product Owner",
-        "Head of Digital Security",
-        "Chief Information Security Officer"
+        "Head of Fraud Operations",
+        "Head of Payment Operations",
+        "Senior Manager (Payment Services)"
       ],
       "disclosure_obligations": [
-        "SCA exemption usage rates reported to FCA on request",
-        "Fraud rates under SCA exemptions monitored against FCA published reference fraud rate thresholds",
-        "Customer notification of SCA requirement changes with minimum 30 days notice",
-        "Annual attestation to FCA that SCA implementation remains compliant"
+        "Customer-facing APP fraud reimbursement policy published on the bank's website",
+        "Reimbursement claim outcome letter to customer within 5 business days",
+        "Quarterly claims and reimbursement data submitted to PSR for monitoring",
+        "Annual disclosure of APP fraud volumes and reimbursement rates to PSR"
       ],
       "constraints": [
-        "SCA must use at least two independent factors from distinct categories (knowledge, possession, inherence)",
-        "Low-value contactless transaction exemption applies only to transactions below £100 cumulative per session (post-2023 UK limit)",
-        "Where TRA exemption is applied, fraud rate for the relevant transaction type must remain below FCA published reference rate",
-        "SCA authentication codes must be dynamically linked to the specific transaction amount and payee"
-      ]
+        "Maximum reimbursement per claim is £85,000",
+        "Reimbursement must be paid within 5 business days unless stop-the-clock applies (e.g. suspected gross negligence investigation)",
+        "Gross negligence standard applies — reimbursement may be refused only if customer ignored PSP warnings or acted fraudulently",
+        "The FPS transaction levy funding the scheme cannot be directly passed on to retail customers"
+      ],
+      "status": "current"
     },
     {
-      "rule_id": "RULE-PO-003",
-      "name": "Confirmation of Payee",
-      "source_legislation": "Payment Systems Regulator (PSR) — Specific Direction 10 (CoP Phase 1 and Phase 2 mandates)",
-      "description": "The bank must implement Confirmation of Payee (CoP) for all Faster Payments and CHAPS transactions where the sending customer provides account name, sort code, and account number. The CoP check must return a match, close match, no match, or unavailable result before the payment is initiated. In the case of a no match or close match result, the customer must be explicitly warned before proceeding. The bank must also respond to CoP requests from other PSPs for accounts it holds.",
+      "rule_id": "GOV-003-R02",
+      "name": "Confirmation of Payee (CoP) — Phase 2 Mandatory Coverage",
+      "source_legislation": "PSR Specific Direction 17 (SD17); PSR Group 2 participation mandatory from October 2024",
+      "description": "The bank must perform Confirmation of Payee checks on all outbound FPS and CHAPS payments, verifying the payee name against the account held at the receiving bank. Outbound payments where CoP returns a 'no match' or 'partial match' result must be presented to the customer with a prominent risk warning and confirmation step before the payment is allowed to proceed. The bank must also respond to inbound CoP requests from other PSPs within the scheme latency requirements.",
+      "authority_level": "senior_manager",
+      "approval_chain": [
+        "Head of Payment Operations",
+        "Head of Digital Channels",
+        "Senior Manager (Payment Services)"
+      ],
+      "disclosure_obligations": [
+        "CoP check result presented to customer before payment authorisation in a standardised format",
+        "No-match and partial-match results accompanied by explicit fraud risk warning",
+        "Confirmation of Payee coverage rate reported to PSR annually"
+      ],
+      "constraints": [
+        "CoP must be performed on 100% of outbound FPS and CHAPS payments — no blanket exemptions",
+        "Inbound CoP request response must be returned within the scheme's latency SLA",
+        "Customer must actively confirm intent to proceed when CoP returns no-match — passive timeout is not acceptable"
+      ],
+      "status": "current"
+    },
+    {
+      "rule_id": "GOV-003-R03",
+      "name": "CHAPS ISO 20022 Enhanced Data — Structured Addresses and LEIs",
+      "source_legislation": "Bank of England CHAPS ISO 20022 Enhanced Data Policy; RTGS/CHAPS Rules",
+      "description": "From 1 May 2025, all CHAPS payments must include LEIs (Legal Entity Identifiers) for corporate originators and beneficiaries and Purpose Codes for specified transaction categories. From November 2026, unstructured postal addresses in CHAPS messages will be rejected; banks must migrate to structured address formats across all onboarding, channels, and payment processing systems. The bank must implement address enrichment processes and LEI validation as part of CHAPS payment origination.",
       "authority_level": "department_head",
       "approval_chain": [
-        "Payments Product Manager",
-        "Head of Payments",
-        "Chief Operating Officer"
+        "Head of CHAPS Operations",
+        "Head of Payment Technology",
+        "Head of Compliance",
+        "Head of Payment Operations"
       ],
       "disclosure_obligations": [
-        "CoP response volumes and match rates reported to Pay.UK as scheme operator",
-        "APP fraud incidents where CoP was bypassed or unavailable flagged in PSR mandatory reimbursement data",
-        "Customer-facing CoP result messages must follow Pay.UK approved wording",
-        "Annual review of CoP coverage gaps reported to the Head of Payments"
+        "LEI population rate reported to Bank of England as part of CHAPS data quality audit programme",
+        "Internal programme plan for structured address migration shared with Bank of England relationship manager",
+        "Board-level sign-off on structured address migration readiness by Q3 2026"
       ],
       "constraints": [
-        "CoP check is mandatory for all Faster Payments and CHAPS payments above the de minimis threshold",
-        "A no match result must generate a mandatory customer warning; the bank must not suppress or auto-proceed past this warning",
-        "CoP response to inbound requests from other PSPs must be provided within scheme-defined latency SLA (currently 10 seconds)",
-        "Business accounts using bulk payment files must implement CoP batch checking before file submission"
-      ]
+        "LEIs and Purpose Codes mandatory in all in-scope CHAPS messages from 1 May 2025",
+        "Unstructured postal addresses rejected by CHAPS central infrastructure from November 2026",
+        "LEI validation must occur at payment origination — invalid or expired LEIs must be flagged and remediated before submission"
+      ],
+      "status": "current"
     },
     {
-      "rule_id": "RULE-PO-004",
-      "name": "CHAPS Settlement Finality",
-      "source_legislation": "Financial Markets and Insolvency (Settlement Finality) Regulations 1999 (SFR 1999); Bank of England CHAPS Scheme Rules",
-      "description": "Payments settled through the CHAPS Real-Time Gross Settlement (RTGS) system are irrevocable and final from the moment of settlement in the Bank of England's books. The bank must treat CHAPS credits as final and unconditional upon receipt of the settlement confirmation. Funds credited to beneficiary accounts following CHAPS settlement must be made available no later than the business day end of the settlement day. Recall of a CHAPS payment post-settlement requires the beneficiary's voluntary agreement and cannot be compelled.",
-      "authority_level": "automated",
-      "approval_chain": [
-        "Head of Payment Operations",
-        "Head of Treasury Operations"
-      ],
-      "disclosure_obligations": [
-        "CHAPS transaction data reported to Bank of England RTGS operator as per scheme requirements",
-        "Liquidity usage in CHAPS reported to ALCO daily",
-        "Settlement fails or liquidity shortfalls reported to Bank of England within one business day",
-        "Annual self-assessment against CHAPS Indirect Access Policy requirements (for indirect participants)"
-      ],
-      "constraints": [
-        "CHAPS payments are final and irrevocable from the point of RTGS settlement; no unilateral reversal is permitted",
-        "Beneficiary funds must be made available no later than close of the settlement business day",
-        "The bank must maintain sufficient intraday liquidity to meet CHAPS settlement obligations without recourse to emergency facilities",
-        "CHAPS recall requests (SWIFT gpi RECALL or CoP recall) must be responded to within Bank of England stipulated timescales"
-      ]
-    },
-    {
-      "rule_id": "RULE-PO-005",
-      "name": "Sanctions Screening on Payments",
-      "source_legislation": "UK financial sanctions legislation administered by OFSI (Office of Financial Sanctions Implementation); HM Treasury Consolidated Sanctions List; UN Security Council Resolutions",
-      "description": "The bank must screen all payment instructions against the HM Treasury Consolidated Sanctions List and relevant regime-specific lists prior to execution. Matches or potential matches must be frozen and escalated to the Sanctions Compliance Team immediately. The bank must not process any payment that would constitute a dealing with a designated person or entity. OFSI must be notified of any frozen assets or suspected sanctions breaches. Sanctions screening records must be retained for a minimum of five years.",
+      "rule_id": "GOV-003-R04",
+      "name": "RTGS Extended Operating Hours — Settlement Window Management",
+      "source_legislation": "Bank of England RTGS Extended Operating Hours policy statement (expected 2025–2026); CHAPS Rules",
+      "description": "The Bank of England is targeting a 01:30 opening of RTGS settlement by end-2025 and is consulting on evening and bank holiday settlement, with near-continuous settlement as an end-of-decade aspiration. The bank must update its CHAPS settlement position monitoring, intraday liquidity management, and operational staffing to cover the extended settlement window. Treasury must maintain adequate settlement reserves across the expanded hours.",
       "authority_level": "senior_manager",
       "approval_chain": [
-        "Payments Sanctions Analyst",
-        "Sanctions Compliance Manager",
-        "Head of Financial Crime Compliance",
-        "Chief Compliance Officer"
+        "Head of Treasury",
+        "Head of CHAPS Operations",
+        "Senior Manager (Payment Services)",
+        "Chief Finance Officer"
       ],
       "disclosure_obligations": [
-        "OFSI notification required within a reasonable time of identifying a potential sanctions match or frozen asset",
-        "Annual OFSI reporting of frozen assets held by the bank",
-        "Suspicious Activity Reports (SARs) to NCA where sanctions evasion suspected",
-        "Internal escalation to Executive Committee of any material sanctions breach within 24 hours"
+        "Updated CHAPS participation terms acknowledging extended operating hours obligations",
+        "Client-facing communication updating CHAPS payment cutoff times as extended hours are adopted",
+        "Internal operational readiness attestation submitted to Bank of England by agreed milestone"
       ],
       "constraints": [
-        "No payment may be processed before sanctions screening is completed and cleared",
-        "A potential match must result in immediate payment hold pending analyst review; automated clearance is not permitted for true matches",
-        "Sanctions screening must cover both originator and beneficiary, and all intermediary parties in cross-border transactions",
-        "Screening systems must be updated within 24 hours of a new HM Treasury sanctions designation being published"
-      ]
+        "Bank must be operationally capable of processing CHAPS payments during the extended settlement window from the date of implementation",
+        "Intraday liquidity buffers must be maintained throughout the extended operating hours",
+        "Staffing and on-call arrangements must cover the full operational window"
+      ],
+      "status": "incoming",
+      "expected_date": "2025-2026"
+    },
+    {
+      "rule_id": "GOV-003-R05",
+      "name": "Commercial Variable Recurring Payments (cVRP) — Scheme Participation",
+      "source_legislation": "FCA cVRP Scheme (announced 2024); PSR Variable Recurring Payments framework; PSR 2017",
+      "description": "Commercial VRP (cVRP) enables consumers and businesses to give pre-authorised payment mandates to third-party PISPs for subscription and variable recurring use cases beyond sweeping. The FCA-led scheme expects first live payments in Q1 2026. The bank as ASPSP must support cVRP consent grant, management, and revocation APIs, and must ensure its digital channel surfaces cVRP mandate management to customers. This creates a new open banking payment rail that competes directly with card recurring mandates and BACS direct debits.",
+      "authority_level": "department_head",
+      "approval_chain": [
+        "Head of Open Banking and APIs",
+        "Head of Payment Operations",
+        "Head of Digital Channels",
+        "Senior Manager (Payment Services)"
+      ],
+      "disclosure_obligations": [
+        "cVRP mandate dashboard accessible to customers in online and mobile banking",
+        "Customer notification upon creation, modification, or revocation of a cVRP mandate",
+        "Scheme participation reporting to FCA/PSR per cVRP scheme rules"
+      ],
+      "constraints": [
+        "Bank must provide cVRP APIs meeting FCA scheme technical standards from scheme go-live",
+        "Customers must be able to revoke cVRP mandates instantly via digital channel",
+        "Payment limits and merchant restrictions agreed in the cVRP mandate must be enforced by the bank at execution"
+      ],
+      "status": "incoming",
+      "expected_date": "2026-Q1"
+    },
+    {
+      "rule_id": "GOV-003-R06",
+      "name": "Interbank Infrastructure Renewal (IIR) — Programme Participation",
+      "source_legislation": "HM Treasury Payments Forward Plan (26 February 2026); Payments Vision Delivery Committee roadmap 2026–2028",
+      "description": "HM Treasury's Payments Forward Plan formally replaced the New Payments Architecture (NPA) with the Interbank Infrastructure Renewal (IIR) programme, led by a new industry-governed Delivery Company. The bank must participate in IIR design and migration activities as a direct scheme participant. The three-year regulatory roadmap (2026–2028) covers migration of domestic interbank rails to new infrastructure. The bank must appoint a senior IIR programme owner and provide resource to industry working groups.",
+      "authority_level": "executive_committee",
+      "approval_chain": [
+        "Head of Payment Strategy",
+        "Head of Payment Operations",
+        "Chief Technology Officer",
+        "Chief Operating Officer",
+        "Executive Committee"
+      ],
+      "disclosure_obligations": [
+        "Annual IIR programme progress report to the Board",
+        "Participation in IIR Delivery Company governance as a direct participant",
+        "Regulatory reporting to PSR and Pay.UK on IIR migration readiness milestones"
+      ],
+      "constraints": [
+        "Bank must maintain active participation in IIR Delivery Company governance and technical working groups",
+        "Migration to new IIR infrastructure is mandatory within the PSR/Pay.UK timeline",
+        "Legacy FPS/BACS infrastructure investment must be balanced against IIR migration capex"
+      ],
+      "status": "incoming",
+      "expected_date": "2026-2028"
     }
   ]
 }

@@ -1,0 +1,81 @@
+{
+  "entity_id": "ENT-029",
+  "name": "SWIFTMessage",
+  "description": "The SWIFT payment message record for an international wire transfer. Created by SVC-010 (International Payments, CAP-003) in PH-032 when the pacs.008 ISO 20022 MX message is assembled. For JRN-009, the message_type is always pacs008 — MT103 is not supported for new transfers as the SWIFT CBPR+ MT coexistence period ended 22 November 2025. The raw_payload_ref is a pointer to the full pacs.008 XML stored in the bank's encrypted document store (not stored inline). Records the SWIFT submission timestamp (sent_timestamp) and correspondent acknowledgement timestamp (ack_timestamp). Owned by SVC-010. Introduced by JRN-009.",
+  "owning_service": "SVC-010",
+  "owning_capability": "CAP-003 (Payment Operations — International Payments, promoted sub-capability CAP-003.04)",
+  "reachable_from_phases": ["PH-032", "PH-033"],
+  "aggregate_root": false,
+  "fields": [
+    {
+      "name": "message_id",
+      "type": "UUID",
+      "validation_rule": "RFC 4122 UUID v4. System-generated. Internal identifier. Immutable.",
+      "source": "PH-032",
+      "governed_by": null
+    },
+    {
+      "name": "transfer_id",
+      "type": "UUID",
+      "validation_rule": "Required. FK → InternationalTransfer.transfer_id. Immutable.",
+      "source": "PH-032",
+      "governed_by": null
+    },
+    {
+      "name": "message_type",
+      "type": "enum",
+      "validation_rule": "Required. Enum: MT103 | pacs008. For JRN-009, always pacs008. MT103 included in enum for legacy read compatibility only — must not be set on new records post-CBPR+ cutover (22 November 2025). Enforced at SVC-010 service layer.",
+      "source": "PH-032",
+      "governed_by": "GOV-003-R03"
+    },
+    {
+      "name": "raw_payload_ref",
+      "type": "string",
+      "validation_rule": "Required. URI or key reference to the raw SWIFT pacs.008 XML payload stored in the bank's encrypted document store (SVC-111 or equivalent). Raw XML is never stored inline. Immutable after submission.",
+      "source": "PH-032",
+      "governed_by": "GOV-005-R01",
+      "privacy_note": "The raw pacs.008 may contain beneficiary PII (name, address). Stored in encrypted document store under MLR 2017 Regulation 40 five-year retention. raw_payload_ref grants access only to authorised SVC-010 and audit processes."
+    },
+    {
+      "name": "swift_message_ref",
+      "type": "string",
+      "validation_rule": "Required. The SWIFT MsgId from the pacs.008 GroupHeader (max 35 characters, ISO 20022). Unique within the bank's SWIFT message namespace. Distinct from InternationalTransfer.swift_reference (EndToEndId). Immutable.",
+      "source": "PH-032",
+      "governed_by": "GOV-003-R03"
+    },
+    {
+      "name": "sent_timestamp",
+      "type": "timestamp",
+      "validation_rule": "Conditional. ISO 8601 UTC. Set at PH-033 when the pacs.008 is submitted to the SWIFT network via SAA. Immutable after set.",
+      "source": "PH-033",
+      "governed_by": null
+    },
+    {
+      "name": "ack_timestamp",
+      "type": "timestamp",
+      "validation_rule": "Conditional. ISO 8601 UTC. Set when the first correspondent bank acknowledges receipt (SWIFT gpi ACSP — AcceptedSettlementInProcess). Immutable after set.",
+      "source": "PH-033",
+      "governed_by": null
+    }
+  ],
+  "relationships": [
+    {
+      "target_entity": "ENT-026",
+      "type": "one-to-one",
+      "description": "SWIFTMessage belongs to one InternationalTransfer via transfer_id."
+    }
+  ],
+  "design_decisions": [
+    {
+      "id": "DD-ENT029-01",
+      "decision": "raw_payload_ref is a pointer to the stored message; the raw SWIFT pacs.008 XML is never stored as an inline field.",
+      "rationale": "CBPR+-enriched pacs.008 messages (with structured addresses, LEIs, purpose codes) can be several KB. Inline storage would bloat the primary entity datastore. The pointer pattern keeps the entity lightweight while preserving the complete audit record per SWIFT gpi, FATF travel rule, and MLR 2017 requirements."
+    },
+    {
+      "id": "DD-ENT029-02",
+      "decision": "message_type enum retains MT103 for read compatibility; JRN-009 enforces pacs008 exclusively at the SVC-010 service layer.",
+      "rationale": "SVC-010 may need to read historical SWIFTMessage records created before the CBPR+ cutover (pre-November 2025) that carry message_type = MT103. Schema-level exclusion would break historical reads. Service-layer enforcement (SVC-010 rejects MT103 on write) is the appropriate control boundary."
+    }
+  ],
+  "source_journeys": ["JRN-009"]
+}

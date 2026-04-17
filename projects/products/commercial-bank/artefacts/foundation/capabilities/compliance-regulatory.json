@@ -1,0 +1,280 @@
+{
+  "id": "CAP-005",
+  "name": "Compliance & Regulatory",
+  "description": "Ensures the bank operates within the law, regulatory rules, and its own conduct standards across all products, channels, and geographies. Covers financial crime prevention (KYC/AML), sanctions screening, regulatory reporting to the PRA/FCA/HMRC, conduct monitoring, data protection (UK GDPR/DPA 2018), and the governance frameworks that maintain the bank's authorisation and operating licence. Compliance is non-negotiable — failure creates criminal liability, licence revocation, and reputational damage that cannot be recovered commercially. Unlike Risk Management (which quantifies and prices risk), Compliance is binary: the bank is either within the rules or it is not.",
+  "status": "Draft",
+  "mandate_source": [
+    "Proceeds of Crime Act 2002 (POCA) — principal anti-money laundering legislation",
+    "Terrorism Act 2000 — counter-terrorist financing obligations",
+    "Money Laundering, Terrorist Financing and Transfer of Funds (Information on the Payer) Regulations 2017 (MLR 2017) as amended",
+    "Economic Crime (Transparency and Enforcement) Act 2022",
+    "Economic Crime and Corporate Transparency Act 2023 — failure to prevent fraud offence",
+    "UK Financial Sanctions legislation — OFSI (Office of Financial Sanctions Implementation) regulations",
+    "Financial Services and Markets Act 2000 (FSMA) — regulatory reporting, conduct, PRA/FCA authorisation",
+    "PRA Rulebook and FCA Handbook (SYSC, COBS, BCOBS, MCOB) — systems and controls, conduct of business",
+    "UK General Data Protection Regulation (UK GDPR) / Data Protection Act 2018",
+    "PRA Supervisory Statement SS1/21 — Operational Resilience (also a Compliance obligation post-March 2025)",
+    "FCA Consumer Duty (PS22/9) — effective July 2023 for new products, July 2024 for closed products",
+    "Capital Requirements Regulation (CRR) / CRD IV — Pillar 3 disclosure, COREP/FINREP regulatory reporting",
+    "UK Senior Managers and Certification Regime (SM&CR) — conduct rules, fitness and propriety",
+    "Payment Services Regulations 2017 (PSRs 2017) — conduct obligations for payment services",
+    "Electronic Money Regulations 2011 (EMRs)",
+    "FCA Market Abuse Regulation (UK MAR) — market integrity and insider dealing prohibition",
+    "Digital Operational Resilience Act (DORA) — applicable to UK branches of EU firms and UK firms with EU operations"
+  ],
+  "market_context": {
+    "competitive_landscape": {
+      "table_stakes": [
+        "CDD/KYC checks at onboarding — identity verification, beneficial ownership determination, PEP and sanctions screening",
+        "Ongoing transaction monitoring for suspicious activity under MLR 2017",
+        "Suspicious Activity Reports (SARs) submission to the National Crime Agency",
+        "OFSI sanctions list screening for all counterparties and transactions",
+        "Regulatory reporting: COREP capital, FINREP financial, PRA 110 liquidity, Bank of England Statistical Returns",
+        "SM&CR conduct rule training and certification for all relevant persons",
+        "UK GDPR privacy notices, subject access request handling, data breach notification to ICO",
+        "Annual compliance monitoring plan and board compliance report"
+      ],
+      "differentiators": [
+        "Perpetual KYC — continuous, event-triggered client review rather than periodic refresh cycles. Early adopters (HSBC, Standard Chartered via ComplyAdvantage, Encompass) show 60-80% reduction in KYC refresh costs and improved client experience at review",
+        "Real-time sanctions screening with network graph analysis — Quantexa, ComplyAdvantage, and Refinitiv World-Check One offer millisecond screening with ownership chain traversal, identifying sanctions exposure through beneficial ownership networks rather than name-only matching",
+        "AI-driven transaction monitoring that reduces false positive alert rates by 30-50% compared to rule-based systems (NICE Actimize, Behavox, Featurespace for AML)",
+        "Consumer Duty closed-loop governance — banks with mature fair value assessments, customer outcome monitoring, and board reporting demonstrating Consumer Duty compliance as a commercial differentiator with retail clients",
+        "Automated regulatory reporting via AxiomSL or Regnology — reducing manual restatement risk, enabling faster regulatory change response, supporting real-time PRA/FCA data requests"
+      ],
+      "disruptors": [
+        "Onfido — AI-powered identity verification (document + biometric) used in digital onboarding; challenges manual KYC document review",
+        "Jumio — automated identity verification and document authentication; growing in commercial banking onboarding for SME clients",
+        "ComplyAdvantage — AI-driven AML data and transaction monitoring; real-time adverse media, PEP, and sanctions data with API delivery rather than quarterly list updates",
+        "Refinitiv World-Check (LSEG) — the incumbent PEP and sanctions data provider; now competing with real-time API alternatives",
+        "Encompass Corporation — automated corporate KYC using public registry data (Companies House, official gazette, regulatory databases); reduces manual research time for corporate onboarding by 70-90%",
+        "Behavox — AI conduct surveillance and communications monitoring; challenged by UK LIBOR scandal legacy and expanding to misconduct detection beyond communications",
+        "Napier AI — intelligent transaction monitoring and client risk scoring for AML; targets banks looking to move off legacy rule-based systems",
+        "Accenture / Deloitte KYC utility models — managed KYC services where a third party holds the KYC record on behalf of multiple banks; reduces duplicated effort in shared client bases (primarily corporate and institutional)",
+        "SWIFT KYC Registry — industry utility for correspondent banking KYC; reduces duplication for banks with large correspondent networks"
+      ],
+      "unbundling": [
+        "KYC is being unbundled into specialist utilities — Encompass automates corporate KYC data gathering; Onfido/Jumio automate identity verification; SWIFT KYC Registry and shared KYC utilities (proposed under various FinCEN/industry consultations) suggest direction of travel toward industry-level KYC infrastructure",
+        "Sanctions screening is treated as a distinct real-time service by most technology vendors — ComplyAdvantage, Refinitiv, Dow Jones Risk & Compliance all offer sanctions screening as a standalone API service separate from broader AML platforms",
+        "Regulatory reporting is unbundling from core banking — AxiomSL (now Adenza, acquired by Nasdaq), Wolters Kluwer OneSumX, and Regnology offer reporting-as-a-service that sits alongside any core banking or risk system",
+        "Conduct monitoring / surveillance is a specialist category — Behavox, NICE Actimize Surveillance, Relativity Trace handle communications surveillance independently of broader compliance platforms",
+        "GDPR / data protection operations is emerging as a distinct function with its own tooling (OneTrust, TrustArc) — increasingly run by a dedicated Data Protection Officer function rather than embedded in Legal or Compliance"
+      ],
+      "rebundling": [
+        "NICE Actimize bundles transaction monitoring, KYC case management, sanctions screening, and fraud detection into a single financial crime platform — dominant in Tier 1 UK banks",
+        "Fiserv and Temenos are embedding compliance modules (AML, sanctions) into their core banking platforms — driving rebundling for banks that standardise on a single core",
+        "Microsoft Purview and IBM OpenPages rebundle data governance, compliance management, and risk reporting into enterprise governance platforms — increasing for UK banks with strong Microsoft or IBM infrastructure footprints",
+        "Wolters Kluwer OneSumX bundles regulatory reporting, ALM, liquidity, and compliance content into a unified data and reporting platform"
+      ],
+      "switching_drivers": [
+        "MLR 2017 and evolving NCA SAR guidance increasing AML programme expectations — banks with legacy rule-based TMS facing pressure to upgrade to AI/ML-based systems or face supervisory criticism",
+        "Consumer Duty (effective 2023-2024) creating new governance and monitoring requirements not supported by legacy compliance systems",
+        "Economic Crime and Corporate Transparency Act 2023 failure-to-prevent fraud offence — creates new corporate liability requiring documented fraud prevention programmes; driving demand for enterprise compliance platforms",
+        "FCA data strategy and machine-readable regulatory reporting ambition — regulatory direction toward digital and automated reporting formats (XBRL, ISO 20022) making legacy manual reporting unsustainable",
+        "DORA applicability for EU-facing UK branches — ICT third-party risk register and incident reporting requirements not covered by legacy compliance infrastructure"
+      ]
+    },
+    "regulatory_horizon": {
+      "current": [
+        "MLR 2017 (as amended) — CDD, EDD, ongoing monitoring, SAR reporting, record-keeping. HMRC and FCA as supervisory authorities for different business lines.",
+        "OFSI financial sanctions — real-time screening obligation, no safe harbour for name-matching failures in ownership chains. OFSI enforcement actions increasing (£7.5m penalty against Standard Chartered 2024).",
+        "Consumer Duty (PS22/9) — four outcomes (products/services, price/value, consumer understanding, consumer support). Board annual assessment obligation. FCA using supervisory data requests to assess compliance quality.",
+        "FCA/PRA SM&CR — Individual conduct rules, Senior Manager conduct rules, prescribed responsibilities, duty of responsibility.",
+        "UK GDPR / DPA 2018 — lawful basis requirements, data subject rights, DPIAs, record of processing activities, breach notification (72h to ICO). ICO enforcement increasing for financial services.",
+        "FCA Market Surveillance / UK MAR — market abuse detection and reporting, algorithmic trading controls, inside information controls.",
+        "PRA regulatory reporting — COREP, FINREP, FSA001-FSA071 liquidity returns, Pillar 3 disclosures, Annual Report requirements. PRA modernising regulatory returns programme ongoing.",
+        "FCA COBS/BCOBS conduct of business rules — fair treatment, product governance (PROD), appropriateness assessments, charges disclosure."
+      ],
+      "incoming_2_3_years": [
+        "MLR amendments — HM Treasury consultation on strengthening the UK AML framework ongoing. Expected: enhanced beneficial ownership verification requirements, stronger register of overseas entities linkage (ECTE Act 2023), potential for regulated information sharing between banks on financial crime typologies.",
+        "Failure to prevent fraud (Economic Crime and Corporate Transparency Act 2023) — commencement order expected 2025. Large organisations (turnover >£36m, balance sheet >£18m, employees >250) must demonstrate reasonable fraud prevention procedures or face corporate criminal liability.",
+        "Perpetual KYC regulatory expectation — FCA and JMLSG guidance update expected to move from periodic refresh to event-driven, risk-based review. Banks without pKYC infrastructure will face compliance gaps.",
+        "FCA data strategy — FCA has signalled ambition for machine-readable, near-real-time regulatory data from firms. Pilot digital reporting programme (DRR) underway. Banks should expect move from batch XBRL reporting toward API-based data delivery within 3-5 years.",
+        "PRA modernising regulatory returns — PRA CP4/24 consultation on streamlining returns. Expect rationalisation of some returns and introduction of new data standards. Banks dependent on manual return preparation face increasing operational risk.",
+        "DORA (EU Digital Operational Resilience Act) — applies to UK branches of EU-regulated firms and UK firms with EU subsidiary operations as of January 2025. ICT risk management framework, critical ICT third-party provider register, incident classification and reporting to competent authorities, TLPT (threat-led penetration testing). UK equivalent framework expected via FCA/PRA operational resilience convergence.",
+        "AI Act (EU) — applicable to UK firms with EU operations. High-risk AI system requirements include financial services credit scoring and AML systems. Transparency, human oversight, and documentation obligations.",
+        "FCA Consumer Duty closed book deadline — July 2024 extended duties apply to all closed products. FCA beginning supervisory assessment of outcomes monitoring quality in 2025."
+      ],
+      "enforcement_signals": [
+        "FCA AML enforcement intensifying — FCA fined Starling Bank £29m (October 2024) for financial sanctions screening failures, including using a system that screened only a fraction of the customer base against sanctions lists. Specific signal: automated screening coverage must be demonstrably complete.",
+        "OFSI enforcement escalation — OFSI civil monetary penalties rising; Standard Chartered £7.5m fine (2024) for sanctions violations. Signal: beneficial ownership screening through corporate structures is now an OFSI expectation, not just name-matching.",
+        "FCA Consumer Duty supervisory focus — FCA Dear CEO letters (2024) on retail banking value assessments and overdraft pricing fairness. Signal: price/value outcome is the FCA's near-term enforcement priority under Consumer Duty.",
+        "ICO enforcement in financial services — enforcement notices to financial services firms for unlawful marketing and failure to honour data subject rights (access requests). Signal: DPA 2018 operational compliance (SAR response times, consent records) under active ICO scrutiny.",
+        "NCA UKFIU SAR quality — UKFIU annual report 2023 highlighted that a significant proportion of SARs from banks are of insufficient quality to generate intelligence value. Signal: SAR quality (not just volume) is being assessed; banks should expect supervisory challenge on training and typology awareness.",
+        "FCA LIBOR benchmark manipulation legacy — FCA continues to use conduct surveillance findings as a benchmark for SM&CR accountability. Signal: communications surveillance completeness and conduct investigation quality remain under scrutiny."
+      ]
+    },
+    "build_vs_buy": {
+      "platform_options": [
+        "NICE Actimize — enterprise financial crime platform: AML transaction monitoring, KYC/CDD case management, sanctions screening, fraud. Dominant in UK Tier 1 banks. High licence cost; deep PRA/FCA familiarity.",
+        "Temenos Financial Crime Mitigation — AML and fraud combined platform; integrated with Temenos core banking. Buy if already on Temenos.",
+        "ComplyAdvantage — real-time AML data, transaction screening, adverse media, PEP and sanctions data; API-first. Strong as a data layer under an existing TMS.",
+        "Refinitiv World-Check One (LSEG) — incumbent PEP, sanctions, and adverse media screening database; batch and real-time API. Universal in UK financial services.",
+        "Dow Jones Risk & Compliance — PEP, sanctions, adverse media data; competes with Refinitiv on coverage and data freshness.",
+        "Encompass Corporation — automated corporate KYC data gathering from Companies House, official registries, court records. Buy for corporate/SME onboarding to reduce analyst time.",
+        "Onfido / Jumio / iProov — digital identity verification (document + biometrics); buy for digital onboarding channels. Avoid building proprietary document OCR and liveness detection.",
+        "Napier AI / Quantexa — ML-based transaction monitoring and network analytics for AML. Buy as replacement for legacy rule-based TMS.",
+        "Behavox / NICE Actimize Surveillance / Relativity Trace — communications surveillance and conduct monitoring. Buy for surveillance infrastructure; own the policy and investigation process.",
+        "AxiomSL (Adenza, Nasdaq) — regulatory reporting: COREP, FINREP, PRA returns, DORA reporting. Buy for capital and liquidity reporting automation.",
+        "Wolters Kluwer OneSumX — regulatory reporting SaaS for capital, liquidity, and compliance content. Strong in mid-market UK banks.",
+        "Regnology — regulatory reporting cloud platform with regulator connectivity; growing FCA DRR compatibility.",
+        "OneTrust / TrustArc — GDPR compliance management: ROPA, DPIA management, consent management, SAR workflow. Buy for DPO function tooling.",
+        "MetricStream / Archer (IBM) — enterprise GRC for compliance programme management, policy management, controls testing. Buy for compliance monitoring plan and board reporting."
+      ],
+      "must_build_in_house": [
+        "AML risk appetite and typology framework — the bank's own assessment of its money laundering risk profile, client risk scoring methodology, and SAR escalation standards must be authored internally; no vendor defines this",
+        "Financial crime policy framework (AML Policy, Sanctions Policy, Fraud Policy) — owned by the MLRO and CISO respectively; cannot be outsourced",
+        "Consumer Duty outcomes monitoring governance — the bank must own its customer outcome assessment methodology, fair value framework, and board reporting; FCA expects board-level accountability",
+        "SM&CR accountability map and prescribed responsibility assignments — institutionally specific, cannot be templated or outsourced",
+        "Sanctions policy decisions — the bank must own OFAC/OFSI licence application decisions, voluntary disclosures, and escalation governance; OFSI expects designated senior manager accountability",
+        "Data Protection Officer function and GDPR accountability — UK GDPR requires a designated DPO; the accountability cannot be outsourced even if tooling is bought",
+        "Regulatory reporting sign-off and accuracy governance — PRA/FCA hold the bank's CEO and CFO accountable for returns; the governance and verification process must be internal",
+        "Conduct investigation process — conduct surveillance may use vendor tooling but the investigation, escalation, and breach management must be internally governed"
+      ],
+      "buy_candidates": [
+        "Identity verification at onboarding — Onfido or Jumio for digital channel KYC; avoids competing with biometric and document AI specialists",
+        "PEP/sanctions/adverse media data — ComplyAdvantage or Refinitiv World-Check as a data service; do not build or maintain proprietary data lists",
+        "Corporate KYC data aggregation — Encompass for automated Companies House / official registry data gathering; significant analyst time saving for commercial banking onboarding",
+        "Transaction monitoring engine — Napier or Quantexa ML-based TMS to replace legacy rule-based systems; own the model validation and typology configuration",
+        "Regulatory reporting automation — AxiomSL or Wolters Kluwer for COREP/FINREP/PRA returns; avoid manual template-based reporting at scale",
+        "Communications surveillance — Behavox or NICE Actimize Surveillance for SM&CR conduct monitoring; own the policy and investigation, buy the surveillance infrastructure",
+        "GDPR compliance tooling — OneTrust for ROPA, DPIA workflows, consent management, SAR handling; avoids building specialist privacy tooling"
+      ]
+    },
+    "revenue_model": {
+      "primary_revenue_streams": [
+        "Compliance & Regulatory is a cost centre and operating licence prerequisite — it generates no direct revenue",
+        "Effective AML/KYC enables onboarding of commercial clients with complex structures (private equity, international corporates) who bring high-margin treasury and lending relationships; poor compliance capability closes these doors",
+        "Consumer Duty compliance quality protects retail deposit franchise — regulatory criticism or FCA intervention has immediate deposit flight and reputational cost",
+        "Robust sanctions compliance enables correspondent banking relationships and cross-border trade finance — sanctions violations can result in de-risking by US correspondent banks, permanently impairing international business lines"
+      ],
+      "margin_pressure": [
+        "Escalating AML compliance costs — UK Finance estimates UK banking sector spends over GBP 5 billion annually on financial crime compliance; increasing with perpetual KYC and real-time screening expectations",
+        "Consumer Duty implementation cost — PRA/FCA estimate total industry implementation cost at GBP 2.4 billion (FCA CP22/14 impact assessment); ongoing monitoring and annual assessment obligations",
+        "Regulatory reporting change velocity — frequent changes to COREP, new PRA returns, FCA data strategy pilot — each change requiring analyst time and system updates",
+        "GDPR Subject Access Request volume — increasing consumer awareness of data rights creating operational SAR handling cost for large retail banks",
+        "DORA ICT third-party risk register — new ongoing compliance obligation for EU-facing operations adding to vendor management overhead"
+      ],
+      "cross_sell_hooks": [
+        "Mature KYC infrastructure enables faster onboarding of new commercial clients — competitive differentiator in SME and mid-market banking where time-to-first-transaction drives switching",
+        "Robust sanctions compliance enables international trade finance, where margins are higher than domestic lending — compliance capability is a prerequisite for the product",
+        "Consumer Duty fair value assessments create structured dialogue with clients that surface unmet needs — compliance-driven conversations as a sales enablement tool for relationship managers",
+        "Data Protection / GDPR maturity enables consent-based marketing programmes — first-party data strategy underpinned by lawful basis management"
+      ]
+    }
+  },
+  "sub_capabilities": [
+    {
+      "id": "CAP-005.01",
+      "name": "KYC / AML",
+      "description": "Performs customer due diligence and enhanced due diligence on all clients — individuals, SMEs, corporates, and financial institution counterparties — at onboarding and on a risk-based ongoing basis. Includes identity verification, beneficial ownership determination, PEP screening, adverse media screening, client risk scoring, and SAR reporting to the NCA. Operates the bank's AML monitoring programme including transaction monitoring rule configuration and case management for suspicious activity investigation.",
+      "promotion_test": {
+        "distinct_participants": true,
+        "separate_regulatory_framework": true,
+        "distinct_lifecycle": true,
+        "independent_scalability": true,
+        "criteria_met": 4,
+        "decision": "PROMOTE",
+        "market_evidence": "KYC/AML meets all four promotion criteria and has the strongest market signal of any sub-capability in this domain. (1) Distinct participants: KYC/AML involves the MLRO (a PRA/FCA prescribed senior manager with personal accountability), the NCA UKFIU (SAR submission), HMRC (supervision of specific business lines), industry bodies (JMLSG, UK Finance), shared KYC registries (SWIFT KYC Registry, Encompass), biometric identity verification vendors (Onfido, Jumio), and data providers (ComplyAdvantage, Refinitiv) — none of whom participate in Regulatory Reporting or Conduct Monitoring. (2) Separate regulatory framework: MLR 2017, POCA 2002, Terrorism Act 2000, Economic Crime and Corporate Transparency Act 2023, and JMLSG guidance constitute a comprehensive, distinct regulatory framework. The MLRO has personal criminal liability under POCA — distinct from all other compliance obligations. (3) Distinct lifecycle: KYC has a complete end-to-end lifecycle — onboarding CDD → risk scoring → periodic review → event-triggered refresh → offboarding — that is independent of the lending, trading, or reporting lifecycles. The industry trend toward perpetual KYC (event-triggered rather than periodic) is redefining this lifecycle entirely and signals a distinct operational rhythm. (4) Independent scalability: KYC workload is driven by client acquisition volume, portfolio review cycles, and regulatory change — independent of payment volume, loan book size, or reporting frequency. The specialist vendor ecosystem (Encompass, Onfido, Jumio, ComplyAdvantage, SWIFT KYC Registry, managed KYC utility proposals) is the clearest market signal that this is an independently viable capability. Decision: PROMOTE to standalone capability."
+      }
+    },
+    {
+      "id": "CAP-005.02",
+      "name": "Regulatory Reporting",
+      "description": "Produces, validates, and submits all prudential and conduct regulatory returns required by the PRA, FCA, Bank of England, and HMRC. Covers COREP capital and leverage, FINREP financial reporting, PRA liquidity returns (PRA 110, FSA047/FSA048), Bank of England statistical returns, Pillar 3 disclosures, HMRC FATCA/CRS reporting, and FCA product sales data. Manages the regulatory reporting calendar, sign-off governance, and restatement processes.",
+      "promotion_test": {
+        "distinct_participants": false,
+        "separate_regulatory_framework": false,
+        "distinct_lifecycle": false,
+        "independent_scalability": false,
+        "criteria_met": 0,
+        "decision": "RETAIN",
+        "market_evidence": "Regulatory Reporting is a distinct operational function but does not meet the promotion threshold. Its participants (finance, risk, compliance, CEO/CFO sign-off, PRA/FCA as recipients) overlap substantially with the parent Compliance & Regulatory capability and with Finance. The regulatory framework (CRR COREP, FINREP, PRA rules) governs the content of reports rather than creating a separate regime — reporting obligations are a compliance output of the capital, liquidity, and conduct frameworks, not an independent framework. The lifecycle (data extract → validation → consolidation → sign-off → submission → restatement) is a recurring operational process, not an end-to-end business lifecycle with distinct phases. Scalability is driven by the complexity of the bank's product mix and regulatory change velocity — not an independent demand driver. While AxiomSL and Wolters Kluwer demonstrate a specialist vendor market, these are tooling choices for a well-understood reporting process, not evidence of capability promotion. Decision: RETAIN within Compliance & Regulatory."
+      }
+    },
+    {
+      "id": "CAP-005.03",
+      "name": "Conduct Monitoring",
+      "description": "Monitors the bank's compliance with FCA conduct of business rules (COBS, BCOBS, MCOB), SM&CR conduct rules, Consumer Duty outcomes, and UK MAR market abuse obligations. Includes communications surveillance (voice and electronic), product governance reviews, fair value assessments, customer outcome monitoring, training and competence oversight, and breach reporting to the FCA.",
+      "promotion_test": {
+        "distinct_participants": false,
+        "separate_regulatory_framework": false,
+        "distinct_lifecycle": false,
+        "independent_scalability": false,
+        "criteria_met": 0,
+        "decision": "RETAIN",
+        "market_evidence": "Conduct Monitoring is a core compliance function that does not exhibit the structural characteristics warranting promotion. Its participants (Compliance function, line managers, FCA, SM&CR designated persons) are the same as the parent. The regulatory framework (FCA Handbook COBS/BCOBS, Consumer Duty, UK MAR) is directly administered by the FCA under the same FSMA authorisation framework — not a separate regime. The lifecycle (monitor → alert → investigate → remediate → report) is an operational sub-process of the Compliance programme. Scalability is driven by staff headcount, product complexity, and FCA change — all correlated with the parent capability's drivers. Conduct surveillance vendors (Behavox, NICE Actimize Surveillance) represent tooling specialisation rather than capability boundary evidence. Consumer Duty is a significant new obligation but it governs how the bank treats customers across all products — an intensification of existing conduct obligations rather than a new capability domain. Decision: RETAIN within Compliance & Regulatory."
+      }
+    },
+    {
+      "id": "CAP-005.04",
+      "name": "Data Protection",
+      "description": "Manages the bank's obligations under UK GDPR and the Data Protection Act 2018. Encompasses the Record of Processing Activities (ROPA), Data Protection Impact Assessments (DPIAs), Subject Access Request (SAR) handling, consent and legitimate interest management, data breach detection and ICO notification, Data Protection Officer (DPO) function, and privacy-by-design standards for new products and systems.",
+      "promotion_test": {
+        "distinct_participants": false,
+        "separate_regulatory_framework": false,
+        "distinct_lifecycle": false,
+        "independent_scalability": false,
+        "criteria_met": 0,
+        "decision": "RETAIN",
+        "market_evidence": "Data Protection is a compliance obligation with a distinct regulator (ICO) but does not meet the promotion threshold. The DPO function and UK GDPR obligations are increasingly treated as a distinct discipline with dedicated tooling (OneTrust, TrustArc) and specialist expertise. However, the ICO is an overarching data regulator, not a financial services regulator — Data Protection applies across every capability and does not have distinct financial services participants separate from the parent compliance function. The lifecycle (ROPA maintenance → DPIA → consent management → breach response → SAR handling) is a compliance governance cycle, not an end-to-end business process with product-style phases. Scalability is driven by customer base size and product data complexity — correlated with overall bank scale, not independent. The DPO reporting line (to board rather than Compliance) creates a governance dimension that warrants attention, but this is a governance arrangement, not a capability promotion signal. Decision: RETAIN within Compliance & Regulatory, with a note that the DPO function may require a distinct governance reporting line to the board."
+      }
+    },
+    {
+      "id": "CAP-005.05",
+      "name": "Sanctions Screening",
+      "description": "Screens all counterparties, beneficial owners, and transactions in real time against UK, EU, US (OFAC), and UN sanctions lists administered by OFSI. Provides name-matching, fuzzy matching, and beneficial ownership chain traversal to identify direct and indirect sanctions exposure. Manages OFSI licence applications, voluntary disclosures, and the bank's sanctions policy governance including de-risking decisions for high-risk jurisdictions.",
+      "promotion_test": {
+        "distinct_participants": false,
+        "separate_regulatory_framework": false,
+        "distinct_lifecycle": false,
+        "independent_scalability": false,
+        "criteria_met": 0,
+        "decision": "RETAIN",
+        "market_evidence": "Sanctions Screening operates at the intersection of KYC/AML and Payment Operations — it screens both counterparties (a KYC-adjacent function) and live transactions (a payment-adjacent function). Despite having a distinct real-time infrastructure requirement and specialist vendors (ComplyAdvantage, Refinitiv, Dow Jones), it does not meet the promotion threshold as a standalone capability. The regulatory framework (OFSI, OFAC secondary sanctions, UN Security Council) is administered through the same compliance infrastructure as AML — the MLRO holds accountability for both. Participants are the same compliance function, OFSI, and operations teams. The lifecycle (list management → screening → alert → review → escalate/clear) is a sub-process within both KYC onboarding and payment processing. Scalability is driven by transaction volume and list update frequency — correlated with payment operations and KYC volume, not independent. Sanctions Screening is retained within Compliance & Regulatory but is documented as shared_with Payment Operations, reflecting that the real-time payment screening component is operationally integrated with the payment processing workflow. This shared dependency is recorded in the shared sub-capabilities register. Decision: RETAIN within Compliance & Regulatory with shared_with Payment Operations documented."
+      }
+    }
+  ],
+  "design_decisions": [
+    {
+      "id": "DD-001",
+      "decision": "Promote KYC/AML to standalone capability",
+      "rationale": "KYC/AML meets all four promotion criteria and has the clearest market signal of any sub-capability across the bank's capability map. The MLRO's personal criminal liability under POCA 2002, the distinct MLR 2017 regulatory framework, the specialist vendor ecosystem (Encompass, Onfido, ComplyAdvantage, SWIFT KYC Registry), and the industry direction toward perpetual KYC as a continuously operating programme all confirm that KYC/AML is not an administrative sub-process of Compliance — it is a distinct institutional capability with its own data domain, technology stack, and governance structure. Retaining KYC/AML inside Compliance & Regulatory would create a deployment unit that must simultaneously handle real-time biometric identity verification, ML-based transaction monitoring, and periodic governance reporting — architecturally incoherent.",
+      "alternatives_considered": [
+        "Retain KYC/AML within Compliance & Regulatory as a large sub-capability",
+        "Merge KYC/AML with Fraud Detection (already promoted as a distinct capability)"
+      ],
+      "rejected_because": "Retaining KYC/AML inside Compliance creates an oversized deployment unit where the MLRO governance obligations are architecturally entangled with regulatory reporting and conduct monitoring. KYC/AML merging with Fraud Detection is tempting given the overlap in financial crime data, but AML is an investigative and SAR-focused function under POCA/MLR, while Fraud Detection is a real-time prevention function under PSR rules — different regulators, different SLAs, different technology patterns. The two capabilities share data (Quantexa network analytics serves both) but should communicate via domain events, not shared deployment."
+    },
+    {
+      "id": "DD-002",
+      "decision": "Retain Sanctions Screening within Compliance & Regulatory with a shared_with relationship to Payment Operations",
+      "rationale": "Sanctions Screening does not meet the promotion threshold (0 of 4 criteria independently) but has a strong operational integration with Payment Operations — every outgoing payment must be screened against sanctions lists in real time before execution. This creates a hard dependency between Compliance & Regulatory (which owns the sanctions policy, list management, and OFSI relationship) and Payment Operations (which owns the payment execution workflow). The resolution pattern is: Compliance & Regulatory owns the Sanctions Screening service (list management, screening engine, OFSI governance), Payment Operations consumes it via a synchronous API call in the payment execution path. This is a hard dependency — payment cannot proceed without a clear sanctions check result.",
+      "alternatives_considered": [
+        "Promote Sanctions Screening to standalone capability",
+        "Own Sanctions Screening within Payment Operations as a payment controls function",
+        "Own Sanctions Screening within KYC/AML (already promoted)"
+      ],
+      "rejected_because": "Promoting Sanctions Screening standalone creates a capability that is essentially a screening API service — no business process, no data domain beyond the sanctions list, no journeys of its own. This is tooling, not a capability. Owning within Payment Operations misplaces OFSI regulatory accountability — the MLRO owns the sanctions framework, not the Payments head. Owning within KYC/AML is the closest natural home for the screening policy, but sanctions screening of live transactions is operationally distinct from KYC onboarding screening — different timing (real-time vs onboarding), different data (transaction beneficiary vs client identity), different workflow. RETAIN in Compliance & Regulatory with documented shared_with payment operations is the correct resolution."
+    },
+    {
+      "id": "DD-003",
+      "decision": "Scope Compliance & Regulatory to exclude Financial Crime Investigation (owned by KYC/AML after promotion) and Technology/Cyber Risk (owned by Technology Operations)",
+      "rationale": "After promoting KYC/AML, the financial crime investigation and SAR management workflow is owned by the standalone KYC/AML capability, not by this Compliance & Regulatory capability. Similarly, cyber and information security controls — while a compliance obligation under SYSC 13 and operational resilience rules — are operationally owned by the CISO function in Technology Operations. Compliance & Regulatory retains the governance oversight role (assurance that controls exist and are operating) but does not own the technical controls. This reflects the three lines of defence model: 1LoD owns the control, 2LoD Compliance owns the assurance.",
+      "alternatives_considered": [
+        "Include financial crime investigation within Compliance & Regulatory as a consolidated financial crime function",
+        "Create a separate Financial Crime capability spanning KYC/AML, Sanctions, and Fraud Detection"
+      ],
+      "rejected_because": "A consolidated Financial Crime capability conflates three very different operational rhythms: AML (investigative, ongoing monitoring), Sanctions (real-time screening, policy-driven), and Fraud Detection (real-time ML, already promoted). The regulatory frameworks are also distinct: POCA/MLR (MLRO accountability), OFSI/OFAC (sanctions), and PSR (fraud reimbursement). A single Financial Crime capability would be architecturally too large to fit within a development agent's context window and would create deployment coupling between real-time fraud prevention and periodic AML review cycles."
+    },
+    {
+      "id": "DD-004",
+      "decision": "Consumer Duty obligations distributed across Compliance & Regulatory (governance and monitoring) rather than creating a standalone Consumer Duty capability",
+      "rationale": "Consumer Duty (PS22/9) is a cross-cutting conduct obligation affecting every product, channel, and customer-facing capability. Its four outcomes (products/services, price/value, consumer understanding, consumer support) are governed from the Conduct Monitoring sub-capability within Compliance & Regulatory, but the operational delivery of each outcome is owned by the relevant capability (e.g. fair value assessments for lending products are owned by Lending & Credit, customer support outcomes by Client Services). Compliance & Regulatory owns the governance framework, the board annual assessment, and the monitoring programme. It does not own the underlying product or service delivery.",
+      "alternatives_considered": [
+        "Create a standalone Consumer Duty capability to manage cross-cutting obligations",
+        "Embed Consumer Duty governance within each product capability independently"
+      ],
+      "rejected_because": "A standalone Consumer Duty capability creates an organisational and architectural construct that mirrors a regulatory programme rather than an institutional business function — capabilities should represent what the organisation does, not how it responds to a specific regulatory initiative. Embedding Consumer Duty independently in each product capability risks fragmented interpretation, inconsistent methodology, and inability to produce the board-level annual cross-firm assessment the FCA expects. Centralising governance in Compliance & Regulatory with operational ownership in product capabilities is the correct two-level model."
+    }
+  ]
+}

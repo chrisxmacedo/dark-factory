@@ -1,0 +1,210 @@
+{
+  "diagram_id": "SEQ-JRN011-002",
+  "journey_id": "JRN-011",
+  "name": "Card Transaction Authorisation — Suspicious Activity Block (Geographic Impossibility)",
+  "description": "Exception path sequence showing post-authorisation suspicious activity detection. Two approved transactions are authorised from geographically impossible locations within 3 minutes. SVC-013 detects the geographic impossibility pattern after consuming the second EVT-065. SVC-013 publishes EVT-068 (SuspiciousCardActivityDetected) with recommended_action = block_card. SVC-011 blocks the card in its local cache. Subsequent authorisation attempts are declined. Fraud Analyst (PER-054) investigates and confirms genuine card compromise. Key design point: both transactions are already approved before the pattern is detected — post-auth fraud detection cannot reverse already-issued authorisations.",
+  "exception_path_ids": ["EX-CA-005"],
+  "phases_covered": ["PH-043", "PH-044"],
+  "key_design_points": [
+    "Real-time authorisation path does NOT involve SVC-013 — fraud rules in local cache only",
+    "Post-auth pattern detection is async and cannot block already-issued authorisations",
+    "EVT-068 payload does NOT include decline_reason or raw risk_score in SVC-103 audit log",
+    "Customer notification uses generic 'unusual activity' language — no fraud pattern disclosed",
+    "SVC-011 card block propagates immediately to local cache — next auth attempt declined within 500ms"
+  ],
+  "participants": [
+    {"id": "CN", "label": "Card Network (PER-009)", "type": "external_system"},
+    {"id": "SVC011", "label": "SVC-011 Card Processing", "type": "service"},
+    {"id": "BUS", "label": "SVC-102 Event Bus", "type": "infrastructure"},
+    {"id": "SVC013", "label": "SVC-013 Fraud Detection", "type": "service"},
+    {"id": "SVC053", "label": "SVC-053 Notification Service", "type": "service"},
+    {"id": "SVC103", "label": "SVC-103 Audit & Logging", "type": "service"},
+    {"id": "FA", "label": "Fraud Analyst (PER-054)", "type": "persona"}
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "from": "CN",
+      "to": "SVC011",
+      "action": "ISO 8583 Auth Request #1 — card used in country A (GB)",
+      "async": false,
+      "data": "card_number_token, merchant_country_code=GB, transaction_amount, auth_id_1"
+    },
+    {
+      "step": 2,
+      "from": "SVC011",
+      "to": "CN",
+      "action": "Response: APPROVED (00)",
+      "async": false,
+      "data": "authorisation_code, response_code=00"
+    },
+    {
+      "step": 3,
+      "from": "SVC011",
+      "to": "BUS",
+      "action": "Publish EVT-065 CardAuthorisationCompleted #1",
+      "async": true,
+      "data": "card_number_token, auth_id=auth_id_1, channel_country_code=GB, amount, outcome=approved"
+    },
+    {
+      "step": 4,
+      "from": "BUS",
+      "to": "SVC013",
+      "action": "Deliver EVT-065 #1 — velocity counter updated",
+      "async": true,
+      "data": "card_number_token, auth_id_1, channel_country_code=GB, timestamp"
+    },
+    {
+      "step": 5,
+      "from": "CN",
+      "to": "SVC011",
+      "action": "ISO 8583 Auth Request #2 — same card, 3 minutes later, country B (DE)",
+      "async": false,
+      "data": "card_number_token, merchant_country_code=DE, transaction_amount, auth_id_2"
+    },
+    {
+      "step": 6,
+      "from": "SVC011",
+      "to": "CN",
+      "action": "Response: APPROVED (00)",
+      "async": false,
+      "data": "authorisation_code, response_code=00"
+    },
+    {
+      "step": 7,
+      "from": "SVC011",
+      "to": "BUS",
+      "action": "Publish EVT-065 CardAuthorisationCompleted #2",
+      "async": true,
+      "data": "card_number_token, auth_id=auth_id_2, channel_country_code=DE, amount, outcome=approved"
+    },
+    {
+      "step": 8,
+      "from": "BUS",
+      "to": "SVC013",
+      "action": "Deliver EVT-065 #2 — cross-transaction pattern analysis triggered",
+      "async": true,
+      "data": "card_number_token, auth_id_2, channel_country_code=DE, timestamp"
+    },
+    {
+      "step": 9,
+      "from": "SVC013",
+      "to": "SVC013",
+      "action": "Evaluate cross-transaction pattern: geographic impossibility detected — GB and DE within 3 minutes (physical travel impossible). risk_score=0.97, recommended_action=block_card.",
+      "async": false,
+      "data": "card_number_token, pattern_type=geographic_impossibility, affected_transactions=[auth_id_1, auth_id_2], risk_score=0.97"
+    },
+    {
+      "step": 10,
+      "from": "SVC013",
+      "to": "BUS",
+      "action": "Publish EVT-068 SuspiciousCardActivityDetected",
+      "async": true,
+      "data": "card_number_token, pattern_type=geographic_impossibility, recommended_action=block_card, affected_transactions=[auth_id_1, auth_id_2]"
+    },
+    {
+      "step": 11,
+      "from": "BUS",
+      "to": "SVC103",
+      "action": "Deliver EVT-068 to audit log — risk_score redacted in SVC-103 entry",
+      "async": true,
+      "data": "card_number_token, pattern_type=geographic_impossibility, recommended_action=block_card, affected_transactions=[auth_id_1, auth_id_2] (risk_score omitted)"
+    },
+    {
+      "step": 12,
+      "from": "BUS",
+      "to": "SVC011",
+      "action": "Deliver EVT-068 — recommended_action=block_card",
+      "async": true,
+      "data": "card_number_token, recommended_action=block_card"
+    },
+    {
+      "step": 13,
+      "from": "SVC011",
+      "to": "SVC011",
+      "action": "Update local card status cache: card_number_token status set to suspended_fraud_investigation",
+      "async": false,
+      "data": "card_number_token, new_status=suspended_fraud_investigation"
+    },
+    {
+      "step": 14,
+      "from": "BUS",
+      "to": "FA",
+      "action": "Deliver EVT-068 to fraud case management (INTL-003) — full risk_score and pattern_type visible to PER-054",
+      "async": true,
+      "data": "card_number_token, pattern_type=geographic_impossibility, risk_score=0.97, affected_transactions=[auth_id_1, auth_id_2], recommended_action=block_card"
+    },
+    {
+      "step": 15,
+      "from": "BUS",
+      "to": "SVC053",
+      "action": "Deliver EVT-068 — trigger customer notification",
+      "async": true,
+      "data": "card_number_token, customer_id, recommended_action=block_card"
+    },
+    {
+      "step": 16,
+      "from": "SVC053",
+      "to": "SVC053",
+      "action": "Dispatch push notification (CH-002) — generic 'unusual activity' language, no fraud pattern disclosed",
+      "async": false,
+      "data": "push_notification: 'Unusual activity detected. Card temporarily blocked. Call fraud line if you need assistance.'"
+    },
+    {
+      "step": 17,
+      "from": "CN",
+      "to": "SVC011",
+      "action": "ISO 8583 Auth Request #3 — same card (post-block attempt)",
+      "async": false,
+      "data": "card_number_token, transaction_amount, auth_id_3"
+    },
+    {
+      "step": 18,
+      "from": "SVC011",
+      "to": "SVC011",
+      "action": "Check local card status cache — card is suspended_fraud_investigation, decline immediately",
+      "async": false,
+      "data": "card_number_token, cached_status=suspended_fraud_investigation"
+    },
+    {
+      "step": 19,
+      "from": "SVC011",
+      "to": "CN",
+      "action": "Response: DECLINED (D05 — Do Not Honour)",
+      "async": false,
+      "data": "response_code=D05"
+    },
+    {
+      "step": 20,
+      "from": "SVC011",
+      "to": "BUS",
+      "action": "Publish EVT-066 CardAuthorisationDeclined — no decline_reason in payload",
+      "async": true,
+      "data": "card_number_token, auth_id=auth_id_3, scheme_response_code=D05, outcome=declined (decline_reason omitted)"
+    },
+    {
+      "step": 21,
+      "from": "FA",
+      "to": "FA",
+      "action": "PER-054 reviews case in INTL-003: inspects transaction timeline, MCC patterns, and geographic impossibility. Confirms genuine card compromise.",
+      "async": false,
+      "data": "case review: auth_id_1 (GB), auth_id_2 (DE), 3-minute interval — confirmed physical impossibility, card compromised"
+    },
+    {
+      "step": 22,
+      "from": "FA",
+      "to": "SVC011",
+      "action": "PATCH /card-status/{card_number_token} — action=maintain_block (card remains suspended pending replacement)",
+      "async": false,
+      "data": "card_number_token, action=maintain_block, analyst_id, case_reference"
+    },
+    {
+      "step": 23,
+      "from": "FA",
+      "to": "SVC011",
+      "action": "Initiate card replacement workflow",
+      "async": false,
+      "data": "card_number_token, replacement_reason=confirmed_fraud_compromise, customer_id"
+    }
+  ]
+}

@@ -1,0 +1,90 @@
+{
+  "entity_id": "ENT-005",
+  "name": "CardIssuance",
+  "description": "Debit card linked to an Account. Created when a CardIssuanceTriggered event is published in PH-005 (Account Provisioning). Card production and delivery are managed by the card processor (Marqeta/Thredd); this entity tracks the bank's record of the card issuance, not the card processor's internal records. Card numbers (PAN) are never stored by the bank — PCI DSS scope is limited to the card processor.",
+  "owning_service": "SVC-001",
+  "reachable_from_phases": ["PH-005", "PH-007"],
+  "aggregate_root": false,
+  "fields": [
+    {
+      "name": "card_id",
+      "type": "UUID",
+      "validation_rule": "RFC 4122 UUID v4. System-generated. Immutable after creation. This is the bank's internal card reference, not the card processor's card token.",
+      "source": "PH-005",
+      "governed_by": null
+    },
+    {
+      "name": "account_id",
+      "type": "UUID",
+      "validation_rule": "Required. FK → Account.account_id. Immutable after creation. A card is always linked to exactly one account.",
+      "source": "PH-005",
+      "governed_by": null
+    },
+    {
+      "name": "card_type",
+      "type": "enum",
+      "validation_rule": "Required. Enum: debit. For JRN-001 (personal current account opening), card_type is always 'debit'. Credit card issuance is a separate journey.",
+      "source": "PH-005",
+      "governed_by": null
+    },
+    {
+      "name": "card_status",
+      "type": "enum",
+      "validation_rule": "Required. Enum: ordered | in_production | dispatched | active | blocked | cancelled | expired. Transitions: ordered (on CardIssuanceTriggered) → in_production → dispatched → active (on customer PIN set or first use); active → blocked (fraud or customer request); active/blocked → cancelled; any → expired (on expiry_date). 'blocked' accounts with status = frozen must also have their card_status = blocked.",
+      "source": "PH-005",
+      "governed_by": null
+    },
+    {
+      "name": "last_four_digits",
+      "type": "string",
+      "validation_rule": "Required. Exactly 4 numeric digits. The last four digits of the PAN, provided by the card processor for display purposes. Not a sufficient cardholder data element to constitute PCI DSS scope on its own.",
+      "source": "PH-005",
+      "governed_by": null,
+      "transparency_note": "Surfaced to PER-001 for card identification purposes (e.g. 'Card ending 1234'). Full PAN is never stored by the bank."
+    },
+    {
+      "name": "expiry_date",
+      "type": "string",
+      "validation_rule": "Required. MM/YY format. Provided by card processor at issuance. Not a PCI DSS-restricted field in isolation (only combined with PAN). Must be a future date at time of issuance.",
+      "source": "PH-005",
+      "governed_by": null
+    },
+    {
+      "name": "issued_date",
+      "type": "date",
+      "validation_rule": "Required. ISO 8601 (YYYY-MM-DD). The date on which the CardIssuanceTriggered event was published and card production was initiated by the processor.",
+      "source": "PH-005",
+      "governed_by": null
+    },
+    {
+      "name": "delivery_address",
+      "type": "object",
+      "validation_rule": "Required. A copy of the Customer.addresses entry of type 'residential' at the time of card issuance. Fields: line1, line2, city, postcode, country_code (as per Address object). Immutable after card dispatch (cannot redirect a card already in transit).",
+      "source": "PH-005",
+      "governed_by": null,
+      "transparency_note": "Delivery address is confirmed to PER-001 in PH-005 confirmation screen and PH-007 card dispatch notification. PCI DSS: delivery address is not cardholder data — it is customer PII governed by UK GDPR."
+    },
+    {
+      "name": "estimated_delivery_date",
+      "type": "date",
+      "validation_rule": "Required. ISO 8601 (YYYY-MM-DD). Set at card dispatch by card processor. Must be within 5 working days of issued_date per bank policy (nfr.json PH-005 card_delivery_sla). Surfaced to PER-001 in PH-005/PH-007 notifications.",
+      "source": "PH-007",
+      "governed_by": null
+    }
+  ],
+  "relationships": [
+    {
+      "target_entity": "ENT-004",
+      "type": "many-to-one",
+      "description": "CardIssuance belongs to one Account via account_id FK."
+    }
+  ],
+  "design_decisions": [
+    {
+      "id": "DD-ENT005-01",
+      "decision": "Full PAN, CVV2, and card track data are never stored in CardIssuance. Only last_four_digits is stored. The card processor (Marqeta/Thredd) holds the authoritative card record within its PCI DSS-compliant environment.",
+      "rationale": "PCI DSS v4.0 requires that card numbers not be stored unless there is a specific business need with compensating controls. For an issuing bank that has outsourced card processing, there is no such business need. The bank's PCI DSS scope is limited to the CardIssuanceTriggered event payload, which must not contain PAN data (nfr.json cross_cutting_nfrs pci_dss)."
+    }
+  ],
+  "source_journeys": ["JRN-001"]
+}

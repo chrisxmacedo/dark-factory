@@ -1,0 +1,909 @@
+{
+  "journey_id": "JRN-001",
+  "name": "Personal Current Account Opening — Data Model",
+  "description": "Canonical data model for JRN-001. Every entity is reachable from at least one journey phase. Every field carries: name, type, validation_rule, source (phase that introduced it), and governed_by (governance rule reference where applicable). Entities are the persistence boundary for domain aggregates; they are not database table definitions. Each entity is owned by a single service (see service-boundaries.json).",
+  "document_version": "0.1.0",
+  "status": "Draft",
+  "modelling_principles": [
+    "Entities represent domain aggregates, not relational tables — a field of type 'array' or 'object' may be stored as a sub-document or in a separate relation depending on the owning service's persistence technology.",
+    "Every field must have a traceable source phase; fields not traceable to a phase are not part of this journey's data model.",
+    "Governance rule references (governed_by) link to the bank's governance register; absence of a reference means the field is constrained by general data minimisation under UK GDPR Article 5(1)(c) only.",
+    "Retention periods derive from the strictest applicable obligation across MLR 2017 Regulation 40 (5 years), FCA BCOBS (7 years), and UK GDPR storage limitation.",
+    "All data is UK-resident only; no field value may traverse a non-UK cloud region or CDN node."
+  ],
+  "entities": [
+    {
+      "entity_id": "ENT-001",
+      "name": "Customer",
+      "description": "Core identity aggregate. Established at PH-001 (Application Initiation) as a prospect record and promoted to 'active' status at PH-005 (Account Provisioning) once an account is opened. This is the foundational entity consumed by all downstream retail journeys. Acts as the root of the Single Customer View (SCV) required by FSCS Depositor Protection rules.",
+      "owning_service": "SVC-001",
+      "reachable_from_phases": ["PH-001", "PH-002", "PH-003", "PH-004", "PH-005", "PH-006", "PH-007"],
+      "aggregate_root": true,
+      "fields": [
+        {
+          "name": "customer_id",
+          "type": "UUID",
+          "validation_rule": "RFC 4122 UUID v4. System-generated. Immutable after creation. Must be globally unique across the bank's customer estate.",
+          "source": "PH-001",
+          "governed_by": null,
+          "transparency_note": "Surfaced to the customer indirectly via application_ref in PER-001 communications. Internal identifier — not displayed as a raw UUID in any customer-facing screen."
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "validation_rule": "Enum: Mr | Mrs | Ms | Miss | Dr | Prof | Mx | Other. Optional. Max 20 characters.",
+          "source": "PH-001",
+          "governed_by": null
+        },
+        {
+          "name": "first_name",
+          "type": "string",
+          "validation_rule": "Required. 1–100 characters. Unicode letters, hyphens, and apostrophes permitted. No leading/trailing whitespace.",
+          "source": "PH-001",
+          "governed_by": "GOV-001-R01",
+          "transparency_note": "Collected under UK GDPR Article 6(1)(b) (contract performance) and Article 6(1)(c) (MLR 2017 CDD obligation). Disclosed in PER-001 notifications and welcome communications."
+        },
+        {
+          "name": "last_name",
+          "type": "string",
+          "validation_rule": "Required. 1–100 characters. Unicode letters, hyphens, and apostrophes permitted. No leading/trailing whitespace.",
+          "source": "PH-001",
+          "governed_by": "GOV-001-R01"
+        },
+        {
+          "name": "date_of_birth",
+          "type": "date",
+          "validation_rule": "Required. ISO 8601 (YYYY-MM-DD). Must result in age >= 18 at application date (under-18 redirect to EX-004). Must not be a future date. Maximum age: 120 years.",
+          "source": "PH-001",
+          "governed_by": "GOV-005-R04",
+          "transparency_note": "Used for age eligibility check (GOV-005-R04 under-18 policy) and as a CDD matching field in PEP/sanctions screening (PH-003). Not displayed in full on welcome screens — only year of birth used for display personalisation."
+        },
+        {
+          "name": "nationality",
+          "type": "string",
+          "validation_rule": "Required. ISO 3166-1 alpha-2 country code. Multiple nationalities stored as an array of strings. At least one nationality required.",
+          "source": "PH-001",
+          "governed_by": "GOV-005-R01",
+          "transparency_note": "Used as a CDD input for risk scoring and PEP/sanctions screening. High-risk jurisdiction nationality contributes to elevated risk_category in KycAssessment. UK GDPR: lawful basis Article 6(1)(c) (MLR 2017 Regulation 27)."
+        },
+        {
+          "name": "tax_residency",
+          "type": "string",
+          "validation_rule": "Required. ISO 3166-1 alpha-2 country code. Must be collected to satisfy FATCA/CRS reporting obligations. Multiple residencies stored as array.",
+          "source": "PH-001",
+          "governed_by": "GOV-005-R01",
+          "transparency_note": "Required for HMRC FATCA/CRS reporting. UK tax residency confirms eligibility for standard CDD tier."
+        },
+        {
+          "name": "email",
+          "type": "string",
+          "validation_rule": "Required. RFC 5321 email format. Max 254 characters. Must be unique across active customer records (deduplication check at PH-001). Lowercase normalised on storage.",
+          "source": "PH-001",
+          "governed_by": "GOV-001-R01",
+          "transparency_note": "Primary communication channel for regulatory notifications, welcome pack, FSCS information sheet, and account security alerts. Disclosed in participant-interaction.json PH-001/PH-007 notifications."
+        },
+        {
+          "name": "phone",
+          "type": "string",
+          "validation_rule": "Required. E.164 format (e.g. +447700900123). Must include country code. Validated against ITU-T E.164 length constraints (max 15 digits).",
+          "source": "PH-001",
+          "governed_by": null
+        },
+        {
+          "name": "addresses",
+          "type": "array<Address>",
+          "validation_rule": "Required. At least one address of type 'residential' required. Address sub-object: line1 (required, max 100 chars), line2 (optional, max 100 chars), city (required, max 100 chars), county (optional), postcode (required, UK postcode format — validated against Royal Mail PAF pattern), country_code (required, ISO 3166-1 alpha-2), address_type (residential | correspondence | previous), valid_from (date), valid_to (date, null if current). UK residency confirmed if at least one active residential address has country_code = GB.",
+          "source": "PH-001",
+          "governed_by": "GOV-005-R01",
+          "transparency_note": "UK residential address required as CDD evidence (MLR 2017 Regulation 27). Address verified in PH-002 by SVC-050 against electoral roll/credit bureau. Previous addresses collected if current address tenancy < 3 years."
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "validation_rule": "System-generated. ISO 8601 UTC. Immutable. Set at the moment ApplicationStarted event is published in PH-001.",
+          "source": "PH-001",
+          "governed_by": null
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "validation_rule": "System-generated. ISO 8601 UTC. Updated on any field mutation. Must be maintained for audit trail continuity.",
+          "source": "PH-001",
+          "governed_by": null
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "validation_rule": "Enum: prospect | active | suspended | closed. Transitions: prospect → active (on AccountOpened, PH-005); active → suspended (compliance action); active → closed (customer request or regulatory action). No transition from closed back to prospect without a new application journey.",
+          "source": "PH-001",
+          "governed_by": "GOV-005-R01",
+          "transparency_note": "Surfaced to PER-001 as account status in the welcome dashboard (PH-007). Internal status labels are abstracted to customer-friendly language in the UI."
+        },
+        {
+          "name": "vulnerability_indicators",
+          "type": "array<string>",
+          "validation_rule": "Optional. Free-form flags captured from wellbeing questions in PH-007 (FCA FG21/1 vulnerability screening). Values are a defined enum set maintained by the Compliance team. Access restricted to authorised staff only.",
+          "source": "PH-007",
+          "governed_by": "GOV-001-R01",
+          "transparency_note": "Sensitive personal data under UK GDPR. Collected under FCA FG21/1 obligation. Not visible to PER-001 in their own data projection. Access-controlled to authorised relationship management and compliance staff. Retained for duration of customer relationship, reviewed annually."
+        }
+      ],
+      "relationships": [
+        {
+          "target_entity": "ENT-002",
+          "type": "one-to-one",
+          "description": "Customer has one IdentityVerification record created in PH-002."
+        },
+        {
+          "target_entity": "ENT-003",
+          "type": "one-to-one",
+          "description": "Customer has one KycAssessment record created in PH-003."
+        },
+        {
+          "target_entity": "ENT-004",
+          "type": "one-to-many",
+          "description": "Customer may hold multiple Account records over time (additional accounts opened via subsequent journeys)."
+        },
+        {
+          "target_entity": "ENT-006",
+          "type": "one-to-many",
+          "description": "Customer may have multiple DigitalEnrollment records (per channel or device)."
+        },
+        {
+          "target_entity": "ENT-007",
+          "type": "one-to-many",
+          "description": "Customer may have multiple ApplicationRecord records (one per application attempt)."
+        }
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-ENT001-01",
+          "decision": "Customer is the single identity aggregate root. All other entities reference customer_id as their FK. This means customer identity data is not duplicated into KycAssessment or IdentityVerification — those entities hold only their domain-specific results.",
+          "rationale": "Satisfies the Single Customer View (SCV) requirement for FSCS. Avoids identity data sprawl across multiple owning services. Consistent with SVC-001 ownership of the Customer aggregate as defined in service-boundaries.json."
+        },
+        {
+          "id": "DD-ENT001-02",
+          "decision": "vulnerability_indicators is placed on Customer (SVC-001) rather than ApplicationRecord, because it persists beyond the application journey and must inform all future customer interactions throughout the relationship.",
+          "rationale": "FCA FG21/1 requires vulnerability indicators to be reflected in subsequent interactions. Placing it on ApplicationRecord would limit its lifetime to the application event. Customer is the permanent record; ApplicationRecord is a transient journey artefact."
+        }
+      ]
+    },
+    {
+      "entity_id": "ENT-002",
+      "name": "IdentityVerification",
+      "description": "Document and biometric check results produced by the Customer Onboarding Service (SVC-050) orchestrating the identity verification vendor (Onfido/Jumio) in PH-002. Holds the outcome of document authentication, biometric liveness check, and address verification. Biometric templates are never stored — only the outcome and confidence score are persisted. Retained for 5 years under MLR 2017 Regulation 40.",
+      "owning_service": "SVC-050",
+      "reachable_from_phases": ["PH-002"],
+      "aggregate_root": false,
+      "fields": [
+        {
+          "name": "verification_id",
+          "type": "UUID",
+          "validation_rule": "RFC 4122 UUID v4. System-generated. Immutable after creation.",
+          "source": "PH-002",
+          "governed_by": null
+        },
+        {
+          "name": "customer_id",
+          "type": "UUID",
+          "validation_rule": "Required. FK → Customer.customer_id. Must reference an existing Customer record with status 'prospect'. Immutable after creation.",
+          "source": "PH-002",
+          "governed_by": null
+        },
+        {
+          "name": "document_type",
+          "type": "enum",
+          "validation_rule": "Required. Enum: passport | uk_driving_licence | national_identity_card. Must be a document type accepted by SVC-050 at the time of verification. Extensible — new document types require compliance review.",
+          "source": "PH-002",
+          "governed_by": "GOV-005-R01"
+        },
+        {
+          "name": "document_number",
+          "type": "string",
+          "validation_rule": "Required. Extracted via OCR by identity verification vendor. Max 50 characters. Stored encrypted at rest (AES-256). Access-controlled to compliance team (PER-052) and SVC-050. Not surfaced in any customer-facing screen after capture.",
+          "source": "PH-002",
+          "governed_by": "GOV-005-R01",
+          "transparency_note": "Sensitive identity data. Retained for 5 years (MLR 2017 Regulation 40). Not displayed back to PER-001 after capture (participant-interaction.json PH-002 data_fields_masked)."
+        },
+        {
+          "name": "document_expiry",
+          "type": "date",
+          "validation_rule": "Required. ISO 8601 (YYYY-MM-DD). Must be on or after application date (expired documents are rejected). Extracted via OCR by identity verification vendor.",
+          "source": "PH-002",
+          "governed_by": "GOV-005-R01"
+        },
+        {
+          "name": "biometric_match_score",
+          "type": "decimal",
+          "validation_rule": "Required. 0.00–1.00 (inclusive). Two decimal places. Produced by identity verification vendor comparing selfie to document photo. Score >= 0.80 required for automated PASS. Values below threshold trigger manual review or REFER outcome. Stored as a result scalar — no raw biometric data or template is stored.",
+          "source": "PH-002",
+          "governed_by": "GOV-005-R01",
+          "transparency_note": "Biometric match score is derived from biometric processing. The underlying biometric template is never transmitted to or stored by the bank. Score is classified as HIGHEST sensitivity per nfr.json PH-002 data_classification. Not visible to PER-001."
+        },
+        {
+          "name": "address_verification_result",
+          "type": "enum",
+          "validation_rule": "Required. Enum: confirmed | unconfirmed | manual_required. 'confirmed' requires a positive match against at least one of: electoral roll, credit bureau, or utility data. 'unconfirmed' blocks automatic progression to PH-003.",
+          "source": "PH-002",
+          "governed_by": "GOV-005-R01"
+        },
+        {
+          "name": "verification_provider",
+          "type": "string",
+          "validation_rule": "Required. Enum: onfido | jumio | manual_branch. Identifies the identity verification vendor or the branch manual fallback path. Used for audit and vendor SLA monitoring.",
+          "source": "PH-002",
+          "governed_by": null
+        },
+        {
+          "name": "verification_timestamp",
+          "type": "timestamp",
+          "validation_rule": "Required. ISO 8601 UTC. Set at the moment the identity verification vendor returns its result to SVC-050. Immutable.",
+          "source": "PH-002",
+          "governed_by": null
+        },
+        {
+          "name": "outcome",
+          "type": "enum",
+          "validation_rule": "Required. Enum: pass | refer | fail | fraud_detected. 'pass' is the only outcome that allows progression to PH-003. 'fraud_detected' triggers EX-003. 'refer' triggers branch fallback (AP-001). 'fail' after maximum retries triggers EX-003 or branch referral.",
+          "source": "PH-002",
+          "governed_by": "GOV-005-R01",
+          "transparency_note": "Only the high-level outcome is surfaced to PER-001 (pass/fail message). Detailed scoring and fraud indicators are not disclosed per nfr.json PH-002 data_not_visible list. 'fraud_detected' outcome is never surfaced to PER-001 — customer receives standard failure message (tipping-off principle applied by analogy)."
+        },
+        {
+          "name": "retry_count",
+          "type": "integer",
+          "validation_rule": "Required. 0–2 (maximum 2 retries permitted per participant-interaction.json PH-002 entitlements). Incremented on each failed attempt. Application suspended when retry_count = 2 and outcome != pass.",
+          "source": "PH-002",
+          "governed_by": null
+        },
+        {
+          "name": "branch_staff_id",
+          "type": "UUID",
+          "validation_rule": "Optional. FK → Staff.staff_id. Populated only when verification_provider = manual_branch. References the PER-056 branch staff member who conducted the manual check.",
+          "source": "PH-002",
+          "governed_by": null
+        }
+      ],
+      "relationships": [
+        {
+          "target_entity": "ENT-001",
+          "type": "many-to-one",
+          "description": "IdentityVerification belongs to one Customer via customer_id FK."
+        }
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-ENT002-01",
+          "decision": "Biometric templates and document images are not stored in this entity. Only the scalar outcome fields (biometric_match_score, outcome) are persisted. Document images are stored separately in encrypted cold storage by SVC-054 (Document Store) with their own access controls.",
+          "rationale": "UK GDPR Article 9 requires biometric data to be treated as special category data. The DPIA for JRN-001 constrains biometric data to the verification event. Storing only outcomes satisfies data minimisation (Article 5(1)(c)) while retaining the audit evidence required by MLR 2017 Regulation 40."
+        },
+        {
+          "id": "DD-ENT002-02",
+          "decision": "IdentityVerification is owned by SVC-050 (Customer Onboarding Service), not SVC-001 (Retail Banking Core). SVC-001 consumes the IdentityVerificationCompleted event but does not own the verification record.",
+          "rationale": "SVC-050 is the MLRO-governed service responsible for CDD compliance. Splitting ownership would fragment the audit trail required for FCA/NCA requests (must be producible within 2 business days per nfr.json PH-002 regulatory_sla)."
+        }
+      ]
+    },
+    {
+      "entity_id": "ENT-003",
+      "name": "KycAssessment",
+      "description": "Customer Due Diligence (CDD) record produced by the KYC/AML Service (SVC-014) and Sanctions Screening Service (SVC-051) in PH-003. Represents the complete CDD assessment for this customer at onboarding, including PEP screening, sanctions screening, adverse media screening, and risk tier assignment. This entity is the foundation for ongoing perpetual KYC (pKYC) monitoring throughout the customer relationship.",
+      "owning_service": "SVC-014",
+      "reachable_from_phases": ["PH-003", "PH-004"],
+      "aggregate_root": false,
+      "fields": [
+        {
+          "name": "assessment_id",
+          "type": "UUID",
+          "validation_rule": "RFC 4122 UUID v4. System-generated. Immutable after creation.",
+          "source": "PH-003",
+          "governed_by": null
+        },
+        {
+          "name": "customer_id",
+          "type": "UUID",
+          "validation_rule": "Required. FK → Customer.customer_id. Immutable after creation.",
+          "source": "PH-003",
+          "governed_by": null
+        },
+        {
+          "name": "risk_score",
+          "type": "integer",
+          "validation_rule": "Required. 0–100 (inclusive). Produced by the automated risk scoring algorithm in SVC-014. Higher scores indicate higher risk. Score bands map to risk_category: 0–30 = simplified; 31–60 = standard; 61–100 = enhanced. Score is based on identity, occupation, source of funds, country of residence, PEP status, and adverse media results.",
+          "source": "PH-003",
+          "governed_by": "GOV-005-R01",
+          "transparency_note": "Risk score is not surfaced to PER-001 (masked per participant-interaction.json PH-003 data_fields_masked). Internal regulatory data. Accessible to PER-052 (Compliance Officer) via case management system."
+        },
+        {
+          "name": "risk_category",
+          "type": "enum",
+          "validation_rule": "Required. Enum: simplified | standard | enhanced. Derives from risk_score band. 'enhanced' maps to High risk tier (EDD required per MLR 2017 Regulation 33). 'simplified' applies only where MLR 2017 Regulation 37 simplified due diligence conditions are met.",
+          "source": "PH-003",
+          "governed_by": "GOV-005-R01"
+        },
+        {
+          "name": "pep_screening_result",
+          "type": "object",
+          "validation_rule": "Required. Object containing: status (enum: clear | match | pending_review), match_detail (string, null if clear — contains name, position, country, data source if match), data_source (string — e.g. ComplyAdvantage, Refinitiv World-Check), screened_at (ISO 8601 UTC timestamp). A 'match' result sets edd_required = true and raises KYCReferralRaised event.",
+          "source": "PH-003",
+          "governed_by": "GOV-005-R01",
+          "transparency_note": "PEP match detail is sensitive regulatory data. Access restricted to PER-052 only. Not surfaced to PER-001, PER-056, or PER-060. Tipping-off prohibition (POCA 2002 s333A) applies — PEP screening results must never be disclosed to the subject."
+        },
+        {
+          "name": "sanctions_screening_result",
+          "type": "object",
+          "validation_rule": "Required. Object containing: status (enum: clear | blocked | pending_review), match_detail (string, null if clear — contains list name, match confidence percentage, beneficial ownership chain detail if applicable), lists_checked (array of strings: OFSI | OFAC | UN | EU), screened_at (ISO 8601 UTC timestamp). A 'blocked' status immediately raises SanctionsHitDetected event and triggers EX-002. Must complete within 3,000ms hard limit (nfr.json PH-003 sanctions_screening_hard_limit_ms).",
+          "source": "PH-003",
+          "governed_by": "GOV-005-R02",
+          "transparency_note": "Sanctions result is the highest-sensitivity regulatory field in this entity. Access restricted to MLRO (PER-052) only. Tipping-off prohibition (POCA 2002 s333A) strictly applies. The customer receives no indication of a sanctions match — only a standard decline message."
+        },
+        {
+          "name": "adverse_media_result",
+          "type": "object",
+          "validation_rule": "Required. Object containing: status (enum: clear | flagged | pending_review), summary (string, null if clear — automated summary of negative news items), severity (enum: none | low | medium | high), screened_at (ISO 8601 UTC timestamp). 'high' severity contributes to elevated risk_score and may trigger EDD.",
+          "source": "PH-003",
+          "governed_by": "GOV-005-R01"
+        },
+        {
+          "name": "assessment_date",
+          "type": "date",
+          "validation_rule": "Required. ISO 8601 (YYYY-MM-DD). The date on which this CDD assessment was completed. Used to calculate next_review_date.",
+          "source": "PH-003",
+          "governed_by": null
+        },
+        {
+          "name": "next_review_date",
+          "type": "date",
+          "validation_rule": "Required. ISO 8601 (YYYY-MM-DD). Calculated from assessment_date based on risk_category: simplified = assessment_date + 5 years; standard = assessment_date + 3 years; enhanced = assessment_date + 1 year. Drives pKYC review scheduling in SVC-014.",
+          "source": "PH-003",
+          "governed_by": "GOV-005-R01"
+        },
+        {
+          "name": "assessor",
+          "type": "enum",
+          "validation_rule": "Required. Enum: automated | manual. 'automated' for standard happy path (PH-003 automated screening). 'manual' for AP-001 EDD path (PER-052 compliance officer review). If manual, mlro_sign_off_at timestamp must be populated.",
+          "source": "PH-003",
+          "governed_by": null
+        },
+        {
+          "name": "mlro_referral",
+          "type": "boolean",
+          "validation_rule": "Required. Default: false. Set to true when KYCReferralRaised event is published (PEP identification, high adverse media, or manual escalation). If true, the assessment cannot be used as the basis for account provisioning until mlro_referral is resolved.",
+          "source": "PH-003",
+          "governed_by": "GOV-005-R06"
+        },
+        {
+          "name": "edd_required",
+          "type": "boolean",
+          "validation_rule": "Required. Default: false. Set to true when risk_category = enhanced or pep_screening_result.status = match. If true, Enhanced Due Diligence (AP-001) must be completed and documented before account decision (PH-004).",
+          "source": "PH-003",
+          "governed_by": "GOV-005-R01"
+        },
+        {
+          "name": "mlro_sign_off_by",
+          "type": "UUID",
+          "validation_rule": "Conditional. Required when mlro_referral = true and assessment_outcome = approved. FK → Staff.staff_id for PER-052. Must reference a staff member with MLRO role.",
+          "source": "PH-004",
+          "governed_by": "GOV-005-R06"
+        },
+        {
+          "name": "mlro_sign_off_at",
+          "type": "timestamp",
+          "validation_rule": "Conditional. Required when mlro_sign_off_by is populated. ISO 8601 UTC. Immutable after creation.",
+          "source": "PH-004",
+          "governed_by": "GOV-005-R06"
+        }
+      ],
+      "relationships": [
+        {
+          "target_entity": "ENT-001",
+          "type": "many-to-one",
+          "description": "KycAssessment belongs to one Customer via customer_id FK."
+        }
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-ENT003-01",
+          "decision": "KycAssessment is owned by SVC-014 (KYC/AML Service), not SVC-050 (Customer Onboarding Service). SVC-050 orchestrates the onboarding flow and calls SVC-014/SVC-051 APIs, but the CDD record of authority sits in SVC-014 under MLRO governance.",
+          "rationale": "MLRO personal accountability under POCA 2002 and MLR 2017 requires a single system of record for CDD assessments under MLRO governance. Fragmenting ownership across services would break the audit trail required for NCA SAR submissions and FCA supervision requests."
+        },
+        {
+          "id": "DD-ENT003-02",
+          "decision": "SVC-051 (Sanctions Screening) has no owned entity in the data model. sanctions_screening_result is stored as a field within KycAssessment (owned by SVC-014). SVC-051 is a stateless screening API; SVC-014 persists the result.",
+          "rationale": "Consistent with the service-boundaries.json design: SVC-051 publishes a synchronous screening decision; SVC-014 is the persistence owner. This avoids distributed ownership of a single CDD record and keeps the MLRO audit trail unified in SVC-014."
+        }
+      ]
+    },
+    {
+      "entity_id": "ENT-004",
+      "name": "Account",
+      "description": "The personal current account itself. Created by SVC-001 (Retail Banking Core) in PH-005 (Account Provisioning) upon an approved ApplicationDecisionMade event. This is the central financial entity in the bank's retail ledger. Triggers FSCS SCV update, CASS registration, and CardIssuanceTriggered event upon creation.",
+      "owning_service": "SVC-001",
+      "reachable_from_phases": ["PH-005", "PH-006", "PH-007"],
+      "aggregate_root": false,
+      "fields": [
+        {
+          "name": "account_id",
+          "type": "UUID",
+          "validation_rule": "RFC 4122 UUID v4. System-generated. Immutable after creation. Internal identifier — distinct from account_number (the scheme-facing identifier).",
+          "source": "PH-005",
+          "governed_by": null
+        },
+        {
+          "name": "customer_id",
+          "type": "UUID",
+          "validation_rule": "Required. FK → Customer.customer_id. Must reference a Customer with status = 'active' (promoted from 'prospect' at account creation). Immutable after creation.",
+          "source": "PH-005",
+          "governed_by": null
+        },
+        {
+          "name": "sort_code",
+          "type": "string",
+          "validation_rule": "Required. 6-digit UK sort code in format XX-XX-XX. Allocated from the bank's Vocalink/Pay.UK assigned range. Must be registered with Pay.UK CASS within 2 business days of account opening. Immutable after creation.",
+          "source": "PH-005",
+          "governed_by": "GOV-001-R02",
+          "transparency_note": "Surfaced in full to PER-001 in PH-005 confirmation screen and PH-007 welcome dashboard. Used in account details sharing for salary redirection."
+        },
+        {
+          "name": "account_number",
+          "type": "string",
+          "validation_rule": "Required. 8-digit UK account number. Allocated from the bank's assigned range. Must be unique within the sort code. Validated against Vocalink EISCD modulus checking rules. Immutable after creation.",
+          "source": "PH-005",
+          "governed_by": "GOV-001-R02",
+          "transparency_note": "Surfaced in full to PER-001 in PH-005 and PH-007. PCI DSS: account_number is not a PAN — it is not subject to PCI DSS cardholder data environment scoping, unlike card_number."
+        },
+        {
+          "name": "account_type",
+          "type": "enum",
+          "validation_rule": "Required. Enum: personal_current | personal_current_packaged. Set from the account type selected by PER-001 at PH-001. Immutable after creation without a product change journey.",
+          "source": "PH-005",
+          "governed_by": "GOV-001-R01"
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "validation_rule": "Required. Enum: pending | active | dormant | closed | frozen. Transitions: pending (set at provisioning start) → active (AccountProvisioned event); active → dormant (no activity for 12 months, bank policy); active → frozen (compliance action, SanctionsHitDetected); active/dormant → closed (customer request or regulatory direction). 'frozen' accounts block all debits and credits — OFSI obligation.",
+          "source": "PH-005",
+          "governed_by": "GOV-005-R02"
+        },
+        {
+          "name": "opened_date",
+          "type": "date",
+          "validation_rule": "Required. ISO 8601 (YYYY-MM-DD). The date on which the AccountOpened event was published. Immutable. Used as the CASS registration reference date and FSCS protection commencement date.",
+          "source": "PH-005",
+          "governed_by": "GOV-001-R02"
+        },
+        {
+          "name": "iban",
+          "type": "string",
+          "validation_rule": "Required. IBAN format: GB + 2 check digits + 4-letter bank code + 6-digit sort code + 8-digit account number = 22 characters. Validated per ISO 13616. Generated algorithmically from sort_code and account_number. Immutable after creation.",
+          "source": "PH-005",
+          "governed_by": null
+        },
+        {
+          "name": "bic",
+          "type": "string",
+          "validation_rule": "Required. ISO 9362 BIC format (8 or 11 characters). Bank's assigned BIC. Immutable.",
+          "source": "PH-005",
+          "governed_by": null
+        },
+        {
+          "name": "fscs_eligible",
+          "type": "boolean",
+          "validation_rule": "Required. Default: true for personal current accounts. Set to false only in specific exclusion scenarios (e.g. account holder is a financial institution or exempt body under FSCS rules). Must be consistent with FSCS SCV record.",
+          "source": "PH-005",
+          "governed_by": "GOV-001-R02",
+          "transparency_note": "FSCS eligibility flag drives the FSCS information sheet delivery requirement at PH-007. Surfaced to PER-001 as 'protected by FSCS up to £85,000' in PH-005 confirmation and PH-007 welcome communications."
+        },
+        {
+          "name": "daily_payment_limit",
+          "type": "decimal",
+          "validation_rule": "Required. Positive decimal, max 2 decimal places (GBP). Default: set by bank policy at account opening. Modifiable via a separate limit management journey. Must be >= 0. Expressed in GBP.",
+          "source": "PH-005",
+          "governed_by": null
+        },
+        {
+          "name": "overdraft_limit",
+          "type": "decimal",
+          "validation_rule": "Required. Positive decimal or 0.00 (no overdraft). Max 2 decimal places (GBP). Default at account opening: 0.00 (no overdraft facility) — an overdraft must be applied for separately. Modifiable via a personal lending journey.",
+          "source": "PH-005",
+          "governed_by": null
+        },
+        {
+          "name": "cass_registered",
+          "type": "boolean",
+          "validation_rule": "Required. Default: false. Set to true when CASS registration with Pay.UK is confirmed. Must be true within 2 business days of opened_date (nfr.json PH-005 cass_registration_sla).",
+          "source": "PH-005",
+          "governed_by": "GOV-001-R02"
+        },
+        {
+          "name": "cass_registered_at",
+          "type": "timestamp",
+          "validation_rule": "Conditional. Required when cass_registered = true. ISO 8601 UTC. Set when Pay.UK confirms CASS registration.",
+          "source": "PH-005",
+          "governed_by": "GOV-001-R02"
+        }
+      ],
+      "relationships": [
+        {
+          "target_entity": "ENT-001",
+          "type": "many-to-one",
+          "description": "Account belongs to one Customer via customer_id FK."
+        },
+        {
+          "target_entity": "ENT-005",
+          "type": "one-to-many",
+          "description": "Account may have multiple CardIssuance records (initial card, replacement cards)."
+        }
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-ENT004-01",
+          "decision": "account_id (internal UUID) and account_number (8-digit scheme identifier) are separate fields. account_id is the internal persistence key; account_number is the scheme-facing customer identifier.",
+          "rationale": "Decouples internal persistence from scheme-mandated identifiers. Sort code / account number allocation is governed by Pay.UK scheme rules (Vocalink EISCD). The internal UUID is the stable reference in all service-to-service calls; account_number is only used for customer-facing display and scheme submission."
+        },
+        {
+          "id": "DD-ENT004-02",
+          "decision": "Opening balance is not a field on Account. The ledger balance is a derived value calculated from the transaction ledger in SVC-001, not a stored field on the Account entity.",
+          "rationale": "Storing a balance as a field alongside a transaction ledger creates a consistency hazard. The authoritative balance is the sum of transaction credits minus debits in the SVC-001 ledger. The Account entity stores account metadata; financial position is a ledger computation."
+        }
+      ]
+    },
+    {
+      "entity_id": "ENT-005",
+      "name": "CardIssuance",
+      "description": "Debit card linked to an Account. Created when a CardIssuanceTriggered event is published in PH-005 (Account Provisioning). Card production and delivery are managed by the card processor (Marqeta/Thredd); this entity tracks the bank's record of the card issuance, not the card processor's internal records. Card numbers (PAN) are never stored by the bank — PCI DSS scope is limited to the card processor.",
+      "owning_service": "SVC-001",
+      "reachable_from_phases": ["PH-005", "PH-007"],
+      "aggregate_root": false,
+      "fields": [
+        {
+          "name": "card_id",
+          "type": "UUID",
+          "validation_rule": "RFC 4122 UUID v4. System-generated. Immutable after creation. This is the bank's internal card reference, not the card processor's card token.",
+          "source": "PH-005",
+          "governed_by": null
+        },
+        {
+          "name": "account_id",
+          "type": "UUID",
+          "validation_rule": "Required. FK → Account.account_id. Immutable after creation. A card is always linked to exactly one account.",
+          "source": "PH-005",
+          "governed_by": null
+        },
+        {
+          "name": "card_type",
+          "type": "enum",
+          "validation_rule": "Required. Enum: debit. For JRN-001 (personal current account opening), card_type is always 'debit'. Credit card issuance is a separate journey.",
+          "source": "PH-005",
+          "governed_by": null
+        },
+        {
+          "name": "card_status",
+          "type": "enum",
+          "validation_rule": "Required. Enum: ordered | in_production | dispatched | active | blocked | cancelled | expired. Transitions: ordered (on CardIssuanceTriggered) → in_production → dispatched → active (on customer PIN set or first use); active → blocked (fraud or customer request); active/blocked → cancelled; any → expired (on expiry_date). 'blocked' accounts with status = frozen must also have their card_status = blocked.",
+          "source": "PH-005",
+          "governed_by": null
+        },
+        {
+          "name": "last_four_digits",
+          "type": "string",
+          "validation_rule": "Required. Exactly 4 numeric digits. The last four digits of the PAN, provided by the card processor for display purposes. Not a sufficient cardholder data element to constitute PCI DSS scope on its own.",
+          "source": "PH-005",
+          "governed_by": null,
+          "transparency_note": "Surfaced to PER-001 for card identification purposes (e.g. 'Card ending 1234'). Full PAN is never stored by the bank."
+        },
+        {
+          "name": "expiry_date",
+          "type": "string",
+          "validation_rule": "Required. MM/YY format. Provided by card processor at issuance. Not a PCI DSS-restricted field in isolation (only combined with PAN). Must be a future date at time of issuance.",
+          "source": "PH-005",
+          "governed_by": null
+        },
+        {
+          "name": "issued_date",
+          "type": "date",
+          "validation_rule": "Required. ISO 8601 (YYYY-MM-DD). The date on which the CardIssuanceTriggered event was published and card production was initiated by the processor.",
+          "source": "PH-005",
+          "governed_by": null
+        },
+        {
+          "name": "delivery_address",
+          "type": "object",
+          "validation_rule": "Required. A copy of the Customer.addresses entry of type 'residential' at the time of card issuance. Fields: line1, line2, city, postcode, country_code (as per Address object). Immutable after card dispatch (cannot redirect a card already in transit).",
+          "source": "PH-005",
+          "governed_by": null,
+          "transparency_note": "Delivery address is confirmed to PER-001 in PH-005 confirmation screen and PH-007 card dispatch notification. PCI DSS: delivery address is not cardholder data — it is customer PII governed by UK GDPR."
+        },
+        {
+          "name": "estimated_delivery_date",
+          "type": "date",
+          "validation_rule": "Required. ISO 8601 (YYYY-MM-DD). Set at card dispatch by card processor. Must be within 5 working days of issued_date per bank policy (nfr.json PH-005 card_delivery_sla). Surfaced to PER-001 in PH-005/PH-007 notifications.",
+          "source": "PH-007",
+          "governed_by": null
+        }
+      ],
+      "relationships": [
+        {
+          "target_entity": "ENT-004",
+          "type": "many-to-one",
+          "description": "CardIssuance belongs to one Account via account_id FK."
+        }
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-ENT005-01",
+          "decision": "Full PAN, CVV2, and card track data are never stored in CardIssuance. Only last_four_digits is stored. The card processor (Marqeta/Thredd) holds the authoritative card record within its PCI DSS-compliant environment.",
+          "rationale": "PCI DSS v4.0 requires that card numbers not be stored unless there is a specific business need with compensating controls. For an issuing bank that has outsourced card processing, there is no such business need. The bank's PCI DSS scope is limited to the CardIssuanceTriggered event payload, which must not contain PAN data (nfr.json cross_cutting_nfrs pci_dss)."
+        }
+      ]
+    },
+    {
+      "entity_id": "ENT-006",
+      "name": "DigitalEnrollment",
+      "description": "Online and mobile banking setup record for a customer. Created by SVC-017 (Digital Channels) in PH-006 (Digital Channel Activation). Tracks credential creation, biometric SCA enrolment, device registration, and notification preferences. The biometric template itself is never transmitted to or stored by the bank — only the enrolment status flag is stored here, consistent with FIDO2/WebAuthn on-device biometric processing.",
+      "owning_service": "SVC-017",
+      "reachable_from_phases": ["PH-006"],
+      "aggregate_root": false,
+      "fields": [
+        {
+          "name": "enrollment_id",
+          "type": "UUID",
+          "validation_rule": "RFC 4122 UUID v4. System-generated. Immutable after creation.",
+          "source": "PH-006",
+          "governed_by": null
+        },
+        {
+          "name": "customer_id",
+          "type": "UUID",
+          "validation_rule": "Required. FK → Customer.customer_id. Immutable after creation.",
+          "source": "PH-006",
+          "governed_by": null
+        },
+        {
+          "name": "channel",
+          "type": "enum",
+          "validation_rule": "Required. Enum: web | mobile. One enrollment record per channel per customer. A customer completing PH-006 on mobile creates a 'mobile' record; if they subsequently set up web banking, a separate 'web' record is created.",
+          "source": "PH-006",
+          "governed_by": null
+        },
+        {
+          "name": "biometric_enrolled",
+          "type": "boolean",
+          "validation_rule": "Required. Default: false. Set to true when FIDO2/WebAuthn biometric enrolment is confirmed by SVC-100. False indicates the customer opted for TOTP app fallback or biometric enrolment failed.",
+          "source": "PH-006",
+          "governed_by": "GOV-001-R04",
+          "transparency_note": "Biometric enrolment status flag is personal data under UK GDPR. The biometric template itself never leaves the device (iOS Secure Enclave / Android Strongbox). Processing this flag under Article 9 requires explicit consent and DPIA (nfr.json PH-006 regulatory_sla). Surfaced to PER-001 in PH-006 setup wizard as 'Biometric login: enabled/disabled'."
+        },
+        {
+          "name": "biometric_consent_recorded_at",
+          "type": "timestamp",
+          "validation_rule": "Conditional. Required when biometric_enrolled = true. ISO 8601 UTC. Records the moment explicit consent for biometric processing was granted by PER-001 (UK GDPR Article 9(2)(a)).",
+          "source": "PH-006",
+          "governed_by": "GOV-001-R04"
+        },
+        {
+          "name": "device_id",
+          "type": "string",
+          "validation_rule": "Required for mobile channel. A stable device identifier registered via SVC-100. Max 255 characters. Not a raw hardware IMEI — a bank-assigned device token that references the FIDO2 registration in SVC-100. For web channel: browser/session token used at enrolment.",
+          "source": "PH-006",
+          "governed_by": "GOV-001-R04"
+        },
+        {
+          "name": "device_name",
+          "type": "string",
+          "validation_rule": "Optional. Customer-assigned or system-detected device name (e.g. 'iPhone 15 Pro'). Max 100 characters. Surfaced in PH-006 device registration confirmation and security notifications.",
+          "source": "PH-006",
+          "governed_by": null
+        },
+        {
+          "name": "push_notification_token",
+          "type": "string",
+          "validation_rule": "Conditional. Required if channel = mobile and push notifications enabled. APNs token (iOS) or FCM registration token (Android). Max 512 characters. Must not be included in notification payloads that contain account or balance data.",
+          "source": "PH-006",
+          "governed_by": null
+        },
+        {
+          "name": "enrolled_at",
+          "type": "timestamp",
+          "validation_rule": "Required. ISO 8601 UTC. Set at the moment the DigitalChannelActivated event is published in PH-006. Immutable.",
+          "source": "PH-006",
+          "governed_by": null
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "validation_rule": "Required. Enum: pending | active | suspended. pending: PH-006 in progress, first-login SCA not yet completed. active: first-login SCA completed and DigitalChannelActivated event published. suspended: compliance or fraud action.",
+          "source": "PH-006",
+          "governed_by": null
+        },
+        {
+          "name": "sca_factor",
+          "type": "enum",
+          "validation_rule": "Required. Enum: biometric_fido2 | totp. Indicates the SCA inherence/knowledge factor in use. biometric_fido2: FIDO2/WebAuthn (preferred, PSR 2017 Regulation 100 compliant). totp: authenticator app fallback.",
+          "source": "PH-006",
+          "governed_by": "GOV-001-R04"
+        }
+      ],
+      "relationships": [
+        {
+          "target_entity": "ENT-001",
+          "type": "many-to-one",
+          "description": "DigitalEnrollment belongs to one Customer via customer_id FK."
+        }
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-ENT006-01",
+          "decision": "Credential data (hashed password) is stored in SVC-100 (Identity & Access Management), not in DigitalEnrollment. DigitalEnrollment stores the enrolment metadata and status; SVC-100 holds the credential store.",
+          "rationale": "SVC-100 is the authoritative IAM system with bcrypt/Argon2id password storage, audit logging of authentication events, and FIDO2 assertion verification. Duplicating credential data into SVC-017 would create a split credential store with inconsistent security controls."
+        },
+        {
+          "id": "DD-ENT006-02",
+          "decision": "biometric_consent_recorded_at is a required field when biometric_enrolled = true, not an optional audit field. It is a legal pre-condition for processing biometric data under UK GDPR Article 9(2)(a).",
+          "rationale": "The DPIA for JRN-001 identifies biometric processing as a high-risk activity requiring explicit consent. Without a timestamped consent record, the bank cannot demonstrate compliance with UK GDPR Article 7 (conditions for consent) in a data subject access request or ICO investigation."
+        }
+      ]
+    },
+    {
+      "entity_id": "ENT-007",
+      "name": "ApplicationRecord",
+      "description": "Tracks the journey state of a single account opening application. Created at PH-001 (Application Initiation) when ApplicationStarted is published and updated through each phase until a terminal status is reached. This is the orchestration state record consumed by SVC-017 to drive the customer-facing application flow and by SVC-001 to gate account provisioning. Retained for 5 years post-application for Consumer Duty evidence.",
+      "owning_service": "SVC-001",
+      "reachable_from_phases": ["PH-001", "PH-002", "PH-003", "PH-004", "PH-005", "PH-006", "PH-007"],
+      "aggregate_root": false,
+      "fields": [
+        {
+          "name": "application_id",
+          "type": "UUID",
+          "validation_rule": "RFC 4122 UUID v4. System-generated. Immutable after creation. This is the application_ref surfaced to PER-001 in all application-phase communications.",
+          "source": "PH-001",
+          "governed_by": null,
+          "transparency_note": "Surfaced to PER-001 as the application reference in all phase notifications (e.g. 'Your application reference is [application_ref]'). Also visible to PER-052 in the case management system."
+        },
+        {
+          "name": "customer_id",
+          "type": "UUID",
+          "validation_rule": "Required. FK → Customer.customer_id. Immutable after creation.",
+          "source": "PH-001",
+          "governed_by": null
+        },
+        {
+          "name": "channel",
+          "type": "enum",
+          "validation_rule": "Required. Enum: web | mobile | branch. Set at PH-001 based on the channel through which the application was initiated. Immutable after creation.",
+          "source": "PH-001",
+          "governed_by": null
+        },
+        {
+          "name": "started_at",
+          "type": "timestamp",
+          "validation_rule": "Required. ISO 8601 UTC. Set at the moment the ApplicationStarted event is published. Immutable.",
+          "source": "PH-001",
+          "governed_by": null
+        },
+        {
+          "name": "completed_at",
+          "type": "timestamp",
+          "validation_rule": "Conditional. Required when status = approved | declined | abandoned. ISO 8601 UTC. Set at the terminal state transition.",
+          "source": "PH-007",
+          "governed_by": null
+        },
+        {
+          "name": "current_phase",
+          "type": "enum",
+          "validation_rule": "Required. Enum: PH-001 | PH-002 | PH-003 | PH-004 | PH-005 | PH-006 | PH-007 | AP-001 | EX-001 | EX-002 | EX-003 | EX-004 | EX-005. Updated at each phase transition. Drives the resume-from-save functionality (applications paused and resumed within session validity windows).",
+          "source": "PH-001",
+          "governed_by": null
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "validation_rule": "Required. Enum: in_progress | approved | declined | referred | abandoned. Transitions: in_progress (PH-001 through PH-004 automated path) → approved (ApplicationDecisionMade: APPROVED, PH-004) | declined (ApplicationDecisionMade: DECLINED) | referred (ApplicationDecisionMade: REFERRED, entering AP-001) | abandoned (no activity for 48 hours at PH-003, or customer explicit abandonment at PH-001/PH-002).",
+          "source": "PH-001",
+          "governed_by": null
+        },
+        {
+          "name": "decline_reason",
+          "type": "string",
+          "validation_rule": "Conditional. Required when status = declined. Internal reason code from a defined enum: kyc_failure | sanctions_hit | identity_fraud | policy_exclusion | under_18 | not_uk_resident | duplicate_identity. The internal reason code is not disclosed verbatim to PER-001 — a generic decline message is sent. The reason code is retained for Consumer Duty evidence and FOS complaint adjudication.",
+          "source": "PH-004",
+          "governed_by": "GOV-001-R01",
+          "transparency_note": "Internal decline reason not surfaced to PER-001 (participant-interaction.json PH-004 data_fields_masked). PER-001 receives a generic decline message with FOS signpost per Consumer Duty (PS22/9). PER-052 (Compliance) can see the full reason code in the case management system. Where SAR is under consideration, the reason 'sanctions_hit' or 'kyc_failure' must not be disclosed to PER-001 (tipping-off prohibition)."
+        },
+        {
+          "name": "referral_reason",
+          "type": "string",
+          "validation_rule": "Conditional. Required when status = referred. Internal reason code: pep_identified | high_risk_score | adverse_media | edd_required. Surfaced to PER-052 in case management alert. Not disclosed to PER-001 beyond 'additional review required' message.",
+          "source": "PH-004",
+          "governed_by": "GOV-005-R06"
+        },
+        {
+          "name": "account_type_selected",
+          "type": "enum",
+          "validation_rule": "Required. Enum: personal_current | personal_current_packaged. Set at PH-001 by PER-001 account type selection. Used to confirm Account.account_type at provisioning.",
+          "source": "PH-001",
+          "governed_by": null
+        },
+        {
+          "name": "decision_basis_ref",
+          "type": "UUID",
+          "validation_rule": "Conditional. Required when status = approved | declined. References the immutable decision record in SVC-111 (WORM store) that contains the full decision inputs and outputs. The decision audit trail must be tamper-evident per nfr.json PH-004 security_notes.",
+          "source": "PH-004",
+          "governed_by": "GOV-001-R01"
+        }
+      ],
+      "relationships": [
+        {
+          "target_entity": "ENT-001",
+          "type": "many-to-one",
+          "description": "ApplicationRecord belongs to one Customer via customer_id FK."
+        }
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-ENT007-01",
+          "decision": "ApplicationRecord is owned by SVC-001 (Retail Banking Core) rather than SVC-017 (Digital Channels) or SVC-050 (Customer Onboarding Service), despite SVC-017 being the channel-facing orchestrator during the application flow.",
+          "rationale": "ApplicationRecord's lifecycle concludes with the provisioning of an Account — its terminal state is the opening of an Account record in SVC-001. Ownership by SVC-001 ensures that the ApplicationRecord and Account are always co-located in the same service, enabling transactional consistency between application approval and account creation. SVC-017 holds only presentation-layer state; SVC-001 holds the authoritative application outcome."
+        },
+        {
+          "id": "DD-ENT007-02",
+          "decision": "decline_reason is stored as an internal code and not surfaced to PER-001 directly. The entity stores the machine-readable reason; human-readable communications are composed by SVC-017 using a separate message template mapping.",
+          "rationale": "Consumer Duty (PS22/9) requires decline communications to be clear and fair but does not require disclosure of the specific internal reason code. Where a SAR is under consideration (EX-001, EX-002), the tipping-off prohibition (POCA 2002 s333A) prevents disclosure of the true reason. Separating the stored code from the customer communication template allows compliance-safe messaging without changing the underlying data model."
+        }
+      ]
+    }
+  ],
+  "entity_reachability_matrix": {
+    "description": "Confirms that every entity is reachable from at least one journey phase. No orphaned entities.",
+    "matrix": [
+      { "entity": "ENT-001 Customer", "phases": ["PH-001", "PH-002", "PH-003", "PH-004", "PH-005", "PH-006", "PH-007"] },
+      { "entity": "ENT-002 IdentityVerification", "phases": ["PH-002"] },
+      { "entity": "ENT-003 KycAssessment", "phases": ["PH-003", "PH-004"] },
+      { "entity": "ENT-004 Account", "phases": ["PH-005", "PH-006", "PH-007"] },
+      { "entity": "ENT-005 CardIssuance", "phases": ["PH-005", "PH-007"] },
+      { "entity": "ENT-006 DigitalEnrollment", "phases": ["PH-006"] },
+      { "entity": "ENT-007 ApplicationRecord", "phases": ["PH-001", "PH-002", "PH-003", "PH-004", "PH-005", "PH-006", "PH-007"] }
+    ]
+  },
+  "retention_schedule": {
+    "description": "Retention periods by entity, derived from the strictest applicable regulatory obligation.",
+    "entries": [
+      {
+        "entity": "ENT-001 Customer",
+        "retention": "Duration of customer relationship + 7 years post-closure",
+        "basis": "FCA BCOBS (7-year financial records); MLR 2017 Regulation 40 (5-year CDD post-relationship end); UK GDPR storage limitation"
+      },
+      {
+        "entity": "ENT-002 IdentityVerification",
+        "retention": "5 years from verification date",
+        "basis": "MLR 2017 Regulation 40 (CDD record-keeping)"
+      },
+      {
+        "entity": "ENT-003 KycAssessment",
+        "retention": "Duration of customer relationship + 5 years post-relationship end",
+        "basis": "MLR 2017 Regulation 40; pKYC obligations require the assessment to be accessible throughout the relationship"
+      },
+      {
+        "entity": "ENT-004 Account",
+        "retention": "Duration of account relationship + 7 years post-closure",
+        "basis": "FCA BCOBS (7-year financial records); FSCS SCV obligations"
+      },
+      {
+        "entity": "ENT-005 CardIssuance",
+        "retention": "Duration of card validity + 7 years post-cancellation",
+        "basis": "PCI DSS (card records); FCA BCOBS; fraud investigation evidence"
+      },
+      {
+        "entity": "ENT-006 DigitalEnrollment",
+        "retention": "Duration of customer relationship; device registrations 7 years post-deregistration",
+        "basis": "Fraud investigation evidence (nfr.json PH-006 data_classification retention)"
+      },
+      {
+        "entity": "ENT-007 ApplicationRecord",
+        "retention": "5 years for approved applications; 6 years for declined applications",
+        "basis": "FCA Consumer Duty evidence (5 years); FOS complaint limitation period (6 years for declined applications)"
+      }
+    ]
+  }
+}

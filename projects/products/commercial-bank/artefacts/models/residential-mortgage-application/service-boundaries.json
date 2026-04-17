@@ -1,0 +1,208 @@
+{
+  "journey_id": "JRN-006",
+  "journey_name": "Residential Mortgage Application",
+  "version": "1.0.0",
+  "status": "Draft",
+  "architectural_principles": [
+    "A service owns its entities exclusively — no shared databases between services.",
+    "Cross-capability communication is async events only (via SVC-102 event bus). No synchronous cross-capability calls.",
+    "Same-capability services (within CAP-001) may communicate directly (synchronous API calls permitted).",
+    "SVC-002 (Mortgage Service) is a promoted sub-capability of CAP-001 (Retail Banking). It shares capability-level data access with SVC-001 (Retail Banking Core) but is a separate bounded context with its own entity ownership.",
+    "Event payloads carry minimum data required for consumers to act. No raw PII in event payloads beyond essential identifiers."
+  ],
+  "service_boundaries": [
+    {
+      "service_id": "SVC-002",
+      "service_name": "Mortgage Service",
+      "capability_domain": "CAP-001 (Retail Banking — Mortgages sub-capability)",
+      "tier": "T2",
+      "description": "Owns the end-to-end mortgage application lifecycle. Created as a promoted sub-capability of CAP-001. Holds all mortgage-specific entities. Communicates with SVC-001 (same capability) via direct API for customer data. Communicates with SVC-012 (Risk Engine, CAP-004) and SVC-014 (KYC/AML, CAP-005) exclusively via async events through SVC-102.",
+      "owned_entities": [
+        "ENT-012",
+        "ENT-013",
+        "ENT-014",
+        "ENT-015",
+        "ENT-016"
+      ],
+      "owned_entity_names": {
+        "ENT-012": "MortgageApplication",
+        "ENT-013": "AffordabilityAssessment",
+        "ENT-014": "PropertyValuation",
+        "ENT-015": "MortgageOffer",
+        "ENT-016": "MortgageAccount"
+      },
+      "published_events": [
+        "EVT-020",
+        "EVT-021",
+        "EVT-022",
+        "EVT-024",
+        "EVT-025",
+        "EVT-026",
+        "EVT-027",
+        "EVT-028",
+        "EVT-029",
+        "EVT-030"
+      ],
+      "consumed_events": [
+        {
+          "event_id": "EVT-023",
+          "event_name": "CreditCheckCompleted",
+          "provider_service_id": "SVC-012",
+          "provider_capability": "CAP-004 (Risk Management)",
+          "communication_pattern": "async — cross-capability boundary. SVC-002 subscribes via SVC-102 event bus.",
+          "purpose": "SVC-002 receives the credit score and credit decision from the Risk Engine. Updates MortgageApplication with credit outcome. For DIP: if pass, proceeds to issue DIP (EVT-021). For full application: credit result stored for underwriter review. Idempotent on application_id + check_type (soft|hard)."
+        }
+      ],
+      "synchronous_dependencies": [
+        {
+          "provider_service_id": "SVC-001",
+          "provider_service_name": "Retail Banking Core",
+          "capability": "CAP-001 (same capability)",
+          "call_pattern": "Synchronous (direct API call — same-capability permitted)",
+          "purpose": "SVC-002 calls SVC-001 GET /customers/{id} to fetch Customer data (name, address, date of birth) required for mortgage application, ESIS document generation, and offer issuance. No local copy of Customer fields maintained in SVC-002.",
+          "dependency_criticality": "hard"
+        },
+        {
+          "provider_service_id": "SVC-102",
+          "provider_service_name": "Event Bus",
+          "call_pattern": "Asynchronous publish (event bus for all cross-capability events)",
+          "purpose": "SVC-002 publishes all events to SVC-102 for routing to cross-capability consumers (SVC-012, SVC-014, SVC-017).",
+          "dependency_criticality": "hard"
+        },
+        {
+          "provider_service_id": "SVC-053",
+          "provider_service_name": "Notification Service",
+          "call_pattern": "Asynchronous (fire-and-forget with delivery confirmation)",
+          "purpose": "SVC-002 calls SVC-053 to dispatch customer notifications: DIP issued, full application received, valuation instructed, underwriting decision, mortgage offer, completion confirmation, welcome pack.",
+          "dependency_criticality": "soft"
+        },
+        {
+          "provider_service_id": "EXT-CREDIT-BUREAU",
+          "provider_service_name": "Credit Bureau (Experian/Equifax/TransUnion)",
+          "call_pattern": "Async via SVC-012 (SVC-002 does not call credit bureau directly — credit check is requested via EVT-022 and result received via EVT-023)",
+          "purpose": "Credit checks are fully mediated through SVC-012 (Risk Engine). SVC-002 has no direct integration with credit bureaux.",
+          "dependency_criticality": "hard"
+        },
+        {
+          "provider_service_id": "EXT-SURVEYOR-PANEL",
+          "provider_service_name": "External Surveyor Panel",
+          "call_pattern": "Synchronous API or portal instruction (SVC-002 instructed valuation directly)",
+          "purpose": "SVC-002 instructs valuations directly via the surveyor panel management system. Surveyor panel is an external service managed by the Mortgage Operations team.",
+          "dependency_criticality": "hard"
+        },
+        {
+          "provider_service_id": "CHAPS",
+          "provider_service_name": "CHAPS (Bank of England Real-Time Gross Settlement)",
+          "call_pattern": "Synchronous — CHAPS payment instruction on completion day",
+          "purpose": "SVC-002 submits the CHAPS payment instruction to release mortgage funds to the solicitor on completion day. CHAPS provides irrevocable same-day settlement.",
+          "dependency_criticality": "hard"
+        }
+      ],
+      "api_endpoints": [
+        "POST /mortgage-applications",
+        "GET /mortgage-applications/{id}",
+        "POST /mortgage-applications/{id}/dip",
+        "POST /mortgage-applications/{id}/full-application",
+        "POST /mortgage-applications/{id}/offer",
+        "POST /mortgage-accounts",
+        "GET /mortgage-accounts/{id}"
+      ],
+      "source_journeys": ["JRN-006"]
+    },
+    {
+      "service_id": "SVC-012",
+      "service_name": "Risk Engine",
+      "capability_domain": "CAP-004 (Risk Management)",
+      "tier": "T1",
+      "description": "Provides credit scoring and risk assessment services. Consumed by SVC-002 exclusively via async events. SVC-012 receives CreditCheckRequested (EVT-022) from SVC-002, calls the credit bureau, and publishes CreditCheckCompleted (EVT-023) back to SVC-102.",
+      "owned_entities": [],
+      "published_events": ["EVT-023"],
+      "consumed_events": [
+        {
+          "event_id": "EVT-022",
+          "event_name": "CreditCheckRequested",
+          "provider_service_id": "SVC-002",
+          "provider_capability": "CAP-001 (Retail Banking)",
+          "communication_pattern": "async — cross-capability boundary. SVC-012 subscribes via SVC-102 event bus.",
+          "purpose": "SVC-012 receives a credit check request from SVC-002. Calls the credit bureau (Experian/Equifax/TransUnion) with customer identity data. Publishes CreditCheckCompleted (EVT-023) with the credit score, credit decision, and credit report reference. Supports both soft check (DIP, no bureau footprint) and hard check (full application, footprint recorded)."
+        }
+      ],
+      "cross_capability_note": "All communication between SVC-002 and SVC-012 is exclusively via async events (EVT-022 → SVC-012, EVT-023 ← SVC-012). No synchronous calls across this CAP-001 / CAP-004 boundary.",
+      "source_journeys": ["JRN-006"]
+    },
+    {
+      "service_id": "SVC-014",
+      "service_name": "KYC/AML Service",
+      "capability_domain": "CAP-005 (Compliance & Regulatory)",
+      "tier": "T1",
+      "description": "Provides KYC identity checks for new mortgage applicants who are not existing bank customers, and AML property source-of-funds checks required under MLR 2017 for property transactions. All communication with SVC-002 is via async events across the CAP-001 / CAP-005 boundary.",
+      "owned_entities": ["ENT-003"],
+      "published_events": ["EVT-004", "EVT-005", "EVT-006"],
+      "consumed_events": [
+        {
+          "event_id": "EVT-020",
+          "event_name": "MortgageEnquiryStarted",
+          "provider_service_id": "SVC-002",
+          "provider_capability": "CAP-001 (Retail Banking)",
+          "communication_pattern": "async — cross-capability boundary",
+          "purpose": "JRN-006: SVC-014 checks whether the customer_id is an existing bank customer with active KYC. If new customer, SVC-014 initiates KYC workflow. If existing customer with valid KYC, SVC-014 publishes KYCClearanceGranted (EVT-004) without requiring new CDD."
+        },
+        {
+          "event_id": "EVT-022",
+          "event_name": "CreditCheckRequested",
+          "provider_service_id": "SVC-002",
+          "provider_capability": "CAP-001 (Retail Banking)",
+          "communication_pattern": "async — cross-capability boundary",
+          "purpose": "JRN-006: SVC-014 listens for full application credit check requests to trigger AML source-of-funds check on the property purchase amount. AML check runs in parallel with credit check."
+        }
+      ],
+      "cross_capability_note": "All JRN-006 communication between SVC-002 and SVC-014 is exclusively via async events across the CAP-001 / CAP-005 boundary. SVC-014 KYC result is returned via the existing EVT-004 (KYCClearanceGranted) / EVT-005 (KYCReferralRaised) / EVT-006 (SanctionsHitDetected) event pattern reused from JRN-001.",
+      "source_journeys": ["JRN-001", "JRN-003", "JRN-004", "JRN-006"]
+    },
+    {
+      "service_id": "SVC-001",
+      "service_name": "Retail Banking Core",
+      "capability_domain": "CAP-001 (Retail Banking)",
+      "tier": "T2",
+      "description": "Same-capability peer to SVC-002. SVC-002 may call SVC-001 directly (synchronous) to read Customer data. SVC-001 links MortgageAccount (ENT-016) to the customer's current Account (ENT-004) for direct debit purposes via the Bacs mandate reference. No entity ownership crosses between the two services.",
+      "integration_with_svc002": {
+        "pattern": "same-capability direct API call (SVC-002 calls SVC-001 GET /customers/{id})",
+        "data_shared": "Customer identity data (name, address, DOB) for ESIS and offer document generation",
+        "direction": "SVC-002 → SVC-001 (read-only)",
+        "no_reverse_call": "SVC-001 does not call SVC-002 directly. SVC-001 consumes EVT-029 (MortgageCompleted) and EVT-030 (MortgageAccountOpened) from SVC-102 to update the Customer's product holdings record."
+      },
+      "source_journeys": ["JRN-001", "JRN-002", "JRN-003", "JRN-005", "JRN-006"]
+    }
+  ],
+  "capability_boundary_map": {
+    "description": "Defines which service interactions cross capability boundaries and must be async, and which are within the same capability and may be synchronous.",
+    "intra_capability_sync_allowed": [
+      {
+        "from": "SVC-002",
+        "to": "SVC-001",
+        "capability": "CAP-001",
+        "pattern": "synchronous direct API"
+      }
+    ],
+    "cross_capability_async_required": [
+      {
+        "from": "SVC-002",
+        "to": "SVC-012",
+        "boundary": "CAP-001 → CAP-004",
+        "events": ["EVT-022 (published by SVC-002)", "EVT-023 (consumed by SVC-002)"]
+      },
+      {
+        "from": "SVC-002",
+        "to": "SVC-014",
+        "boundary": "CAP-001 → CAP-005",
+        "events": ["EVT-020 (consumed by SVC-014)", "EVT-004/EVT-005/EVT-006 (consumed by SVC-002)"]
+      },
+      {
+        "from": "SVC-002",
+        "to": "SVC-001",
+        "boundary": "CAP-001 intra — event notification only",
+        "events": ["EVT-029 (MortgageCompleted)", "EVT-030 (MortgageAccountOpened) consumed by SVC-001 via event bus"]
+      }
+    ]
+  }
+}

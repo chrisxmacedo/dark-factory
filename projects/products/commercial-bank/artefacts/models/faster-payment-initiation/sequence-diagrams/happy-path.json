@@ -1,0 +1,226 @@
+{
+  "diagram_id": "SEQ-JRN002-001",
+  "name": "Happy Path — Faster Payment Initiation",
+  "journey_id": "JRN-002",
+  "scenario": "happy-path",
+  "description": "PER-001 initiates a Faster Payment via web or mobile channel. CoP returns a match. SCA succeeds. Sanctions screen is clear. Fraud score is non-block. FPS execution succeeds. Account is debited. Customer sees confirmation. Total elapsed time < 15 seconds from SCA completion.",
+  "participants": [
+    {"id": "Customer", "label": "PER-001 (Customer)", "type": "actor"},
+    {"id": "Channel", "label": "SVC-017 (Digital Channels)", "type": "service"},
+    {"id": "IAM", "label": "SVC-100 (IAM)", "type": "service"},
+    {"id": "DomesticPayments", "label": "SVC-009 (Domestic Payments)", "type": "service"},
+    {"id": "RetailBanking", "label": "SVC-001 (Retail Banking Core)", "type": "service"},
+    {"id": "EventBus", "label": "SVC-102 (Event Bus)", "type": "infrastructure"},
+    {"id": "Sanctions", "label": "SVC-051 (Sanctions Screening)", "type": "service"},
+    {"id": "Fraud", "label": "SVC-013 (Fraud Detection)", "type": "service"},
+    {"id": "AuditLog", "label": "SVC-103 (Audit & Logging)", "type": "service"}
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "from": "Customer",
+      "to": "Channel",
+      "type": "sync",
+      "action": "Navigate to Make Payment; enter payee sort code, account number, name, amount",
+      "phase": "PY-001"
+    },
+    {
+      "step": 2,
+      "from": "Channel",
+      "to": "DomesticPayments",
+      "type": "sync",
+      "action": "POST /cop/verify { payee_sort_code, payee_account_number, payee_name }",
+      "phase": "PY-001"
+    },
+    {
+      "step": 3,
+      "from": "DomesticPayments",
+      "to": "Channel",
+      "type": "sync-return",
+      "action": "200 OK { cop_result: 'match', risk_warning_required: false }",
+      "phase": "PY-001"
+    },
+    {
+      "step": 4,
+      "from": "Channel",
+      "to": "Customer",
+      "type": "ui",
+      "action": "Display CoP result: 'Payee name verified ✓'. Prompt customer to complete SCA.",
+      "phase": "PY-001"
+    },
+    {
+      "step": 5,
+      "from": "Customer",
+      "to": "Channel",
+      "type": "sync",
+      "action": "Complete SCA (biometric or TOTP) — dynamic linking to payee + amount",
+      "phase": "PY-001"
+    },
+    {
+      "step": 6,
+      "from": "Channel",
+      "to": "IAM",
+      "type": "sync",
+      "action": "POST /sca/validate { assertion, payee_sort_code, payee_account_number, amount }",
+      "phase": "PY-001"
+    },
+    {
+      "step": 7,
+      "from": "IAM",
+      "to": "Channel",
+      "type": "sync-return",
+      "action": "200 OK { sca_assertion_ref: 'uuid', valid: true }",
+      "phase": "PY-001"
+    },
+    {
+      "step": 8,
+      "from": "Channel",
+      "to": "RetailBanking",
+      "type": "sync",
+      "action": "POST /payments { account_id, amount, payee details, cop_result: match, sca_assertion_ref }",
+      "phase": "PY-001",
+      "note": "Single channel → capability API call. SVC-001 validates balance, daily limit, and SCA assertion."
+    },
+    {
+      "step": 9,
+      "from": "RetailBanking",
+      "to": "Channel",
+      "type": "sync-return",
+      "action": "202 Accepted { payment_intent_id, status: pending_screening, poll_url }",
+      "phase": "PY-001"
+    },
+    {
+      "step": 10,
+      "from": "RetailBanking",
+      "to": "EventBus",
+      "type": "async-publish",
+      "action": "Publish PaymentIntentCreated (EVT-P01)",
+      "event_id": "EVT-P01",
+      "phase": "PY-001"
+    },
+    {
+      "step": 11,
+      "from": "Channel",
+      "to": "Customer",
+      "type": "ui",
+      "action": "Show 'Processing your payment...' progress screen",
+      "phase": "PY-002"
+    },
+    {
+      "step": 12,
+      "from": "EventBus",
+      "to": "Sanctions",
+      "type": "async-consume",
+      "action": "Consume PaymentIntentCreated → run OFSI/UN/EU/OFAC sanctions screen on payee",
+      "event_id": "EVT-P01",
+      "phase": "PY-002",
+      "note": "Concurrent with step 13"
+    },
+    {
+      "step": 13,
+      "from": "EventBus",
+      "to": "Fraud",
+      "type": "async-consume",
+      "action": "Consume PaymentIntentCreated → run ML fraud scoring",
+      "event_id": "EVT-P01",
+      "phase": "PY-002",
+      "note": "Concurrent with step 12"
+    },
+    {
+      "step": 14,
+      "from": "Sanctions",
+      "to": "EventBus",
+      "type": "async-publish",
+      "action": "Publish SanctionsScreeningCompleted (EVT-P02) { outcome: 'clear' }",
+      "event_id": "EVT-P02",
+      "phase": "PY-002",
+      "timing": "< 3 seconds from PaymentIntentCreated"
+    },
+    {
+      "step": 15,
+      "from": "Fraud",
+      "to": "EventBus",
+      "type": "async-publish",
+      "action": "Publish FraudScoreCompleted (EVT-P03) { risk_level: 'low', fraud_score: 0.05 }",
+      "event_id": "EVT-P03",
+      "phase": "PY-002",
+      "timing": "< 500ms from PaymentIntentCreated"
+    },
+    {
+      "step": 16,
+      "from": "EventBus",
+      "to": "RetailBanking",
+      "type": "async-consume",
+      "action": "Consume SanctionsScreeningCompleted (clear) and FraudScoreCompleted (low) — both received",
+      "phase": "PY-003"
+    },
+    {
+      "step": 17,
+      "from": "RetailBanking",
+      "to": "EventBus",
+      "type": "async-publish",
+      "action": "Publish PaymentCleared (EVT-P04) — update PaymentIntent.status = processing",
+      "event_id": "EVT-P04",
+      "phase": "PY-003"
+    },
+    {
+      "step": 18,
+      "from": "EventBus",
+      "to": "DomesticPayments",
+      "type": "async-consume",
+      "action": "Consume PaymentCleared → construct ISO 20022 pacs.008 → submit to Vocalink FPS",
+      "phase": "PY-004"
+    },
+    {
+      "step": 19,
+      "from": "DomesticPayments",
+      "to": "EventBus",
+      "type": "async-publish",
+      "action": "Publish PaymentExecuted (EVT-P05) { fps_reference: 'FPS20260415...', settlement_status: accepted }",
+      "event_id": "EVT-P05",
+      "phase": "PY-004"
+    },
+    {
+      "step": 20,
+      "from": "EventBus",
+      "to": "RetailBanking",
+      "type": "async-consume",
+      "action": "Consume PaymentExecuted → debit account ledger → update PaymentIntent.status = completed",
+      "phase": "PY-004"
+    },
+    {
+      "step": 21,
+      "from": "RetailBanking",
+      "to": "EventBus",
+      "type": "async-publish",
+      "action": "Publish AccountDebited (EVT-P06)",
+      "event_id": "EVT-P06",
+      "phase": "PY-004"
+    },
+    {
+      "step": 22,
+      "from": "Channel",
+      "to": "RetailBanking",
+      "type": "sync",
+      "action": "GET /payments/{payment_intent_id} (polling)",
+      "phase": "PY-005"
+    },
+    {
+      "step": 23,
+      "from": "RetailBanking",
+      "to": "Channel",
+      "type": "sync-return",
+      "action": "200 OK { status: completed, fps_reference: '...', completed_at: '...' }",
+      "phase": "PY-005"
+    },
+    {
+      "step": 24,
+      "from": "Channel",
+      "to": "Customer",
+      "type": "ui",
+      "action": "Display payment confirmation: payee name, amount, FPS reference, timestamp",
+      "phase": "PY-005"
+    }
+  ],
+  "total_elapsed_target": "< 15 seconds from step 8 (POST /payments) to step 24 (confirmation render)"
+}

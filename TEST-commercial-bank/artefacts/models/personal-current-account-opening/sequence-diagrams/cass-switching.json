@@ -1,0 +1,257 @@
+{
+  "id": "SEQ-JRN001-AP003",
+  "name": "Alternative Path AP-003 — Account Switching via CASS",
+  "journey_id": "JRN-001",
+  "journey_phase": "PH-001 / PH-005 / PH-007 (CASS overlay)",
+  "description": "Alternative path AP-003: An existing customer at another UK bank initiates a Current Account Switch Service (CASS) transfer as part of their account opening journey. The customer selects 'Switch my account' at PH-001 (or PH-007 welcome phase). The CASS service orchestrates the redirection of Direct Debits, standing orders, and incoming payments from the old account over the 7-working-day switching window. The old account is closed by the previous bank on the Switch Date. The bank must register the new account with Pay.UK CASS within 2 business days of account opening and guarantee the 7-working-day SLA as a CASS participant. The happy path (PH-001 through PH-006) is a prerequisite — the CASS switch cannot begin until the new account is provisioned and active.",
+  "participants": [
+    { "id": "PER-001", "name": "Personal Customer", "type": "actor" },
+    { "id": "SVC-017", "name": "Digital Channels", "type": "service" },
+    { "id": "SVC-001", "name": "Retail Banking Core", "type": "service" },
+    { "id": "SVC-050", "name": "Customer Onboarding Service", "type": "service" },
+    { "id": "SVC-051", "name": "Sanctions Screening Service", "type": "service" },
+    { "id": "SVC-014", "name": "KYC/AML Service", "type": "service" },
+    { "id": "CASS", "name": "CASS Service (Pay.UK)", "type": "external_service" },
+    { "id": "PREV_BANK", "name": "Previous Bank", "type": "external_actor" },
+    { "id": "SVC-102", "name": "Event Bus", "type": "infrastructure" },
+    { "id": "SVC-053", "name": "Notifications Service", "type": "service" }
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "phase": "PH-001",
+      "from": "PER-001",
+      "to": "SVC-017",
+      "action": "Submit application form with 'Switch my account' selected",
+      "description": "Customer submits personal details and selects 'Switch my account' (switching = true). Provides CASS switch details: intended_switch_date, previous_bank_name, previous_sort_code, previous_account_number. The intended_switch_date must be at least 7 working days from today per CASS guarantee.",
+      "data": {
+        "account_type": "standard_current",
+        "channel": "mobile_app",
+        "switching": true,
+        "cass_switch": {
+          "intended_switch_date": "2026-04-24",
+          "previous_bank_name": "Barclays Bank plc",
+          "previous_sort_code": "20-00-00",
+          "previous_account_number": "12345678"
+        }
+      },
+      "async": false
+    },
+    {
+      "step": 2,
+      "phase": "PH-001",
+      "from": "SVC-017",
+      "to": "SVC-001",
+      "action": "POST /applications (switching = true)",
+      "description": "SVC-001 creates ApplicationRecord (ENT-007) with switching = true and persists the CassSwitchRequest data. Validates that intended_switch_date is >= 7 working days from today.",
+      "data": {
+        "CreateApplicationRequest": "{ account_type: standard_current, switching: true, cass_switch: { intended_switch_date: 2026-04-24, previous_bank_name, previous_sort_code, previous_account_number } }"
+      },
+      "async": false,
+      "http_method": "POST",
+      "endpoint": "retail-banking-core/v1/applications"
+    },
+    {
+      "step": 3,
+      "phase": "PH-001",
+      "from": "SVC-001",
+      "to": "SVC-102",
+      "action": "Publish ApplicationStarted (switching = true)",
+      "description": "ApplicationStarted event published with switching = true flag. Downstream consumers are notified that CASS onboarding is required after account provisioning.",
+      "data": {
+        "event": "ApplicationStarted",
+        "payload": "{ application_id, customer_id, channel, started_at, account_type_selected: standard_current, switching: true }"
+      },
+      "async": true,
+      "event_consumers": ["SVC-017", "SVC-050", "SVC-103"]
+    },
+    {
+      "step": 4,
+      "phase": "PH-002 to PH-006",
+      "from": "SVC-017",
+      "to": "SVC-001",
+      "action": "PH-002 → PH-006 complete as per happy path",
+      "description": "Identity verification (PH-002), KYC/CDD assessment (PH-003, including sanctions screening via SVC-051), account decision (PH-004), account provisioning (PH-005), and digital channel activation (PH-006) all proceed as per the happy path sequence. No deviation for CASS applications.",
+      "data": { "ref": "See happy-path.json steps 6–26" },
+      "async": false
+    },
+    {
+      "step": 5,
+      "phase": "PH-005",
+      "from": "SVC-001",
+      "to": "SVC-001",
+      "action": "Provision account with CASS flag — initiate CASS registration",
+      "description": "During account provisioning (PH-005), SVC-001 creates the Account (ENT-004) with sort code and account number, then immediately initiates CASS registration with Pay.UK. The new sort code and account number must be registered with Pay.UK within 2 business days of account opening (CASS rules).",
+      "data": {
+        "ProvisionAccountRequest": "{ application_id, customer_id, account_type: standard_current, cass_switch: { intended_switch_date: 2026-04-24, previous_bank_name, previous_sort_code, previous_account_number } }"
+      },
+      "async": false,
+      "note": "CASS registration is a prerequisite for the 7-working-day switch guarantee. Pay.UK must be notified of the new sort code/account number within 2 business days."
+    },
+    {
+      "step": 6,
+      "phase": "PH-005",
+      "from": "SVC-001",
+      "to": "CASS",
+      "action": "Register new account with Pay.UK CASS",
+      "description": "SVC-001 registers the new sort code and account number with Pay.UK CASS system. Sends: new account details, customer identity, switch authorisation. Pay.UK confirms registration and assigns a CASS switch reference.",
+      "data": {
+        "cass_registration_request": "{ new_sort_code: 40-47-84, new_account_number: 87654321, customer_name, date_of_birth, intended_switch_date: 2026-04-24, previous_sort_code: 20-00-00, previous_account_number: 12345678 }"
+      },
+      "async": false,
+      "sla": "Must register within 2 business days of account opening",
+      "note": "CASS participant obligation under CAP-001 mandate (Pay.UK CASS rules). Registration is blocking — the 7-working-day SLA clock does not start until Pay.UK confirms registration."
+    },
+    {
+      "step": 7,
+      "phase": "PH-005",
+      "from": "CASS",
+      "to": "SVC-001",
+      "action": "CASS registration confirmed — Switch Reference issued",
+      "description": "Pay.UK confirms CASS registration and issues a switch reference. Account.cass_registered = true. SVC-001 stores the CASS switch reference in the Account record.",
+      "data": {
+        "cass_confirmation": "{ switch_ref: CASS-2026-0042391, new_sort_code: 40-47-84, new_account_number: 87654321, switch_date: 2026-04-24, registration_confirmed_at }"
+      },
+      "async": false
+    },
+    {
+      "step": 8,
+      "phase": "PH-005",
+      "from": "SVC-001",
+      "to": "SVC-102",
+      "action": "Publish AccountProvisioned (cass_registered: true)",
+      "description": "AccountProvisioned event published with cass_registered = true. Switch reference and switch_date included in event payload for downstream consumers.",
+      "data": {
+        "event": "AccountProvisioned",
+        "payload": "{ account_id, customer_id, sort_code: 40-47-84, account_number: 87654321, status: active, cass_registered: true, switch_ref: CASS-2026-0042391, switch_date: 2026-04-24, provisioned_at }"
+      },
+      "async": true,
+      "event_consumers": ["SVC-017", "SVC-053", "SVC-103"]
+    },
+    {
+      "step": 9,
+      "phase": "PH-007",
+      "from": "SVC-053",
+      "to": "PER-001",
+      "action": "Welcome pack — includes CASS switch confirmation",
+      "description": "Welcome email and in-app message include CASS switch details: switch reference (CASS-2026-0042391), switch date (2026-04-24), details of what will be switched (direct debits, standing orders, incoming payments), 7-working-day SLA confirmation, and the CASS guarantee.",
+      "data": {
+        "email": "Welcome email: account details + CASS switch confirmation + switch date + what will be moved + 7-working-day CASS guarantee",
+        "in_app": "Switch summary: your switch is confirmed for 24 April 2026. Your direct debits and standing orders will move automatically. CASS guarantee: if anything goes wrong, you are protected."
+      },
+      "async": true
+    },
+    {
+      "step": 10,
+      "phase": "PH-007 / CASS window",
+      "from": "PER-001",
+      "to": "SVC-017",
+      "action": "Customer authorises CASS switch form in-app",
+      "description": "Customer reviews and authorises the CASS switch form within the mobile app. Authorisation covers: consent to move direct debits, standing orders, and incoming payments; consent to close previous account on switch date. SVC-017 records authorisation and passes to CASS service.",
+      "data": {
+        "cass_authorisation": "{ switch_ref: CASS-2026-0042391, customer_id, authorised_at, authorisation_method: biometric_sca, switch_date: 2026-04-24 }"
+      },
+      "async": false,
+      "note": "Switch authorisation requires SCA (biometric + device). Customer must be authenticated before authorising the switch (PSR 2017 SCA requirements)."
+    },
+    {
+      "step": 11,
+      "phase": "CASS switching window (Day 0 to Day 7 working days)",
+      "from": "CASS",
+      "to": "PREV_BANK",
+      "action": "CASS orchestrates transfer of direct debits and standing orders",
+      "description": "Pay.UK CASS contacts the previous bank (Barclays) to obtain the list of direct debits and standing orders. CASS orchestrates redirection to the new account (40-47-84 / 87654321). This process runs asynchronously over the 7-working-day window.",
+      "data": {
+        "cass_orchestration": "{ switch_ref: CASS-2026-0042391, action: transfer_mandates, new_sort_code: 40-47-84, new_account_number: 87654321 }"
+      },
+      "async": true,
+      "sla": "Must complete within 7 working days of Switch Date (2026-04-24)"
+    },
+    {
+      "step": 12,
+      "phase": "CASS switching window",
+      "from": "CASS",
+      "to": "SVC-001",
+      "action": "CASS redirect — incoming payments forwarded to new account",
+      "description": "During the 7-working-day window, any payments directed to the old account (20-00-00 / 12345678) are automatically redirected to the new account (40-47-84 / 87654321) by CASS. The bank receives these redirected payments as normal incoming credits.",
+      "data": {
+        "cass_redirect": "{ type: incoming_payment_redirect, from_sort_code: 20-00-00, from_account: 12345678, to_sort_code: 40-47-84, to_account: 87654321 }"
+      },
+      "async": true
+    },
+    {
+      "step": 13,
+      "phase": "Switch Date (Day 7 working days after switch initiation)",
+      "from": "CASS",
+      "to": "PREV_BANK",
+      "action": "CASS instructs previous bank to close old account on Switch Date",
+      "description": "On the Switch Date (2026-04-24), CASS instructs the previous bank (Barclays) to close the customer's old account. The old account is closed. Any remaining balance is transferred to the new account. The customer's previous sort code and account number are deactivated.",
+      "data": {
+        "cass_close_instruction": "{ switch_ref: CASS-2026-0042391, close_account_sort_code: 20-00-00, close_account_number: 12345678, switch_date: 2026-04-24 }"
+      },
+      "async": true
+    },
+    {
+      "step": 14,
+      "phase": "Switch complete",
+      "from": "CASS",
+      "to": "SVC-001",
+      "action": "CASS switch completion notification",
+      "description": "CASS notifies SVC-001 that the switch has completed successfully. Account.cass_switch_status updated to 'completed'. Switch completion timestamp recorded.",
+      "data": {
+        "cass_completion": "{ switch_ref: CASS-2026-0042391, switch_completed_at: 2026-04-24T17:00:00Z, status: completed }"
+      },
+      "async": false
+    },
+    {
+      "step": 15,
+      "phase": "Switch complete",
+      "from": "SVC-053",
+      "to": "PER-001",
+      "action": "Switch completion notification",
+      "description": "Customer receives email and in-app notification: 'Your switch is complete. Your account at Barclays has been closed. All your direct debits and standing orders are now linked to your new account.'",
+      "data": {
+        "notification_email": "Your Current Account Switch is complete. Your previous account at Barclays Bank plc has been closed. Your sort code and account number are now 40-47-84 / 87654321.",
+        "notification_in_app": "Switch complete — your account is ready to use."
+      },
+      "async": true
+    },
+    {
+      "step": 16,
+      "phase": "Switch complete",
+      "from": "SVC-001",
+      "to": "SVC-102",
+      "action": "Publish CassSwitchCompleted",
+      "description": "SVC-001 publishes CassSwitchCompleted domain event to the event bus to signal that the CASS switch has completed within the 7-working-day SLA.",
+      "data": {
+        "event": "CassSwitchCompleted",
+        "payload": "{ account_id, customer_id, switch_ref: CASS-2026-0042391, switch_completed_at: 2026-04-24T17:00:00Z, within_sla: true }"
+      },
+      "async": true,
+      "event_consumers": ["SVC-017", "SVC-053", "SVC-103"]
+    }
+  ],
+  "sla_tracking": {
+    "cass_registration_with_payuk": {
+      "obligation": "Register new sort code and account number with Pay.UK within 2 business days of account opening",
+      "trigger": "AccountProvisioned event",
+      "deadline": "T+2 business days",
+      "regulatory_basis": "CAP-001 mandate: CASS rules (Pay.UK)"
+    },
+    "cass_7_day_switch_guarantee": {
+      "obligation": "Switch must complete within 7 working days of Switch Date",
+      "trigger": "Customer authorises CASS switch form",
+      "switch_date": "2026-04-24",
+      "deadline": "7 working days from Switch Date",
+      "regulatory_basis": "CASS guarantee — Pay.UK scheme rules. Bank is liable for any losses incurred by the customer if the switch does not complete on time."
+    }
+  },
+  "notes": [
+    "CASS switch SLA: 7 working days from Switch Date — this is a guaranteed SLA under CASS rules. Bank is liable for customer losses from CASS failures.",
+    "CASS registration with Pay.UK must occur within 2 business days of account opening — not the switch date.",
+    "The customer's CASS switch authorisation requires SCA per PSR 2017.",
+    "All happy path phases (PH-001 to PH-006) are prerequisites. A CASS switch cannot commence until the new account is provisioned and active.",
+    "CASS redirect protection runs for a minimum of 3 years after the switch date — incoming payments to the old account are automatically forwarded for this period (CASS guarantee).",
+    "The CASS switch is the customer's choice — it must not be pre-selected or presented as mandatory (Consumer Duty PS22/9 consumer understanding outcome)."
+  ]
+}

@@ -1,0 +1,373 @@
+{
+  "$schema": "../../schemas/observability-model.schema.json",
+  "document_version": "0.1.0",
+  "status": "Draft",
+
+  "log_routing_architecture": {
+    "ingestion_layer": {
+      "component": "OpenTelemetry Collector",
+      "protocol": "OTLP/gRPC on port 4317; OTLP/HTTP on port 4318. Sidecar mode for all Kubernetes pods; gateway mode for batch and legacy services.",
+      "rationale": "OTel Collector is the sole ingestion point. No service emits directly to a back-end store. This provides a single point for PII scrubbing, schema validation, fan-out routing, and backpressure management. Replacing or reconfiguring a back-end store requires a Collector pipeline change only — zero application changes."
+    },
+    "pii_scrubbing": {
+      "stage": "OTel Collector processor pipeline, before any fan-out exporter",
+      "mechanism": "transform processor with regex-redaction rules for UK GDPR-classified fields. Hash-based pseudonymisation (SHA-256 HMAC with rotating key from SVC-105) used for fields required for correlation (e.g. customer_id in traces) where full redaction would break observability.",
+      "fields_scrubbed": [
+        "body.account_number",
+        "body.sort_code",
+        "body.pan",
+        "body.cvv",
+        "body.full_name",
+        "body.date_of_birth",
+        "body.national_insurance_number",
+        "body.email_address",
+        "body.phone_number",
+        "body.ip_address",
+        "body.iban",
+        "attributes.http.request.header.authorization",
+        "attributes.http.request.header.cookie"
+      ],
+      "enforcement": "OPA policy gate in CI pipeline rejects service manifests that configure bypass of the scrubbing processor. Audit logs from the Collector itself are forwarded to the Audit Store."
+    },
+    "fan_out_stores": [
+      {
+        "name": "Log Store",
+        "purpose": "Operational log aggregation for debugging, alerting, and incident investigation across all 23 services.",
+        "retention": "90 days hot; tiered to cold object storage (S3 / GCS Nearline) after 30 days",
+        "access_control": "SRE, platform engineering, and service-owning engineers. No raw PII in this store post-scrubbing. RBAC enforced via OIDC token from SVC-100.",
+        "worm": false,
+        "technology_options": ["Grafana Loki", "Elastic (self-hosted)", "OpenSearch"]
+      },
+      {
+        "name": "Trace Store",
+        "purpose": "Distributed trace storage for performance analysis, latency regression detection, and end-to-end request tracing across service boundaries.",
+        "retention": "30 days",
+        "access_control": "SRE and service-owning engineers. Traces contain pseudonymised correlation IDs; no raw PII.",
+        "worm": false,
+        "technology_options": ["Grafana Tempo", "Jaeger (self-hosted)", "AWS X-Ray"]
+      },
+      {
+        "name": "Metrics Store",
+        "purpose": "Long-term metrics storage for capacity planning, SLO/SLA tracking, dashboards, and regulatory availability reporting (CMA Open Banking, FCA operational resilience impact tolerance evidence).",
+        "retention": "13 months (one full year plus one month for year-on-year comparison; satisfies PRA operational resilience self-assessment evidence requirement)",
+        "access_control": "SRE, platform engineering, product owners. Read-only dashboards for compliance and risk functions.",
+        "worm": false,
+        "technology_options": ["Prometheus + Thanos (long-term)", "Grafana Mimir", "VictoriaMetrics"]
+      },
+      {
+        "name": "Audit Store",
+        "purpose": "Immutable, tamper-evident audit log storage for regulatory and legal obligations: AML records (MLR 2017 min 5 years), PCI DSS access logs, SM&CR conduct evidence, FCA supervisory data requests, GDPR processing records, and sanctions screening decisions.",
+        "retention": "7 years WORM (Write Once Read Many). Cryptographic sealing applied at ingestion: SHA-256 hash of each log batch signed with bank's HSM-backed private key stored in SVC-105.",
+        "access_control": "Auditor-only access. Service engineers, SREs, and operations cannot read or delete entries. Access requires two-person approval from the MLRO-designated audit team. FCA/PRA supervisory read requests routed via SVC-015 compliance team.",
+        "worm": true,
+        "technology_options": ["AWS S3 Object Lock (Compliance mode)", "Azure Immutable Blob Storage", "Cloudian HyperStore WORM"]
+      }
+    ]
+  },
+
+  "per_service_instrumentation_checklist": [
+    {
+      "id": "INST-001",
+      "name": "Structured Logging",
+      "description": "All log output must be emitted as structured JSON lines. No plain-text log concatenation. Log level (DEBUG, INFO, WARN, ERROR, FATAL) must be a discrete field. Correlation fields (trace_id, span_id, service_id, environment) must be present on every log line. Log level must be dynamically configurable via environment variable without restart.",
+      "mandatory": true,
+      "standards_reference": "OTel Semantic Conventions for Logs 1.24+"
+    },
+    {
+      "id": "INST-002",
+      "name": "Distributed Tracing",
+      "description": "Every service must initialise an OTel SDK tracer, propagate W3C TraceContext headers on all outbound HTTP and Kafka calls, and create child spans for each significant operation (DB query, external call, message publish). Span attributes must include service.name, service.version, deployment.environment, and relevant business context (e.g. payment_id, customer_id pseudonymised). Spans must NOT include raw PII — they are subject to scrubbing but defence-in-depth requires source hygiene.",
+      "mandatory": true,
+      "standards_reference": "W3C TraceContext Level 2; OTel Trace API/SDK 1.28+"
+    },
+    {
+      "id": "INST-003",
+      "name": "Metrics Emission",
+      "description": "Services must emit the following minimum metric set via OTLP: (1) HTTP request rate, error rate, duration histogram (RED pattern); (2) dependency call rate, error rate, duration (for each upstream); (3) resource utilisation (CPU, memory, goroutine/thread count); (4) domain-specific business metrics (e.g. payment_throughput_per_second, fraud_decisions_per_second). Metrics must follow OTel semantic naming conventions. Use of Prometheus client library as OTel SDK bridge is permitted.",
+      "mandatory": true,
+      "standards_reference": "OTel Metrics API/SDK 1.28+; Prometheus exposition format (bridge only)"
+    },
+    {
+      "id": "INST-004",
+      "name": "Health Endpoints",
+      "description": "Every service must expose: GET /health/live (liveness — is the process alive?) and GET /health/ready (readiness — is the service ready to accept traffic, including dependency checks). Both endpoints must return JSON with status: ok | degraded | down. The readiness endpoint must check critical hard-blocking dependencies. Kubernetes liveness and readiness probes must be wired to these endpoints. An optional GET /health/startup endpoint is required for services with initialisation workflows (key loading, cache warming).",
+      "mandatory": true,
+      "standards_reference": "Kubernetes Probe API; CNCF Health Check Pattern"
+    },
+    {
+      "id": "INST-005",
+      "name": "Kafka CloudEvents",
+      "description": "All Kafka messages published by a service must conform to the CloudEvents 1.0 specification. The CloudEvents envelope must include: specversion, id (UUID), source (service URN), type (reverse-DNS event type e.g. uk.bank.payment.settled.v1), time (RFC3339), datacontenttype (application/json), subject (business entity ID e.g. payment_id). The event body must be registered in the schema registry (Confluent Schema Registry or equivalent) with a version. Consumers must validate against the registered schema before processing.",
+      "mandatory": true,
+      "standards_reference": "CloudEvents 1.0 specification; CNCF Kafka Protocol Binding"
+    },
+    {
+      "id": "INST-006",
+      "name": "Service Manifest (service.yaml)",
+      "description": "Every service must maintain a machine-readable service.yaml manifest in the root of its repository. Required fields: service_id (e.g. SVC-001), name, version, team, tier (domain_specific | cross_cutting | foundation), data_classification, pci_dss_scope (boolean), dependencies (list of service_id), slos (p99_latency_ms, error_rate_threshold, availability_target), on_call_runbook_url. The manifest is consumed by the service catalogue, C4 workspace renderer, and dependency topology freshness contract (FRS-001).",
+      "mandatory": true,
+      "standards_reference": "Internal bank service catalogue standard v1.0"
+    }
+  ],
+
+  "logging_schema_by_category": [
+    {
+      "category_id": "LOG-CAT-001",
+      "category_name": "API / Edge",
+      "applies_to_services": ["SVC-101", "SVC-017"],
+      "required_fields": [
+        { "field": "timestamp", "type": "ISO8601 datetime", "description": "Request receipt timestamp at the gateway", "example": "2025-06-15T14:23:01.123Z" },
+        { "field": "trace_id", "type": "string (W3C trace-id)", "description": "Distributed trace identifier propagated downstream" },
+        { "field": "method", "type": "string", "description": "HTTP method", "example": "POST" },
+        { "field": "path", "type": "string", "description": "URL path without query string" },
+        { "field": "status_code", "type": "integer", "description": "HTTP response status code" },
+        { "field": "duration_ms", "type": "number", "description": "Total request duration in milliseconds" },
+        { "field": "client_type", "type": "string", "description": "mobile_app | web | tpp | corporate_api | internal" },
+        { "field": "tpp_client_id", "type": "string", "description": "OBIE-registered TPP client ID — pseudonymised" }
+      ],
+      "extension_fields": [
+        { "field": "rate_limit_remaining", "type": "integer", "description": "Remaining quota for this consumer within the current window" },
+        { "field": "fapi_interaction_id", "type": "string", "description": "FAPI correlation ID from Open Banking requests" }
+      ],
+      "critical_rules": [
+        "Authorization header must NEVER appear in logs — the OTel Collector processor strips it but source code must also exclude it",
+        "Token bearer values must be replaced with [REDACTED] at source before emission",
+        "tpp_client_id must be the OBIE-registered identifier, not a raw OAuth client secret"
+      ]
+    },
+    {
+      "category_id": "LOG-CAT-002",
+      "category_name": "Core Domain",
+      "applies_to_services": ["SVC-001", "SVC-002", "SVC-003", "SVC-004", "SVC-005", "SVC-007", "SVC-016"],
+      "required_fields": [
+        { "field": "timestamp", "type": "ISO8601 datetime", "description": "Event timestamp" },
+        { "field": "trace_id", "type": "string", "description": "Distributed trace identifier" },
+        { "field": "service_id", "type": "string", "description": "Service identifier e.g. SVC-001" },
+        { "field": "event_type", "type": "string", "description": "Domain event type e.g. AccountOpened, LoanOriginated" },
+        { "field": "entity_id", "type": "string", "description": "Business entity identifier — pseudonymised where personal data" },
+        { "field": "outcome", "type": "string", "description": "success | failure | deferred" },
+        { "field": "environment", "type": "string", "description": "ci | rc | prod-parity" }
+      ],
+      "extension_fields": [
+        { "field": "product_type", "type": "string", "description": "current_account | savings | personal_loan | mortgage | credit_card | etc." },
+        { "field": "segment", "type": "string", "description": "retail | sme | corporate | hnw" },
+        { "field": "channel", "type": "string", "description": "mobile_app | online_banking | branch | api | telephone" }
+      ],
+      "critical_rules": [
+        "account_number, sort_code, IBAN must use pseudonymised hashed reference only — never raw values",
+        "balance amounts must NOT appear in operational logs; they may appear in encrypted audit logs only",
+        "customer_name must NEVER appear — use customer_id pseudonym"
+      ]
+    },
+    {
+      "category_id": "LOG-CAT-003",
+      "category_name": "Payment",
+      "applies_to_services": ["SVC-009", "SVC-010", "SVC-011"],
+      "required_fields": [
+        { "field": "timestamp", "type": "ISO8601 datetime", "description": "Payment event timestamp" },
+        { "field": "trace_id", "type": "string", "description": "Distributed trace identifier" },
+        { "field": "payment_id", "type": "string (UUID)", "description": "Unique payment instruction identifier" },
+        { "field": "rail", "type": "string", "description": "fps | bacs | chaps | swift | card_scheme" },
+        { "field": "direction", "type": "string", "description": "inbound | outbound" },
+        { "field": "status", "type": "string", "description": "submitted | accepted | settled | rejected | returned" },
+        { "field": "sanctions_clearance", "type": "string", "description": "CLEAR | BLOCKED | PENDING — outcome from SVC-051" },
+        { "field": "fraud_score_band", "type": "string", "description": "low | medium | high — banded score from SVC-013; NOT raw score" },
+        { "field": "amount_band", "type": "string", "description": "Banded amount tier (e.g. <£100, £100-£999, £1k-£9999, £10k+) — NOT exact amount" }
+      ],
+      "extension_fields": [
+        { "field": "scheme_reference", "type": "string", "description": "Scheme-assigned reference (FPS end-to-end ID, CHAPS settlement reference, SWIFT UETR)" },
+        { "field": "cop_result", "type": "string", "description": "Confirmation of Payee result: match | close_match | no_match | unavailable" }
+      ],
+      "critical_rules": [
+        "Exact payment amounts must NEVER appear in the Log Store or Trace Store — use banded tiers only",
+        "Beneficiary account numbers must NEVER appear — use payment_id only",
+        "Exact amounts and account details flow to the Audit Store only via encrypted OTLP pipeline",
+        "sanctions_clearance outcome must be present on EVERY payment log line — absence triggers an alert"
+      ]
+    },
+    {
+      "category_id": "LOG-CAT-004",
+      "category_name": "Identity / Auth",
+      "applies_to_services": ["SVC-100"],
+      "required_fields": [
+        { "field": "timestamp", "type": "ISO8601 datetime", "description": "Authentication event timestamp" },
+        { "field": "trace_id", "type": "string", "description": "Distributed trace identifier" },
+        { "field": "event_subtype", "type": "string", "description": "authentication_success | authentication_failure | sca_challenge | token_issued | token_revoked | access_denied | tpp_certificate_validated" },
+        { "field": "principal_type", "type": "string", "description": "customer | employee | service_account | tpp" },
+        { "field": "principal_id", "type": "string", "description": "Pseudonymised principal identifier (SHA-256 HMAC)" },
+        { "field": "ip_address_hashed", "type": "string", "description": "SHA-256 hash of client IP — pseudonymised for GDPR compliance" },
+        { "field": "channel", "type": "string", "description": "mobile_app | online_banking | api | internal" },
+        { "field": "outcome", "type": "string", "description": "success | failure | challenge_required" }
+      ],
+      "extension_fields": [
+        { "field": "failure_reason", "type": "string", "description": "wrong_credential | account_locked | sca_timeout | certificate_invalid" },
+        { "field": "sca_method", "type": "string", "description": "biometric | otp_sms | otp_app | hardware_token" }
+      ],
+      "critical_rules": [
+        "Passwords, PINs, OTP codes must NEVER appear in logs under any circumstances",
+        "Raw IP addresses must be hashed before emission; original IP must NOT persist in Log Store",
+        "Failed authentication patterns (brute force indicators) must be forwarded to SIEM (SVC-103) in real time",
+        "SM&CR employee access events must be routed to Audit Store as well as Log Store"
+      ]
+    },
+    {
+      "category_id": "LOG-CAT-005",
+      "category_name": "Async / Event",
+      "applies_to_services": ["SVC-102", "SVC-050", "SVC-051", "SVC-052", "SVC-053", "SVC-054", "SVC-055"],
+      "required_fields": [
+        { "field": "timestamp", "type": "ISO8601 datetime", "description": "Event publish or consume timestamp" },
+        { "field": "trace_id", "type": "string", "description": "Distributed trace identifier (propagated in CloudEvents traceparent extension)" },
+        { "field": "event_id", "type": "string (UUID)", "description": "CloudEvents id field" },
+        { "field": "event_type", "type": "string", "description": "CloudEvents type field e.g. uk.bank.payment.settled.v1" },
+        { "field": "event_source", "type": "string", "description": "CloudEvents source field (producing service URN)" },
+        { "field": "kafka_topic", "type": "string", "description": "Kafka topic name" },
+        { "field": "kafka_partition", "type": "integer", "description": "Kafka partition number" },
+        { "field": "kafka_offset", "type": "integer", "description": "Kafka offset of the message" },
+        { "field": "processing_outcome", "type": "string", "description": "published | consumed | dead_lettered | schema_rejected" }
+      ],
+      "extension_fields": [
+        { "field": "consumer_group", "type": "string", "description": "Kafka consumer group identifier of the consuming service" },
+        { "field": "schema_version", "type": "string", "description": "Schema registry version of the event schema used" },
+        { "field": "lag_ms", "type": "number", "description": "Consumer lag at time of consumption in milliseconds" }
+      ],
+      "critical_rules": [
+        "Event payloads must NEVER be logged in full — only the CloudEvents envelope fields above",
+        "Dead-lettered events must trigger an alert to the service-owning team within 60 seconds",
+        "Schema rejection events must trigger an alert — schema incompatibility must never be silently discarded"
+      ]
+    },
+    {
+      "category_id": "LOG-CAT-006",
+      "category_name": "Admin / Config",
+      "applies_to_services": ["SVC-105", "SVC-106", "SVC-015"],
+      "required_fields": [
+        { "field": "timestamp", "type": "ISO8601 datetime", "description": "Admin action timestamp" },
+        { "field": "trace_id", "type": "string", "description": "Distributed trace identifier" },
+        { "field": "actor_id", "type": "string", "description": "Pseudonymised employee identifier — SM&CR senior manager role must be resolvable for accountability" },
+        { "field": "actor_role", "type": "string", "description": "SM&CR role or RBAC role of the actor" },
+        { "field": "action_type", "type": "string", "description": "secret_rotated | policy_updated | config_changed | access_granted | access_revoked | mtls_cert_renewed | network_policy_changed" },
+        { "field": "resource_affected", "type": "string", "description": "The resource or configuration item changed" },
+        { "field": "outcome", "type": "string", "description": "success | rejected | error" },
+        { "field": "approval_reference", "type": "string", "description": "Maker-checker approval reference from SVC-055 — required for all privileged changes" }
+      ],
+      "extension_fields": [
+        { "field": "previous_value_hash", "type": "string", "description": "SHA-256 hash of previous config value (for change diffing without exposing secrets)" },
+        { "field": "new_value_hash", "type": "string", "description": "SHA-256 hash of new config value" }
+      ],
+      "critical_rules": [
+        "ALL admin/config log entries must be routed to both Log Store AND Audit Store",
+        "Secret values must NEVER appear — only hashed references",
+        "All privileged actions require a non-empty approval_reference — absence is a policy violation alert",
+        "Config changes without an associated change record in the ITSM are a PCI DSS control failure"
+      ]
+    },
+    {
+      "category_id": "LOG-CAT-007",
+      "category_name": "Batch",
+      "applies_to_services": ["SVC-012", "SVC-015", "SVC-104"],
+      "required_fields": [
+        { "field": "timestamp", "type": "ISO8601 datetime", "description": "Batch job event timestamp" },
+        { "field": "job_id", "type": "string (UUID)", "description": "Unique batch job instance identifier" },
+        { "field": "job_name", "type": "string", "description": "Human-readable job name e.g. ifrs9_ecl_daily_run" },
+        { "field": "service_id", "type": "string", "description": "Owning service identifier" },
+        { "field": "phase", "type": "string", "description": "started | checkpoint | completed | failed | aborted" },
+        { "field": "records_processed", "type": "integer", "description": "Count of records processed at this checkpoint or completion" },
+        { "field": "records_failed", "type": "integer", "description": "Count of records that failed processing (must be 0 for regulatory batch)" },
+        { "field": "duration_seconds", "type": "number", "description": "Elapsed time in seconds" },
+        { "field": "outcome", "type": "string", "description": "success | partial | failed" }
+      ],
+      "extension_fields": [
+        { "field": "regulatory_return_id", "type": "string", "description": "Reference to the regulatory return being produced (COREP, FINREP, PRA 110)" },
+        { "field": "data_as_of_date", "type": "string (date)", "description": "The business date the batch data represents" }
+      ],
+      "critical_rules": [
+        "Regulatory batch jobs (COREP, FINREP, IFRS9) must log a completion record to the Audit Store",
+        "records_failed must be 0 for any regulatory reporting batch — non-zero triggers an immediate alert to the compliance team",
+        "Batch run duration must be compared against the SLA window (e.g. must complete before reporting cutoff time)"
+      ]
+    }
+  ],
+
+  "data_freshness": [
+    {
+      "contract_id": "FRS-001",
+      "signal_name": "Service Topology (dependency graph from service.yaml manifests)",
+      "source": "Service catalogue build pipeline reading service.yaml from each service repo",
+      "max_staleness": "24 hours",
+      "alert_threshold": "If any service.yaml has not been ingested within 24 hours, alert platform engineering",
+      "rationale": "The C4 workspace and security model blast radius visualiser depend on an accurate service dependency topology. Stale topology creates false confidence in blast radius assessments and could cause incorrect incident scope classification."
+    },
+    {
+      "contract_id": "FRS-002",
+      "signal_name": "p99 Latency (per service, per endpoint)",
+      "source": "OTel Collector → Metrics Store (Prometheus/Mimir)",
+      "max_staleness": "60 seconds",
+      "alert_threshold": "If p99 exceeds SLO threshold for 5 consecutive minutes, page on-call SRE",
+      "rationale": "SVC-009 (payments), SVC-051 (sanctions), SVC-013 (fraud) have sub-100ms latency SLAs with regulatory implications. Stale latency data means FCA operational resilience impact tolerance evidence gaps."
+    },
+    {
+      "contract_id": "FRS-003",
+      "signal_name": "Kafka Consumer Lag (per topic, per consumer group)",
+      "source": "OTel Collector Kafka receiver → Metrics Store",
+      "max_staleness": "30 seconds",
+      "alert_threshold": "Lag exceeding 10,000 messages on any topic or lag growing continuously for 5 minutes triggers P2 alert",
+      "rationale": "Kafka lag accumulation indicates a stalled consumer, which can cause SLO breaches downstream (e.g. balance updates delayed, fraud alerts delayed). APP fraud reimbursement liability (PSR PS23/3) makes fraud event lag a board-level financial risk."
+    },
+    {
+      "contract_id": "FRS-004",
+      "signal_name": "Deploy State (current deployed version per service per environment)",
+      "source": "CI/CD pipeline emitting deployment events → Metrics Store",
+      "max_staleness": "5 minutes post-deployment",
+      "alert_threshold": "If deploy state has not updated within 5 minutes of a deployment event, alert DevOps lead",
+      "rationale": "Accurate deploy state is required for blast radius containment during incidents (to identify which version introduced a regression), PCI DSS change management evidence, and FCA operational resilience incident reporting."
+    },
+    {
+      "contract_id": "FRS-005",
+      "signal_name": "Secret Expiry Countdown (per secret in SVC-105)",
+      "source": "SVC-105 (Secrets Management) → OTel Collector → Metrics Store",
+      "max_staleness": "1 hour",
+      "alert_threshold": "Alert 30 days before expiry; escalate to P1 48 hours before expiry; PCI DSS violation if expired key is still in use",
+      "rationale": "Expired TLS certificates or API credentials cause service outages with regulatory reporting obligations. PCI DSS Requirement 3.6 mandates documented key management procedures including expiry controls."
+    },
+    {
+      "contract_id": "FRS-006",
+      "signal_name": "CVE Exposure (critical/high CVEs in service container images)",
+      "source": "Container image scanner (Trivy / Grype) integrated in CI pipeline → vulnerability dashboard",
+      "max_staleness": "24 hours (CI scan); 4 hours for critical CVEs via runtime scanner",
+      "alert_threshold": "Critical CVE: page security team within 4 hours. High CVE: alert within 24 hours. PCI DSS requires critical patch within 30 days.",
+      "rationale": "PCI DSS v4.0 Requirement 6.3.3 requires all system components to be protected against known vulnerabilities. FCA operational resilience expects the bank to identify and remediate ICT vulnerabilities promptly."
+    },
+    {
+      "contract_id": "FRS-007",
+      "signal_name": "Audit Log Completeness (volume of audit events per service per hour)",
+      "source": "OTel Collector pipeline audit exporter → Audit Store with completeness check query",
+      "max_staleness": "1 hour",
+      "alert_threshold": "If audit event volume for any service drops more than 30% below its 4-week rolling average, alert compliance team and MLRO",
+      "rationale": "A silence in audit logs for a regulated service (especially SVC-051, SVC-014, SVC-009) could indicate a logging pipeline failure that would create an evidence gap for regulatory inspection. MLR 2017 and POCA 2002 require continuous, uninterrupted audit records."
+    }
+  ],
+
+  "design_decisions": [
+    {
+      "id": "OBS-DD-001",
+      "decision": "OpenTelemetry Collector is the sole telemetry ingestion point for all 23 services. No service emits telemetry directly to a back-end store. All logs, traces, and metrics pass through the Collector pipeline where PII scrubbing and fan-out routing are applied.",
+      "rationale": "A single ingestion point provides a controlled choke point for PII scrubbing, which is an absolute UK GDPR obligation. It allows back-end store changes (e.g. replacing Loki with Elastic) without any service code change. It provides a consistent observability contract that can be validated against the per-service instrumentation checklist in CI. The alternative — allowing direct emission to stores — creates N×M integration paths and eliminates the ability to guarantee PII scrubbing.",
+      "alternatives_considered": ["Allow services to emit directly to Elasticsearch and Prometheus"],
+      "rejected_because": "Direct emission bypasses the PII scrubbing processor, creating GDPR risk. It also creates per-service back-end coupling that makes store migrations operationally expensive."
+    },
+    {
+      "id": "OBS-DD-002",
+      "decision": "The Audit Store is physically separate from the Log Store and Trace Store. It uses WORM object storage with cryptographic sealing. SREs and service engineers have no read or delete access to the Audit Store. Access requires a two-person control process via the MLRO-designated audit team.",
+      "rationale": "MLR 2017, POCA 2002, and PCI DSS require audit records to be tamper-evident and protected from accidental or malicious deletion. If the Audit Store shared infrastructure with the Log Store, a misconfigured log rotation policy or a storage incident could delete regulatory-mandated records. Separation is non-negotiable for FCA supervisory examination readiness.",
+      "alternatives_considered": ["Use the same Elasticsearch cluster with a dedicated index and access control"],
+      "rejected_because": "Elasticsearch indices, even with ILM, do not provide the WORM guarantees required for regulatory audit records. An Elasticsearch cluster administrator can delete indices. The FCA and PRA expect immutability that only WORM object storage (S3 Object Lock Compliance mode) provides."
+    },
+    {
+      "id": "OBS-DD-003",
+      "decision": "Data freshness contracts (FRS-001 to FRS-007) are first-class observability artefacts. A freshness SLO violation is treated with the same severity as a service SLO violation. The freshness contracts are monitored in the same dashboard as service SLOs.",
+      "rationale": "Stale observability data (e.g. stale topology, silent audit logs) is itself an operational risk and a regulatory compliance risk. Treating freshness as a secondary concern led to the Starling Bank FCA fine (October 2024) where sanctions screening coverage gaps were not detected. Freshness contracts make the observability pipeline itself observable.",
+      "alternatives_considered": ["Monitor data freshness informally via ad-hoc queries"],
+      "rejected_because": "Ad-hoc freshness monitoring creates a blind spot: no alert is raised when a pipeline silently stops delivering data. The MLR 2017 and FCA operational resilience requirements demand that the bank can demonstrate continuous, uninterrupted data flows for regulated functions."
+    }
+  ]
+}

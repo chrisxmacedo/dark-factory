@@ -1,0 +1,690 @@
+{
+  "journey_id": "JRN-001",
+  "name": "Personal Current Account Opening — Participant Interaction",
+  "description": "Defines, for each phase of JRN-001, what each participant can see (data projection), what actions they can take (entitlements), and what communications they receive (notifications). Covers: PER-001 (Personal Customer), PER-052 (Compliance Officer / MLRO — exception and referral paths), PER-056 (Branch Staff — manual referral and eKYC fallback paths), PER-060 (IT Operations — provisioning failure exception path).",
+  "participants": [
+    {
+      "persona_id": "PER-001",
+      "persona_name": "Personal Customer",
+      "access_classification": "authenticated_customer",
+      "channels": ["CH-001", "CH-002"],
+      "phases": [
+        {
+          "phase_id": "PH-001",
+          "phase_name": "Application Initiation",
+          "projection": {
+            "description": "Customer sees the account opening application form. Displayed fields: full name, date of birth, residential address, email address, phone number, nationality, account type selector (standard / packaged / switching). No account data exists yet — no balance, no account number.",
+            "data_fields_visible": [
+              "Application reference (provisional, system-generated)",
+              "Account type options and associated features/fees",
+              "Eligibility criteria summary (age 18+, UK resident)",
+              "FSCS protection summary (£85,000 per depositor)",
+              "Packaged account monthly fee (if selected)"
+            ],
+            "data_fields_masked": [],
+            "data_not_visible": [
+              "Internal risk scoring parameters",
+              "System fraud signals being captured in background"
+            ]
+          },
+          "entitlements": {
+            "actions_permitted": [
+              "Complete and submit personal details form",
+              "Select account type",
+              "Upload or enter residential address",
+              "Save application progress and return later (session-bound, 24-hour expiry)",
+              "Abandon application"
+            ],
+            "actions_not_permitted": [
+              "View other customers' data",
+              "Modify system eligibility rules",
+              "Skip mandatory personal detail fields"
+            ]
+          },
+          "notifications": [
+            {
+              "trigger": "Application form submitted",
+              "channel": "In-app message",
+              "content": "Your application has been started. Reference: [application_ref]. We will guide you through a few more steps — it usually takes around 5–10 minutes.",
+              "timing": "Immediate on form submission"
+            },
+            {
+              "trigger": "Under-18 age detected",
+              "channel": "In-app message",
+              "content": "It looks like you're under 18. We have a great account designed for young people — tap here to find out more.",
+              "timing": "Immediate on date of birth entry"
+            }
+          ]
+        },
+        {
+          "phase_id": "PH-002",
+          "phase_name": "Identity Verification",
+          "projection": {
+            "description": "Customer sees the document capture and biometric liveness check screens. Step-by-step guidance is provided for document type selection, camera capture, and selfie/liveness instructions. Progress indicator shows step 2 of 5.",
+            "data_fields_visible": [
+              "Accepted document types (passport, UK driving licence, national identity card)",
+              "Step-by-step capture instructions",
+              "Liveness check animation instructions",
+              "Verification status: In Progress / Passed / Failed",
+              "Retry count (maximum 2 attempts)"
+            ],
+            "data_fields_masked": [
+              "Document number is not displayed back to the customer after capture",
+              "Biometric template — never transmitted or visible to customer"
+            ],
+            "data_not_visible": [
+              "Identity verification vendor name and scoring detail",
+              "Fraud confidence score",
+              "Internal document authenticity analysis result"
+            ]
+          },
+          "entitlements": {
+            "actions_permitted": [
+              "Select identity document type",
+              "Capture document via camera (mobile) or file upload (web)",
+              "Complete biometric liveness check",
+              "Retry document capture once after failure (maximum 2 attempts)",
+              "Switch to an alternative document type after first failure",
+              "Request branch appointment if digital identity verification cannot be completed"
+            ],
+            "actions_not_permitted": [
+              "Upload documents on behalf of another person",
+              "Bypass biometric liveness check",
+              "Proceed to next phase without completed verification"
+            ]
+          },
+          "notifications": [
+            {
+              "trigger": "Document capture completed and under review",
+              "channel": "In-app",
+              "content": "We are verifying your document — this usually takes a few seconds.",
+              "timing": "Immediate on document submission"
+            },
+            {
+              "trigger": "Identity verification passed",
+              "channel": "In-app",
+              "content": "Identity confirmed. We are now completing a few background checks — please wait.",
+              "timing": "Immediate on PASS result"
+            },
+            {
+              "trigger": "Document check failed — retry available",
+              "channel": "In-app",
+              "content": "We could not verify that document. Please try again with a different document or ensure the image is clear.",
+              "timing": "Immediate on failure"
+            },
+            {
+              "trigger": "All retry attempts exhausted",
+              "channel": "In-app + Email",
+              "content": "We were unable to verify your identity online. We have booked you a branch appointment — details below. Alternatively, call us on [number].",
+              "timing": "Immediately after final failure"
+            }
+          ]
+        },
+        {
+          "phase_id": "PH-003",
+          "phase_name": "KYC/CDD Assessment",
+          "projection": {
+            "description": "The customer sees a 'Checking your details' holding screen while automated KYC/CDD and sanctions screening complete. No KYC scoring detail or screening match information is surfaced to the customer. If the automated check takes longer than expected (e.g., EDD path), the customer sees an estimated wait time.",
+            "data_fields_visible": [
+              "Progress indicator: 'Checking your details'",
+              "Estimated completion time if processing exceeds 30 seconds",
+              "Contact number for queries"
+            ],
+            "data_fields_masked": [
+              "PEP/sanctions screening result",
+              "Risk tier assignment (Low/Medium/High)",
+              "Adverse media results"
+            ],
+            "data_not_visible": [
+              "Whether a SAR is being considered (tipping-off prohibition — POCA 2002 s333A)",
+              "Specific data sources used for screening"
+            ]
+          },
+          "entitlements": {
+            "actions_permitted": [
+              "Wait for automated check completion",
+              "Close app and return (application state preserved for 48 hours)",
+              "Contact support for status update (support agents have limited visibility per tipping-off rules)"
+            ],
+            "actions_not_permitted": [
+              "View screening results",
+              "Modify any submitted identity or personal data during this phase",
+              "Proceed to next phase without system-generated outcome"
+            ]
+          },
+          "notifications": [
+            {
+              "trigger": "KYC automated checks pass — CLEAR result",
+              "channel": "In-app",
+              "content": "All checks completed. Reviewing your application now.",
+              "timing": "Immediate on KYCClearanceGranted event"
+            },
+            {
+              "trigger": "KYC checks require additional review (referral path)",
+              "channel": "In-app + Email",
+              "content": "We need a little more time to complete our checks. We will be in touch within 3 business days. Your application reference is [ref].",
+              "timing": "Within 2 minutes of KYCReferralRaised event"
+            },
+            {
+              "trigger": "Sanctions hit — application blocked (no tipping off)",
+              "channel": "In-app + Email",
+              "content": "We are unable to open an account for you at this time. If you have questions, please contact us on [number] or write to [address].",
+              "timing": "Within 5 minutes of SanctionsHitDetected event"
+            }
+          ]
+        },
+        {
+          "phase_id": "PH-004",
+          "phase_name": "Account Decision",
+          "projection": {
+            "description": "On approval, the customer sees a congratulatory confirmation screen showing their new account details (sort code and account number). On refer, they see a status screen with case reference and SLA. On decline, they see the decline notification with a generic reason and FOS signpost.",
+            "data_fields_visible": [
+              "Decision outcome: Approved / Under Review / Declined",
+              "If Approved: account type, indicative features (overdraft availability, card delivery date)",
+              "If Under Review: case reference, SLA (up to 3 business days), contact details",
+              "If Declined: decline reason (generic — e.g., 'We are unable to open an account for you at this time'), FOS details, right to request a copy of the decision basis (subject to legal restrictions)"
+            ],
+            "data_fields_masked": [
+              "Internal decision score",
+              "Specific KYC data points that contributed to decline",
+              "SAR-related information (tipping-off prohibition)"
+            ],
+            "data_not_visible": [
+              "Decision model weights or credit bureau scores used",
+              "Names of screening data sources"
+            ]
+          },
+          "entitlements": {
+            "actions_permitted": [
+              "View approval confirmation and proceed to account setup",
+              "Download or email confirmation of approval decision",
+              "Request a manual review of a declined decision (where permitted by policy)",
+              "Contact FOS if dissatisfied with a decline decision (signpost provided)",
+              "If referred: upload additional documents requested by compliance team"
+            ],
+            "actions_not_permitted": [
+              "Appeal a sanctions-related decline directly (must go through OFSI/legal process)",
+              "Access the account before provisioning is complete"
+            ]
+          },
+          "notifications": [
+            {
+              "trigger": "Application approved",
+              "channel": "In-app + Email",
+              "content": "Congratulations — your account has been approved! We are setting it up now. You will be ready to bank in just a moment.",
+              "timing": "Immediate on ApplicationDecisionMade: APPROVED"
+            },
+            {
+              "trigger": "Application referred for manual review",
+              "channel": "In-app + Email",
+              "content": "Your application is being reviewed by our team. We will update you within 3 business days. Reference: [case_ref].",
+              "timing": "Within 5 minutes of REFERRED decision"
+            },
+            {
+              "trigger": "Application declined",
+              "channel": "In-app + Email",
+              "content": "We are sorry, we are unable to open an account for you at this time. If you have questions, you can contact the Financial Ombudsman Service at [FOS details]. Reference: [application_ref].",
+              "timing": "Within 5 minutes of DECLINED decision"
+            }
+          ]
+        },
+        {
+          "phase_id": "PH-005",
+          "phase_name": "Account Provisioning",
+          "projection": {
+            "description": "The customer sees a loading/confirmation screen while provisioning completes (typically under 5 seconds). On success, they are shown their new sort code and account number. Card delivery date is confirmed.",
+            "data_fields_visible": [
+              "Sort code (6 digits)",
+              "Account number (8 digits)",
+              "Account type name",
+              "Estimated card delivery date (3–5 working days)",
+              "FSCS protection confirmation statement"
+            ],
+            "data_fields_masked": [
+              "Full card number (not yet issued)",
+              "Internal account system reference (not customer-facing)"
+            ],
+            "data_not_visible": [
+              "Ledger system identifiers",
+              "CASS registration status (internal process)"
+            ]
+          },
+          "entitlements": {
+            "actions_permitted": [
+              "Copy sort code and account number to clipboard",
+              "Share account details (within app) for salary redirection purposes",
+              "Download account confirmation PDF"
+            ],
+            "actions_not_permitted": [
+              "Initiate payments before digital channel activation is complete",
+              "Modify account number or sort code"
+            ]
+          },
+          "notifications": [
+            {
+              "trigger": "Account successfully provisioned",
+              "channel": "In-app + Email",
+              "content": "Your account is ready. Sort code: [XX-XX-XX], Account number: [XXXXXXXX]. Your card is on its way — expected [date]. Your account is protected by the FSCS up to £85,000.",
+              "timing": "Immediate on AccountProvisioned event"
+            },
+            {
+              "trigger": "Provisioning delayed (EX-005)",
+              "channel": "In-app + Email",
+              "content": "Your application was approved but we are experiencing a short delay setting up your account. We will complete this within [4 business hours] and email you when it is ready.",
+              "timing": "Within 5 minutes of provisioning failure detection"
+            }
+          ]
+        },
+        {
+          "phase_id": "PH-006",
+          "phase_name": "Digital Channel Activation",
+          "projection": {
+            "description": "The customer sees the digital onboarding setup wizard. Steps: create online banking password, enrol biometric, register device, configure push notifications. Progress shown as a stepped indicator (e.g., '3 of 4 steps complete').",
+            "data_fields_visible": [
+              "Online banking username (pre-filled from account setup, editable)",
+              "Password strength indicator",
+              "Biometric enrolment status: Not enrolled / Enrolled",
+              "Device name registered",
+              "Push notification preferences (transaction alerts, account updates, offers)"
+            ],
+            "data_fields_masked": [
+              "Password input (masked characters)",
+              "Biometric template (never displayed; processed on-device only)"
+            ],
+            "data_not_visible": [
+              "Device cryptographic key details",
+              "SVC-100 internal token identifiers"
+            ]
+          },
+          "entitlements": {
+            "actions_permitted": [
+              "Set online banking password",
+              "Enrol biometric authentication factor",
+              "Register current device as primary SCA device",
+              "Configure push notification preferences",
+              "Skip biometric enrolment and use TOTP app instead",
+              "Defer notification setup and configure later in account settings"
+            ],
+            "actions_not_permitted": [
+              "Register more than 3 devices without additional verification",
+              "Disable SCA entirely",
+              "Access full account functionality before first-login SCA is confirmed"
+            ]
+          },
+          "notifications": [
+            {
+              "trigger": "Digital channel activation completed",
+              "channel": "In-app + Push notification + Email",
+              "content": "You are all set up! Welcome to [Bank Name]. Your account is ready to use.",
+              "timing": "Immediate on DigitalChannelActivated event"
+            },
+            {
+              "trigger": "Biometric enrolment failed — fallback offered",
+              "channel": "In-app",
+              "content": "We could not set up biometric login on this device. You can use our authenticator app instead — here is how.",
+              "timing": "Immediate on enrolment failure"
+            },
+            {
+              "trigger": "New device login detected (fraud protection)",
+              "channel": "Push notification + Email",
+              "content": "A new device has been registered to your account. If this was not you, call us immediately on [fraud line].",
+              "timing": "Immediate on device registration"
+            }
+          ]
+        },
+        {
+          "phase_id": "PH-007",
+          "phase_name": "Welcome and Onboarding",
+          "projection": {
+            "description": "The customer sees the in-app welcome dashboard: account balance (£0.00), sort code and account number, card status ('on its way'), CASS switch prompt, initial funding prompt, and introductory product cards. Personalised based on account type selected at PH-001.",
+            "data_fields_visible": [
+              "Account balance: £0.00",
+              "Sort code and account number",
+              "Card status and expected delivery date",
+              "FSCS information summary and link to full information sheet",
+              "CASS switch prompt (if applicable)",
+              "Initial funding methods (bank transfer, CASS)",
+              "Product cross-sell cards (savings account, overdraft availability, packaged account)"
+            ],
+            "data_fields_masked": [],
+            "data_not_visible": [
+              "Other customers' account data",
+              "Internal customer risk tier"
+            ]
+          },
+          "entitlements": {
+            "actions_permitted": [
+              "View account details and balance",
+              "Initiate CASS switch from previous account",
+              "Make first deposit via bank transfer",
+              "Set up salary payment redirection",
+              "Apply for linked savings account (new product journey)",
+              "Express interest in overdraft facility (new journey)",
+              "Update notification preferences",
+              "Dismiss or defer product cross-sell cards"
+            ],
+            "actions_not_permitted": [
+              "Make outbound payments before first deposit (zero balance) unless overdraft is granted",
+              "Complete CASS switch before account provisioning is fully confirmed"
+            ]
+          },
+          "notifications": [
+            {
+              "trigger": "Welcome pack dispatched",
+              "channel": "Email + In-app",
+              "content": "Welcome to [Bank Name]! Your account is ready. Here are your details, your FSCS protection summary, and some tips to get started.",
+              "timing": "Within 15 minutes of DigitalChannelActivated event"
+            },
+            {
+              "trigger": "3 days after account opening — no funding received",
+              "channel": "Push notification",
+              "content": "Your account is ready and waiting. Add your first payment by transferring funds or switching your account with our free CASS service.",
+              "timing": "72 hours post-account opening if balance remains £0.00"
+            },
+            {
+              "trigger": "Card dispatched",
+              "channel": "Push notification + Email",
+              "content": "Your card is on its way! Expected delivery: [date]. You can use your card details in-app for online purchases before it arrives.",
+              "timing": "On CardIssuanceTriggered confirmation from card processor"
+            },
+            {
+              "trigger": "Card delivered (estimated)",
+              "channel": "Push notification",
+              "content": "Your card should have arrived by now. If you have not received it, please let us know in-app and we will send a replacement.",
+              "timing": "Estimated delivery date + 1 day"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "persona_id": "PER-052",
+      "persona_name": "Compliance Officer (MLRO)",
+      "access_classification": "privileged_internal",
+      "channels": ["CH-005"],
+      "participation_scope": "Active in AP-001 (Manual Referral / EDD), EX-001 (KYC Failure / SAR), EX-002 (Sanctions Hit). Not involved in the happy path.",
+      "phases": [
+        {
+          "phase_id": "PH-003",
+          "phase_name": "KYC/CDD Assessment — Referral and Exception Handling",
+          "projection": {
+            "description": "The MLRO and compliance team see the full KYC case record in the case management system (SVC-014). This includes the complete customer identity data, screening results (PEP matches, sanctions hits, adverse media), risk score breakdown, the identity verification outcome from SVC-050, and the full application history.",
+            "data_fields_visible": [
+              "Customer full name, date of birth, nationality, address",
+              "Application reference and timestamp",
+              "Identity verification outcome and confidence score (Onfido/Jumio result detail)",
+              "PEP screening result with match details (name, position, country, data source)",
+              "Sanctions screening result with match details (list name, match confidence, beneficial ownership chain)",
+              "Adverse media summary and source links",
+              "Customer risk tier (Low/Medium/High) with scoring factors",
+              "Previous application history (if any) for this identity",
+              "Internal suspicious activity disclosures linked to this application (where raised)"
+            ],
+            "data_fields_masked": [
+              "Customer password and authentication credentials",
+              "Device biometric data"
+            ],
+            "data_not_visible": [
+              "Other customer accounts not relevant to the case"
+            ]
+          },
+          "entitlements": {
+            "actions_permitted": [
+              "Review full KYC case record",
+              "Request additional documentation from the customer via secure document request in SVC-014",
+              "Approve application following EDD completion (AP-001)",
+              "Decline application on compliance grounds",
+              "Escalate case to MLRO for PEP or sanctions sign-off",
+              "Raise internal SAR disclosure to MLRO (EX-001)",
+              "Initiate OFSI notification workflow (EX-002)",
+              "Add case notes and document review actions for audit trail",
+              "Override automated risk tier (with documented rationale)",
+              "Place tipping-off hold on customer communications"
+            ],
+            "actions_not_permitted": [
+              "Approve an application with an uncleared confirmed sanctions hit",
+              "Remove SAR from case management without MLRO sign-off",
+              "Access unrelated customer accounts without a documented case reason"
+            ]
+          },
+          "notifications": [
+            {
+              "trigger": "KYCReferralRaised event — new referral case",
+              "channel": "Internal case management system alert + Email",
+              "content": "New KYC referral for review. Application: [ref]. Reason: [PEP identified / High risk score / Adverse media]. Target review SLA: 3 business days.",
+              "timing": "Within 5 minutes of KYCReferralRaised event"
+            },
+            {
+              "trigger": "SanctionsHitDetected event",
+              "channel": "Internal system alert + Email + SMS (urgent)",
+              "content": "URGENT: Sanctions hit detected on application [ref]. Customer name: [name]. Match: [list name, confidence]. Account opening blocked. OFSI notification obligation: 14 days. MLRO review required.",
+              "timing": "Immediate on SanctionsHitDetected event"
+            },
+            {
+              "trigger": "Internal SAR disclosure received",
+              "channel": "Case management system",
+              "content": "Internal disclosure received for application [ref]. SAR decision required within 5 business days per POCA 2002 s330.",
+              "timing": "Immediate on disclosure receipt"
+            },
+            {
+              "trigger": "EDD case approaching 3-day SLA",
+              "channel": "Internal system alert",
+              "content": "EDD case [ref] is approaching the 3-business-day customer SLA. Current status: [status]. Action required.",
+              "timing": "24 hours before SLA expiry"
+            }
+          ]
+        },
+        {
+          "phase_id": "PH-004",
+          "phase_name": "Account Decision — Compliance Sign-Off",
+          "projection": {
+            "description": "For referred applications requiring MLRO or senior compliance sign-off, the compliance team see a decision approval screen showing the full EDD package: customer documentation, compliance officer review notes, EDD evidence, and the recommended decision.",
+            "data_fields_visible": [
+              "Full EDD package including source of funds/wealth documentation",
+              "Compliance officer review notes and risk assessment",
+              "Recommended decision with rationale",
+              "Decision audit trail"
+            ],
+            "data_fields_masked": [],
+            "data_not_visible": []
+          },
+          "entitlements": {
+            "actions_permitted": [
+              "Approve application (MLRO sign-off for PEP cases)",
+              "Decline application with documented rationale",
+              "Return case to compliance officer for additional information",
+              "Document decision rationale in audit trail"
+            ],
+            "actions_not_permitted": [
+              "Approve a case with outstanding unresolved sanctions hit",
+              "Approve without documented EDD rationale"
+            ]
+          },
+          "notifications": [
+            {
+              "trigger": "Case ready for MLRO sign-off",
+              "channel": "Internal case management + Email",
+              "content": "EDD case [ref] is ready for MLRO sign-off. All documentation received. Recommended decision: [Approve/Decline]. Please review.",
+              "timing": "When compliance officer marks case as ready for MLRO review"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "persona_id": "PER-056",
+      "persona_name": "Branch Staff",
+      "access_classification": "privileged_internal",
+      "channels": ["CH-004"],
+      "participation_scope": "Active in AP-001 where customer is referred to branch for manual identity verification (eKYC fallback) or EDD document collection. Not involved in the happy path (digital-only).",
+      "phases": [
+        {
+          "phase_id": "PH-002",
+          "phase_name": "Identity Verification — Branch Fallback",
+          "projection": {
+            "description": "Branch staff access the Customer Onboarding Service (SVC-050) via the branch terminal (CH-004). They can see the customer's in-progress application record, the failed digital verification outcome, and the manual identity check checklist. Full customer personal data is visible for identity check purposes.",
+            "data_fields_visible": [
+              "Customer application reference and status",
+              "Digital verification failure reason (document failure or system fallback — not fraud flag details)",
+              "Customer personal details as submitted in PH-001",
+              "Manual identity check checklist (document type, expiry, photo match, address confirmation)",
+              "Branch appointment booking details"
+            ],
+            "data_fields_masked": [
+              "Internal fraud scores (branch staff should not see fraud signals to avoid bias in customer interaction)",
+              "SAR-related flags (tipping-off prohibition)"
+            ],
+            "data_not_visible": [
+              "Other customer accounts (unless separately authenticated by the customer in branch)",
+              "KYC risk tier detail"
+            ]
+          },
+          "entitlements": {
+            "actions_permitted": [
+              "Complete manual identity document check (document type, validity, photo comparison)",
+              "Confirm address from document or secondary evidence",
+              "Submit manual identity verification outcome to SVC-050",
+              "Collect additional EDD documentation from customer (for AP-001 cases)",
+              "Upload documentation securely to the case management system",
+              "Flag vulnerability indicators in customer record (FCA FG21/1)",
+              "Refer customer to specialist compliance team if additional concerns arise"
+            ],
+            "actions_not_permitted": [
+              "Override a compliance-placed fraud hold without compliance team authorisation",
+              "Access a customer application that is not linked to a branch referral",
+              "Complete an account opening without completing the full manual identity checklist"
+            ]
+          },
+          "notifications": [
+            {
+              "trigger": "Branch referral assigned to branch",
+              "channel": "Branch terminal system alert",
+              "content": "New branch referral for identity verification. Customer: [name], Application: [ref], Appointment time: [time]. Required documents: [list].",
+              "timing": "When referral is created; repeated 30 minutes before scheduled appointment"
+            },
+            {
+              "trigger": "Manual identity check completed (pass)",
+              "channel": "Branch terminal confirmation",
+              "content": "Identity verified manually. Application [ref] has been updated. Customer may now complete remaining steps digitally or in branch.",
+              "timing": "Immediate on submission of manual check outcome"
+            },
+            {
+              "trigger": "Manual identity check failed",
+              "channel": "Branch terminal + Compliance team alert",
+              "content": "Manual identity verification could not be completed for application [ref]. Reason: [documented reason]. Case referred to compliance team.",
+              "timing": "Immediate on failure"
+            }
+          ]
+        },
+        {
+          "phase_id": "PH-003",
+          "phase_name": "KYC/CDD Assessment — EDD Document Collection",
+          "projection": {
+            "description": "Where the AP-001 path requires in-branch EDD document collection (e.g. source of funds evidence), branch staff see a document collection task in their branch terminal with the specific documents requested by the compliance team.",
+            "data_fields_visible": [
+              "EDD document request list (e.g., payslips, bank statements, source of wealth declaration)",
+              "Case reference and compliance team contact",
+              "Document checklist status (received / outstanding)"
+            ],
+            "data_fields_masked": [
+              "Full compliance risk assessment",
+              "PEP match details",
+              "SAR status (tipping-off prohibition strictly applies)"
+            ],
+            "data_not_visible": []
+          },
+          "entitlements": {
+            "actions_permitted": [
+              "Receive and scan/upload EDD documents from customer",
+              "Mark document checklist items as received in case system",
+              "Advise customer on which documents are required (per compliance team list only)"
+            ],
+            "actions_not_permitted": [
+              "Make compliance judgements on document adequacy",
+              "Approve or decline the application",
+              "Discuss compliance concerns directly with the customer in terms that could constitute tipping off"
+            ]
+          },
+          "notifications": [
+            {
+              "trigger": "EDD document collection task assigned to branch",
+              "channel": "Branch terminal alert",
+              "content": "EDD document collection required for application [ref]. Documents needed: [list]. Please assist customer when they attend branch.",
+              "timing": "When compliance team assigns collection task"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "persona_id": "PER-060",
+      "persona_name": "IT Operations",
+      "access_classification": "privileged_internal",
+      "channels": ["CH-005"],
+      "participation_scope": "Active only in EX-005 (Account Provisioning Failure). Monitors system health throughout the journey via the observability platform (SVC-112) but has no active role in the happy path or compliance paths.",
+      "phases": [
+        {
+          "phase_id": "PH-005",
+          "phase_name": "Account Provisioning — Failure Exception",
+          "projection": {
+            "description": "IT Operations see the provisioning failure alert in the observability platform (SVC-112), including the failed account provisioning event, error type, affected service (SVC-001), error timestamp, and current system health status.",
+            "data_fields_visible": [
+              "Provisioning failure alert with error code and stack trace",
+              "Application reference (application_ref — not customer PII in alert)",
+              "Affected service: SVC-001 (Retail Banking Core)",
+              "Error type (sort code allocation failure / system timeout / duplicate account conflict)",
+              "System health dashboard: SVC-001 availability, error rate, queue depth",
+              "Number of applications affected by the same failure mode",
+              "Incident severity classification (P1/P2/P3 per PRA SS1/21 impact tolerance)"
+            ],
+            "data_fields_masked": [
+              "Customer full name, address, and PII (shown as application reference only in technical alerts)",
+              "KYC data"
+            ],
+            "data_not_visible": [
+              "Customer banking credentials",
+              "Biometric data",
+              "SAR or compliance case information"
+            ]
+          },
+          "entitlements": {
+            "actions_permitted": [
+              "Acknowledge incident alert and assign to on-call engineer",
+              "Investigate SVC-001 logs and error trace",
+              "Trigger account provisioning retry for affected applications (after root cause identified)",
+              "Escalate to P1 incident process if SVC-001 availability is below impact tolerance threshold",
+              "Coordinate with core banking vendor for system-level issues",
+              "Trigger customer communication workflow to notify affected applicants of delay (via SVC-017 / SVC-053)"
+            ],
+            "actions_not_permitted": [
+              "Manually create account records directly in SVC-001 without approval workflow",
+              "Access or modify customer KYC or compliance records",
+              "Override sort code or account number allocation rules",
+              "Access customer authentication credentials"
+            ]
+          },
+          "notifications": [
+            {
+              "trigger": "Account provisioning failure detected",
+              "channel": "PagerDuty / observability alert (SVC-112)",
+              "content": "ALERT: AccountProvisioned event failure on SVC-001. Application refs affected: [count]. Error: [error_code]. Severity: [P1/P2/P3]. On-call engineer: please acknowledge.",
+              "timing": "Within 2 minutes of failure detection by SVC-112"
+            },
+            {
+              "trigger": "Provisioning failure resolved",
+              "channel": "Incident management system",
+              "content": "Provisioning failure resolved. [N] affected applications retried. [N] successful. Post-incident review scheduled.",
+              "timing": "On resolution confirmation"
+            },
+            {
+              "trigger": "SVC-001 availability below impact tolerance (PRA SS1/21)",
+              "channel": "Incident management + Senior Manager alert",
+              "content": "CRITICAL: Account Opening Important Business Service — SVC-001 availability below [threshold]%. PRA SS1/21 impact tolerance breach. Escalate to CTO and SMF on-call.",
+              "timing": "Immediate on impact tolerance breach"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,368 @@
+{
+  "diagram_id": "SEQ-008-001",
+  "journey_id": "JRN-008",
+  "name": "Credit Card Application and Issuance — Happy Path",
+  "description": "End-to-end happy path for a personal customer (PER-001) applying for a credit card. Covers PH-023 through PH-028: application submission, automated eligibility and hard credit check (async cross-capability to SVC-012), instant approve decision, card issuance with PCI-safe tokenisation, card activation, and first statement generation. Shows synchronous and async event flows across SVC-003, SVC-001 (same capability direct call), SVC-012 (cross-capability async), and supporting services.",
+  "participants": [
+    {"id": "PER001", "label": "Customer (PER-001)", "type": "actor"},
+    {"id": "Portal", "label": "Customer App / Portal", "type": "ui"},
+    {"id": "SVC003", "label": "SVC-003 Credit Card Service", "type": "service"},
+    {"id": "SVC001", "label": "SVC-001 Retail Banking Core", "type": "service"},
+    {"id": "EventBus", "label": "SVC-102 Event Bus", "type": "infrastructure"},
+    {"id": "SVC012", "label": "SVC-012 Risk Engine (CAP-004)", "type": "service"},
+    {"id": "CardProc", "label": "Card Processing Platform (PCI CDE)", "type": "external"},
+    {"id": "SVC053", "label": "SVC-053 Notification Service", "type": "service"},
+    {"id": "SVC103", "label": "SVC-103 Audit & Logging", "type": "service"}
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "phase": "PH-023",
+      "type": "sync",
+      "from": "PER001",
+      "to": "Portal",
+      "label": "Browse card products. Select product. Enter income, employment status, optional requested limit. Review representative APR and pre-contractual info (CCA s56). Consent to hard credit check.",
+      "note": "ENT-024 CardProduct catalogue rendered to customer. APR prominently displayed (CONC 3.5.3)."
+    },
+    {
+      "step": 2,
+      "phase": "PH-023",
+      "type": "sync",
+      "from": "Portal",
+      "to": "SVC003",
+      "label": "POST /credit-card-applications",
+      "request_body": "customer_id, product_id, income_declared, employment_status, requested_limit (optional), hard_credit_check_consent: true"
+    },
+    {
+      "step": 3,
+      "phase": "PH-023",
+      "type": "internal",
+      "actor": "SVC003",
+      "label": "Eligibility pre-check: customer exists in SVC-001 (active status). No open bankruptcy/IVA. Product eligibility criteria satisfied. Create ENT-022 CreditCardApplication (status: submitted)."
+    },
+    {
+      "step": 4,
+      "phase": "PH-023",
+      "type": "async_publish",
+      "from": "SVC003",
+      "to": "EventBus",
+      "label": "Publish EVT-040 CreditCardApplicationSubmitted",
+      "note": "SVC-053 consumes for application received notification. SVC-103 audits."
+    },
+    {
+      "step": 5,
+      "phase": "PH-023",
+      "type": "sync_return",
+      "from": "SVC003",
+      "to": "Portal",
+      "label": "202 Accepted (application_id, status: submitted, message: 'Credit check in progress')"
+    },
+    {
+      "step": 6,
+      "phase": "PH-023",
+      "type": "sync_return",
+      "from": "Portal",
+      "to": "PER001",
+      "label": "Application received screen. Spinner: 'Checking your eligibility...'"
+    },
+    {
+      "step": 7,
+      "phase": "PH-023",
+      "type": "async_consume",
+      "from": "EventBus",
+      "to": "SVC053",
+      "label": "Consume EVT-040 CreditCardApplicationSubmitted. Send application received email/push notification."
+    },
+    {
+      "step": 8,
+      "phase": "PH-024",
+      "type": "sync",
+      "from": "SVC003",
+      "to": "SVC001",
+      "label": "GET /customers/{customer_id}",
+      "note": "Same-capability direct call (CAP-001). Retrieve customer identity data for credit bureau submission: name, address, DOB."
+    },
+    {
+      "step": 9,
+      "phase": "PH-024",
+      "type": "sync_return",
+      "from": "SVC001",
+      "to": "SVC003",
+      "label": "200 Customer data (first_name, last_name, date_of_birth, addresses, nationality)"
+    },
+    {
+      "step": 10,
+      "phase": "PH-024",
+      "type": "async_publish",
+      "from": "SVC003",
+      "to": "EventBus",
+      "label": "Publish EVT-041 CreditCheckRequested (check_type: hard, customer_id, income_declared)",
+      "note": "Cross-capability: CAP-001 → CAP-004. Async only — no synchronous cross-capability calls."
+    },
+    {
+      "step": 11,
+      "phase": "PH-024",
+      "type": "async_consume",
+      "from": "EventBus",
+      "to": "SVC012",
+      "label": "Consume EVT-041 CreditCheckRequested"
+    },
+    {
+      "step": 12,
+      "phase": "PH-024",
+      "type": "internal",
+      "actor": "SVC012",
+      "label": "Submit hard search to credit bureau (Experian). Bureau footprint recorded on customer credit file. Retrieve full credit report. Run internal scoring model. Score: 680 — PASS (bank threshold: 620). Derive recommended_credit_limit: £4,500 based on income and score."
+    },
+    {
+      "step": 13,
+      "phase": "PH-024",
+      "type": "async_publish",
+      "from": "SVC012",
+      "to": "EventBus",
+      "label": "Publish EVT-042 CreditCheckCompleted (outcome: pass, credit_risk_band: B, recommended_credit_limit: 4500, cra_used: experian, credit_assessment_reference: UUID)"
+    },
+    {
+      "step": 14,
+      "phase": "PH-024",
+      "type": "async_consume",
+      "from": "EventBus",
+      "to": "SVC003",
+      "label": "Consume EVT-042 CreditCheckCompleted"
+    },
+    {
+      "step": 15,
+      "phase": "PH-024",
+      "type": "internal",
+      "actor": "SVC003",
+      "label": "Update ENT-022: store credit_assessment_reference, credit_risk_band: B. Transition status: assessment_complete."
+    },
+    {
+      "step": 16,
+      "phase": "PH-025",
+      "type": "internal",
+      "actor": "SVC003",
+      "label": "Apply credit policy rules. outcome: pass. income_declared: £32,000. recommended_credit_limit: £4,500. requested_limit: null (not specified). assigned_credit_limit: £4,500. APR: 24.9% (base_apr for credit_risk_band B). Decision: APPROVE. Transition ENT-022 status: approved."
+    },
+    {
+      "step": 17,
+      "phase": "PH-025",
+      "type": "async_publish",
+      "from": "SVC003",
+      "to": "EventBus",
+      "label": "Publish EVT-043 CreditCardApproved (application_id, customer_id, assigned_credit_limit: 4500, apr: 24.9)"
+    },
+    {
+      "step": 18,
+      "phase": "PH-025",
+      "type": "async_consume",
+      "from": "EventBus",
+      "to": "SVC053",
+      "label": "Consume EVT-043. Send approval notification: credit limit £4,500, APR 24.9%, card dispatch details."
+    },
+    {
+      "step": 19,
+      "phase": "PH-025",
+      "type": "notification",
+      "from": "SVC053",
+      "to": "PER001",
+      "label": "Push notification + email: Congratulations — credit card approved! Credit limit: £4,500 | APR: 24.9%. Virtual card available shortly in the app."
+    },
+    {
+      "step": 20,
+      "phase": "PH-026",
+      "type": "internal",
+      "actor": "SVC003",
+      "label": "Issuance workflow triggered by EVT-043 consumption. Create ENT-023 CreditCardAccount (customer_id, credit_limit: 4500, apr: 24.9, status: issued, persistent_debt_flag: false, persistent_debt_months: 0)."
+    },
+    {
+      "step": 21,
+      "phase": "PH-026",
+      "type": "sync",
+      "from": "SVC003",
+      "to": "CardProc",
+      "label": "POST /cards (generate PAN, issue card_number_token, provision virtual card) [within PCI CDE boundary]",
+      "note": "PCI DSS: raw PAN generated and tokenised within PCI CDE. SVC-003 receives card_number_token ONLY — no raw PAN returned."
+    },
+    {
+      "step": 22,
+      "phase": "PH-026",
+      "type": "sync_return",
+      "from": "CardProc",
+      "to": "SVC003",
+      "label": "201 { card_number_token: 'tok_4929...', expiry: '12/29', virtual_card_ready: true } [card_number_token only — no PAN in response]"
+    },
+    {
+      "step": 23,
+      "phase": "PH-026",
+      "type": "internal",
+      "actor": "SVC003",
+      "label": "Persist card_number_token on ENT-023. Submit physical card embossing order to card processing platform (dispatch to customer registered address). ENT-023 status remains: issued."
+    },
+    {
+      "step": 24,
+      "phase": "PH-026",
+      "type": "async_publish",
+      "from": "SVC003",
+      "to": "EventBus",
+      "label": "Publish EVT-045 CreditCardIssued (account_id, card_number_token, virtual_card_available: true, physical_card_dispatch_date: today+1)",
+      "note": "PCI DSS: no raw PAN in payload. card_number_token only."
+    },
+    {
+      "step": 25,
+      "phase": "PH-026",
+      "type": "async_consume",
+      "from": "EventBus",
+      "to": "SVC001",
+      "label": "Consume EVT-045. Update Customer product holdings: add ENT-023.account_id to credit card accounts."
+    },
+    {
+      "step": 26,
+      "phase": "PH-026",
+      "type": "async_consume",
+      "from": "EventBus",
+      "to": "SVC053",
+      "label": "Consume EVT-045. Send card issuance notification: virtual card available in app, physical card dispatched."
+    },
+    {
+      "step": 27,
+      "phase": "PH-026",
+      "type": "notification",
+      "from": "SVC053",
+      "to": "PER001",
+      "label": "Push + email: Your virtual card is ready — use it now for online purchases. Physical card arrives in 3–5 business days. Tap to view card in app."
+    },
+    {
+      "step": 28,
+      "phase": "PH-026",
+      "type": "sync",
+      "from": "PER001",
+      "to": "Portal",
+      "label": "View virtual card in app (secure in-app CDE viewer — card details displayed within PCI-compliant viewer, not cached by app)",
+      "note": "PCI DSS: virtual card details (masked PAN, expiry) shown only within the app's PCI-scoped secure viewer component."
+    },
+    {
+      "step": 29,
+      "phase": "PH-027",
+      "type": "note",
+      "label": "3–5 business days pass. Customer receives physical card in the post."
+    },
+    {
+      "step": 30,
+      "phase": "PH-027",
+      "type": "sync",
+      "from": "PER001",
+      "to": "Portal",
+      "label": "Activate card via app (SCA: push notification to device [possession] + PIN/biometric [knowledge/inherence])"
+    },
+    {
+      "step": 31,
+      "phase": "PH-027",
+      "type": "sync",
+      "from": "Portal",
+      "to": "SVC003",
+      "label": "POST /credit-card-accounts/{account_id}/activate",
+      "request_body": "sca_session_token (validated), card_number_token, activation_method: explicit_app"
+    },
+    {
+      "step": 32,
+      "phase": "PH-027",
+      "type": "internal",
+      "actor": "SVC003",
+      "label": "Validate SCA session token. Transition ENT-023 status: issued → active. Set activated_at timestamp."
+    },
+    {
+      "step": 33,
+      "phase": "PH-027",
+      "type": "async_publish",
+      "from": "SVC003",
+      "to": "EventBus",
+      "label": "Publish EVT-046 CreditCardActivated (account_id, card_number_token, activation_method: explicit_app)"
+    },
+    {
+      "step": 34,
+      "phase": "PH-027",
+      "type": "sync_return",
+      "from": "SVC003",
+      "to": "Portal",
+      "label": "200 OK (status: active, credit_limit: 4500, first_statement_date: [next statement_date_day])"
+    },
+    {
+      "step": 35,
+      "phase": "PH-027",
+      "type": "sync_return",
+      "from": "Portal",
+      "to": "PER001",
+      "label": "Card activated! Credit limit: £4,500. Your first statement will be generated on [date]."
+    },
+    {
+      "step": 36,
+      "phase": "PH-027",
+      "type": "async_consume",
+      "from": "EventBus",
+      "to": "SVC053",
+      "label": "Consume EVT-046. Send activation confirmation: card active, credit limit, first statement date, link to card settings."
+    },
+    {
+      "step": 37,
+      "phase": "PH-028",
+      "type": "note",
+      "label": "~30 days pass. Customer makes purchases. Statement date reached."
+    },
+    {
+      "step": 38,
+      "phase": "PH-028",
+      "type": "internal",
+      "actor": "SVC003",
+      "label": "Scheduled job: statement generation for account at statement_date_day. Calculate opening_balance, closing_balance, interest_charged, minimum_payment_due (covers interest + fees + minimum principal), payment_due_date (statement_date + 25 days). Create ENT-025 StatementCycle. Evaluate persistent_debt_months: 0 → no threshold crossed."
+    },
+    {
+      "step": 39,
+      "phase": "PH-028",
+      "type": "async_publish",
+      "from": "SVC003",
+      "to": "EventBus",
+      "label": "Publish EVT-047 StatementGenerated (cycle_id, account_id, statement_date, closing_balance, minimum_payment_due, payment_due_date, persistent_debt_months: 0)"
+    },
+    {
+      "step": 40,
+      "phase": "PH-028",
+      "type": "async_consume",
+      "from": "EventBus",
+      "to": "SVC053",
+      "label": "Consume EVT-047. Send statement available notification: closing balance, minimum payment due, payment due date, link to view statement."
+    },
+    {
+      "step": 41,
+      "phase": "PH-028",
+      "type": "notification",
+      "from": "SVC053",
+      "to": "PER001",
+      "label": "Email + push: Your statement is ready. Closing balance: £[X]. Minimum payment: £[Y] due by [date]. Pay now in the app."
+    },
+    {
+      "step": 42,
+      "phase": "PH-028",
+      "type": "sync",
+      "from": "PER001",
+      "to": "Portal",
+      "label": "View statement and payment history in app"
+    },
+    {
+      "step": 43,
+      "phase": "PH-028",
+      "type": "sync",
+      "from": "Portal",
+      "to": "SVC003",
+      "label": "GET /credit-card-accounts/{account_id}/statements?months=1"
+    },
+    {
+      "step": 44,
+      "phase": "PH-028",
+      "type": "sync_return",
+      "from": "SVC003",
+      "to": "Portal",
+      "label": "200 StatementCycle array (cycle_id, statement_date, opening_balance, closing_balance, minimum_payment_due, payment_due_date)"
+    }
+  ]
+}

@@ -1,8 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "governance.schema.json",
-  "title": "Governance Mapping",
-  "description": "Schema for capability-level governance rules for a UK commercial bank",
+  "$id": "https://bank.internal/schemas/governance.schema.json",
+  "title": "GovernanceFile",
+  "description": "Governance mapping for a single capability — documents the regulatory rules, approval chains, disclosure obligations, and constraints that apply to that capability within a UK commercial bank.",
   "type": "object",
   "required": ["id", "capability_id", "capability_name", "rules"],
   "additionalProperties": false,
@@ -10,79 +10,107 @@
     "id": {
       "type": "string",
       "pattern": "^GOV-[0-9]{3}$",
-      "description": "Unique governance mapping identifier in format GOV-XXX"
+      "description": "Unique governance file identifier, e.g. GOV-001."
     },
     "capability_id": {
       "type": "string",
       "pattern": "^CAP-[0-9]{3}$",
-      "description": "Reference to the capability this governance mapping covers"
+      "description": "Reference to the capability this governance file covers, e.g. CAP-001."
     },
     "capability_name": {
       "type": "string",
-      "description": "Human-readable name of the capability"
+      "description": "Human-readable name of the capability."
     },
     "rules": {
       "type": "array",
+      "description": "Ordered list of governance rules that apply to this capability.",
       "minItems": 1,
       "items": {
-        "type": "object",
-        "required": [
-          "rule_id",
-          "name",
-          "source_legislation",
-          "description",
-          "authority_level",
-          "approval_chain",
-          "disclosure_obligations",
-          "constraints"
-        ],
-        "additionalProperties": false,
-        "properties": {
-          "rule_id": {
-            "type": "string",
-            "pattern": "^RULE-[A-Z0-9]+-[0-9]{3}$",
-            "description": "Unique rule identifier scoped to the capability"
-          },
-          "name": {
-            "type": "string",
-            "description": "Short name of the governance rule"
-          },
-          "source_legislation": {
-            "type": "string",
-            "description": "The regulation, directive, or rule source underpinning this requirement"
-          },
-          "description": {
-            "type": "string",
-            "description": "Full description of the rule and its compliance obligations"
-          },
-          "authority_level": {
-            "type": "string",
-            "enum": [
-              "board",
-              "executive_committee",
-              "senior_manager",
-              "department_head",
-              "team_lead",
-              "automated"
-            ],
-            "description": "Lowest authority level required to approve exceptions or policy changes"
-          },
-          "approval_chain": {
-            "type": "array",
-            "items": { "type": "string" },
-            "description": "Ordered list of roles that must approve policy changes or material exceptions"
-          },
-          "disclosure_obligations": {
-            "type": "array",
-            "items": { "type": "string" },
-            "description": "Mandatory disclosure or reporting obligations triggered by or associated with this rule"
-          },
-          "constraints": {
-            "type": "array",
-            "items": { "type": "string" },
-            "description": "Hard limits, thresholds, or prohibitions imposed by this rule"
+        "$ref": "#/definitions/Rule"
+      }
+    }
+  },
+  "definitions": {
+    "Rule": {
+      "type": "object",
+      "required": [
+        "rule_id",
+        "name",
+        "source_legislation",
+        "description",
+        "authority_level",
+        "approval_chain",
+        "disclosure_obligations",
+        "constraints"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "rule_id": {
+          "type": "string",
+          "pattern": "^GOV-[0-9]{3}-R[0-9]{2}$",
+          "description": "Unique rule identifier within this governance file, e.g. GOV-001-R01."
+        },
+        "name": {
+          "type": "string",
+          "description": "Short descriptive name for the rule."
+        },
+        "source_legislation": {
+          "type": "string",
+          "description": "Primary legislation, regulation, or regulatory instrument that creates this rule."
+        },
+        "description": {
+          "type": "string",
+          "description": "Plain-English description of what this rule requires the bank to do or refrain from doing."
+        },
+        "authority_level": {
+          "type": "string",
+          "enum": [
+            "board",
+            "executive_committee",
+            "senior_manager",
+            "department_head",
+            "team_lead",
+            "automated"
+          ],
+          "description": "Minimum organisational authority required to approve or own this rule's obligations."
+        },
+        "approval_chain": {
+          "type": "array",
+          "description": "Ordered list of roles / bodies that must approve decisions governed by this rule (first = initiator, last = final approval).",
+          "items": {
+            "type": "string"
           }
+        },
+        "disclosure_obligations": {
+          "type": "array",
+          "description": "Disclosures that must be made to regulators, customers, or the public under this rule.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "constraints": {
+          "type": "array",
+          "description": "Operational or commercial limits imposed by this rule (e.g. caps, timelines, prohibitions).",
+          "items": {
+            "type": "string"
+          }
+        },
+        "status": {
+          "type": "string",
+          "enum": ["current", "incoming"],
+          "description": "Whether this rule is already in force (current) or is upcoming regulation (incoming)."
+        },
+        "expected_date": {
+          "type": "string",
+          "description": "For incoming rules only — the expected date or date range when the rule comes into force (ISO 8601 date or free-text range such as '2026-Q3')."
         }
+      },
+      "if": {
+        "properties": { "status": { "const": "incoming" } },
+        "required": ["status"]
+      },
+      "then": {
+        "required": ["expected_date"]
       }
     }
   }

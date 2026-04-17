@@ -1,0 +1,330 @@
+{
+  "diagram_id": "SEQ-005-001",
+  "diagram_name": "Customer Report — Happy Path",
+  "journey_id": "JRN-005",
+  "description": "Full happy path for a customer (PER-001) reporting APP fraud via mobile app. Payment has been made; customer reports fraud within hours. Investigation completed. Full reimbursement approved and credited within 5 business days. Recovery claim raised against receiving PSP.",
+  "path_reference": "Happy path (journey-detail.json)",
+  "participants": [
+    { "id": "PER001", "label": "PER-001 Customer" },
+    { "id": "APP", "label": "SVC-017 Digital Channels" },
+    { "id": "SVC013", "label": "SVC-013 Fraud Detection" },
+    { "id": "SVC001", "label": "SVC-001 Retail Banking Core" },
+    { "id": "SVC009", "label": "SVC-009 Domestic Payments" },
+    { "id": "SVC053", "label": "SVC-053 Notification Service" },
+    { "id": "SVC111", "label": "SVC-111 WORM Compliance Store" },
+    { "id": "PER054", "label": "PER-054 Fraud Analyst" },
+    { "id": "EVTBUS", "label": "SVC-102 Event Bus" },
+    { "id": "PAYUK", "label": "Pay.UK Reimbursement API" }
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "phase": "PH-064",
+      "from": "PER001",
+      "to": "APP",
+      "type": "sync",
+      "label": "Selects suspect payment, submits fraud report",
+      "note": "Customer navigates to 'Report Fraud' in mobile app, selects transaction from history"
+    },
+    {
+      "step": 2,
+      "phase": "PH-064",
+      "from": "APP",
+      "to": "SVC013",
+      "type": "sync",
+      "label": "POST /fraud-cases (customer_id, account_id, payment_intent_id, trigger_type=customer_report)"
+    },
+    {
+      "step": 3,
+      "phase": "PH-064",
+      "from": "SVC013",
+      "to": "SVC013",
+      "type": "internal",
+      "label": "Create FraudCase (ENT-043), status=open. Publish FraudCaseCreated (EVT-090)"
+    },
+    {
+      "step": 4,
+      "phase": "PH-064",
+      "from": "SVC013",
+      "to": "APP",
+      "type": "response",
+      "label": "201 Created — FraudCase {case_id, case_reference, status=open}"
+    },
+    {
+      "step": 5,
+      "phase": "PH-064",
+      "from": "APP",
+      "to": "PER001",
+      "type": "response",
+      "label": "Case reference APP-20260415-000123 confirmed. Decision within 5 business days."
+    },
+    {
+      "step": 6,
+      "phase": "PH-064",
+      "from": "SVC013",
+      "to": "SVC053",
+      "type": "async",
+      "label": "Dispatch FraudCaseCreated notification (push + email) to PER-001"
+    },
+    {
+      "step": 7,
+      "phase": "PH-065",
+      "from": "PER054",
+      "to": "SVC013",
+      "type": "sync",
+      "label": "GET /fraud-cases/{id} — open case from analyst queue"
+    },
+    {
+      "step": 8,
+      "phase": "PH-065",
+      "from": "SVC013",
+      "to": "EVTBUS",
+      "type": "async",
+      "label": "Publish FraudDataRequested (payment_intent_id) → Event Bus [cross-capability async: CAP-004→CAP-001, CAP-004→CAP-003]",
+      "note": "Cross-capability boundary enforced. SVC-013 (CAP-004) must not call SVC-001 (CAP-001) or SVC-009 (CAP-003) synchronously. Event Bus (SVC-102) mediates the request."
+    },
+    {
+      "step": 9,
+      "phase": "PH-065",
+      "from": "EVTBUS",
+      "to": "SVC001",
+      "type": "async",
+      "label": "SVC-001 consumes FraudDataRequested — retrieves PaymentIntent (cop_result, fraud_score, cop_override_confirmed) and Customer data"
+    },
+    {
+      "step": 10,
+      "phase": "PH-065",
+      "from": "SVC001",
+      "to": "EVTBUS",
+      "type": "async",
+      "label": "Publish FraudDataProvided (payment_intent_id, amount=£12500, cop_result=match, fraud_risk_level=medium, cop_override_confirmed=false, customer metadata)"
+    },
+    {
+      "step": 11,
+      "phase": "PH-065",
+      "from": "EVTBUS",
+      "to": "SVC009",
+      "type": "async",
+      "label": "SVC-009 consumes FraudDataRequested — retrieves PaymentExecution (fps_reference, settlement_status, receiving_sort_code)"
+    },
+    {
+      "step": "11b",
+      "phase": "PH-065",
+      "from": "SVC009",
+      "to": "EVTBUS",
+      "type": "async",
+      "label": "Publish FraudPaymentExecutionProvided (fps_reference=FPS20260410000001, settlement_status=settled, receiving_sort_code=200000)"
+    },
+    {
+      "step": "11c",
+      "phase": "PH-065",
+      "from": "EVTBUS",
+      "to": "SVC013",
+      "type": "async",
+      "label": "SVC-013 consumes FraudDataProvided and FraudPaymentExecutionProvided — hydrates FraudCase with evidence data"
+    },
+    {
+      "step": 12,
+      "phase": "PH-065",
+      "from": "PER054",
+      "to": "SVC013",
+      "type": "sync",
+      "label": "POST /fraud-cases/{id}/evidence (evidence_type=transaction_data, source_reference={payment_intent_id})"
+    },
+    {
+      "step": 13,
+      "phase": "PH-065",
+      "from": "SVC013",
+      "to": "SVC013",
+      "type": "internal",
+      "label": "Create FraudEvidence records (transaction_data, cop_result). PATCH FraudCase status=investigating. Publish FraudInvestigationStarted (EVT-091)"
+    },
+    {
+      "step": 14,
+      "phase": "PH-065",
+      "from": "SVC013",
+      "to": "SVC053",
+      "type": "async",
+      "label": "Dispatch FraudInvestigationStarted notification (secure in-app message) to PER-001"
+    },
+    {
+      "step": 15,
+      "phase": "PH-066",
+      "from": "PER054",
+      "to": "SVC013",
+      "type": "sync",
+      "label": "POST /fraud-cases/{id}/evidence (evidence_type=device_data — device fingerprint and behavioural biometrics consistent with normal customer behaviour)"
+    },
+    {
+      "step": 16,
+      "phase": "PH-066",
+      "from": "PER054",
+      "to": "SVC013",
+      "type": "sync",
+      "label": "PATCH /fraud-cases/{id} (vulnerability_assessment=[elderly], vulnerability_detail='Customer 78 years old')"
+    },
+    {
+      "step": 17,
+      "phase": "PH-066",
+      "from": "PER054",
+      "to": "SVC013",
+      "type": "sync",
+      "label": "POST /fraud-cases/{id}/evidence (evidence_type=vulnerability_assessment_record, psr_relevance=supports_eligibility)"
+    },
+    {
+      "step": 18,
+      "phase": "PH-066",
+      "from": "PER054",
+      "to": "SVC013",
+      "type": "sync",
+      "label": "PATCH /fraud-cases/{id} (status=decision_pending)"
+    },
+    {
+      "step": 19,
+      "phase": "PH-067",
+      "from": "PER054",
+      "to": "SVC013",
+      "type": "sync",
+      "label": "POST /fraud-cases/{id}/decision (decision=approve, reimbursement_amount=12500, decision_rationale='...')"
+    },
+    {
+      "step": 20,
+      "phase": "PH-067",
+      "from": "SVC013",
+      "to": "SVC013",
+      "type": "internal",
+      "label": "Validate decision. Update FraudCase (status=reimbursed, decision_outcome=approved, reimbursement_amount=12500). Publish FraudReimbursementApproved (EVT-092)"
+    },
+    {
+      "step": 21,
+      "phase": "PH-067",
+      "from": "SVC013",
+      "to": "SVC053",
+      "type": "async",
+      "label": "Dispatch regulated outcome letter (approve) to PER-001 — push notification + email"
+    },
+    {
+      "step": 22,
+      "phase": "PH-068",
+      "from": "SVC001",
+      "to": "SVC001",
+      "type": "event-consume",
+      "label": "Consume FraudReimbursementApproved (EVT-092). Credit £12,500 to Account {account_id}. Debit APP fraud loss suspense account. Publish ReimbursementCredited (EVT-094)",
+      "note": "P99 < 30 minutes from event receipt to credit applied"
+    },
+    {
+      "step": 23,
+      "phase": "PH-068",
+      "from": "SVC001",
+      "to": "SVC053",
+      "type": "async",
+      "label": "Dispatch credit confirmation notification to PER-001: '£12,500 credited — Case APP-20260415-000123'"
+    },
+    {
+      "step": 24,
+      "phase": "PH-068",
+      "from": "SVC053",
+      "to": "PER001",
+      "type": "async",
+      "label": "Push notification: '£12,500 APP Fraud Reimbursement credited to your account'"
+    },
+    {
+      "step": 25,
+      "phase": "PH-068",
+      "from": "SVC009",
+      "to": "SVC009",
+      "type": "event-consume",
+      "label": "Consume FraudReimbursementApproved (EVT-092). Create ReimbursementClaim (ENT-045): sending_bank_share=£6,250, receiving_bank_share=£6,250, receiving_sort_code=200000"
+    },
+    {
+      "step": 26,
+      "phase": "PH-069",
+      "from": "SVC009",
+      "to": "PAYUK",
+      "type": "sync",
+      "label": "Submit reimbursement recovery claim to Pay.UK (receiving_bank_share=£6,250, fps_reference, receiving_sort_code)"
+    },
+    {
+      "step": 27,
+      "phase": "PH-069",
+      "from": "PAYUK",
+      "to": "SVC009",
+      "type": "response",
+      "label": "Pay.UK claim reference assigned: PAYUK-CLAIM-20260415-001. Claim status: pending"
+    },
+    {
+      "step": 28,
+      "phase": "PH-069",
+      "from": "SVC009",
+      "to": "SVC009",
+      "type": "internal",
+      "label": "Update ReimbursementClaim (pay_uk_claim_reference set). Publish RecoveryInitiated (EVT-095)"
+    },
+    {
+      "step": 29,
+      "phase": "PH-069",
+      "from": "PAYUK",
+      "to": "SVC009",
+      "type": "async",
+      "label": "[~15 business days later] Receiving PSP returns £6,250. Pay.UK notifies sending bank.",
+      "note": "Recovery timeline is independent of the 5-day customer reimbursement SLA"
+    },
+    {
+      "step": 30,
+      "phase": "PH-069",
+      "from": "SVC009",
+      "to": "SVC009",
+      "type": "internal",
+      "label": "Update ReimbursementClaim (recovery_status=full, recovery_amount=6250, recovery_resolved_at=...). Publish RecoveryCompleted (EVT-096)"
+    },
+    {
+      "step": 31,
+      "phase": "PH-070",
+      "from": "PER054",
+      "to": "SVC013",
+      "type": "sync",
+      "label": "PATCH /fraud-cases/{id} (status=closed)"
+    },
+    {
+      "step": 32,
+      "phase": "PH-070",
+      "from": "SVC013",
+      "to": "SVC013",
+      "type": "internal",
+      "label": "Set FraudCase.closed_at. Publish FraudCaseClosed (EVT-097). Publish FraudPatternDetected (EVT-098) with anonymised pattern features. PSR quarterly counter incremented."
+    },
+    {
+      "step": 33,
+      "phase": "PH-070",
+      "from": "SVC013",
+      "to": "SVC111",
+      "type": "async",
+      "label": "Archive FraudCase + FraudEvidence records to WORM store (7-year retention)"
+    },
+    {
+      "step": 34,
+      "phase": "PH-070",
+      "from": "SVC013",
+      "to": "SVC053",
+      "type": "async",
+      "label": "Dispatch case closure notification to PER-001"
+    }
+  ],
+  "timing_checkpoints": [
+    {
+      "checkpoint": "Step 3 → Step 32",
+      "measurement": "FraudCase.closed_at minus FraudCase.reported_date",
+      "sla": "FraudCase.reimbursement_date must be <= 5 business days from reported_date (NFR-005-REG-001)"
+    },
+    {
+      "checkpoint": "Step 3 → Step 13",
+      "measurement": "FraudCase.assigned_at minus FraudCase.reported_date",
+      "sla": "P99 <= 4 hours (NFR-005-REG-002)"
+    },
+    {
+      "checkpoint": "Step 20 → Step 23",
+      "measurement": "ReimbursementCredited timestamp minus FraudReimbursementApproved timestamp",
+      "sla": "P99 <= 30 minutes (NFR-005-PERF-002)"
+    }
+  ]
+}

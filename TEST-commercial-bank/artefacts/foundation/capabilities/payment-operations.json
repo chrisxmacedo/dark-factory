@@ -1,85 +1,275 @@
 {
   "id": "CAP-003",
   "name": "Payment Operations",
-  "description": "Manages the end-to-end origination, routing, clearing, and settlement of domestic and international payment transactions on behalf of the bank and its customers. Encompasses high-value, bulk, real-time, card, and open banking payment rails, ensuring compliance with UK regulatory obligations, scheme rules, and fraud/sanctions controls.",
+  "description": "The capability through which the bank originates, routes, clears and settles payment instructions across domestic interbank rails (FPS, BACS, CHAPS), international correspondent networks, card schemes, and open banking payment initiation. It encompasses end-to-end payment lifecycle management from instruction capture through to confirmation of settlement, fraud and sanctions screening, and scheme membership obligations. The bank must hold this capability to fulfil its role as a direct participant in UK payment systems and to meet its obligations to corporate and retail customers.",
+  "status": "Draft",
   "mandate_source": [
-    "Payment Services Regulations 2017",
-    "FCA PSRs",
-    "Bank of England RTGS",
-    "Faster Payments Scheme Rules",
-    "SEPA Regulation"
+    "Payment Services Regulations 2017 (SI 2017/752) — authorisation as payment institution and compliance with execution time, refund, and liability obligations",
+    "FCA Payment Services and Electronic Money: Our Approach (July 2019, updated 2025)",
+    "PSR Specific Direction 17 — Confirmation of Payee mandatory participation (Group 1: Oct 2023; Group 2: Oct 2024)",
+    "PSR APP Fraud Reimbursement — mandatory reimbursement up to £85,000 for authorised push payment fraud from 7 October 2024",
+    "Bank of England CHAPS Participation Requirements — direct participant obligations under CHAPS Rules",
+    "Pay.UK FPS and BACS Participation Rules",
+    "SWIFT CBPR+ ISO 20022 — coexistence period ended 22 November 2025; ISO 20022 now mandatory for cross-border SWIFT messages",
+    "Bank of England CHAPS ISO 20022 Enhanced Data — LEIs and Purpose Codes mandatory from 1 May 2025; structured addresses from November 2026",
+    "UK Sanctions (SIs under Sanctions and Anti-Money Laundering Act 2018) — real-time screening obligations",
+    "Money Laundering, Terrorist Financing and Transfer of Funds (Information on the Payer) Regulations 2017"
   ],
+  "market_context": {
+    "competitive_landscape": {
+      "table_stakes": [
+        "Direct participation in Faster Payments Service (FPS) — 5 billion+ transactions in 2024, 12.3% volume growth YoY in Q4 2024",
+        "BACS credit transfers and direct debits for payroll, supplier, and recurring payment mandates",
+        "CHAPS high-value same-day settlement for treasury, property, and wholesale transactions",
+        "SWIFT correspondent network access for USD, EUR, and other cross-currency corporate payments",
+        "Card scheme membership (Visa/Mastercard) for debit card issuance and acquiring",
+        "Confirmation of Payee checks on all outbound FPS and CHAPS payments",
+        "Real-time sanctions and fraud screening on all payment instructions"
+      ],
+      "differentiators": [
+        "Payment initiation APIs with rich ISO 20022 structured data enabling STP rates above 99%",
+        "Programmable payment controls (spending limits, counterparty whitelisting, time-of-day rules) for corporate treasury clients",
+        "Value-dated and conditional payment scheduling with intraday liquidity optimisation",
+        "Multi-currency virtual account structures with automated sweeping and notional pooling",
+        "Real-time payment status tracking with webhook notifications — competitive with Wise and Revolut Business experience",
+        "FX execution integrated inline with international payment instruction at mid-market-plus pricing"
+      ],
+      "disruptors": [
+        "Wise: £145.2B annual cross-border volume; FX spreads below 20 bps, undercutting bank FX margins by up to 80%; now licensed as a bank in multiple jurisdictions",
+        "Revolut Business: 60M+ customers globally by September 2025; 46% revenue growth YoY to £1.01B Q2 2025; offering multi-currency accounts with sub-bank FX rates as a substitute for corporate FX-embedded payments",
+        "Airwallex and Payoneer: B2B cross-border platforms offering embedded payment rails, multi-currency wallets, and payouts API — targeting the same SME and corporate segment as commercial banks",
+        "Stripe: Treasury and Issuing products wrapping card and A2A rails in a single developer API; accelerating fintech and platform company defection from bank-issued card processing",
+        "Open banking aggregators (TrueLayer, Yapily, Token.io): enabling PISPs to initiate A2A payments directly — bypassing card rails entirely; TrueLayer covers 98% of UK bank accounts; 200M open banking transactions in 2024"
+      ],
+      "unbundling": [
+        "Payment initiation (PIS) unbundled from account servicing under PSD2/PSRs 2017 — third-party PISPs can now originate FPS payments from customer accounts without the bank's involvement in the customer journey",
+        "Cross-border FX conversion separated from payment execution — fintechs offer FX-as-a-service with real-time mid-market rates, leaving banks defending a shrinking FX margin",
+        "Card acquiring separated from card issuing — processors such as Worldpay, Adyen, and Stripe operate acquiring independently of issuing banks; merchants increasingly multi-home across processors",
+        "Card programme management (BIN sponsorship, card controls, dispute management) separated from scheme membership — GPS and Marqeta issue Visa/Mastercard cards on behalf of fintechs without the fintech needing direct scheme participation",
+        "Fraud and sanctions screening separated from payment execution — specialist vendors (Featurespace, Quantexa, ComplyAdvantage) increasingly deployed as standalone layers rather than within monolithic payment platforms"
+      ],
+      "rebundling": [
+        "Neobanks and super-apps (Revolut, Monzo Business, Starling) rebundle current account, domestic payments, international transfers, and card issuance in a single low-cost digital product — competing directly with the commercial bank's bundled corporate banking offering",
+        "BaaS platforms (Railsbank, ClearBank) rebundle scheme access, ledger, and card issuance behind a single API — enabling non-bank platforms to offer bank-equivalent payment products without a full banking licence",
+        "Open banking aggregators moving up the stack: TrueLayer launching PayDirect (A2A instant payment with confirmation) competes with card-not-present acquiring for e-commerce — rebundling payment initiation + confirmation in one product"
+      ],
+      "switching_drivers": [
+        "FX pricing transparency — corporates and SMEs comparing all-in FX costs against Wise/Revolut benchmarks; bank opacity increasingly disqualifying",
+        "Payment speed and cutoff times — bank same-day international cutoffs (typically 15:00–16:00) versus fintech near-24/7 processing losing SME clients",
+        "API quality and developer experience — treasury management system integrations and ERP connectors require robust, well-documented APIs; banks with legacy SFTP-based connectivity losing corporate mandates",
+        "Pricing — PSR interchange cap pressure reducing card revenue; corporates scrutinising payment fees as part of broader banking cost reviews",
+        "Resilience and service levels — high-profile payment system outages remain a primary switching trigger for large corporate clients with zero tolerance for settlement failures"
+      ]
+    },
+    "regulatory_horizon": {
+      "current": [
+        "APP Fraud Mandatory Reimbursement — in force 7 October 2024; PSPs must reimburse victims up to £85,000; reimbursement split 50/50 between sending and receiving PSP; funded by levy on FPS transactions",
+        "Confirmation of Payee Phase 2 (SD17) — all Group 2 PSPs live by October 2024; 99%+ of FPS/CHAPS transactions now covered; Verification of Payee (VoP) under PSD3 framework active October 2025",
+        "CHAPS ISO 20022 Enhanced Data Phase 1 — LEIs and Purpose Codes mandatory in CHAPS from 1 May 2025; hybrid address support active from November 2025",
+        "SWIFT CBPR+ ISO 20022 — MT format coexistence ended 22 November 2025; ISO 20022 MX messages mandatory for all in-scope cross-border SWIFT traffic",
+        "RTGS Renewal (RT2) — new Bank of England core ledger and settlement engine (Transition State 3) went live 28 April 2025; first new CHAPS direct participant onboardings expected 2026",
+        "FPS and BACS continuity — Pay.UK and Vocalink extended contracts securing the existing infrastructure into the early 2030s (announced December 2025)"
+      ],
+      "incoming_2_3_years": [
+        "Interbank Infrastructure Renewal (IIR) — HM Treasury Payments Forward Plan published 26 February 2026 formally replaced NPA; new industry-led Delivery Company to design next-generation retail payment infrastructure; three-year regulatory roadmap 2026–2028 via Payments Vision Delivery Committee",
+        "CHAPS ISO 20022 Enhanced Data Phase 2 — unstructured postal addresses rejected from November 2026; banks must complete structured address migration in onboarding, channels, and internal systems",
+        "RTGS extended operating hours — Bank of England targeting 01:30 opening by end-2025 (policy statement expected); second consultation in 2026 covering evening and bank holiday settlement; near-continuous settlement aspiration by end of decade",
+        "PSD3/PSR (EU) — political agreement 27 November 2025; expected publication Official Journal early–mid 2026; 18–21 month transition means PSR compliance mandatory late 2027; directly constrains EEA correspondent relationships and EU-facing payment product obligations",
+        "Commercial Variable Recurring Payments (cVRP) — FCA scheme with first live payments expected Q1 2026; creates a new open banking payment rail for subscription and sweeping use cases that competes with card recurring mandates",
+        "PSR cross-border interchange cap — PSR cap limiting EU-origin card transactions to 0.2% debit / 0.3% credit; ongoing competition litigation against Visa and Mastercard post-Brexit interchange increases",
+        "Digital Pound (CBDC) — design phase findings to support Bank of England / HM Treasury decision on next steps in 2026; platform model envisages banks as Payment Interface Providers (PIPs); no launch decision made; tail risk to deposit and payment revenue models if adopted at scale"
+      ],
+      "enforcement_signals": [
+        "PSR enforcement focus on APP fraud reimbursement compliance — PSR monitoring claiming and reimbursement rates across all PSPs; non-compliant firms subject to regulatory action under Payment Systems Act 2013",
+        "FCA operational resilience — Dear CEO letters and SS1/21 requiring boards to set impact tolerances for payment services; intolerance for prolonged payment outages as an important business service",
+        "FCA Consumer Duty (in force July 2023) — payment service pricing, terms, and complaint handling subject to fair value assessments; regulator scrutinising overdraft and FX fee structures",
+        "PSR market review into card acquiring (2023–2024) — PSR required remedies including greater pricing transparency; ongoing monitoring of Visa/Mastercard scheme fee increases",
+        "Bank of England supervisory focus on CHAPS participant data quality — ISO 20022 structured data audit programme; participants expected to demonstrate structured address and LEI population rates"
+      ]
+    },
+    "build_vs_buy": {
+      "platform_options": [
+        "Form3 — cloud-native payment processing platform; connects to FPS, CHAPS, BACS, SEPA; direct FPS participant onboarding in as little as 8 weeks; used by a growing number of UK challenger banks and fintechs as managed payment infrastructure",
+        "Vocalink (Mastercard) — central infrastructure provider for FPS, BACS, and ICS under multi-year contracts with Pay.UK secured into early 2030s; banks access Vocalink-operated infrastructure via direct or indirect participation",
+        "Bottomline PTX — payment automation platform for BACS and FPS; widely deployed across UK corporate banks and building societies; strong BACS bureau and direct submission capability",
+        "GPS (Global Processing Services) — card issuing processor; provides card programme management, BIN sponsorship, and real-time transaction processing for Visa/Mastercard programmes; used by Revolut, Starling, and 180+ clients",
+        "Marqeta — modern card issuing platform with open API; real-time spend controls, just-in-time funding, and virtual card issuance; strong for commercial card and expense management programmes",
+        "TrueLayer — open banking payment initiation and data platform; covers 98% of UK bank accounts; provides PIS and AIS APIs; used by banks and fintechs to offer A2A payment products",
+        "Yapily — enterprise open banking infrastructure; connects to 2,000+ banks across 19 European countries; favoured by large enterprises and SaaS platforms for bulk A2A payment orchestration",
+        "Token.io — open banking platform with specific strength in bulk payment initiation and variable recurring payments; strong for corporate treasury use cases",
+        "SWIFT Alliance / SAA Cloud — SWIFT messaging infrastructure for cross-border correspondent banking; cloud variant reducing on-premises hardware obligation",
+        "Finastra (Fusion Payments) / Temenos (Payments Hub) / Volante — payment hub platforms offering multi-rail orchestration (BACS, FPS, CHAPS, SWIFT, ISO 20022) as managed or on-premises deployments for tier-2 commercial banks"
+      ],
+      "must_build_in_house": [
+        "Scheme participation governance and rules management — direct participant obligations, dispute handling, and regulatory reporting to Pay.UK, Bank of England, and PSR cannot be fully outsourced",
+        "Payment policy engine — bank-specific controls (sanctions lists, customer mandates, credit limits, fraud rules) must be authored and owned in-house; vendor platforms provide the execution layer but not the policy layer",
+        "Intraday liquidity management and settlement position monitoring — real-time RTGS/FPS settlement exposure management is a treasury function that sits at the intersection of Payment Operations and Treasury; cannot be delegated to a third-party processor",
+        "Customer payment instruction capture and authentication — the customer channel (corporate banking portal, host-to-host API, bulk file upload) must be bank-owned to meet Consumer Duty, data protection, and authentication obligations",
+        "Financial crime screening orchestration — while individual screening engines can be bought, the orchestration logic, override governance, and SAR filing process must remain in-house under MLRO accountability"
+      ],
+      "buy_candidates": [
+        "Central infrastructure connectivity (FPS, BACS, CHAPS) — Form3 or Bottomline PTX are proven managed service options; building and maintaining direct Vocalink connectivity in-house carries disproportionate infrastructure cost for a mid-tier commercial bank",
+        "Card issuing processing — GPS or Marqeta for commercial card programmes; avoids the capital and certification burden of direct Visa/Mastercard scheme processing membership",
+        "Open banking payment initiation aggregation — TrueLayer, Yapily, or Token.io for A2A PIS/AIS; the API aggregation layer covering 99%+ of UK bank accounts is not a bank differentiator and should be bought",
+        "ISO 20022 translation and enrichment — vendors such as Volante or Pelican for MT-to-MX translation and structured data enrichment during the migration period",
+        "SWIFT connectivity — SWIFT Alliance Access or SAA Cloud; most mid-tier banks use bureau or service bureau models rather than owning full SWIFT infrastructure",
+        "Fraud detection ML models — Featurespace ARIC, Quantexa, or ComplyAdvantage for transaction monitoring and sanctions screening engines; models require continuous retraining that specialist vendors do better at scale"
+      ]
+    },
+    "revenue_model": {
+      "primary_revenue_streams": [
+        "FX margin on international payments — traditional source of 50–150 bps spread on GBP/USD, GBP/EUR, and exotic currency conversions; under severe compression from Wise (sub-20 bps) and Revolut (spot rate) for SME and mid-corporate segments",
+        "Card interchange income — issuer interchange on debit (c. 0.2% capped) and credit (c. 0.3% capped) card transactions; for corporate cards/commercial cards interchange is uncapped and remains a meaningful revenue line",
+        "Payment processing fees — transaction-level fees on CHAPS, international SWIFT payments, and bulk BACS files; corporate tariffs range from £5–£35 per CHAPS, £3–£20 per international payment depending on volume tier",
+        "Float income on payment float — interest earned on intraday balances arising from payment timing differences (debit before credit); at base rates of 4.5–5.0% (2024–2025), float income is a meaningful contributor",
+        "Acquiring margin — merchant service charge on card acquiring for commercial customers; typically 10–50 bps on transaction value net of interchange and scheme fees",
+        "Foreign currency account fees — monthly/annual fees and transaction charges on multi-currency account facilities used by importing and exporting corporate clients"
+      ],
+      "margin_pressure": [
+        "Fintech FX compression — Wise and Revolut have trained SME and corporate buyers to expect sub-20 bps FX spreads; bank FX margins in the 80–150 bps range are increasingly difficult to defend outside large-ticket or complex transactions",
+        "PSR interchange cap — PSR cap on cross-border EEA card transactions (0.2% debit / 0.3% credit) directly compresses card revenue on European commerce; ongoing competition litigation may extend to domestic interchange",
+        "APP fraud reimbursement levy — FPS transaction levy to fund the reimbursement scheme increases per-payment cost; banks cannot easily pass this through to corporate clients on fixed-tariff relationships",
+        "Open banking A2A substitution — TrueLayer-powered A2A payments at near-zero per-transaction cost begin substituting card payments at the checkout; reduces acquiring volume and interchange income for issuing bank",
+        "IIR infrastructure cost — participation in designing and migrating to the new Interbank Infrastructure Renewal (IIR) delivery company will require significant one-off programme investment",
+        "ISO 20022 structured data compliance — mandatory structured address and LEI enrichment requires internal system changes across onboarding, channels, and payment engines; high one-off cost, zero revenue uplift",
+        "Digital pound tail risk — if the CBDC platform model advances post-2026 decision point, commercial bank float and payment revenue could be structurally impaired as a share of transactions migrate to a Bank of England-operated settlement layer"
+      ],
+      "cross_sell_hooks": [
+        "Trade finance origination — FX payment visibility creates natural triggers for documentary credit, guarantee, and supply chain finance products for import/export corporate clients",
+        "Cash management mandate — high payment volumes signal operational banking depth; rich payment data enables liquidity forecasting tools that deepen the cash management relationship",
+        "Commercial card programme expansion — each new business current account with payment activity is an acquisition entry point for a commercial card programme; card spend generates interchange plus FX on international transactions",
+        "Treasury risk management (FX hedging) — international payment activity surfaces FX exposure data that the bank's treasury sales team can convert into forward, option, and swap mandates",
+        "Accounts receivable financing — inbound payment patterns provide credit insight enabling working capital lending and invoice discounting facilities for SME clients",
+        "API banking subscription — corporates with high payment volumes are candidates for premium host-to-host API connectivity packages with enhanced SLAs, reporting, and dedicated support"
+      ]
+    }
+  },
   "sub_capabilities": [
     {
       "id": "CAP-003.01",
       "name": "Faster Payments",
-      "description": "Processes real-time domestic payments via the Faster Payments Scheme (FPS), including single immediate payments, forward-dated payments, and standing orders routed over the FPS rail. Provides near-instantaneous credit confirmation to payers and payees.",
+      "description": "Origination, routing, and settlement of retail and corporate Faster Payments Service (FPS) transactions — single immediate payments (SIPs), forward-dated payments, and standing orders — including scheme participation, CoP checks, fraud screening, and intraday settlement position management. Processed 5 billion transactions in 2024 at 12.3% YoY volume growth.",
       "promotion_test": {
-        "outcome": "RETAIN",
-        "rationale": "Tightly coupled to domestic sterling payment infrastructure and the bank's core payment engine. Participant set (UK retail/commercial banks via Pay.UK) and lifecycle are shared with BACS. No independent scalability benefit justifies promotion at this time."
+        "distinct_participants": false,
+        "separate_regulatory_framework": false,
+        "distinct_lifecycle": false,
+        "independent_scalability": false,
+        "criteria_met": 0,
+        "decision": "RETAIN",
+        "market_evidence": "FPS is a domestic interbank rail operated by Pay.UK via Vocalink infrastructure (contracts extended to early 2030s). All UK commercial banks participate directly or indirectly in FPS as a baseline obligation — it is not a standalone market with separate specialist providers. The payment lifecycle (instruction capture, screening, routing, settlement) is co-extensive with the parent Payment Operations capability. Volume growth (12.3% YoY Q4 2024, 5B+ annual transactions) increases throughput demand but does not change the architectural boundary: FPS processing scales horizontally within the same execution platform that handles BACS and CHAPS. Form3 and Bottomline PTX both treat FPS, BACS, and CHAPS as a unified rail set within a single platform product. No promotion criteria met."
       }
     },
     {
       "id": "CAP-003.02",
       "name": "BACS Processing",
-      "description": "Handles bulk payment processing via the BACS scheme, covering direct debits, direct credits, and standing orders settled on a three-day processing cycle. Manages submission, validation, and reconciliation of BACS files.",
+      "description": "Management of bulk credit transfers (BACS credit) and direct debit collections under BACS Payment Schemes, including payroll, supplier payments, Direct Debit origination, indemnity claims handling, and bureau file submission via Vocalink infrastructure with three-working-day settlement cycle.",
       "promotion_test": {
-        "outcome": "RETAIN",
-        "rationale": "Shares the domestic payment infrastructure, participant model (UK banks via Pay.UK/Vocalink), and operational processes with Faster Payments. The bulk/batch lifecycle is handled within the same payment operations domain."
+        "distinct_participants": false,
+        "separate_regulatory_framework": false,
+        "distinct_lifecycle": false,
+        "independent_scalability": false,
+        "criteria_met": 0,
+        "decision": "RETAIN",
+        "market_evidence": "BACS operates on the same Vocalink central infrastructure as FPS under the same Pay.UK governance umbrella and the same Pay.UK participant rules. The three-day settlement cycle is a scheduling variant, not a fundamentally different lifecycle. Direct Debit origination does involve corporate mandators and Direct Debit mandates as additional participants, but these are managed through standard AUDDIS/ADDACS processes within the same operational team that handles FPS. Bottomline PTX and similar platforms bundle BACS and FPS into a single payments product. No promotion criteria met."
       }
     },
     {
       "id": "CAP-003.03",
       "name": "CHAPS",
-      "description": "Executes high-value, same-day sterling payments through the Bank of England's Real-Time Gross Settlement (RTGS) infrastructure. Used for time-critical wholesale, property, and large corporate transactions requiring irrevocable settlement.",
+      "description": "Same-day high-value sterling settlement via the Bank of England CHAPS system, covering treasury, commercial property, syndicated lending disbursements, and large corporate transfers. Includes adherence to the new RT2 settlement engine (live April 2025), ISO 20022 enhanced data obligations, and RTGS settlement position monitoring.",
       "promotion_test": {
-        "outcome": "RETAIN",
-        "rationale": "Inseparably coupled to the Bank of England RTGS infrastructure and the bank's direct or indirect RTGS membership. Settlement finality mechanics and liquidity management are integral to the core payment operations capability rather than a separately governed domain."
+        "distinct_participants": false,
+        "separate_regulatory_framework": false,
+        "distinct_lifecycle": false,
+        "independent_scalability": false,
+        "criteria_met": 0,
+        "decision": "RETAIN",
+        "market_evidence": "CHAPS is operated by the Bank of England (unlike FPS/BACS which are Pay.UK) and has distinct participation rules (CHAPS Rules) and a direct relationship with the Bank of England as operator and supervisor. However, CHAPS still forms part of the same payment execution lifecycle as FPS and BACS from the bank's operational standpoint — instruction capture, screening, routing, settlement — and is managed by the same Payment Operations function. The RT2 modernisation (live April 2025) and ISO 20022 enhanced data requirements (LEIs/Purpose Codes from May 2025; structured addresses from November 2026) create additional compliance obligations but do not change the sub-capability's architectural scope. CHAPS high-value settlement volumes are driven by corporate and treasury activity that is inherently linked to the broader payment operations throughput; independent scalability argument is weak. RETAIN."
       }
     },
     {
       "id": "CAP-003.04",
       "name": "International Payments",
-      "description": "Manages cross-border payment transfers via the SWIFT network and SEPA credit transfers/direct debits for euro-denominated transactions. Includes correspondent banking relationships, nostro/vostro account management, FX conversion, and compliance screening (sanctions, AML) specific to cross-border flows.",
+      "description": "Origination and settlement of cross-border payments via SWIFT correspondent network (CBPR+ ISO 20022 mandatory from November 2025), including currency conversion, correspondent bank selection, sanctions and AML screening, and compliance with FATF travel rule data requirements. Covers both retail remittance and corporate treasury cross-border flows.",
       "promotion_test": {
-        "outcome": "PROMOTE",
-        "rationale": "Distinct participant set (correspondent banks, SWIFT network, SEPA CSMs) not shared with domestic rails. Operates under a separate sanctions and AML framework (OFAC, UN, UK HMT sanctions lists overlaid on cross-border flows). Payment lifecycle (initiation, correspondent routing, FX conversion, nostro reconciliation) is materially different from domestic schemes. Independent scalability required to support volume growth in international corridors without impacting domestic payment SLAs."
+        "distinct_participants": true,
+        "separate_regulatory_framework": true,
+        "distinct_lifecycle": true,
+        "independent_scalability": true,
+        "criteria_met": 4,
+        "decision": "PROMOTE",
+        "market_evidence": "All four promotion criteria met. (1) Distinct participants: International payments involve correspondent banks, nostro agents, SWIFT network, currency conversion desks, and foreign financial intelligence units — none of whom participate in domestic FPS/BACS/CHAPS. Fintech disruptors (Wise, Airwallex, Revolut Business) have built standalone international payment businesses operating outside the domestic interbank rails entirely. (2) Separate regulatory framework: Cross-border payments are governed by FATF Recommendation 16 (travel rule), the UK Funds Transfer Regulations (FTR 2017), SWIFT CBPR+ ISO 20022 (MT cutover November 2025), OFAC/EU/UN/UK sanctions regimes, and FCA requirements distinct from domestic payment services. Post-Brexit, EEA-facing transactions attract the PSR cross-border interchange cap and separate correspondent relationship terms. PSD3 (political agreement November 2025) will further differentiate EEA cross-border obligations. (3) Distinct lifecycle: International payments involve correspondent bank selection, currency conversion (FX execution), nostro account management, beneficiary bank BIC validation, in-flight status tracking via gpi, and potential T+1/T+2 settlement — phases absent from domestic same-day rails. (4) Independent scalability: International payment volumes and revenue are driven by trade finance activity, M&A, and FX market conditions — demand drivers entirely independent of domestic payments throughput. Fintechs have captured 15–20% annual share in retail and SME cross-border segments. PROMOTE to standalone capability."
       }
     },
     {
       "id": "CAP-003.05",
       "name": "Card Processing",
-      "description": "Covers the issuer-side lifecycle of card transactions, including authorisation, clearing, and settlement with card networks (Visa, Mastercard). Manages chargeback processing, fraud decisioning, card scheme rule compliance, and interchange settlement.",
+      "description": "Management of the bank's debit and commercial card programmes as card issuer — including BIN management, transaction authorisation, clearing and settlement with Visa/Mastercard, dispute and chargeback management, card controls, and card scheme compliance. Distinct from card acquiring (merchant-side processing).",
       "promotion_test": {
-        "outcome": "PROMOTE",
-        "rationale": "Distinct participant set (card networks, acquirers, processors) operating under card scheme rules (Visa/Mastercard Operating Regulations) that are entirely separate from payment scheme rulebooks. Transaction lifecycle (authorisation message flows, clearing files, settlement positions) is architecturally distinct from credit transfer rails. Requires independent scalability to absorb peak card transaction volumes without contention with payment processing capacity."
+        "distinct_participants": true,
+        "separate_regulatory_framework": true,
+        "distinct_lifecycle": true,
+        "independent_scalability": true,
+        "criteria_met": 4,
+        "decision": "PROMOTE",
+        "market_evidence": "All four promotion criteria met. (1) Distinct participants: Card processing involves Visa and Mastercard as four-party scheme operators, card issuing processors (GPS, Marqeta), card network infrastructure, merchants and acquirers, and cardholders — a completely separate ecosystem from the bank's interbank payment participants. The market has specialist players (GPS with 180+ clients, Marqeta used by Revolut and Starling) who operate card programmes entirely independently of domestic payment rails. Card acquiring is already structurally separated from issuing (Worldpay, Adyen, Stripe operate acquiring without any dependency on FPS/BACS/CHAPS). (2) Separate regulatory framework: Card issuance is governed by Visa/Mastercard scheme rules (Network Regulations), PSR market review into card acquiring (2023–2024 remedies), PSR cross-border interchange cap on EU-origin transactions, Consumer Credit Act 1974 for credit cards, and Payment Card Industry Data Security Standard (PCI DSS v4.0). These frameworks are entirely separate from domestic interbank participation rules. The PSR is actively pursuing competition litigation against Visa and Mastercard interchange — a regulatory dynamic with no domestic rail equivalent. (3) Distinct lifecycle: Card lifecycle includes card application and issuance, BIN configuration, authorisation (real-time, sub-second), clearing (T+1 batch), settlement, dispute/chargeback (up to 120 days), card renewal, and compromise management — a multi-month lifecycle with chargeback and dispute phases that have no analogue in FPS or CHAPS. (4) Independent scalability: Card transaction volumes are driven by cardholder spending behaviour and merchant acceptance, independent of corporate or interbank payment volumes. The PSR interchange cap, fintech card issuance growth (Revolut's 60M+ cardholders), and the open banking A2A substitution threat create demand and revenue dynamics entirely independent of the domestic payment rails. GPS and Marqeta demonstrate that card processing can be scaled as a standalone managed service. PROMOTE to standalone capability."
       }
     },
     {
       "id": "CAP-003.06",
       "name": "Open Banking Payments",
-      "description": "Enables Payment Initiation Services (PIS) via regulated open banking APIs under PSD2/PSRs, allowing authorised Third Party Providers (TPPs) to initiate payments from customer accounts. Manages consent flows, strong customer authentication (SCA), and routing of initiated payments onto underlying rails (typically FPS).",
+      "description": "Payment initiation via regulated open banking Payment Initiation Service (PIS) APIs under the PSRs 2017 / Open Banking Implementation Entity (OBIE) standards, including variable recurring payments (VRP) and commercial VRP (cVRP from Q1 2026). Shared with Digital Channels capability as the API layer exposed to third-party PISPs and the bank's own digital products.",
       "promotion_test": {
-        "outcome": "RETAIN",
-        "rationale": "Payment initiation ultimately executes on the Faster Payments rail, making it operationally coupled to the domestic payment engine. However, the consent and API layer is shared with the Digital Channels capability."
-      },
-      "shared_with": ["Digital Channels"]
+        "distinct_participants": false,
+        "separate_regulatory_framework": false,
+        "distinct_lifecycle": false,
+        "independent_scalability": false,
+        "criteria_met": 0,
+        "decision": "RETAIN",
+        "market_evidence": "Open Banking Payments is an API and consent management layer that sits on top of the FPS rail — it does not constitute a separate payment clearing or settlement infrastructure. Payment initiation via PIS ultimately routes through FPS for execution and settlement; the underlying rail is the same. Participants (PISPs, AISPs) are new compared to traditional banking, but the bank's own obligations under the PSRs 2017 apply to its role as Account Servicing Payment Service Provider (ASPSP), which is an extension of its existing payment services authorisation rather than a distinct regulatory framework. The lifecycle (consent grant, initiation, FPS execution, confirmation) is a UI/API wrapper around the existing FPS payment lifecycle. Market evidence: TrueLayer, Yapily, and Token.io provide the aggregation infrastructure as a buy candidate — this is a connectivity and consent layer, not a standalone settlement capability. The FCA's cVRP scheme (first live payments Q1 2026) and the National Payments Vision's support for A2A as a card alternative will increase volumes, but the capability scales with FPS throughput rather than independently. RETAIN, with shared ownership flagged between Payment Operations and Digital Channels."
+      }
     }
   ],
   "design_decisions": [
     {
-      "id": "DD-CAP-003-01",
-      "title": "International Payments promoted to standalone capability",
-      "decision": "International Payments is separated from the core Payment Operations capability into its own bounded capability domain.",
-      "rationale": "The distinct participant ecosystem (correspondent banks, SWIFT, SEPA CSMs), the independent sanctions/AML controls regime required for cross-border flows, and the materially different payment lifecycle (correspondent routing, FX conversion, nostro reconciliation) create sufficient complexity and governance separation to warrant a standalone capability. Independent deployment and scalability are required to grow international volumes without contention with high-frequency domestic payment processing.",
-      "consequences": "A formal integration contract (API or event) must be defined between the domestic Payment Operations capability and the International Payments capability. Sanctions screening logic must not be duplicated; a shared Financial Crime Compliance service should be consumed by both."
+      "id": "DD-001",
+      "decision": "International Payments is promoted to a standalone capability (CAP-003.04 promoted) rather than retained as a sub-capability of Payment Operations.",
+      "rationale": "International payments meet all four promotion criteria: distinct correspondent banking and FX participants not present in domestic rails; separate regulatory frameworks (FATF travel rule, UK FTR 2017, SWIFT CBPR+ ISO 20022, post-Brexit PSR interchange cap, PSD3); a distinct multi-phase lifecycle including FX execution, nostro management, and gpi tracking; and demand drivers (trade flows, FX market conditions) entirely independent of domestic payment volumes. The fintech disruption vector is also qualitatively different — Wise and Airwallex are not competing on FPS; they have built alternative cross-border rails. Modelling international payments as a retained sub-capability would obscure the strategic investment case for a competitive international proposition and the distinct regulatory compliance programme required.",
+      "alternatives_considered": [
+        "Retain as sub-capability of Payment Operations",
+        "Model as sub-capability of Trade Finance capability"
+      ],
+      "rejected_because": "Retaining as a Payment Operations sub-capability would mask the independent regulatory compliance burden (CBPR+ migration, FATF travel rule, PSD3) and the distinct competitive threat from Wise/Airwallex that demands a dedicated strategic response. Modelling under Trade Finance was rejected because the majority of international payment volume is not trade-related — it includes treasury, salary, and general commercial transfers — and would misrepresent the capability's scope."
     },
     {
-      "id": "DD-CAP-003-02",
-      "title": "Card Processing promoted to standalone capability",
-      "decision": "Card Processing (issuer-side authorisation, clearing, and settlement) is separated from the core Payment Operations capability into its own bounded capability domain.",
-      "rationale": "Card scheme rules (Visa/Mastercard Operating Regulations) impose governance, certification, and change management obligations entirely separate from UK payment scheme rulebooks (Pay.UK, Bank of England). The authorisation message flow (ISO 8583 / ISO 20022 card messages), clearing file exchange, and chargeback lifecycle are architecturally distinct from credit transfer processing. Independent scalability is required to handle peak card transaction volumes, particularly intraday spikes, without impacting domestic payment SLAs.",
-      "consequences": "Card Processing will maintain its own scheme compliance programme and certification calendar. Settlement positions from card clearing must be reconciled against the bank's liquidity management function, requiring a defined interface to Treasury/Liquidity Management."
+      "id": "DD-002",
+      "decision": "Card Processing is promoted to a standalone capability (CAP-003.05 promoted) rather than retained as a sub-capability of Payment Operations.",
+      "rationale": "Card processing meets all four promotion criteria. The Visa/Mastercard four-party scheme is architecturally and commercially distinct from the UK interbank rails. The PSR is actively investigating card scheme pricing (market review remedies 2023–2024); the interchange cap and competition litigation against Visa/Mastercard are regulatory dynamics with no domestic rail equivalent. The card dispute and chargeback lifecycle (up to 120 days) is entirely absent from FPS/CHAPS. Independent scalability is evident: GPS and Marqeta have built businesses processing hundreds of millions of card transactions for clients including Revolut and Starling with no dependency on FPS/BACS throughput. The growing A2A substitution threat (open banking reaching 200M transactions in 2024, cVRP launching Q1 2026) also needs to be tracked against card volumes — only possible if card processing is modelled as a distinct capability with its own metrics.",
+      "alternatives_considered": [
+        "Retain as sub-capability of Payment Operations",
+        "Split into card issuance and card acquiring as two separate sub-capabilities"
+      ],
+      "rejected_because": "Retaining under Payment Operations would obscure the distinct investment decisions around card programme management (GPS vs Marqeta vs in-house), the PCI DSS compliance programme, and the strategic decision on whether to maintain direct Visa/Mastercard scheme membership. Splitting issuance and acquiring was considered but rejected at this stage: the bank's current acquiring activity is limited (primarily served through a third-party acquirer relationship); splitting would create an asymmetric sub-capability with insufficient scope to stand alone. Acquiring should be revisited at capability review if the bank chooses to build a direct merchant acquiring proposition."
+    },
+    {
+      "id": "DD-003",
+      "decision": "Open Banking Payments is retained as a sub-capability of Payment Operations (shared with Digital Channels) rather than promoted.",
+      "rationale": "Open banking payment initiation (PIS) is an API consent and routing layer that sits on top of FPS — it does not constitute independent payment infrastructure. The bank's obligations as ASPSP under PSRs 2017 are an extension of its existing payment services authorisation. OBIE/Open Banking Limited standards are not a separate prudential or payment system framework; they are technical specifications for API access. cVRP and the National Payments Vision's A2A ambition will increase volume but scale with FPS throughput. The buy decision for aggregation infrastructure (TrueLayer, Yapily) further limits the scope of in-house build required. Shared ownership with Digital Channels is flagged explicitly because the customer-facing consent journey and PISP connectivity layer sit naturally in Digital Channels, while FPS execution and settlement sit in Payment Operations.",
+      "alternatives_considered": [
+        "Promote to standalone Open Banking capability",
+        "Move entirely into Digital Channels capability"
+      ],
+      "rejected_because": "Promotion would overstate the architectural independence of an API layer that has no settlement engine of its own. Moving entirely into Digital Channels would lose the payment execution and scheme compliance context that belongs in Payment Operations and would create a duplicate payment processing function. Shared sub-capability ownership is the correct model given the cross-capability dependency."
+    },
+    {
+      "id": "DD-004",
+      "decision": "CHAPS is retained as a sub-capability of Payment Operations despite the Bank of England's distinct governance role and the RT2 modernisation programme.",
+      "rationale": "CHAPS has a distinct operator (Bank of England, not Pay.UK) and distinct participation rules (CHAPS Rules, RTGS Access Policy). However, from the bank's internal operational standpoint, CHAPS processing shares the same payment execution lifecycle (instruction capture, screening, routing, settlement monitoring) as FPS and BACS, and is managed by the same Payment Operations team. The RT2 go-live (April 2025), ISO 20022 enhanced data obligations, and extended operating hours consultation create additional compliance work but do not change the deployment boundary. The bank does not need a separate organisational unit or technology platform to process CHAPS versus FPS; both are handled by the same payment hub (whether Form3, Bottomline, or in-house). Promotion criteria: 0 of 4 met.",
+      "alternatives_considered": [
+        "Promote CHAPS to standalone capability citing Bank of England governance distinction",
+        "Merge CHAPS into a 'High Value Payments' capability alongside large-value FPS"
+      ],
+      "rejected_because": "Promotion based solely on the Bank of England's operator role would over-fragment the capability map and create a standalone artefact for a rail that shares its entire execution and operational lifecycle with FPS. A High Value Payments grouping was considered but rejected as artificial — CHAPS high-value settlement and FPS instant payments are increasingly convergent (RT2 extended hours, near-continuous settlement aspiration) and separating them would complicate future architecture decisions about rail consolidation."
     }
   ]
 }

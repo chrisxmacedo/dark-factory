@@ -1,0 +1,205 @@
+{
+  "id": "SEQ-JRN001-EX002",
+  "name": "Exception Path EX-002 — Sanctions Hit, Account Freeze and MLRO Escalation",
+  "journey_id": "JRN-001",
+  "journey_phase": "PH-003 → EX-002",
+  "description": "Exception path EX-002: Sanctions screening (SVC-051) returns a confirmed match against the OFSI Consolidated List during PH-003. Account opening is immediately blocked. SanctionsHitDetected event is published to the event bus. MLRO (PER-052) is alerted immediately. Any funds received are frozen. The customer receives a standard decline notification without disclosure of the sanctions reason (tipping-off prohibition, POCA 2002 s333A). OFSI notification must occur within 14 days of confirmed designated person identification. WORM audit log entries are created at each key action for regulatory evidence.",
+  "participants": [
+    { "id": "PER-001", "name": "Personal Customer", "type": "actor" },
+    { "id": "PER-052", "name": "MLRO / Compliance Officer", "type": "actor" },
+    { "id": "SVC-017", "name": "Digital Channels", "type": "service" },
+    { "id": "SVC-001", "name": "Retail Banking Core", "type": "service" },
+    { "id": "SVC-050", "name": "Customer Onboarding Service", "type": "service" },
+    { "id": "SVC-051", "name": "Sanctions Screening Service", "type": "service" },
+    { "id": "SVC-014", "name": "KYC/AML Service", "type": "service" },
+    { "id": "SVC-102", "name": "Event Bus", "type": "infrastructure" },
+    { "id": "SVC-111", "name": "Audit Log (WORM)", "type": "infrastructure" },
+    { "id": "SVC-053", "name": "Notifications Service", "type": "service" }
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "phase": "PH-001 to PH-002",
+      "from": "PER-001",
+      "to": "SVC-017",
+      "action": "Application submitted and identity verification completed (PASS)",
+      "description": "Steps PH-001 and PH-002 proceed as per the happy path. ApplicationStarted and IdentityVerificationCompleted (outcome: pass) events have been published.",
+      "data": { "ref": "See happy-path.json steps 1–11" },
+      "async": false
+    },
+    {
+      "step": 2,
+      "phase": "PH-003",
+      "from": "SVC-014",
+      "to": "SVC-051",
+      "action": "POST /sanctions/screen",
+      "description": "SVC-014 receives IdentityVerificationCompleted and calls SVC-051. Applicant has dual nationality (GB, RU). All four lists screened.",
+      "data": {
+        "SanctionsScreenRequest": "{ entity_type: individual, individual: { first_name: Nikolai, last_name: Petrov, date_of_birth: 1975-03-22, nationality: [GB, RU] }, lists_to_check: [OFSI, OFAC, UN, EU], context: { application_id, customer_id } }"
+      },
+      "async": false,
+      "http_method": "POST",
+      "endpoint": "sanctions-screening/v1/sanctions/screen",
+      "sla": "< 3000ms hard limit"
+    },
+    {
+      "step": 3,
+      "phase": "PH-003",
+      "from": "SVC-051",
+      "to": "SVC-014",
+      "action": "200 OK — BLOCKED (confirmed OFSI + EU match)",
+      "description": "SVC-051 returns status = blocked. 94% match confidence against OFSI Consolidated List (OFSI-GBP-0001234) and EU Sanctions List. Designated person under UK Russia Sanctions Regulations 2019.",
+      "data": {
+        "SanctionsScreenResponse": "{ status: blocked, overall_result: blocked, match_detail: { list_name: OFSI, designated_person_ref: OFSI-GBP-0001234, match_confidence_percentage: 94, matched_name: Nikolai Petrov, designation_date: 2022-03-10 }, lists_checked: [OFSI, OFAC, UN, EU], processing_time_ms: 498 }"
+      },
+      "async": false,
+      "note": "Stateless result — SVC-051 does not persist. SVC-014 must persist in KycAssessment.sanctions_screening_result and act immediately."
+    },
+    {
+      "step": 4,
+      "phase": "PH-003 / EX-002",
+      "from": "SVC-014",
+      "to": "SVC-014",
+      "action": "Set sanctions_screening_result.status = blocked; set KycAssessment.status = blocked",
+      "description": "SVC-014 persists the sanctions hit in KycAssessment (ENT-003): sanctions_screening_result.status = blocked, match_detail persisted. KycAssessment.status = blocked. No KYCClearanceGranted event will be published.",
+      "data": {
+        "KycAssessment_update": "{ status: blocked, sanctions_screening_result: { status: blocked, match_detail: { ... } }, assessor: automated }"
+      },
+      "async": false
+    },
+    {
+      "step": 5,
+      "phase": "EX-002",
+      "from": "SVC-014",
+      "to": "SVC-111",
+      "action": "WORM audit log — SanctionsHitDetected",
+      "description": "SVC-014 writes immutable WORM audit log entry: sanctions hit detected, matched list, match confidence, timestamp, customer_id, assessment_id. This is OFSI compliance evidence. Audit log entry is write-once, append-only.",
+      "data": {
+        "audit_entry": "{ event_type: SanctionsHitDetected, customer_id, assessment_id, list_name: OFSI, match_confidence: 94, detected_at, assessor: automated }",
+        "classification": "HIGHEST — restricted to MLRO + FCA/NCA production only"
+      },
+      "async": false,
+      "note": "WORM (Write-Once Read-Many) storage. Immutable. Required for OFSI notification evidence and FCA supervisory record. Retention: 5 years minimum (MLR 2017 Reg 40)."
+    },
+    {
+      "step": 6,
+      "phase": "EX-002",
+      "from": "SVC-014",
+      "to": "SVC-102",
+      "action": "Publish SanctionsHitDetected",
+      "description": "SVC-014 publishes SanctionsHitDetected domain event to the event bus immediately. Payload must not include match_detail that could tip off the customer. Consumers: SVC-001 (block provisioning), SVC-017 (display standard decline), SVC-053 (trigger sanitised decline notification), SVC-111 (audit).",
+      "data": {
+        "event": "SanctionsHitDetected",
+        "payload": "{ assessment_id, customer_id, list_name: OFSI, match_confidence: 94, detected_at }",
+        "note": "Payload does not include designated_person_ref or match_detail — tipping-off prohibition (POCA 2002 s333A)"
+      },
+      "async": true,
+      "event_consumers": ["SVC-001", "SVC-017", "SVC-053", "SVC-103", "SVC-111"]
+    },
+    {
+      "step": 7,
+      "phase": "EX-002",
+      "from": "SVC-001",
+      "to": "SVC-001",
+      "action": "Block account provisioning — ApplicationRecord status = declined",
+      "description": "SVC-001 receives SanctionsHitDetected and sets ApplicationRecord.status = declined with decline_reason = sanctions_hit. Account provisioning is permanently blocked for this application. No Account record (ENT-004) is created.",
+      "data": { "ApplicationRecord_update": "{ status: declined, decline_reason: sanctions_hit, current_phase: EX-002 }" },
+      "async": false
+    },
+    {
+      "step": 8,
+      "phase": "EX-002",
+      "from": "SVC-001",
+      "to": "SVC-111",
+      "action": "WORM audit log — ApplicationRecord blocked",
+      "description": "SVC-001 writes WORM audit entry: ApplicationRecord blocked due to sanctions hit. Records that no account was opened, no funds accepted.",
+      "data": {
+        "audit_entry": "{ event_type: ApplicationBlockedSanctions, application_id, customer_id, blocked_at, reason: sanctions_hit }"
+      },
+      "async": false
+    },
+    {
+      "step": 9,
+      "phase": "EX-002",
+      "from": "SVC-053",
+      "to": "PER-001",
+      "action": "Sanitised decline notification (no sanctions disclosure)",
+      "description": "Customer receives standard decline notification: 'We are unable to open an account for you at this time.' No indication of sanctions match. Tipping-off prohibition (POCA 2002 s333A) strictly applied. FOS signpost included per Consumer Duty PS22/9.",
+      "data": {
+        "notification_email": "Subject: Your account application — important information. Body: We are unable to open an account for you at this time. If you believe this decision is incorrect, you may contact the Financial Ombudsman Service (FOS). [FOS link and contact details].",
+        "notification_in_app": "We are unable to proceed with your application at this time."
+      },
+      "async": true,
+      "note": "CRITICAL: No mention of sanctions, designated person status, or OFSI. Tipping-off prohibition is absolute (POCA 2002 s333A)."
+    },
+    {
+      "step": 10,
+      "phase": "EX-002",
+      "from": "SVC-014",
+      "to": "PER-052",
+      "action": "MLRO immediate alert — sanctions hit confirmed",
+      "description": "SVC-014 (or compliance case management system) immediately alerts the MLRO (PER-052) with full sanctions match detail: designated person reference, list name, match confidence, customer identity data. MLRO must begin OFSI notification process.",
+      "data": {
+        "mlro_alert": "{ alert_type: SANCTIONS_HIT_CONFIRMED, customer_id, assessment_id, designated_person_ref: OFSI-GBP-0001234, list_name: OFSI, match_confidence: 94, detected_at, ofsi_notification_deadline: detected_at + 14 days }"
+      },
+      "async": false,
+      "note": "MLRO alert contains full sensitive details. Restricted to PER-052 only. Not shared with PER-001, PER-056, or channel services."
+    },
+    {
+      "step": 11,
+      "phase": "EX-002",
+      "from": "PER-052",
+      "to": "SVC-111",
+      "action": "WORM audit log — MLRO review initiated",
+      "description": "MLRO records: sanctions hit review initiated, OFSI notification deadline (detected_at + 14 days), case reference. WORM entry. Regulatory SLA tracking begins.",
+      "data": {
+        "audit_entry": "{ event_type: MLROReviewInitiated, case_ref, customer_id, assessment_id, ofsi_notification_deadline, reviewed_by: PER-052, initiated_at }"
+      },
+      "async": false
+    },
+    {
+      "step": 12,
+      "phase": "EX-002",
+      "from": "PER-052",
+      "to": "PER-052",
+      "action": "MLRO confirms designated person status",
+      "description": "MLRO reviews sanctions match detail, confirms the customer is a designated person under UK Russia Sanctions Regulations 2019. Decision: OFSI notification required within 14 days (GOV-005-R02). No voluntary disclosure to customer.",
+      "data": { "mlro_decision": "Confirmed designated person. OFSI notification required within 14 days of detected_at." },
+      "async": false
+    },
+    {
+      "step": 13,
+      "phase": "EX-002",
+      "from": "PER-052",
+      "to": "SVC-111",
+      "action": "WORM audit log — OFSI notification submitted",
+      "description": "MLRO submits OFSI notification (within 14-day SLA). WORM audit log records: OFSI notification reference, submission timestamp, MLRO staff ID. This is the regulatory compliance evidence for GOV-005-R02.",
+      "data": {
+        "audit_entry": "{ event_type: OFSINotificationSubmitted, case_ref, customer_id, ofsi_notification_ref, submitted_by: PER-052, submitted_at, within_sla: true }"
+      },
+      "async": false,
+      "note": "SLA: OFSI notification within 14 days of confirmed designated person identification. Failure to notify is a criminal offence under UK financial sanctions legislation."
+    },
+    {
+      "step": 14,
+      "phase": "EX-002",
+      "from": "SVC-001",
+      "to": "SVC-111",
+      "action": "WORM audit log — funds freeze confirmed (if applicable)",
+      "description": "If any funds were received into a provisional account (edge case: should not occur given blocking at PH-003), SVC-001 records the freeze. In this journey, no account was provisioned so no funds were accepted. WORM entry confirms no assets received.",
+      "data": {
+        "audit_entry": "{ event_type: FundsFreezeConfirmed, customer_id, application_id, account_created: false, funds_received: 0.00, freeze_confirmed_at }"
+      },
+      "async": false
+    }
+  ],
+  "notes": [
+    "EX-002 regulatory SLA: OFSI notification must occur within 14 days of confirmed designated person identification (GOV-005-R02). Non-compliance is a criminal offence.",
+    "Tipping-off prohibition (POCA 2002 s333A) is absolute: customer must not be informed of sanctions match at any point.",
+    "All SanctionsHitDetected audit log entries are WORM (Write-Once Read-Many) — immutable and tamper-evident.",
+    "WORM audit log (SVC-111) retention: minimum 5 years (MLR 2017 Regulation 40). OFSI cases retained for 5 years after case closure.",
+    "The SanctionsHitDetected event payload published to SVC-102 does not contain match_detail — only what is needed for downstream blocking actions. Full match detail stays within SVC-014 and SVC-111 access-controlled stores.",
+    "Precedent: Starling Bank FCA fine (£29m, October 2024) for incomplete screening coverage. 100% applicant coverage with no sampling or deferral is mandatory.",
+    "MLRO case management is outside the scope of this API design — alerts are delivered via SVC-014 internal compliance notification workflow."
+  ]
+}

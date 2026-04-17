@@ -1,0 +1,221 @@
+{
+  "diagram_id": "SEQ-005-002",
+  "diagram_name": "Real-time Block \u2014 Sub-flow 1",
+  "journey_id": "JRN-005",
+  "description": "JRN-005 sub-flow 1 picks up where JRN-002 left off. The fraud scoring engine (SVC-013) produced fraud_risk_level=block during the payment initiation. SVC-001 published PaymentFraudBlocked (EVT-P08). No funds left the customer account. SVC-013 consumes EVT-P08, creates a FraudCase for analyst review and ML pattern learning. No reimbursement required. Case closed with FraudPatternDetected event fed back to the ML model.",
+  "path_reference": "Alternative path AP-001 (journey-detail.json)",
+  "participants": [
+    {
+      "id": "PER001",
+      "label": "PER-001 Customer"
+    },
+    {
+      "id": "APP",
+      "label": "SVC-017 Digital Channels"
+    },
+    {
+      "id": "SVC001",
+      "label": "SVC-001 Retail Banking Core"
+    },
+    {
+      "id": "SVC013",
+      "label": "SVC-013 Fraud Detection"
+    },
+    {
+      "id": "SVC053",
+      "label": "SVC-053 Notification Service"
+    },
+    {
+      "id": "SVC111",
+      "label": "SVC-111 WORM Store"
+    },
+    {
+      "id": "PER054",
+      "label": "PER-054 Fraud Analyst"
+    },
+    {
+      "id": "EVTBUS",
+      "label": "SVC-102 Event Bus"
+    }
+  ],
+  "context": {
+    "prior_journey": "JRN-002 (Faster Payment Initiation) \u2014 Steps PY-001 through PY-002",
+    "entry_point": "PaymentFraudBlocked (EVT-P08) published by SVC-001 after SVC-013 returned fraud_risk_level=block on the FraudScoreCompleted event"
+  },
+  "steps": [
+    {
+      "step": 1,
+      "context": "JRN-002 context \u2014 prior to JRN-005 entry",
+      "from": "SVC013",
+      "to": "SVC001",
+      "type": "event-publish",
+      "label": "Publish FraudScoreCompleted (EVT-P03): fraud_score=0.96, fraud_risk_level=block",
+      "note": "This occurs during JRN-002 payment processing. fraud_risk_level=block means the ML model has high confidence this is fraud."
+    },
+    {
+      "step": 2,
+      "context": "JRN-002 context",
+      "from": "SVC001",
+      "to": "SVC001",
+      "type": "internal",
+      "label": "Evaluate FraudScoreCompleted. fraud_risk_level=block. Transition PaymentIntent.status=fraud_blocked. Publish PaymentFraudBlocked (EVT-P08)"
+    },
+    {
+      "step": 3,
+      "context": "JRN-002 context",
+      "from": "SVC001",
+      "to": "APP",
+      "type": "async",
+      "label": "PaymentFraudBlocked event propagates to Digital Channels"
+    },
+    {
+      "step": 4,
+      "context": "JRN-002 context",
+      "from": "APP",
+      "to": "PER001",
+      "type": "response",
+      "label": "Mobile app displays: 'Payment blocked for your security. No money has left your account. Our fraud team will be in touch.'"
+    },
+    {
+      "step": 5,
+      "phase": "PH-064",
+      "note": "JRN-005 begins here",
+      "from": "SVC013",
+      "to": "SVC013",
+      "type": "event-consume",
+      "label": "Consume PaymentFraudBlocked (EVT-P08). Create FraudCase (trigger_type=realtime_block, total_loss_amount=0.00, status=open). Publish FraudCaseCreated (EVT-090)"
+    },
+    {
+      "step": 6,
+      "phase": "PH-064",
+      "from": "SVC013",
+      "to": "SVC053",
+      "type": "async",
+      "label": "Dispatch notification to PER-001: 'Your payment was blocked. A fraud specialist may contact you. Case reference APP-20260415-000456.'"
+    },
+    {
+      "step": 7,
+      "phase": "PH-065",
+      "from": "PER054",
+      "to": "SVC013",
+      "type": "sync",
+      "label": "GET /fraud-cases/{id} \u2014 analyst reviews realtime_block case from queue"
+    },
+    {
+      "step": 8,
+      "phase": "PH-065",
+      "from": "SVC013",
+      "to": "EVTBUS",
+      "type": "async",
+      "label": "Publish FraudDataRequested (payment_intent_id) \u2192 Event Bus [cross-capability async: CAP-004\u2192CAP-001]",
+      "note": "Cross-capability boundary: SVC-013 (CAP-004) must not call SVC-001 (CAP-001) synchronously."
+    },
+    {
+      "step": 9,
+      "phase": "PH-065",
+      "from": "EVTBUS",
+      "to": "SVC001",
+      "type": "async",
+      "label": "SVC-001 consumes FraudDataRequested \u2014 retrieves PaymentIntent for pattern analysis"
+    },
+    {
+      "step": "9b",
+      "phase": "PH-065",
+      "from": "SVC001",
+      "to": "EVTBUS",
+      "type": "async",
+      "label": "Publish FraudDataProvided (amount=\u00a345,000, payee_sort_code=608000, fraud_score=0.96, fraud_risk_level=block, cop_result=no_match)"
+    },
+    {
+      "step": "9c",
+      "phase": "PH-065",
+      "from": "EVTBUS",
+      "to": "SVC013",
+      "type": "async",
+      "label": "SVC-013 consumes FraudDataProvided \u2014 PaymentIntent data available for pattern analysis"
+    },
+    {
+      "step": 10,
+      "phase": "PH-065",
+      "from": "PER054",
+      "to": "SVC013",
+      "type": "sync",
+      "label": "PATCH /fraud-cases/{id} (status=investigating, assigned_analyst={analyst_id}). Publish FraudInvestigationStarted (EVT-091)"
+    },
+    {
+      "step": 11,
+      "phase": "PH-066",
+      "from": "PER054",
+      "to": "SVC013",
+      "type": "sync",
+      "label": "POST /fraud-cases/{id}/evidence (evidence_type=transaction_data \u2014 ML model features that triggered block, psr_relevance=neutral)"
+    },
+    {
+      "step": 12,
+      "phase": "PH-066",
+      "from": "PER054",
+      "to": "SVC013",
+      "type": "sync",
+      "label": "POST /fraud-cases/{id}/evidence (evidence_type=device_data \u2014 device consistent with customer profile; no anomaly)",
+      "note": "Analyst assesses: genuine fraud prevention (true positive) or false positive? Payee sort code 608000 known mule indicator in Cifas data."
+    },
+    {
+      "step": 13,
+      "phase": "PH-066",
+      "from": "PER054",
+      "to": "SVC013",
+      "type": "sync",
+      "label": "POST /fraud-cases/{id}/evidence (evidence_type=third_party_report \u2014 Cifas mule account indicator on receiving sort code)"
+    },
+    {
+      "step": 14,
+      "phase": "PH-066",
+      "note": "Analyst assessment: true positive block. High-value payment (\u00a345,000) to known mule sort code. Block was correct. No loss. No reimbursement required.",
+      "from": "PER054",
+      "to": "SVC013",
+      "type": "sync",
+      "label": "PATCH /fraud-cases/{id} (status=closed, decision_rationale='Real-time block confirmed as true positive. Total loss = \u00a30. Pattern reinforces mule sort code indicator.')"
+    },
+    {
+      "step": 15,
+      "phase": "PH-070",
+      "from": "SVC013",
+      "to": "SVC013",
+      "type": "internal",
+      "label": "Set FraudCase.closed_at. Publish FraudCaseClosed (EVT-097). Publish FraudPatternDetected (EVT-098) \u2014 pattern: high-value payment, no_match CoP, mule sort code indicator, correct block"
+    },
+    {
+      "step": 16,
+      "phase": "PH-070",
+      "from": "SVC013",
+      "to": "SVC013",
+      "type": "internal",
+      "label": "SVC-013 ML model consumes FraudPatternDetected (EVT-098). Reinforces mule sort code signal in fraud detection model. PSR counter: realtime_block case closed (not a reimbursement claim).",
+      "note": "FraudPatternDetected closes the loop: confirmed true positives reinforce the ML model's blocking rules"
+    },
+    {
+      "step": 17,
+      "phase": "PH-070",
+      "from": "SVC013",
+      "to": "SVC111",
+      "type": "async",
+      "label": "Archive FraudCase + FraudEvidence to WORM store (7-year retention)"
+    },
+    {
+      "step": 18,
+      "phase": "PH-070",
+      "from": "SVC013",
+      "to": "SVC053",
+      "type": "async",
+      "label": "Optional: Dispatch follow-up notification to PER-001 confirming case closed and payment remains blocked"
+    }
+  ],
+  "key_differences_from_happy_path": [
+    "trigger_type = realtime_block (not customer_report)",
+    "total_loss_amount = 0.00 \u2014 no funds left the customer account",
+    "No reimbursement decision or ReimbursementClaim created",
+    "No FraudReimbursementApproved/Declined event",
+    "Case goes directly from investigating to closed (bypasses decision_pending and reimbursed statuses)",
+    "FraudPatternDetected is the primary business outcome \u2014 ML model feedback loop"
+  ]
+}

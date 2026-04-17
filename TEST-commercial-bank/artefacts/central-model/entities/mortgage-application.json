@@ -1,0 +1,152 @@
+{
+  "entity_id": "ENT-012",
+  "name": "MortgageApplication",
+  "description": "Core aggregate for a residential mortgage application. Created when a personal customer initiates a mortgage enquiry (PH-009, JRN-006). Tracks the complete application lifecycle from enquiry through DIP, full application, valuation, underwriting, offer, and completion. Owned exclusively by SVC-002 (Mortgage Service).",
+  "owning_service": "SVC-002",
+  "reachable_from_phases": ["PH-009", "PH-010", "PH-011", "PH-012", "PH-013", "PH-014", "PH-015"],
+  "aggregate_root": true,
+  "fields": [
+    {
+      "name": "application_id",
+      "type": "UUID",
+      "validation_rule": "RFC 4122 UUID v4. System-generated. Immutable after creation.",
+      "source": "PH-009",
+      "governed_by": null
+    },
+    {
+      "name": "customer_id",
+      "type": "UUID",
+      "validation_rule": "Required. FK → Customer.customer_id (ENT-001, SVC-001). Immutable.",
+      "source": "PH-009",
+      "governed_by": null
+    },
+    {
+      "name": "property_address",
+      "type": "object",
+      "validation_rule": "Required. UK address object: line1, city, postcode (UK format), country_code (GB only).",
+      "source": "PH-009",
+      "governed_by": "GOV-001-R01"
+    },
+    {
+      "name": "purchase_price",
+      "type": "decimal",
+      "validation_rule": "Required. Positive decimal, GBP, max 2 decimal places.",
+      "source": "PH-009",
+      "governed_by": null
+    },
+    {
+      "name": "deposit_amount",
+      "type": "decimal",
+      "validation_rule": "Required. Positive decimal, GBP. Must be >= 5% of purchase_price.",
+      "source": "PH-009",
+      "governed_by": null
+    },
+    {
+      "name": "loan_amount",
+      "type": "decimal",
+      "validation_rule": "Required. Positive decimal, GBP. Derived: purchase_price - deposit_amount.",
+      "source": "PH-009",
+      "governed_by": null
+    },
+    {
+      "name": "ltv_ratio",
+      "type": "decimal",
+      "validation_rule": "Required. loan_amount / min(purchase_price, valuation_amount) × 100. Updated post-valuation.",
+      "source": "PH-009",
+      "governed_by": null
+    },
+    {
+      "name": "term_years",
+      "type": "integer",
+      "validation_rule": "Required. 5–40 years.",
+      "source": "PH-009",
+      "governed_by": null
+    },
+    {
+      "name": "rate_type",
+      "type": "enum",
+      "validation_rule": "Required. Enum: fixed | variable | tracker.",
+      "source": "PH-009",
+      "governed_by": null
+    },
+    {
+      "name": "product_id",
+      "type": "string",
+      "validation_rule": "Required. Valid active product in SVC-002 product catalogue.",
+      "source": "PH-009",
+      "governed_by": null
+    },
+    {
+      "name": "application_type",
+      "type": "enum",
+      "validation_rule": "Required. Enum: purchase | remortgage | buy_to_let | shared_ownership.",
+      "source": "PH-009",
+      "governed_by": null
+    },
+    {
+      "name": "status",
+      "type": "enum",
+      "validation_rule": "Required. Full status machine: enquiry | dip_pending | dip_issued | dip_expired | dip_declined | full_application_submitted | documents_complete | valuation_pending | valuation_complete | underwriting | approved | referred | declined | offer_issued | offer_accepted | offer_expired | completed | withdrawn.",
+      "source": "PH-009",
+      "governed_by": null
+    },
+    {
+      "name": "dip_date",
+      "type": "date",
+      "validation_rule": "Conditional. ISO 8601. Set when status = dip_issued.",
+      "source": "PH-010",
+      "governed_by": null
+    },
+    {
+      "name": "dip_expiry",
+      "type": "date",
+      "validation_rule": "Conditional. dip_date + 90 days.",
+      "source": "PH-010",
+      "governed_by": null
+    },
+    {
+      "name": "full_application_date",
+      "type": "date",
+      "validation_rule": "Conditional. ISO 8601. Set when full application submitted. Must be <= dip_expiry.",
+      "source": "PH-011",
+      "governed_by": null
+    },
+    {
+      "name": "created_at",
+      "type": "timestamp",
+      "validation_rule": "System-generated. ISO 8601 UTC. Immutable.",
+      "source": "PH-009",
+      "governed_by": null
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamp",
+      "validation_rule": "System-generated. ISO 8601 UTC. Updated on any mutation.",
+      "source": "PH-009",
+      "governed_by": null
+    }
+  ],
+  "relationships": [
+    {
+      "target_entity": "ENT-001",
+      "type": "many-to-one",
+      "description": "MortgageApplication belongs to one Customer. Cross-service reference (SVC-001 owns ENT-001)."
+    },
+    {
+      "target_entity": "ENT-013",
+      "type": "one-to-many",
+      "description": "MortgageApplication has multiple AffordabilityAssessments (one per stage: dip, full_application)."
+    },
+    {
+      "target_entity": "ENT-014",
+      "type": "one-to-one",
+      "description": "MortgageApplication has one PropertyValuation."
+    },
+    {
+      "target_entity": "ENT-015",
+      "type": "one-to-one",
+      "description": "MortgageApplication has at most one active MortgageOffer."
+    }
+  ],
+  "source_journeys": ["JRN-006"]
+}

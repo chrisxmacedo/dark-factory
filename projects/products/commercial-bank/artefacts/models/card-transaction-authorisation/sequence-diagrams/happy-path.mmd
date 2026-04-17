@@ -1,0 +1,51 @@
+sequenceDiagram
+    autonumber
+    participant CN as Card Network<br/>(PER-009 / Visa/MC)
+    participant SVC011 as SVC-011<br/>Card Processing
+    participant CACHE as SVC-011<br/>Local Cache
+    participant BUS as SVC-102<br/>Event Bus
+    participant SVC013 as SVC-013<br/>Fraud Detection
+    participant SVC001 as SVC-001<br/>Retail Banking Core
+    participant SVC003 as SVC-003<br/>Credit Card Service
+    participant SVC103 as SVC-103<br/>Audit & Logging
+    participant SVC009 as SVC-009<br/>Domestic Payments
+
+    Note over CN,SVC011: PH-041 — Authorisation Request (real-time, <500ms total)
+    CN->>SVC011: ISO 8583 / ISO 20022 Auth Request<br/>(PAN encrypted in transit)
+    SVC011->>SVC011: Tokenise PAN → card_number_token<br/>(PAN stays in PCI CDE only)
+    SVC011->>BUS: EVT-064 CardAuthorisationRequested<br/>(card_number_token, NOT PAN)
+    BUS->>SVC103: EVT-064 (audit log — WORM)
+
+    Note over SVC011,CACHE: PH-042 — Real-Time Decision (local data only)
+    SVC011->>CACHE: Lookup card_status[card_number_token]
+    CACHE-->>SVC011: status = active ✓
+    SVC011->>CACHE: Lookup balance[account_id]
+    CACHE-->>SVC011: available_balance = £1,200 ✓ (> £42.50)
+    SVC011->>CACHE: Evaluate fraud rules[card_number_token, MCC, velocity]
+    CACHE-->>SVC011: All rules PASS ✓
+    SVC011->>SVC011: Check 3DS result from request = authenticated ✓
+    SVC011->>SVC011: Decision: APPROVED<br/>Generate auth_code, record processing_time_ms
+
+    Note over SVC011,CN: PH-043 — Authorisation Response
+    SVC011-->>CN: ISO 8583 Response: Action Code 00<br/>auth_code = "A1B2C3"
+    Note over CN: < 500ms elapsed ✓
+
+    SVC011->>BUS: EVT-065 CardAuthorisationCompleted<br/>(auth_id, card_number_token, customer_id, account_id,<br/>card_type=debit, amount=42.50, auth_code, processing_time_ms)
+    BUS->>SVC103: EVT-065 (WORM audit)
+
+    Note over BUS,SVC001: PH-044 — Post-Authorisation (async, non-blocking)
+    BUS->>SVC013: EVT-065 (fraud pattern learning)
+    SVC013->>SVC013: Update velocity counters<br/>Enrich behaviour model<br/>Evaluate post-auth patterns → No anomaly detected
+    BUS->>SVC001: EVT-065 (card_type=debit → balance reservation)
+    SVC001->>SVC001: Decrement Account.available_balance<br/>by billing_amount_gbp = £42.50<br/>Create balance reservation (auth_id key)
+    Note over SVC001: Within 2 seconds of EVT-065 ✓
+
+    Note over SVC011,SVC009: PH-045 — Clearing & Settlement (end of day batch)
+    CN->>SVC011: End-of-day clearing file<br/>(settled transactions)
+    SVC011->>SVC011: Match clearing item → ENT-032 (auth_id)<br/>Create ENT-033 CardSettlement<br/>(settlement_amount, interchange_fee, scheme_fee)
+    SVC011->>BUS: EVT-067 CardSettlementProcessed<br/>(settlement_id, auth_id, card_number_token, settlement_amount)
+    BUS->>SVC001: EVT-067 (card_type=debit → final ledger debit)
+    SVC001->>SVC001: Post final debit to Account ledger<br/>Release balance reservation<br/>Update available_balance
+    BUS->>SVC103: EVT-067 (WORM audit)
+    SVC011->>SVC009: POST /payments (CHAPS/BACS settlement)<br/>(intra-capability sync call — CAP-003 → CAP-003)
+    SVC009-->>SVC011: Settlement funds movement confirmed

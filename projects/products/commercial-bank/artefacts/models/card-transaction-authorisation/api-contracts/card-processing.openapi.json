@@ -1,0 +1,734 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Card Processing Service API — SVC-011",
+    "version": "0.1.0",
+    "description": "Internal management API for the Card Processing Service (SVC-011, CAP-003.05). The primary interface of SVC-011 is the card scheme host gateway (ISO 8583 / ISO 20022) — not this REST API. This API provides: (1) internal read endpoints for fraud operations and payment operations teams; (2) card status management endpoints consumed by SVC-013 consequence processing (EVT-068 → card block); (3) settlement reconciliation endpoints for Payment Operations (PER-040). PCI DSS scope: all endpoints operate on card_number_token. Raw PAN is NEVER accepted as input or returned as output via this API.",
+    "contact": {
+      "name": "Card Processing Team",
+      "email": "card-processing@bank.internal"
+    },
+    "x-capability": "CAP-003",
+    "x-sub-capability": "CAP-003.05",
+    "x-service": "SVC-011",
+    "x-pci-scope": "IN-SCOPE — all endpoints operate on card_number_token within PCI CDE",
+    "x-journey": "JRN-011"
+  },
+  "servers": [
+    {
+      "url": "https://api.internal.bank/card-processing/v1",
+      "description": "Internal API — not exposed via public API Gateway (SVC-101). Accessed only by authorised internal services and internal tools."
+    }
+  ],
+  "security": [
+    {
+      "BearerAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Authorisations",
+      "description": "CardAuthorisation (ENT-032) read and status operations"
+    },
+    {
+      "name": "Card Status",
+      "description": "Card block/unblock operations. Write endpoints consumed by SVC-013 (EVT-068) and PER-054 (Fraud Analyst)"
+    },
+    {
+      "name": "Settlements",
+      "description": "CardSettlement (ENT-033) read and reconciliation operations"
+    }
+  ],
+  "paths": {
+    "/card-authorisations/{auth_id}": {
+      "get": {
+        "tags": ["Authorisations"],
+        "summary": "Get CardAuthorisation by auth_id",
+        "description": "Returns the CardAuthorisation record (ENT-032) for the given auth_id. Used by SVC-013 for fraud case investigation context and by PER-054 (Fraud Analyst) via INTL-003.",
+        "operationId": "getCardAuthorisation",
+        "parameters": [
+          {
+            "name": "auth_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "CardAuthorisation identifier (UUID v4)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "CardAuthorisation found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CardAuthorisationResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "CardAuthorisation not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/card-authorisations/card/{card_number_token}": {
+      "get": {
+        "tags": ["Authorisations"],
+        "summary": "Get recent CardAuthorisations by card token",
+        "description": "Returns the most recent CardAuthorisation records for the given card_number_token. Used for settlement reconciliation and fraud investigation. Limited to the last 100 records or 30 days, whichever is smaller.",
+        "operationId": "getCardAuthorisationsByCard",
+        "parameters": [
+          {
+            "name": "card_number_token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]{16}$"
+            },
+            "description": "Format-preserving card number token (16 digits). NEVER a raw PAN."
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["approved", "declined", "referred", "pending_decision"]
+            },
+            "description": "Filter by authorisation status"
+          },
+          {
+            "name": "from_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "ISO 8601 date. Return authorisations on or after this date."
+          },
+          {
+            "name": "to_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "ISO 8601 date. Return authorisations on or before this date."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of CardAuthorisation records",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "authorisations": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/CardAuthorisationResponse"
+                      }
+                    },
+                    "total": {
+                      "type": "integer"
+                    },
+                    "limit": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/card-status/{card_number_token}": {
+      "patch": {
+        "tags": ["Card Status"],
+        "summary": "Update card status in authorisation cache",
+        "description": "Updates the card status in SVC-011's local authorisation cache. Called by: (1) SVC-013 consequence processing when EVT-068 (SuspiciousCardActivityDetected) with recommended_action = block_card is consumed; (2) Fraud Analyst (PER-054) via INTL-003 to release a fraud block. Also used by card management events (card reported lost/stolen). IMPORTANT: this endpoint updates the CACHE only — the authoritative card status is owned by SVC-003 (credit cards) or SVC-001 (debit cards). The cache is the fast-path for real-time authorisation decisions.",
+        "operationId": "updateCardStatus",
+        "parameters": [
+          {
+            "name": "card_number_token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]{16}$"
+            },
+            "description": "Format-preserving card number token. NEVER a raw PAN."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CardStatusUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Card status updated in cache",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CardStatusUpdateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid status transition requested",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Card not found in authorisation cache",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": ["Card Status"],
+        "summary": "Get current card status from authorisation cache",
+        "description": "Returns the current card status and cache metadata from SVC-011's local authorisation cache.",
+        "operationId": "getCardStatus",
+        "parameters": [
+          {
+            "name": "card_number_token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]{16}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Card status from cache",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CardStatusResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Card not found in cache"
+          }
+        }
+      }
+    },
+    "/card-settlements/{settlement_id}": {
+      "get": {
+        "tags": ["Settlements"],
+        "summary": "Get CardSettlement by settlement_id",
+        "description": "Returns the CardSettlement record (ENT-033) for the given settlement_id.",
+        "operationId": "getCardSettlement",
+        "parameters": [
+          {
+            "name": "settlement_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "CardSettlement found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CardSettlementResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "CardSettlement not found"
+          }
+        }
+      }
+    },
+    "/card-settlements/unmatched": {
+      "get": {
+        "tags": ["Settlements"],
+        "summary": "Get unmatched clearing items",
+        "description": "Returns clearing items from the most recent end-of-day clearing file that could not be automatically matched to a pre-authorisation record (ENT-032). Used by Payment Operations (PER-040) for manual reconciliation.",
+        "operationId": "getUnmatchedClearingItems",
+        "parameters": [
+          {
+            "name": "clearing_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "ISO 8601 date. Default: most recent clearing date."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of unmatched clearing items",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "clearing_date": {
+                      "type": "string",
+                      "format": "date"
+                    },
+                    "unmatched_items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/UnmatchedClearingItem"
+                      }
+                    },
+                    "total_count": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/card-settlements/unmatched/{item_id}/match": {
+      "post": {
+        "tags": ["Settlements"],
+        "summary": "Manually match unmatched clearing item",
+        "description": "Allows PER-040 (Payment Operations) to manually link an unmatched clearing item to an existing CardAuthorisation record, or to force-post a settlement without a pre-authorisation (requires manager approval role).",
+        "operationId": "matchClearingItem",
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClearingItemMatchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Clearing item matched and CardSettlement created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CardSettlementResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT issued by SVC-100 (IAM). Required scopes: card-processing:read (GET endpoints), card-processing:card-status:write (PATCH /card-status), card-processing:settlement:write (settlement match endpoint). PCI DSS Req 8.3: MFA required for all humans accessing PCI CDE APIs."
+      }
+    },
+    "schemas": {
+      "CardAuthorisationResponse": {
+        "type": "object",
+        "description": "CardAuthorisation entity read model (ENT-032). card_number_token is the sole card identifier. Raw PAN is never included.",
+        "required": ["auth_id", "card_number_token", "customer_id", "account_id", "card_type", "merchant_id", "merchant_name", "merchant_category_code", "amount", "currency", "status", "scheme_response_code", "transaction_type", "processing_time_ms", "request_received_at", "authorised_at"],
+        "properties": {
+          "auth_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "CardAuthorisation identifier. Immutable."
+          },
+          "card_number_token": {
+            "type": "string",
+            "pattern": "^[0-9]{16}$",
+            "description": "Format-preserving card number token. NEVER the raw PAN. PCI DSS Req 3.5.1."
+          },
+          "customer_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "account_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "card_type": {
+            "type": "string",
+            "enum": ["debit", "credit"]
+          },
+          "merchant_id": {
+            "type": "string",
+            "maxLength": 15,
+            "description": "Visa/Mastercard Merchant ID (MID)"
+          },
+          "merchant_name": {
+            "type": "string",
+            "maxLength": 25
+          },
+          "merchant_category_code": {
+            "type": "string",
+            "pattern": "^[0-9]{4}$",
+            "description": "ISO 18245 Merchant Category Code"
+          },
+          "amount": {
+            "type": "string",
+            "pattern": "^[0-9]+\\.[0-9]{2}$",
+            "description": "Transaction amount in transaction currency (decimal as string)"
+          },
+          "currency": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$",
+            "description": "ISO 4217 currency code"
+          },
+          "billing_amount_gbp": {
+            "type": "string",
+            "pattern": "^[0-9]+\\.[0-9]{2}$",
+            "nullable": true,
+            "description": "GBP equivalent. Null if currency = GBP."
+          },
+          "auth_code": {
+            "type": "string",
+            "pattern": "^[A-Z0-9]{6}$",
+            "nullable": true,
+            "description": "6-character authorisation code. Null if status = declined or referred."
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pending_decision", "approved", "declined", "referred"]
+          },
+          "decline_reason": {
+            "type": "string",
+            "enum": ["insufficient_funds", "credit_limit_exceeded", "card_blocked_lost", "card_blocked_stolen", "card_suspended", "fraud_rule_triggered", "expired_card", "invalid_pin", "sca_failure", "do_not_honour"],
+            "nullable": true,
+            "description": "INTERNAL USE ONLY. Not surfaced in external API responses. Null if status = approved. Access restricted to authorised roles (fraud investigation, compliance). See decline_reason access control policy."
+          },
+          "scheme_response_code": {
+            "type": "string",
+            "pattern": "^[0-9]{2}$",
+            "description": "ISO 8583 Field 39 action code. External-facing decline code."
+          },
+          "transaction_type": {
+            "type": "string",
+            "enum": ["card_present", "card_not_present", "contactless", "atm_withdrawal", "recurring"]
+          },
+          "three_ds_result": {
+            "type": "string",
+            "enum": ["authenticated", "attempted", "not_authenticated", "not_required", "not_applicable"],
+            "nullable": true
+          },
+          "sca_exemption_applied": {
+            "type": "string",
+            "enum": ["low_value_contactless", "recurring_transaction", "transaction_risk_analysis", "merchant_initiated"],
+            "nullable": true
+          },
+          "channel_country_code": {
+            "type": "string",
+            "pattern": "^[A-Z]{2}$"
+          },
+          "processing_time_ms": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Milliseconds from request receipt to response transmission. SLA: < 500ms."
+          },
+          "request_received_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "authorised_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Null until decision is made (pending_decision state)."
+          }
+        }
+      },
+      "CardSettlementResponse": {
+        "type": "object",
+        "description": "CardSettlement entity read model (ENT-033). card_number_token is the sole card identifier.",
+        "required": ["settlement_id", "auth_id", "card_number_token", "settlement_date", "settlement_amount", "interchange_fee", "scheme_fee", "net_amount", "scheme", "settlement_status", "settled_at"],
+        "properties": {
+          "settlement_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "auth_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "FK to CardAuthorisation.auth_id (ENT-032)"
+          },
+          "card_number_token": {
+            "type": "string",
+            "pattern": "^[0-9]{16}$",
+            "description": "Format-preserving token. NEVER raw PAN."
+          },
+          "settlement_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "settlement_amount": {
+            "type": "string",
+            "pattern": "^[0-9]+\\.[0-9]{2}$",
+            "description": "Final settled amount in GBP"
+          },
+          "interchange_fee": {
+            "type": "string",
+            "pattern": "^[0-9]+\\.[0-9]{2}$",
+            "description": "Issuer interchange income from this transaction"
+          },
+          "scheme_fee": {
+            "type": "string",
+            "pattern": "^[0-9]+\\.[0-9]{2}$",
+            "description": "Card scheme fee for this transaction"
+          },
+          "net_amount": {
+            "type": "string",
+            "pattern": "^[0-9]+\\.[0-9]{2}$",
+            "description": "settlement_amount minus scheme_fee"
+          },
+          "scheme": {
+            "type": "string",
+            "enum": ["visa", "mastercard"]
+          },
+          "settlement_status": {
+            "type": "string",
+            "enum": ["settled", "failed", "disputed"]
+          },
+          "settled_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CardStatusUpdateRequest": {
+        "type": "object",
+        "required": ["new_status", "reason", "updated_by"],
+        "properties": {
+          "new_status": {
+            "type": "string",
+            "enum": ["active", "suspended_fraud_investigation", "blocked_lost", "blocked_stolen", "suspended"],
+            "description": "New card status for the authorisation cache"
+          },
+          "reason": {
+            "type": "string",
+            "enum": ["suspicious_activity_detected", "reported_lost", "reported_stolen", "fraud_investigation_cleared", "card_management_action"],
+            "description": "Reason for the status change. Recorded in audit log."
+          },
+          "triggering_event_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "If triggered by an event (e.g. EVT-068 suspicious_activity_id), the event identifier. Used for audit correlation."
+          },
+          "updated_by": {
+            "type": "string",
+            "description": "Service ID (e.g. SVC-013) or user ID (for PER-054 manual actions). Required for audit."
+          }
+        }
+      },
+      "CardStatusUpdateResponse": {
+        "type": "object",
+        "properties": {
+          "card_number_token": {
+            "type": "string",
+            "pattern": "^[0-9]{16}$"
+          },
+          "previous_status": {
+            "type": "string"
+          },
+          "new_status": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "cache_updated": {
+            "type": "boolean",
+            "description": "true if the authorisation cache was updated. false if the card was not found (no-op)."
+          }
+        }
+      },
+      "CardStatusResponse": {
+        "type": "object",
+        "properties": {
+          "card_number_token": {
+            "type": "string",
+            "pattern": "^[0-9]{16}$"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["active", "suspended_fraud_investigation", "blocked_lost", "blocked_stolen", "suspended"]
+          },
+          "cache_last_refreshed_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp of last cache refresh from authoritative source"
+          },
+          "cache_age_seconds": {
+            "type": "integer",
+            "description": "Age of cached status in seconds. Alert if > 30 (staleness threshold per NFR-JRN011-010)."
+          }
+        }
+      },
+      "UnmatchedClearingItem": {
+        "type": "object",
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Internal identifier for this unmatched clearing item"
+          },
+          "card_number_token": {
+            "type": "string",
+            "pattern": "^[0-9]{16}$"
+          },
+          "merchant_id": {
+            "type": "string"
+          },
+          "merchant_name": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "string",
+            "pattern": "^[0-9]+\\.[0-9]{2}$"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "clearing_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "scheme": {
+            "type": "string",
+            "enum": ["visa", "mastercard"]
+          },
+          "potential_auth_matches": {
+            "type": "array",
+            "description": "auth_ids of CardAuthorisation records that may correspond to this clearing item (fuzzy match candidates)",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
+      "ClearingItemMatchRequest": {
+        "type": "object",
+        "required": ["match_type", "matched_by"],
+        "properties": {
+          "match_type": {
+            "type": "string",
+            "enum": ["link_to_authorisation", "force_post"],
+            "description": "link_to_authorisation: links to an existing CardAuthorisation record. force_post: creates a settlement without pre-authorisation (requires manager role)."
+          },
+          "auth_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Required if match_type = link_to_authorisation"
+          },
+          "force_post_reason": {
+            "type": "string",
+            "nullable": true,
+            "description": "Required if match_type = force_post. Documented reason for force-posting without pre-authorisation. Retained in audit log."
+          },
+          "matched_by": {
+            "type": "string",
+            "description": "User ID of the PER-040 agent performing the manual match. Required for audit trail."
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": ["error_code", "message", "timestamp"],
+        "properties": {
+          "error_code": {
+            "type": "string",
+            "description": "Machine-readable error code (e.g. CARD_NOT_FOUND, INVALID_STATUS_TRANSITION)"
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable error description (not surfaced to external parties)"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Correlation ID for tracing"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,159 @@
+{
+  "id": "GOV-005",
+  "capability_id": "CAP-005",
+  "capability_name": "Compliance & Regulatory",
+  "rules": [
+    {
+      "rule_id": "GOV-005-R01",
+      "name": "AML — Customer Due Diligence and Ongoing Transaction Monitoring",
+      "source_legislation": "Money Laundering, Terrorist Financing and Transfer of Funds (Information on the Payer) Regulations 2017 (MLR 2017) as amended; Proceeds of Crime Act 2002 (POCA); Terrorism Act 2000",
+      "description": "The bank must apply Customer Due Diligence (CDD) to all customers at onboarding and Enhanced Due Diligence (EDD) to higher-risk customers (PEPs, high-risk jurisdictions, complex ownership structures). Ongoing transaction monitoring must be applied to all accounts to detect suspicious activity. Suspicious Activity Reports (SARs) must be submitted to the National Crime Agency (NCA) within 5 business days of forming a suspicion. The Money Laundering Reporting Officer (MLRO) holds senior manager accountability under SM&CR.",
+      "authority_level": "senior_manager",
+      "approval_chain": [
+        "Head of Financial Crime",
+        "Money Laundering Reporting Officer (MLRO — SMF17)",
+        "Board Risk Committee (for annual MLRO report)"
+      ],
+      "disclosure_obligations": [
+        "Annual MLRO report to the Board covering SAR volumes, typologies, system performance, and resourcing",
+        "SAR submission to NCA within 5 business days of forming a suspicion (tipping-off prohibition applies)",
+        "Cooperation with NCA, FCA, and HMRC requests for information under MLR 2017 and POCA",
+        "Annual MLR compliance report to supervisory authority (FCA or HMRC depending on business line)"
+      ],
+      "constraints": [
+        "CDD must be completed before a business relationship is established or a one-off transaction above €15,000 is executed",
+        "EDD required for all PEPs, customers from high-risk third countries, correspondent banking relationships, and complex structures",
+        "The bank must not tip off a customer that a SAR has been or may be submitted",
+        "Transaction monitoring systems must provide demonstrable coverage of 100% of customer accounts — not a statistical sample"
+      ],
+      "status": "current"
+    },
+    {
+      "rule_id": "GOV-005-R02",
+      "name": "OFSI Financial Sanctions — Real-Time Screening Obligation",
+      "source_legislation": "UK Financial Sanctions (OFSI regulations under Sanctions and Anti-Money Laundering Act 2018); Policing and Crime Act 2017 (OFSI civil penalties)",
+      "description": "The bank must screen all customers, counterparties, and transactions against OFSI's Consolidated List of financial sanctions targets in real time, including screening through corporate ownership chains to identify indirect sanctions exposure. There is no safe harbour for name-matching failures in beneficial ownership chains. OFSI enforcement is increasing — Standard Chartered received a £7.5m civil penalty in 2024 for sanctions violations. The bank must conduct quarterly reviews of its screening system's coverage and accuracy.",
+      "authority_level": "senior_manager",
+      "approval_chain": [
+        "Head of Sanctions Compliance",
+        "Money Laundering Reporting Officer (MLRO)",
+        "Head of Compliance"
+      ],
+      "disclosure_obligations": [
+        "Report to OFSI within 14 days of discovering that a customer is a designated person or holds frozen assets",
+        "Annual sanctions compliance programme overview to the Board",
+        "Maintain records of all screening hits (including cleared hits) for minimum 5 years"
+      ],
+      "constraints": [
+        "Screening must occur in real time before transactions are processed — batch-end screening is not compliant",
+        "Beneficial ownership chain screening required — not name-only matching at the immediate counterparty level",
+        "Any match against OFSI Consolidated List must be escalated immediately and the transaction blocked pending MLRO review",
+        "OFSI-designated persons' assets must be frozen — no transaction processing or account access permitted without OFSI licence"
+      ],
+      "status": "current"
+    },
+    {
+      "rule_id": "GOV-005-R03",
+      "name": "Failure to Prevent Fraud — Corporate Criminal Liability",
+      "source_legislation": "Economic Crime and Corporate Transparency Act 2023 — Failure to Prevent Fraud offence; commencement order expected 2025",
+      "description": "The bank as a large organisation (turnover >£36m, balance sheet >£18m, or >250 employees) will face corporate criminal liability if an associated person (employee, agent, or subsidiary) commits fraud for the bank's benefit and the bank cannot demonstrate it had reasonable fraud prevention procedures in place. This creates a strict-liability corporate criminal offence unless the bank has a documented and implemented fraud prevention framework. The MLRO and compliance function must ensure the framework is designed, communicated, and tested.",
+      "authority_level": "board",
+      "approval_chain": [
+        "Head of Compliance",
+        "Head of Financial Crime",
+        "Money Laundering Reporting Officer (MLRO)",
+        "Chief Executive Officer",
+        "Board Risk Committee",
+        "Full Board"
+      ],
+      "disclosure_obligations": [
+        "Fraud prevention procedures documented and communicated to all relevant staff and associated persons",
+        "Annual board attestation that reasonable fraud prevention procedures are in place",
+        "Staff training completion records maintained for inspection by the regulator or court"
+      ],
+      "constraints": [
+        "The only defence to a failure-to-prevent fraud charge is proof of adequate fraud prevention procedures — the burden is on the bank",
+        "Fraud prevention procedures must cover both external fraud and internal fraud committed by employees for the bank's benefit",
+        "Procedures must be reviewed annually and updated when material changes to business model or fraud typologies occur"
+      ],
+      "status": "incoming",
+      "expected_date": "2025"
+    },
+    {
+      "rule_id": "GOV-005-R04",
+      "name": "SM&CR — Senior Manager Conduct Rules and Prescribed Responsibilities",
+      "source_legislation": "Financial Services and Markets Act 2000 (as amended by the Financial Services (Banking Reform) Act 2013 and Financial Services and Markets Act 2023); FCA/PRA SM&CR Rules; FCA SYSC 4, 5, 6",
+      "description": "All Senior Manager Function (SMF) holders must be pre-approved by the FCA and/or PRA before taking up their role. They must have statements of responsibilities identifying their prescribed responsibilities. All staff in certified functions must be certified as fit and proper annually. Individual conduct rules apply to all relevant persons. Breach of a conduct rule by an SMF holder may result in FCA/PRA prohibition, financial penalty, or criminal prosecution. The bank must maintain a complete and current SMF register.",
+      "authority_level": "board",
+      "approval_chain": [
+        "Head of HR (People and Culture)",
+        "Head of Compliance",
+        "Chairman (for CEO and NEDs)",
+        "Full Board (for all SMF appointments)"
+      ],
+      "disclosure_obligations": [
+        "SMF applications submitted to FCA/PRA before appointment — pre-approval required",
+        "Statement of Responsibilities (SoR) for each SMF holder filed with FCA/PRA and updated on change",
+        "Annual certification of all Certified Function holders signed off by the Compliance function",
+        "Regulatory references provided and obtained for new SMF/Certified Function hires — mandatory"
+      ],
+      "constraints": [
+        "No individual may perform an SMF without FCA/PRA pre-approval",
+        "Temporary cover for SMF roles permitted for up to 12 weeks without FCA/PRA approval; must be notified",
+        "Conduct rules apply to all bank employees — not just SMF holders and Certified Functions",
+        "A handover certificate is required when an SMF holder leaves — ensuring continuity of accountability"
+      ],
+      "status": "current"
+    },
+    {
+      "rule_id": "GOV-005-R05",
+      "name": "FCA Digital Regulatory Reporting — Machine-Readable Data Delivery",
+      "source_legislation": "FCA Digital Regulatory Reporting (DRR) pilot; FCA Data Strategy 2022–2025; PRA CP4/24 (modernising regulatory returns)",
+      "description": "The FCA has signalled ambition for machine-readable, near-real-time regulatory data submission, moving away from batch XBRL filings toward API-based data delivery. The bank must participate in the FCA's DRR pilot programme and prepare its reporting infrastructure for the transition. PRA CP4/24 will rationalise some existing returns and introduce new data standards. Banks dependent on manual return preparation face increasing operational and compliance risk as the regulator raises data quality expectations.",
+      "authority_level": "department_head",
+      "approval_chain": [
+        "Head of Regulatory Reporting",
+        "Chief Data Officer",
+        "Chief Finance Officer",
+        "Head of Compliance"
+      ],
+      "disclosure_obligations": [
+        "Regulatory returns submitted on time and in the mandated format — XBRL/COREP/FINREP as currently required",
+        "DRR pilot participation reported to the Board with timeline and resource estimate",
+        "Material reporting failures or late submissions reported to the Audit Committee"
+      ],
+      "constraints": [
+        "All COREP and FINREP returns must be submitted within PRA/FCA prescribed deadlines — no grace period without supervisory agreement",
+        "Data quality remediation plans must be in place for any identified systematic errors in regulatory returns",
+        "Banks must be capable of responding to ad-hoc PRA/FCA data requests within the stipulated response window"
+      ],
+      "status": "incoming",
+      "expected_date": "2026-2028"
+    },
+    {
+      "rule_id": "GOV-005-R06",
+      "name": "Perpetual KYC — Event-Driven Client Review Expectation",
+      "source_legislation": "MLR 2017 (as expected to be amended); JMLSG Guidance updates (anticipated 2025–2026); FCA AML supervisory expectations",
+      "description": "FCA and JMLSG guidance is expected to move from requiring periodic KYC refresh cycles (typically 1, 3, or 5 years by risk tier) to event-driven, risk-based review (perpetual KYC or pKYC). Banks must trigger CDD/EDD reviews based on material changes in customer risk indicators (change of beneficial ownership, adverse media hit, jurisdiction change, unusual transaction pattern) rather than calendar schedules alone. Banks without pKYC infrastructure will face supervisory criticism and potential enforcement.",
+      "authority_level": "senior_manager",
+      "approval_chain": [
+        "Head of KYC Operations",
+        "Head of Financial Crime",
+        "Money Laundering Reporting Officer (MLRO)",
+        "Chief Operating Officer"
+      ],
+      "disclosure_obligations": [
+        "Annual MLRO report to include pKYC coverage rate and number of event-triggered reviews conducted",
+        "FCA supervisory questionnaire responses on KYC refresh methodology and system capabilities",
+        "Audit trail of pKYC triggers and review outcomes maintained for minimum 5 years"
+      ],
+      "constraints": [
+        "Periodic review cycles cannot be the sole trigger for KYC refresh — risk-event triggers must also be automated",
+        "Adverse media monitoring must run continuously on all higher-risk and corporate customers",
+        "pKYC system must maintain an auditable log of every trigger event and the resultant action taken"
+      ],
+      "status": "incoming",
+      "expected_date": "2025-2026"
+    }
+  ]
+}

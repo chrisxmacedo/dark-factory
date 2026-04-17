@@ -1,0 +1,150 @@
+{
+  "journey_id": "JRN-003",
+  "name": "SAR Filing by MLRO — Service Boundaries",
+  "version": "1.0.0",
+  "status": "Draft",
+  "description": "Service boundary definitions for JRN-003. This is primarily a single-capability journey (CAP-005 Compliance & Regulatory). Cross-capability interaction occurs only via the SARFiled event consumed by SVC-001 (CAP-001 Retail Banking) for account restriction coordination. No customer-facing services (SVC-017 Digital Channels) are involved or notified.",
+  "services": [
+    {
+      "service_id": "SVC-014",
+      "name": "KYC/AML Service",
+      "capability_domain": "CAP-005 (Compliance & Regulatory)",
+      "role_in_journey": "PRIMARY OWNER — orchestrates the entire SAR filing workflow. Owns all SAR entities and events. Enforces tipping-off prohibition at service level.",
+      "owned_entities_added_by_jrn003": [
+        {
+          "entity_id": "ENT-010",
+          "name": "SuspiciousActivityReport",
+          "description": "The formal SAR record. Created on MLRO filing decision. Contains NCA submission data, consent regime status, and SLA compliance tracking."
+        },
+        {
+          "entity_id": "ENT-011",
+          "name": "SARInvestigationRecord",
+          "description": "MLRO internal investigation record. Created on suspicion trigger. Exists for all investigations regardless of outcome."
+        }
+      ],
+      "published_events_added_by_jrn003": [
+        "EVT-014 (SARInvestigationOpened)",
+        "EVT-015 (SARDecisionMade)",
+        "EVT-016 (SARFiled)",
+        "EVT-017 (SARConsentRequested)",
+        "EVT-018 (SARConsentGranted)"
+      ],
+      "consumed_events_added_by_jrn003": [],
+      "new_api_endpoints": [
+        "POST /sars",
+        "GET /sars/{id}",
+        "PATCH /sars/{id}",
+        "POST /sars/{id}/submit",
+        "POST /sars/{id}/consent-response",
+        "POST /investigations",
+        "GET /investigations/{id}",
+        "PATCH /investigations/{id}",
+        "POST /investigations/{id}/evidence",
+        "GET /investigations/customer/{customer_id}"
+      ],
+      "boundary_rules": [
+        "SVC-014 is the exclusive owner of ENT-008 and ENT-009 — no other service reads or writes these entities directly",
+        "All SAR workflow state transitions are enforced within SVC-014 — external services influence state only via events",
+        "The NCA SAR Online integration is owned by SVC-014 — no other service submits to the NCA",
+        "Tipping-off enforcement: SVC-014 must not include SAR narrative, NCA reference, or investigation details in events published to services that could surface them to customers",
+        "SARFiled event (EVT-016) payload is minimal — contains only customer_id and restriction_required flag. SVC-001 must not receive the NCA reference, grounds of suspicion, or any SAR narrative"
+      ],
+      "data_access_controls": {
+        "classification": "auditor_only",
+        "access_granted_to": ["PER-052 (MLRO)", "PER-053 (Deputy MLRO — assigned investigations only)", "SVC-103 (Audit & Logging — write-only)", "SVC-111 (WORM pipeline — write-only)"],
+        "access_denied_to": ["SVC-017 (Digital Channels)", "SVC-001 (Retail Banking Core — read only receives restricted SARFiled payload)", "All customer-facing services", "PER-001 (Customer — absolute prohibition)"]
+      },
+      "source_journeys": ["JRN-001", "JRN-003"]
+    },
+    {
+      "service_id": "SVC-015",
+      "name": "Compliance Core",
+      "capability_domain": "CAP-005 (Compliance & Regulatory)",
+      "role_in_journey": "MLRO WORKFLOW SUPPORT — provides the case management UI layer used by PER-052 to work through the SAR investigation and preparation steps. SVC-015 does not own SAR entities but orchestrates the MLRO user experience and enforces UI-level tipping-off controls.",
+      "owned_entities_added_by_jrn003": [],
+      "responsibilities": [
+        "MLRO case management dashboard — lists open investigations, SLA status, and pending actions",
+        "SAR form assembly UI — renders the NCA SAR form fields drawing from SVC-014 data",
+        "SLA warning display — surfaces 4-day and 5-day SLA warnings to MLRO",
+        "Tipping-off review confirmation — UI checkbox that MLRO must tick before submission is enabled",
+        "Audit trail viewer — MLRO can view their own investigation timeline (read-only, sourced from SVC-014)",
+        "Annual MLRO report data aggregation — aggregates SAR metrics for annual board report"
+      ],
+      "integration_with_svc014": {
+        "call_pattern": "Synchronous API calls to SVC-014 for all entity reads and writes. SVC-015 does not hold SAR entity state independently.",
+        "dependency_criticality": "hard",
+        "purpose": "SVC-015 is a UI/orchestration service that delegates all data persistence to SVC-014. This ensures there is a single system of record for SAR data under MLRO governance."
+      },
+      "access_controls": {
+        "ui_access": "Role-gated to PER-052 and PER-053 only. Step-up MFA required. Separate application from standard compliance desktop.",
+        "api_access": "SVC-015 calls SVC-014 APIs with a service-level identity (not individual MLRO credential). Individual MLRO identity is propagated via request headers for audit attribution."
+      },
+      "source_journeys": ["JRN-003"]
+    },
+    {
+      "service_id": "SVC-001",
+      "name": "Retail Banking Core",
+      "capability_domain": "CAP-001 (Retail Banking)",
+      "role_in_journey": "CONSUMER — receives SARFiled event (EVT-016) to apply account restrictions and enhanced monitoring flags where the MLRO has determined restrictions are required. SVC-001 has no knowledge of SAR details — it acts only on the restriction_required flag.",
+      "owned_entities_added_by_jrn003": [],
+      "consumed_events_added_by_jrn003": [
+        {
+          "event_id": "EVT-016",
+          "name": "SARFiled",
+          "provider_service_id": "SVC-014",
+          "purpose": "SVC-001 reads the restriction_required flag in the SARFiled event. If restriction_required = true, SVC-001 applies an enhanced monitoring flag to all accounts belonging to the customer. SVC-001 does NOT receive or store the NCA reference, SAR narrative, or any SAR detail — only the customer_id and restriction_required boolean.",
+          "tipping_off_note": "SVC-001 must not surface any account restriction to the customer in a way that reveals the SAR reason. Account restriction notices must use generic approved language only."
+        }
+      ],
+      "published_events_added_by_jrn003": [
+        "EVT-019 (AccountRestrictionApplied — published when SVC-001 applies restriction on receipt of SARFiled)"
+      ],
+      "boundary_rules": [
+        "SVC-001 receives only the minimal SARFiled payload — customer_id and restriction_required flag",
+        "SVC-001 must not store the SAR relationship beyond an internal enhanced_monitoring_flag on the Account entity",
+        "SVC-001 must not expose the SAR link to any customer-facing API or UI",
+        "Account restriction messaging to customers must use pre-approved generic language (reviewed by MLRO and Legal)"
+      ],
+      "source_journeys": ["JRN-001", "JRN-003"]
+    },
+    {
+      "service_id": "SVC-103",
+      "name": "Audit & Logging",
+      "capability_domain": "Shared Service",
+      "role_in_journey": "PASSIVE AUDITOR — receives all SAR events and MLRO action logs for immutable audit logging. No active role in SAR workflow.",
+      "access_level": "write_only",
+      "human_access": "auditor_only — dual-person integrity required for any read access to SAR audit logs",
+      "source_journeys": ["JRN-001", "JRN-003"]
+    }
+  ],
+  "cross_capability_event_flows": [
+    {
+      "from_service": "SVC-014 (CAP-005)",
+      "to_service": "SVC-001 (CAP-001)",
+      "event": "EVT-016 (SARFiled)",
+      "direction": "publish → consume",
+      "payload_restriction": "Minimal payload only: { sar_id: UUID (internal reference), customer_id: UUID, restriction_required: boolean, filed_at: timestamp }. No SAR narrative, no NCA reference, no typology codes, no investigation detail.",
+      "tipping_off_protection": "Payload is designed so that even if SVC-001 were compromised or its logs accessed by an unauthorised party, no SAR-identifying information would be disclosed to a subject."
+    },
+    {
+      "from_service": "SVC-001 (CAP-001)",
+      "to_service": "SVC-103 (Shared)",
+      "event": "EVT-019 (AccountRestrictionApplied)",
+      "direction": "publish → consume",
+      "purpose": "Audit log of account restriction application. Feeds into MLRO annual report data."
+    }
+  ],
+  "services_explicitly_excluded": [
+    {
+      "service_id": "SVC-017",
+      "name": "Digital Channels",
+      "reason": "No customer-facing interaction in this journey. SVC-017 must not receive any SAR-related event. Explicit deny rule at API gateway and event bus subscription level."
+    },
+    {
+      "service_id": "SVC-053",
+      "name": "Notification Service",
+      "reason": "No notifications are sent to any customer at any stage. SVC-053 must not be called by SVC-014 or SVC-015 in the context of this journey."
+    }
+  ],
+  "source_journeys": ["JRN-003"]
+}

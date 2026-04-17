@@ -4,103 +4,154 @@
   "capability_name": "Commercial Banking",
   "rules": [
     {
-      "rule_id": "RULE-CB-001",
-      "name": "Large Exposure Limits",
-      "source_legislation": "PRA Rulebook — Large Exposures; CRD IV Article 395 (as retained in UK law)",
-      "description": "The bank must not incur an exposure to a single client or group of connected clients that exceeds 25% of its eligible capital (Tier 1 capital base). Exposures approaching this limit require pre-approval and must be monitored daily. Exemptions for intragroup exposures and sovereign exposures are subject to separate policy controls. All large exposures above 10% of Tier 1 capital must be reported to the PRA quarterly.",
-      "authority_level": "executive_committee",
+      "rule_id": "GOV-002-R01",
+      "name": "Basel 3.1 Output Floor — Capital Adequacy for Commercial Lending",
+      "source_legislation": "PRA PS17/23 (Basel 3.1 UK transposition); Capital Requirements Regulation (CRR) UK; Capital Requirements Directive (CRD V) UK",
+      "description": "The bank's risk-weighted assets (RWAs) calculated using internal models (IRB) must not fall below a floor of a specified percentage of the Standardised Approach RWA equivalent. The output floor phases in annually from 50% (2025) to 72.5% (2030). This directly increases capital requirements for IRB banks with large commercial lending books, particularly those with commercial real estate exposures. Capital plans, ICAAP, and commercial credit strategy must be updated to reflect the rising floor at each phase-in step.",
+      "authority_level": "board",
       "approval_chain": [
-        "Relationship Director",
-        "Credit Risk Manager",
-        "Head of Credit Risk",
+        "Head of Commercial Credit",
         "Chief Risk Officer",
-        "Executive Credit Committee"
+        "Chief Finance Officer",
+        "Capital Management Committee",
+        "Board Risk Committee",
+        "Full Board"
       ],
       "disclosure_obligations": [
-        "PRA Large Exposure return (LE series) submitted quarterly",
-        "Internal large exposure breach escalation to Board Risk Committee within 24 hours",
-        "Pillar 3 disclosure of large exposures above 10% of eligible capital",
-        "Annual review of connected client groupings for material counterparties"
+        "Pillar 3 disclosure of RWA and capital ratios updated at least annually (quarterly for large banks)",
+        "ICAAP submitted to PRA biennially or upon material change, incorporating output floor projections",
+        "COREP capital templates filed with PRA quarterly, reflecting output floor constraint where binding"
       ],
       "constraints": [
-        "Single client or connected group exposure must not exceed 25% of Tier 1 eligible capital",
-        "Exposures to G-SIIs and O-SIIs are subject to a lower limit of 15% of Tier 1 capital",
-        "Transactions that would breach the 25% limit may not be booked until Executive Credit Committee approval is obtained",
-        "Connected client relationships must be reviewed for accuracy at least annually"
-      ]
+        "Output floor: 50% (2025), 55% (2025 end), 60% (2026), 65% (2027), 70% (2028), 72.5% (2030) — phased per PRA timetable",
+        "IRB models for commercial exposures require PRA approval and annual validation",
+        "Commercial real estate risk weights under revised SA increase materially — underwriting standards must reflect higher capital cost",
+        "Lending strategy must be reviewed against capital budget at each output floor phase-in step"
+      ],
+      "status": "current"
     },
     {
-      "rule_id": "RULE-CB-002",
-      "name": "Trade Finance Documentary Compliance",
-      "source_legislation": "ICC Uniform Customs and Practice for Documentary Credits (UCP 600); ICC Uniform Rules for Bank-to-Bank Reimbursements (URR 725)",
-      "description": "All documentary credits (letters of credit) issued or confirmed by the bank must be subject to UCP 600 unless explicitly stated otherwise in the credit. Examination of documents must be completed within five banking days following receipt. Non-compliant documents must be rejected with a single notice listing all discrepancies. The bank must also comply with applicable trade sanctions screening obligations before processing any trade finance transaction.",
+      "rule_id": "GOV-002-R02",
+      "name": "Electronic Trade Documents Act 2023 — Digital Trade Document Acceptance",
+      "source_legislation": "Electronic Trade Documents Act 2023 (ETDA), in force September 2023; UK MLETR alignment",
+      "description": "The bank may now accept and issue electronic bills of lading, bills of exchange, promissory notes, and warehouse receipts that have the same legal standing as paper equivalents, provided the electronic document system meets the ETDA reliability criteria (uniqueness, control, integrity). The bank's trade finance operations must update documentation acceptance policies to recognise ETDA-compliant electronic trade documents and update credit facilities and guarantee issuance procedures accordingly.",
       "authority_level": "department_head",
       "approval_chain": [
-        "Trade Finance Operations Analyst",
-        "Trade Finance Team Lead",
-        "Head of Trade Finance Operations"
+        "Head of Trade Finance Operations",
+        "Head of Commercial Banking Legal",
+        "Head of Compliance",
+        "Head of Commercial Banking"
       ],
       "disclosure_obligations": [
-        "Discrepancy notices issued to presenting banks within 5 banking days (UCP 600 Article 14)",
-        "OFSI and UN sanctions screening records retained per transaction for 5 years",
-        "Suspicious transaction reporting to NCIS/NCA where trade-based money laundering indicators identified",
-        "Annual attestation to Compliance that UCP 600 documentation procedures have been followed"
+        "Updated standard trade finance facility terms noting ETDA-compliant electronic document acceptance",
+        "Client-facing communications confirming digital trade document eligibility under ETDA",
+        "Legal opinion on compliance of each electronic document platform with ETDA reliability criteria"
       ],
       "constraints": [
-        "Document examination window must not exceed 5 banking days from receipt (UCP 600 Article 14b)",
-        "All discrepancies must be listed in a single notice; subsequent notices for the same document set are prohibited",
-        "No payment may be made under a letter of credit where sanctions screening has not been completed and cleared",
-        "Maximum tenor for usance letters of credit without senior credit approval is 180 days"
-      ]
+        "Electronic trade documents are only legally equivalent to paper if the platform meets all ETDA reliability criteria",
+        "Bank must maintain an audit trail demonstrating exclusive control of electronic bills of lading and similar negotiable instruments",
+        "Cross-border trade documents involving non-UK jurisdictions may still require paper originals depending on foreign law"
+      ],
+      "status": "current"
     },
     {
-      "rule_id": "RULE-CB-003",
-      "name": "Treasury Counterparty Limits",
-      "source_legislation": "EMIR (as retained in UK law — UK EMIR); PRA Internal Capital Adequacy Assessment Process (ICAAP) requirements",
-      "description": "All over-the-counter (OTC) derivative transactions must be executed within approved counterparty credit limits. For financial counterparties above the clearing threshold, standardised OTC derivatives must be cleared through a recognised central counterparty (CCP). Bilateral trades must be subject to approved ISDA Master Agreements with Credit Support Annexes (CSA). Counterparty limits are set by the Asset and Liability Committee (ALCO) and reviewed quarterly.",
+      "rule_id": "GOV-002-R03",
+      "name": "Business Banking Resolution Service (BBRS) — SME Dispute Handling",
+      "source_legislation": "Business Banking Resolution Service (BBRS) participation agreement; FCA Business Plan 2024/25",
+      "description": "The bank must participate in BBRS as a dispute resolution scheme for eligible SME customers (up to £10m annual turnover) whose complaints relate to historical or current business banking products and services. Eligible businesses that cannot resolve complaints directly with the bank may refer them to BBRS free of charge. The bank must fund BBRS participation fees and implement all BBRS determinations.",
+      "authority_level": "department_head",
+      "approval_chain": [
+        "Head of SME Banking",
+        "Head of Compliance",
+        "Head of Legal"
+      ],
+      "disclosure_obligations": [
+        "BBRS availability disclosed in all SME complaint-handling communications",
+        "BBRS leaflet provided to eligible SME customers at account opening and upon complaint acknowledgement",
+        "Annual report to BBRS on complaints referred, resolved, and upheld rates"
+      ],
+      "constraints": [
+        "BBRS covers SME customers with up to £10m annual turnover",
+        "Bank must implement BBRS final determinations within the specified timeframe (typically 28 days)",
+        "BBRS complaints must be acknowledged within 5 working days and resolved within 8 weeks before BBRS referral becomes available"
+      ],
+      "status": "current"
+    },
+    {
+      "rule_id": "GOV-002-R04",
+      "name": "PRA Third-Party Risk Management — Material Outsourcing in Commercial Banking",
+      "source_legislation": "PRA SS2/21 (Outsourcing and Third-Party Risk); Financial Services and Markets Act 2023 Part 5 (UK DORA-equivalent); PRA CP30/23",
+      "description": "The bank must maintain a register of material outsourcing and third-party arrangements within the commercial banking capability — covering trade finance platforms (Finastra, Surecomp), treasury technology (Kyriba, FIS), and any cloud infrastructure providers. Material arrangements require board-approved exit plans, concentration risk assessment, and PRA notification. Third-party ICT incidents that affect important business services must be reported to PRA within prescribed timescales.",
       "authority_level": "executive_committee",
       "approval_chain": [
-        "Treasury Dealer",
-        "Head of Treasury",
-        "Chief Financial Officer",
-        "Asset and Liability Committee (ALCO)"
+        "Head of Commercial Banking Technology",
+        "Chief Operating Officer",
+        "Chief Risk Officer",
+        "Executive Committee",
+        "Board Risk Committee"
       ],
       "disclosure_obligations": [
-        "EMIR trade reporting to approved UK Trade Repository within one business day of execution",
-        "Portfolio reconciliation with counterparties as per EMIR RTS frequency requirements",
-        "Dispute resolution escalation records maintained for all mark-to-market disputes above £500k",
-        "ALCO counterparty limit utilisation report produced monthly"
+        "Material outsourcing register filed with PRA and updated annually",
+        "Operational resilience self-assessment including third-party dependencies submitted to PRA",
+        "Material ICT incident report to PRA and FCA within 4 hours (initial) and 24 hours (intermediate)"
       ],
       "constraints": [
-        "OTC derivatives with financial counterparties above the clearing threshold must be centrally cleared unless a valid exemption applies",
-        "No new derivative transaction may be booked where it would breach the approved counterparty credit limit",
-        "ISDA and CSA must be in place before the first transaction with any new derivative counterparty",
-        "Variation margin must be exchanged daily for all in-scope bilateral transactions under UK EMIR margin rules"
-      ]
+        "Cannot outsource accountability for commercial banking important business services — Senior Manager accountability must remain in-house",
+        "Material outsourcing contracts must include exit termination rights and access-for-audit provisions",
+        "Concentration risk must be assessed where two or more material business services depend on the same third-party provider",
+        "PRA must be notified before entering into new material outsourcing arrangements above threshold"
+      ],
+      "status": "current"
     },
     {
-      "rule_id": "RULE-CB-004",
-      "name": "Business Lending Responsible Lending Obligations",
-      "source_legislation": "FCA Consumer Credit Act 1974 (for SME lending below £25,000 threshold); FCA CONC sourcebook; UK Finance Lending Standards Board Standards of Lending Practice for Business Customers",
-      "description": "When lending to small and micro businesses, the bank must conduct proportionate creditworthiness assessments and ensure the loan is suitable for the business's stated purpose and repayment capacity. For loans subject to the Consumer Credit Act threshold, standard CCA pre-contractual disclosures apply. For SME lending above the CCA threshold, the bank operates under the voluntary Lending Standards Board Standards, which require transparent pricing, fair treatment, and access to alternative dispute resolution.",
+      "rule_id": "GOV-002-R05",
+      "name": "FCA SME Lending Rules — Affordability and Disclosure",
+      "source_legislation": "FCA FS23/3 (SME Lending Review); FCA consultation paper (expected final rules 2025–2026)",
+      "description": "Following the FCA's SME lending review, final rules are expected requiring standardised APR-equivalent disclosure for business term loans, affordability stress-testing for facilities above £25,000, cooling-off periods for unsolicited credit increases, and fair value assessments for SME lending products. The bank must update its SME credit origination, documentation, and pricing processes in advance of the rule commencement date.",
       "authority_level": "senior_manager",
       "approval_chain": [
-        "Business Banking Relationship Manager",
-        "Business Credit Underwriter",
-        "Head of Business Credit"
+        "Head of SME Credit",
+        "Head of Compliance",
+        "Chief Risk Officer",
+        "Senior Manager (Commercial Banking)"
       ],
       "disclosure_obligations": [
-        "Pre-contractual explanation provided to SME borrowers covering key loan features and risks",
-        "Annual review statements issued for revolving credit facilities",
-        "SME complaints referred to Financial Ombudsman Service where eligible (turnover below £6.5m threshold)",
-        "Lending Standards Board self-assessment submitted annually"
+        "Standardised cost of credit disclosure (APRC-equivalent) in business loan offer letters",
+        "Affordability stress-test summary provided to borrower for facilities above £25,000",
+        "Cooling-off period and right-to-cancel terms included in credit increase communications"
       ],
       "constraints": [
-        "Creditworthiness assessment must be documented and retained for the life of the facility plus 6 years",
-        "Variable rate loans must include illustrative repayment scenarios at +2% and +4% rate increases in pre-contractual information",
-        "Personal guarantees from directors must be subject to independent legal advice recommendation and signed separately from the loan agreement",
-        "Early repayment charges on fixed-rate SME loans must not exceed the bank's reasonably incurred break cost"
-      ]
+        "Unsolicited credit limit increases must include a minimum 14-day opt-in cooling-off period",
+        "Affordability stress-testing must use PRA-aligned interest rate shock scenarios",
+        "Products found to deliver poor value under Consumer Duty-equivalent SME assessment must be remediated"
+      ],
+      "status": "incoming",
+      "expected_date": "2025-2026"
+    },
+    {
+      "rule_id": "GOV-002-R06",
+      "name": "Business Current Account Portability — CASS Reform for SMEs",
+      "source_legislation": "HM Treasury and FCA CASS consultation for business accounts (expected 2025); Payment and Settlement Systems Act 2023",
+      "description": "HM Treasury and the FCA are expected to mandate 7-day switching for business current accounts equivalent to the personal account CASS regime. The bank must build operational capability to originate and receive CASS business switches within 7 calendar days, including transfer of standing orders, direct debit mandates, and balance. This is a major strategic risk that reduces the structural switching friction protecting incumbent commercial banks.",
+      "authority_level": "executive_committee",
+      "approval_chain": [
+        "Head of Business Banking Operations",
+        "Head of Commercial Banking",
+        "Chief Operating Officer",
+        "Executive Committee"
+      ],
+      "disclosure_obligations": [
+        "CASS business switching guarantee displayed on all business account opening documentation",
+        "Switch tracking confirmation communicated to SME customer throughout the 7-day process",
+        "Switching statistics reported to Pay.UK and FCA per scheme rules"
+      ],
+      "constraints": [
+        "7-day switching window applies from initiation to completion including transfer of all payment mandates",
+        "Bank must redirect all misdirected payments for 36 months after a switch",
+        "Cannot impose contractual barriers or fees that would discourage switching"
+      ],
+      "status": "incoming",
+      "expected_date": "2025-2026"
     }
   ]
 }

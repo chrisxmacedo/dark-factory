@@ -1,0 +1,556 @@
+{
+  "journey_id": "JRN-004",
+  "name": "Business Current Account Opening — Participant Interaction",
+  "description": "Defines, for each phase of JRN-004, what each participant can see (data projection), what actions they can take (entitlements), and what communications they receive (notifications). Covers: PER-002 (Business Customer — primary applicant), PER-050 (Relationship Manager — complex structures and EDD assisted path), PER-052 (MLRO — EDD referrals and sanctions hits). Note: directors and UBOs who are not the primary applicant receive secure verification invitations; their interaction is limited to BPH-004 (Identity Verification) only.",
+  "participants": [
+    {
+      "persona_id": "PER-002",
+      "persona_name": "Business Customer (Primary Applicant)",
+      "access_classification": "pre_authenticated_to_authenticated",
+      "channels": ["CH-001", "CH-002"],
+      "phases": [
+        {
+          "phase_id": "BPH-001",
+          "phase_name": "Application Initiation",
+          "projection": {
+            "description": "Business applicant sees the business account opening application form. Required fields: legal entity type, company name, Companies House registration number, registered address, trading address (if different), trading name (if applicable), SIC codes. Applicant selects account type.",
+            "data_fields_visible": [
+              "Provisional application reference (system-generated)",
+              "Account type options and associated features/fees",
+              "Entity type selector (limited company | LLP | partnership | sole trader)",
+              "Product terms and conditions summary",
+              "BBRS dispute resolution scheme availability notice",
+              "FSCS eligibility summary (sole traders only — limited companies generally ineligible)"
+            ],
+            "data_fields_masked": [],
+            "data_not_visible": [
+              "Internal risk parameters",
+              "System fraud signals captured in background"
+            ]
+          },
+          "entitlements": {
+            "actions_permitted": [
+              "Complete and submit company registration details",
+              "Select entity type",
+              "Select account type",
+              "Save application progress (session-bound, 48-hour expiry for business applications)",
+              "Abandon application",
+              "Request Relationship Manager assistance"
+            ],
+            "actions_not_permitted": [
+              "Skip mandatory company registration fields",
+              "Submit application for an entity type not supported without RM referral",
+              "View other business customers' data"
+            ]
+          },
+          "notifications": [
+            {
+              "trigger": "Application form submitted",
+              "channel": "In-app message + Email",
+              "content": "Your business account application has been started. Reference: [application_ref]. We will now verify your company details with Companies House. This usually takes a few seconds. We will guide you through the next steps.",
+              "timing": "Immediate on form submission"
+            },
+            {
+              "trigger": "Entity type not supported",
+              "channel": "In-app message",
+              "content": "This entity type may require additional support. A Relationship Manager will contact you within 1 business day to continue your application.",
+              "timing": "Immediate on entity type selection"
+            }
+          ]
+        },
+        {
+          "phase_id": "BPH-002",
+          "phase_name": "Companies House Verification",
+          "projection": {
+            "description": "The applicant sees confirmation that the Companies House lookup has completed successfully, along with the verified company details retrieved. Any discrepancies are surfaced for the applicant to confirm or correct.",
+            "data_fields_visible": [
+              "Verified company name (from Companies House)",
+              "Companies House registration number",
+              "Registered address (from Companies House)",
+              "Company incorporation date",
+              "Company status (confirmed: active)",
+              "SIC codes (for applicant confirmation)"
+            ],
+            "data_fields_masked": [
+              "Director names (shown on confirmation screen in BPH-003, not during CH lookup)"
+            ],
+            "data_not_visible": [
+              "Full PSC filing data",
+              "Internal risk flags based on SIC code",
+              "Automated UBO staging results"
+            ]
+          },
+          "entitlements": {
+            "actions_permitted": [
+              "Confirm or correct company details retrieved from Companies House",
+              "Confirm trading name if different from registered name",
+              "Confirm principal trading address"
+            ],
+            "actions_not_permitted": [
+              "Override Companies House-verified legal name without RM escalation",
+              "Proceed if Companies House status is not active"
+            ]
+          },
+          "notifications": [
+            {
+              "trigger": "Companies House verification successful",
+              "channel": "In-app message",
+              "content": "We have verified your company with Companies House. Please confirm the details below are correct before proceeding.",
+              "timing": "Immediate on successful CH API response"
+            },
+            {
+              "trigger": "Companies House verification delayed (API timeout)",
+              "channel": "In-app message",
+              "content": "We are having difficulty reaching Companies House right now. Your application has been saved — we will continue the verification automatically and notify you when complete. This usually resolves within 30 minutes.",
+              "timing": "On API timeout after 3 retries"
+            }
+          ]
+        },
+        {
+          "phase_id": "BPH-003",
+          "phase_name": "Director and UBO Identification",
+          "projection": {
+            "description": "The applicant sees the list of directors and Persons with Significant Control (PSCs) retrieved from Companies House. They are asked to confirm the list is complete, declare any additional beneficial owners not appearing in the PSC register, and confirm ownership percentages for each UBO.",
+            "data_fields_visible": [
+              "Director list: name, appointment date (from Companies House)",
+              "PSC list: name, ownership type, approximate ownership percentage (from Companies House)",
+              "Confirmation prompt for each director/UBO: 'Is this person still an active director/UBO?'",
+              "Declaration field: 'Are there any beneficial owners with >25% not listed above?'",
+              "Contact detail collection fields for each director/UBO not already in bank records (for verification invitation)"
+            ],
+            "data_fields_masked": [],
+            "data_not_visible": [
+              "Automated risk flags on individual directors",
+              "PEP screening results (not yet run at this phase)",
+              "Internal UBO staging entity IDs"
+            ]
+          },
+          "entitlements": {
+            "actions_permitted": [
+              "Confirm each director and UBO as listed",
+              "Declare additional beneficial owners not in Companies House PSC register",
+              "Provide contact details (email) for each director/UBO who requires a verification invitation",
+              "Mark a director as 'no longer a director' (where Companies House data may be stale)",
+              "Confirm ownership percentages for each UBO"
+            ],
+            "actions_not_permitted": [
+              "Remove a director from the list without declaring a reason (change is flagged for review)",
+              "Claim 0% ownership for an individual listed in the PSC register without RM/MLRO review",
+              "Proceed without completing the UBO declaration"
+            ]
+          },
+          "notifications": [
+            {
+              "trigger": "UBO identification step completed",
+              "channel": "In-app message",
+              "content": "Thank you for confirming your company's ownership structure. We will now need to verify the identity of each director and beneficial owner. Each person will receive a secure link by email to complete their identity check.",
+              "timing": "Immediate on UBO confirmation submission"
+            },
+            {
+              "trigger": "Corporate UBO identified (look-through required)",
+              "channel": "In-app message + Email",
+              "content": "We have identified that one of your beneficial owners is itself a company. To comply with anti-money laundering regulations, we need additional information about the ownership of that company. A Relationship Manager will contact you within 1 business day.",
+              "timing": "On detection of corporate PSC entry"
+            }
+          ]
+        },
+        {
+          "phase_id": "BPH-004",
+          "phase_name": "Identity Verification",
+          "projection": {
+            "description": "The primary applicant sees a real-time dashboard showing the identity verification status for each director and UBO. Their own verification can be completed immediately in-app. Others receive email invitations.",
+            "data_fields_visible": [
+              "List of directors/UBOs requiring identity verification with status: pending | in_progress | complete | failed",
+              "Applicant's own identity verification flow (Onfido/Jumio SDK — document capture + liveness)",
+              "Elapsed time and expected SLA for each pending verification",
+              "Resend invitation button for pending verifications"
+            ],
+            "data_fields_masked": [
+              "Document numbers of other directors/UBOs — not visible to applicant",
+              "Biometric scores — never visible"
+            ],
+            "data_not_visible": [
+              "Identity verification outcome details for other individuals (privacy — applicant sees only pass/fail status)",
+              "Fraud signals"
+            ]
+          },
+          "entitlements": {
+            "actions_permitted": [
+              "Complete their own identity verification (document upload + liveness check)",
+              "View overall verification status for all required individuals",
+              "Resend verification invitation to a director/UBO",
+              "Flag a director/UBO as 'unreachable' (triggers RM intervention)",
+              "Retry their own identity verification (up to 2 retries)"
+            ],
+            "actions_not_permitted": [
+              "Complete identity verification on behalf of another director or UBO",
+              "View other individuals' document numbers, biometric scores, or verification provider details"
+            ]
+          },
+          "notifications": [
+            {
+              "trigger": "All required identity verifications complete",
+              "channel": "In-app message + Email",
+              "content": "All identity verifications are complete. We are now completing the compliance checks on your company. This usually takes 1–2 business days. We will contact you as soon as we have an update.",
+              "timing": "When last DirectorVerified event received"
+            },
+            {
+              "trigger": "Verification invitation not completed after 48 hours",
+              "channel": "Email to primary applicant",
+              "content": "The identity verification link we sent to [name] has not yet been completed. Please ask them to check their email and complete the verification, or contact us if you need assistance.",
+              "timing": "48 hours after invitation dispatch, if status is still pending"
+            },
+            {
+              "trigger": "Own identity verification passed",
+              "channel": "In-app message",
+              "content": "Your identity has been verified successfully. Waiting for the remaining [n] director/UBO verifications to complete.",
+              "timing": "Immediate on own DirectorVerified event"
+            }
+          ]
+        },
+        {
+          "phase_id": "BPH-005",
+          "phase_name": "KYC/CDD Assessment",
+          "projection": {
+            "description": "The primary applicant sees a 'compliance checks in progress' holding screen. They are not shown any detail of the specific checks being performed (tipping-off prevention).",
+            "data_fields_visible": [
+              "Application status: 'Compliance checks in progress'",
+              "Expected completion timeframe: 'This usually takes 1–2 business days'",
+              "Case reference number",
+              "Contact details for the Relationship Management team if the applicant has questions"
+            ],
+            "data_fields_masked": [],
+            "data_not_visible": [
+              "PEP screening results for any individual",
+              "Sanctions screening results",
+              "Adverse media findings",
+              "Risk score or risk category",
+              "EDD referral status (if triggered — applicant is told 'additional checks required' without specifics)"
+            ]
+          },
+          "entitlements": {
+            "actions_permitted": [
+              "View application status",
+              "Contact Relationship Manager"
+            ],
+            "actions_not_permitted": [
+              "View CDD assessment details",
+              "Expedite or override the compliance assessment"
+            ]
+          },
+          "notifications": [
+            {
+              "trigger": "KYC/CDD assessment completed — standard path",
+              "channel": "Email + In-app",
+              "content": "Good news — our compliance checks are complete. We are now preparing your account decision. You should hear from us within 1 business day.",
+              "timing": "On BusinessKYCCleared event"
+            },
+            {
+              "trigger": "EDD referral triggered",
+              "channel": "Email + In-app",
+              "content": "Our compliance team needs a little more information before we can complete your application. A Relationship Manager will contact you within 1 business day. Your case reference is [ref]. We aim to complete additional checks within 10 business days.",
+              "timing": "On BusinessKYCReferralRaised event — no mention of specific EDD trigger reason"
+            }
+          ]
+        },
+        {
+          "phase_id": "BPH-006",
+          "phase_name": "Account Decision",
+          "projection": {
+            "description": "The primary applicant receives the account decision outcome.",
+            "data_fields_visible": [
+              "Decision outcome: Approved | Referred | Declined",
+              "If approved: next steps (account setup instructions)",
+              "If declined: plain-language decline message, BBRS referral signpost (if eligible SME), FOS signpost where applicable",
+              "Application reference"
+            ],
+            "data_fields_masked": [],
+            "data_not_visible": [
+              "Internal decline reason code",
+              "KYC risk score or risk category",
+              "Any screening results or findings"
+            ]
+          },
+          "entitlements": {
+            "actions_permitted": [
+              "Accept the approved application and proceed to account setup",
+              "Acknowledge decline notification",
+              "Request BBRS review (decline cases for eligible SME customers)",
+              "Contact Relationship Manager for referred cases"
+            ],
+            "actions_not_permitted": [
+              "Appeal automated KYC/CDD decision directly",
+              "View internal decision rationale"
+            ]
+          },
+          "notifications": [
+            {
+              "trigger": "Application approved",
+              "channel": "Email + In-app",
+              "content": "Congratulations — your business account application has been approved. We are now setting up your account. Your sort code and account number will be ready shortly.",
+              "timing": "Immediate on BusinessApplicationDecisionMade (outcome: approved)"
+            },
+            {
+              "trigger": "Application declined",
+              "channel": "Email + In-app",
+              "content": "We are unable to open a business account for [company name] at this time. We are sorry we cannot be more specific about the reason — this is to comply with our legal obligations. If you believe this decision was made in error, you can contact the Business Banking Resolution Service (BBRS) for an independent review if your business has a turnover under £10 million. For complaints, please visit [complaints URL].",
+              "timing": "Immediate on BusinessApplicationDecisionMade (outcome: declined)"
+            }
+          ]
+        },
+        {
+          "phase_id": "BPH-007",
+          "phase_name": "Account Provisioning",
+          "projection": {
+            "description": "The primary applicant sees the account details confirmation screen as the account is being provisioned.",
+            "data_fields_visible": [
+              "Account number (8-digit, allocated)",
+              "Sort code (XX-XX-XX format)",
+              "IBAN",
+              "BIC",
+              "Account name (legal entity name)",
+              "Multi-signatory configuration summary (who can authorise payments, payment approval thresholds)"
+            ],
+            "data_fields_masked": [],
+            "data_not_visible": [
+              "Internal BusinessAccount entity UUID",
+              "Internal BusinessCustomer entity UUID"
+            ]
+          },
+          "entitlements": {
+            "actions_permitted": [
+              "View account details",
+              "Download account opening confirmation",
+              "Proceed to digital banking setup"
+            ],
+            "actions_not_permitted": [
+              "Modify multi-signatory configuration at this stage (post-opening configuration change journey required)",
+              "Add additional authorised users at this stage (separate onboarding invitation flow available post-opening)"
+            ]
+          },
+          "notifications": [
+            {
+              "trigger": "Account provisioned",
+              "channel": "Email + In-app",
+              "content": "Your business account is ready. Account name: [company name]. Sort code: [XX-XX-XX]. Account number: [XXXXXXXX]. IBAN: [GB..]. You can now set up your online banking access.",
+              "timing": "On BusinessAccountProvisioned event"
+            }
+          ]
+        },
+        {
+          "phase_id": "BPH-008",
+          "phase_name": "Digital Channel Activation",
+          "projection": {
+            "description": "The primary applicant sets up business banking portal credentials and biometric SCA. The business portal welcome dashboard shows account details, payment capabilities, and an onboarding checklist.",
+            "data_fields_visible": [
+              "Business banking portal welcome dashboard",
+              "Account number, sort code, IBAN, BIC",
+              "Payment rails available: BACS, Faster Payments, CHAPS",
+              "Authorised user roster and roles",
+              "Payment approval workflow configuration",
+              "Onboarding checklist: set up payees, configure payment approvals, invite additional users, set up direct debits"
+            ],
+            "data_fields_masked": [],
+            "data_not_visible": [
+              "Other business customers' data",
+              "Internal system configuration IDs"
+            ]
+          },
+          "entitlements": {
+            "actions_permitted": [
+              "Create portal username and password",
+              "Enrol biometric SCA (Face ID / fingerprint via FIDO2/WebAuthn)",
+              "Complete first login via SCA",
+              "View account details and onboarding checklist",
+              "Invite additional authorised users via email"
+            ],
+            "actions_not_permitted": [
+              "Make payments before SCA enrolment is complete",
+              "Access other users' portal sessions"
+            ]
+          },
+          "notifications": [
+            {
+              "trigger": "Digital channel activated",
+              "channel": "Email + In-app",
+              "content": "Welcome to [Bank] Business Banking. Your account is now fully active. Here are your account details: [sort code, account number, IBAN]. Your Relationship Manager is [name] and can be reached at [contact details]. We have attached your account opening confirmation and terms.",
+              "timing": "On BusinessDigitalChannelActivated event"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "persona_id": "PER-050",
+      "persona_name": "Relationship Manager",
+      "access_classification": "internal_staff_authenticated",
+      "channels": ["CH-003"],
+      "description": "Relationship Manager (RM) has read access to the full application state in the commercial banking CRM. The RM can assist PER-002 with complex applications, facilitate UBO documentation gathering for EDD, and progress referred applications. The RM cannot override CDD/KYC compliance outcomes — only MLRO can.",
+      "phases": [
+        {
+          "phase_id": "BPH-001",
+          "phase_name": "Application Initiation (RM-Assisted Path)",
+          "projection": {
+            "description": "RM can view and pre-populate the business account application on behalf of PER-002 in the commercial banking CRM.",
+            "data_fields_visible": [
+              "Full application form (all fields)",
+              "PER-002 contact details",
+              "Companies House pre-populated data (if CRM has CH integration)",
+              "Application status and phase"
+            ],
+            "data_fields_masked": []
+          },
+          "entitlements": {
+            "actions_permitted": [
+              "Initiate a new business account application on behalf of a customer",
+              "Pre-populate company details",
+              "Submit application on behalf of PER-002 (with customer written consent)",
+              "Flag application for RM-assisted path"
+            ],
+            "actions_not_permitted": [
+              "Override eligibility rules",
+              "Bypass Companies House verification"
+            ]
+          },
+          "notifications": [
+            {
+              "trigger": "Application referred to RM",
+              "channel": "CRM alert + Email",
+              "content": "New business account application [ref] has been referred for RM assistance. Company: [company name]. Action required within 2 business days.",
+              "timing": "On RM referral event"
+            }
+          ]
+        },
+        {
+          "phase_id": "BPH-005_EDD",
+          "phase_name": "EDD Review (Alternate Path AP-B001)",
+          "projection": {
+            "description": "RM is assigned EDD cases to facilitate document gathering from PER-002.",
+            "data_fields_visible": [
+              "EDD case details: specific information required",
+              "Reason category for EDD (PEP director, high-risk jurisdiction, complex structure — internal)",
+              "Document checklist for EDD (source of funds, corporate structure chart, board resolution)",
+              "MLRO case status"
+            ],
+            "data_fields_masked": [
+              "Specific PEP identification details — MLRO-only"
+            ]
+          },
+          "entitlements": {
+            "actions_permitted": [
+              "Contact PER-002 to request EDD documentation",
+              "Upload received documents to the EDD case",
+              "Update EDD case status",
+              "Escalate to MLRO with documentation received"
+            ],
+            "actions_not_permitted": [
+              "Make the EDD approval decision",
+              "Override MLRO CDD assessment",
+              "View specific PEP match details (MLRO-only)"
+            ]
+          },
+          "notifications": [
+            {
+              "trigger": "EDD case assigned to RM",
+              "channel": "CRM alert + Email",
+              "content": "EDD case [ref] has been assigned to you. Company: [company name]. Additional information required. Please contact the customer and gather the listed documentation within 5 business days.",
+              "timing": "On EDD assignment"
+            }
+          ]
+        },
+        {
+          "phase_id": "BPH-006",
+          "phase_name": "Account Decision (Referred Applications)",
+          "projection": {
+            "description": "RM can view referred application cases and provide their recommendation to the decision engine or to MLRO.",
+            "data_fields_visible": [
+              "Full application data for the referred case",
+              "Referral reason (internal category — not disclosed to customer)",
+              "CDD assessment summary (non-PEP/sanctions detail — for RM visibility)",
+              "RM recommendation field"
+            ],
+            "data_fields_masked": [
+              "Specific PEP match details — MLRO only",
+              "Specific sanctions match details — MLRO only"
+            ]
+          },
+          "entitlements": {
+            "actions_permitted": [
+              "View referred application details",
+              "Submit RM recommendation (approve / refer to MLRO / escalate for decline)",
+              "Contact PER-002 regarding the referred application"
+            ],
+            "actions_not_permitted": [
+              "Make final approval/decline decision for referred applications with compliance flags",
+              "View raw PEP or sanctions screening results"
+            ]
+          },
+          "notifications": [
+            {
+              "trigger": "Referred application requires RM action",
+              "channel": "CRM alert",
+              "content": "Referred business account application [ref] requires your review and recommendation. Action required within 2 business days.",
+              "timing": "On BusinessApplicationDecisionMade (outcome: referred)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "persona_id": "PER-052",
+      "persona_name": "MLRO (Money Laundering Reporting Officer)",
+      "access_classification": "internal_compliance_authenticated",
+      "channels": ["CH-003"],
+      "description": "MLRO has full read access to all CDD/KYC data, PEP/sanctions screening results, and EDD case files. The MLRO is the sole decision-maker for EDD approvals, sanctions-hit resolutions, and UBO identification exceptions. The MLRO has personal accountability under POCA 2002 and MLR 2017 SMF17.",
+      "phases": [
+        {
+          "phase_id": "BPH-005_EDD",
+          "phase_name": "EDD Review and Sign-Off",
+          "projection": {
+            "description": "MLRO has full visibility of all compliance data for the case.",
+            "data_fields_visible": [
+              "Full BusinessKycAssessment record including all screening results",
+              "PEP match details: name, position, country, data source (ComplyAdvantage/World-Check)",
+              "Sanctions screening details: match confidence, list(s) matched",
+              "Adverse media summary and severity rating",
+              "All individual director/UBO CDD results",
+              "EDD documentation uploaded by RM",
+              "UBO ownership structure diagram",
+              "Company risk score and category",
+              "MLRO sign-off field with audit timestamp"
+            ],
+            "data_fields_masked": []
+          },
+          "entitlements": {
+            "actions_permitted": [
+              "Approve EDD case (BusinessKYCCleared published on sign-off)",
+              "Decline EDD case (BusinessApplicationDecisionMade outcome: declined)",
+              "Request further information from RM",
+              "Impose risk conditions on account (e.g. enhanced monitoring, turnover limits)",
+              "File SAR with NCA UKFIU if suspicion arises during EDD review",
+              "Access OFSI reporting workflow for confirmed sanctions matches"
+            ],
+            "actions_not_permitted": [
+              "Approve a case where UBO cannot be identified to the required standard",
+              "Approve a case with an unresolved confirmed OFSI/OFAC sanctions match"
+            ]
+          },
+          "notifications": [
+            {
+              "trigger": "EDD case assigned to MLRO",
+              "channel": "Case management system alert + Email",
+              "content": "EDD case [ref] requires MLRO review. Company: [company name]. Trigger: [PEP director | high-risk jurisdiction | complex structure]. Case must be resolved within 10 business days of application date.",
+              "timing": "On BusinessKYCReferralRaised event"
+            },
+            {
+              "trigger": "Sanctions hit escalated to MLRO",
+              "channel": "Case management system URGENT alert + Email",
+              "content": "URGENT — Sanctions hit detected on business account application [ref]. Company: [company name]. Action required within 1 business day. OFSI reporting obligation may apply (within 14 days if confirmed).",
+              "timing": "On BusinessSanctionsHitDetected event — immediate"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

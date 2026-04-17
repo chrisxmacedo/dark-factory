@@ -1,0 +1,1311 @@
+{
+  "$schema": "../schemas/service-dependencies.schema.json",
+  "document_version": "0.1.0",
+  "status": "Draft",
+  "description": "Service dependency map for the UK commercial bank. All 37 services (17 domain, 6 cross-cutting, 7 foundation, 6 observability, 1 security) assigned to tiers T0-T4 with dependency criticality (hard/soft). Includes the 7 new observability and security services SVC-107 through SVC-113. The build_order array defines 7 delivery phases each with regulatory rationale. This artefact is the primary input to programme planning and the PRA/FCA operational resilience important business service decomposition.",
+  "tier_definitions": {
+    "T0": {
+      "label": "Foundation Platform",
+      "description": "Core platform infrastructure. No bank service can operate without T0 services. These are the architectural bedrock: identity, API routing, event streaming, audit, secrets, and network security. All must be operational before any domain service is deployed.",
+      "deployment_order": 1,
+      "availability_floor": "99.999%",
+      "regulatory_rationale": "FCA PS21/3 and PRA SS1/21 require banks to identify important business services and demonstrate recovery within impact tolerances. T0 services underpin all important business services \u2014 an outage at T0 is a bank-wide outage. PCI DSS requires IAM (SVC-100) and audit logging (SVC-103) before any cardholder data environment is provisioned. UK GDPR requires encryption key management (SVC-105) before any personal data processing. The observability pipeline (SVC-107) must be active from Day 1 to provide evidence of operational resilience from the first transaction."
+    },
+    "T1": {
+      "label": "Compliance Prerequisites",
+      "description": "Compliance and observability services that must be operational before any customer-facing domain service goes live. Fraud detection, KYC/AML, and sanctions screening are legal prerequisites for payment processing and customer onboarding under UK law. Observability stores (SVC-108-111) must be active to receive telemetry from T0 services.",
+      "deployment_order": 2,
+      "availability_floor": "99.99%",
+      "regulatory_rationale": "POCA 2002 requires AML controls before accepting customer funds. OFSI sanctions regulations require sanctions screening before any payment processing. PSR PS23/3 (APP fraud reimbursement from October 2024) requires fraud detection before FPS/CHAPS go-live. MLR 2017 requires KYC controls at customer onboarding. Deploying domain banking services without T1 compliance prerequisites creates direct criminal and regulatory liability for the bank and MLRO personally. WORM audit log store (SVC-111) must be active before any regulated financial transaction to establish the tamper-evident regulatory evidence trail."
+    },
+    "T2": {
+      "label": "Core Domain Services",
+      "description": "Core retail banking, commercial banking, payment processing, risk engine, credit decisioning, and the data platform. These are the minimum viable banking services \u2014 the bank cannot operate as a licensed deposit-taker and payment institution without them.",
+      "deployment_order": 3,
+      "availability_floor": "99.95%",
+      "regulatory_rationale": "PRA authorisation requires the bank to demonstrate the capability to accept deposits (SVC-001, SVC-005), make credit decisions (SVC-052), and process payments (SVC-009) before operating commercially. Basel 3.1 (PRA PS17/23) requires the risk engine (SVC-012) to calculate Pillar 1 capital before lending commences. The data platform (SVC-104) is required at T2 because the credit decision service (SVC-052) and fraud service (SVC-013) both depend on feature store data. The observability aggregator (SVC-112) is T2 because it requires all T1 observability stores to be active before it can aggregate and alert."
+    },
+    "T3": {
+      "label": "Domain Extension Services",
+      "description": "All remaining domain services, channel services, cross-cutting services, and the zero-trust policy engine. These extend the core banking platform with product-specific capabilities (mortgages, trade finance, treasury, wealth, cards, insurance) and the digital and API channel layer.",
+      "deployment_order": 4,
+      "availability_floor": "99.9%",
+      "regulatory_rationale": "MCOB requires mortgage origination service (SVC-002) before residential mortgage lending commences. ETDA 2023 and UCP 600 require trade finance service (SVC-006) before LC issuance. EMIR UK requires treasury derivatives service (SVC-007) before derivative trading. MiFID II/COBS requires wealth platform (SVC-016) before investment advice and discretionary management. CMA Order requires digital channels service (SVC-017) for Open Banking API compliance. PCI DSS requires card processing (SVC-011) before card issuance. Zero-Trust Policy Engine (SVC-113) at T3 enables centralised policy governance across all T0-T2 services once they are operational."
+    },
+    "T4": {
+      "label": "Overlay Services",
+      "description": "Services that overlay existing capabilities without being prerequisites for any other service. Insurance Distribution is the only T4 service \u2014 it is a distribution overlay on the Retail Banking Core and cannot operate without T2/T3 services but no other service depends on it.",
+      "deployment_order": 5,
+      "availability_floor": "99.5%",
+      "regulatory_rationale": "ICOBS and the Insurance Distribution Directive require insurance distribution controls before bancassurance product sales commence. Insurance Distribution (SVC-004) is T4 because it is purely a revenue overlay \u2014 the bank can operate fully without it; it adds the cross-sell layer over established retail banking relationships. Deploying it at T4 prevents regulatory complexity at earlier stages: insurance distribution authorisation (FCA ICOBS) can be managed as a separate regulatory step from core banking authorisation (PRA deposit-taking permission)."
+    }
+  },
+  "services": [
+    {
+      "id": "SVC-100",
+      "name": "Identity & Access Management",
+      "classification": "foundation",
+      "tier": "T0",
+      "capability_domain": "Platform Infrastructure",
+      "dependencies": [],
+      "notes": "No upstream dependencies. All services depend on SVC-100 as a hard platform dependency. Must be active-active multi-zone. ForgeRock Identity Platform (preferred). SCA-compliant (PSD2 RTS). SM&CR ABAC role assignments."
+    },
+    {
+      "id": "SVC-101",
+      "name": "API Gateway",
+      "classification": "foundation",
+      "tier": "T0",
+      "capability_domain": "Platform Infrastructure",
+      "dependencies": [
+        {
+          "service_id": "SVC-100",
+          "criticality": "hard",
+          "rationale": "Token validation and TPP certificate verification delegate to IAM. API Gateway enforces access policy defined by IAM."
+        }
+      ],
+      "notes": "External and internal API management. Rate limiting, TLS termination. CMA Open Banking performance reporting. Apigee (preferred) / AWS API Gateway / Kong."
+    },
+    {
+      "id": "SVC-102",
+      "name": "Event Bus",
+      "classification": "foundation",
+      "tier": "T0",
+      "capability_domain": "Platform Infrastructure",
+      "dependencies": [],
+      "notes": "No upstream service dependencies. Provides pub-sub infrastructure to all other services. Confluent Cloud managed Kafka (preferred). Schema registry mandatory. UK-hosted."
+    },
+    {
+      "id": "SVC-103",
+      "name": "Audit & Logging",
+      "classification": "foundation",
+      "tier": "T0",
+      "capability_domain": "Platform Infrastructure",
+      "dependencies": [],
+      "notes": "No upstream service dependencies. Receives from all services. Immutable SIEM. MLR 2017 5-year and PRA 7-year retention. Splunk Enterprise Security (preferred). PCI DSS scoped."
+    },
+    {
+      "id": "SVC-105",
+      "name": "Secrets Management",
+      "classification": "foundation",
+      "tier": "T0",
+      "capability_domain": "Platform Infrastructure",
+      "dependencies": [
+        {
+          "service_id": "SVC-100",
+          "criticality": "hard",
+          "rationale": "Machine identity verified via IAM before secrets are granted. Service accounts must authenticate via SVC-100."
+        }
+      ],
+      "notes": "HSM-backed. PCI DSS key management. UK GDPR encryption keys. HashiCorp Vault Enterprise (preferred)."
+    },
+    {
+      "id": "SVC-106",
+      "name": "Service Mesh",
+      "classification": "foundation",
+      "tier": "T0",
+      "capability_domain": "Platform Infrastructure",
+      "dependencies": [
+        {
+          "service_id": "SVC-100",
+          "criticality": "hard",
+          "rationale": "SPIFFE/SPIRE service identity certificates coordinated with bank PKI in SVC-100."
+        }
+      ],
+      "notes": "mTLS, deny-all baseline. Istio (preferred) / Linkerd. PCI DSS network segmentation evidence. FCA SS1/21 service dependency map."
+    },
+    {
+      "id": "SVC-107",
+      "name": "OTel Collector",
+      "classification": "observability",
+      "tier": "T0",
+      "capability_domain": "Platform Observability",
+      "dependencies": [],
+      "notes": "T0 deployment \u2014 observability from Day 1 (ADD-005). Stateless collector/gateway. Routes to SVC-108, SVC-109, SVC-110, SVC-111. CNCF graduated open source."
+    },
+    {
+      "id": "SVC-013",
+      "name": "Fraud Detection Service",
+      "classification": "domain_specific",
+      "tier": "T1",
+      "capability_domain": "Risk Management (CAP-004)",
+      "dependencies": [
+        {
+          "service_id": "SVC-102",
+          "criticality": "hard",
+          "rationale": "Subscribes to payment and card authorisation events for real-time fraud signal aggregation."
+        },
+        {
+          "service_id": "SVC-104",
+          "criticality": "soft",
+          "rationale": "Feature store population for ML model training. Degrades to rule-based scoring if data platform unavailable."
+        }
+      ],
+      "notes": "T1 \u2014 prerequisite for all payment processing. gRPC sub-100ms. PSR APP fraud reimbursement. Featurespace ARIC (preferred). Hard dependency for SVC-009, SVC-010, SVC-011, SVC-008, SVC-003. Note: SVC-104 (Data Platform) is T2 but SVC-013 at T1 is designed to operate with a pre-loaded feature store at bootstrap until T2 data platform is live."
+    },
+    {
+      "id": "SVC-014",
+      "name": "KYC/AML Service",
+      "classification": "domain_specific",
+      "tier": "T1",
+      "capability_domain": "Compliance & Regulatory (CAP-005)",
+      "dependencies": [
+        {
+          "service_id": "SVC-102",
+          "criticality": "hard",
+          "rationale": "Subscribes to CustomerOnboardingInitiated, PaymentReceived events for perpetual KYC monitoring."
+        },
+        {
+          "service_id": "SVC-054",
+          "criticality": "soft",
+          "rationale": "Identity documents stored via SVC-054. Degrades gracefully if document store temporarily unavailable \u2014 initial KYC can proceed with metadata."
+        },
+        {
+          "service_id": "SVC-104",
+          "criticality": "soft",
+          "rationale": "AML transaction monitoring ML models depend on historical data. Degrades to rule-based monitoring if data platform unavailable."
+        }
+      ],
+      "notes": "T1 \u2014 MLRO personal accountability (POCA 2002). MLR 2017 CDD mandatory before any customer relationship. Perpetual KYC. NCA UKFIU SAR submissions. Napier AI for TMS. ComplyAdvantage/Refinitiv for PEP/sanctions data."
+    },
+    {
+      "id": "SVC-050",
+      "name": "Customer Onboarding Service",
+      "classification": "cross_cutting",
+      "tier": "T1",
+      "capability_domain": "Compliance & Regulatory (CAP-005) \u2014 shared service SSC-001",
+      "dependencies": [
+        {
+          "service_id": "SVC-051",
+          "criticality": "hard",
+          "rationale": "Sanctions pre-check is a blocking step at onboarding. KYCClearanceGranted cannot be issued without sanctions clearance."
+        },
+        {
+          "service_id": "SVC-102",
+          "criticality": "hard",
+          "rationale": "Publishes KYCClearanceGranted, CustomerRiskScoreAssigned, OnboardingFailed events."
+        },
+        {
+          "service_id": "SVC-054",
+          "criticality": "soft",
+          "rationale": "Identity documents stored via SVC-054. Retail synchronous onboarding can proceed; documents stored asynchronously."
+        },
+        {
+          "service_id": "SVC-055",
+          "criticality": "soft",
+          "rationale": "Corporate EDD workflows orchestrated via SVC-055. Retail synchronous path does not require SVC-055."
+        }
+      ],
+      "notes": "T1 \u2014 prerequisite for all account provisioning. Dual-mode API (sync retail, async corporate EDD). Single MLRO-owned KYC policy. Must handle peak digital onboarding throughput."
+    },
+    {
+      "id": "SVC-051",
+      "name": "Sanctions Screening Service",
+      "classification": "cross_cutting",
+      "tier": "T1",
+      "capability_domain": "Compliance & Regulatory (CAP-005) \u2014 shared service SSC-002",
+      "dependencies": [
+        {
+          "service_id": "SVC-102",
+          "criticality": "hard",
+          "rationale": "Publishes SanctionsListUpdated events. Consuming services trigger batch rescreening."
+        },
+        {
+          "service_id": "SVC-103",
+          "criticality": "hard",
+          "rationale": "Every screening decision (CLEAR/BLOCKED/REVIEW) immutably logged for OFSI audit. Hard regulatory requirement."
+        }
+      ],
+      "notes": "T1 \u2014 legal prerequisite for all payment processing and customer onboarding. No graceful degradation permitted (OFSI liability; Starling \u00a329m fine Oct 2024). Active-active multi-region. gRPC sub-200ms. ComplyAdvantage (preferred) / Refinitiv World-Check."
+    },
+    {
+      "id": "SVC-108",
+      "name": "Log Store",
+      "classification": "observability",
+      "tier": "T1",
+      "capability_domain": "Platform Observability",
+      "dependencies": [
+        {
+          "service_id": "SVC-107",
+          "criticality": "hard",
+          "rationale": "Receives log streams from OTel Collector. Cannot receive logs without the collector routing layer."
+        }
+      ],
+      "notes": "T1 \u2014 must be active before T2 domain services generate operational logs. Elasticsearch/OpenSearch. 90-day hot tier."
+    },
+    {
+      "id": "SVC-109",
+      "name": "Trace Store",
+      "classification": "observability",
+      "tier": "T1",
+      "capability_domain": "Platform Observability",
+      "dependencies": [
+        {
+          "service_id": "SVC-107",
+          "criticality": "hard",
+          "rationale": "Receives traces from OTel Collector."
+        }
+      ],
+      "notes": "T1 \u2014 distributed trace storage. Jaeger (Cassandra) / Grafana Tempo. 30-day trace retention. FCA PS21/3 impact tolerance monitoring."
+    },
+    {
+      "id": "SVC-110",
+      "name": "Metrics Store",
+      "classification": "observability",
+      "tier": "T1",
+      "capability_domain": "Platform Observability",
+      "dependencies": [
+        {
+          "service_id": "SVC-107",
+          "criticality": "hard",
+          "rationale": "Receives metrics from OTel Collector."
+        }
+      ],
+      "notes": "T1 \u2014 Prometheus / Thanos. 15-day hot retention + 13-month long-term. SLA alerting feeds SVC-112."
+    },
+    {
+      "id": "SVC-111",
+      "name": "Audit Log Store (WORM)",
+      "classification": "observability",
+      "tier": "T1",
+      "capability_domain": "Platform Observability",
+      "dependencies": [
+        {
+          "service_id": "SVC-103",
+          "criticality": "hard",
+          "rationale": "Receives regulated audit records from Audit & Logging service. WORM store is the long-term regulatory archive layer for SVC-103."
+        }
+      ],
+      "notes": "T1 \u2014 WORM. 7-year minimum. AWS S3 Object Lock / Azure Blob Immutable. Must be active before any regulated financial transaction. PCI DSS and PRA financial records retention. UK GDPR and POCA 2002 SAR records."
+    },
+    {
+      "id": "SVC-001",
+      "name": "Retail Banking Core",
+      "classification": "domain_specific",
+      "tier": "T2",
+      "capability_domain": "Retail Banking (CAP-001)",
+      "dependencies": [
+        {
+          "service_id": "SVC-050",
+          "criticality": "hard",
+          "rationale": "Retail account creation requires KYCClearanceGranted event from SVC-050. Cannot be bypassed."
+        },
+        {
+          "service_id": "SVC-052",
+          "criticality": "hard",
+          "rationale": "Personal loan origination and overdraft limits require credit decision from SVC-052."
+        },
+        {
+          "service_id": "SVC-009",
+          "criticality": "soft",
+          "rationale": "Subscribes to PaymentSettled events for balance updates. Balance update delays tolerable within seconds; does not block account operations."
+        },
+        {
+          "service_id": "SVC-014",
+          "criticality": "soft",
+          "rationale": "Subscribes to CustomerRiskScoreUpdated events to adjust monitoring thresholds. Not synchronously blocking."
+        },
+        {
+          "service_id": "SVC-100",
+          "criticality": "hard",
+          "rationale": "Customer authentication for online/mobile banking."
+        },
+        {
+          "service_id": "SVC-102",
+          "criticality": "hard",
+          "rationale": "Publishes AccountOpened, BalanceUpdated, LoanOriginated events consumed by downstream services."
+        }
+      ],
+      "notes": "Core retail ledger. Thought Machine Vault / Mambu / 10x SuperCore buy candidate. FSCS eligibility data. Consumer Duty outcomes evidence trail."
+    },
+    {
+      "id": "SVC-005",
+      "name": "Commercial Banking Core",
+      "classification": "domain_specific",
+      "tier": "T2",
+      "capability_domain": "Commercial Banking (CAP-002)",
+      "dependencies": [
+        {
+          "service_id": "SVC-050",
+          "criticality": "hard",
+          "rationale": "KYB clearance required before commercial ledger record created. MLRO-owned policy."
+        },
+        {
+          "service_id": "SVC-052",
+          "criticality": "hard",
+          "rationale": "Business lending origination requires credit assessment."
+        },
+        {
+          "service_id": "SVC-009",
+          "criticality": "soft",
+          "rationale": "Subscribes to PaymentSettled events for balance updates."
+        },
+        {
+          "service_id": "SVC-051",
+          "criticality": "hard",
+          "rationale": "All business payment instructions require sanctions screening. Beneficial ownership chain screening for complex structures."
+        },
+        {
+          "service_id": "SVC-102",
+          "criticality": "hard",
+          "rationale": "Publishes FacilityApproved, DrawdownCompleted events."
+        }
+      ],
+      "notes": "Commercial customer ledger. nCino (Salesforce) buy candidate for lending origination. Covenant monitoring. Basel 3.1 credit risk records."
+    },
+    {
+      "id": "SVC-009",
+      "name": "Domestic Payments Service",
+      "classification": "domain_specific",
+      "tier": "T2",
+      "capability_domain": "Payment Operations (CAP-003)",
+      "dependencies": [
+        {
+          "service_id": "SVC-051",
+          "criticality": "hard",
+          "rationale": "Every outgoing FPS/BACS/CHAPS payment must receive sanctions clearance before scheme submission. Regulatory hard dependency."
+        },
+        {
+          "service_id": "SVC-013",
+          "criticality": "hard",
+          "rationale": "FPS payments scored for APP fraud before submission. PSR mandatory reimbursement creates board-level liability."
+        }
+      ],
+      "notes": "Direct FPS and BACS participant (Vocalink). CHAPS Bank of England RT2. CoP integration. 99.99% SLA. Form3 buy candidate. CHAPS ISO 20022 enhanced data (structured addresses from November 2026)."
+    },
+    {
+      "id": "SVC-012",
+      "name": "Risk Engine Service",
+      "classification": "domain_specific",
+      "tier": "T2",
+      "capability_domain": "Risk Management (CAP-004)",
+      "dependencies": [
+        {
+          "service_id": "SVC-001",
+          "criticality": "soft",
+          "rationale": "Subscribes to LoanOriginated/LoanRepaid events for retail credit risk portfolio metrics and IFRS 9 staging."
+        },
+        {
+          "service_id": "SVC-005",
+          "criticality": "soft",
+          "rationale": "Subscribes to FacilityApproved/DrawdownCompleted events for commercial credit portfolio and Basel 3.1 RWA."
+        },
+        {
+          "service_id": "SVC-104",
+          "criticality": "soft",
+          "rationale": "Risk calculations require data platform for batch model scoring, stress testing, COREP data extraction. Degrades to pre-loaded batch if unavailable."
+        }
+      ],
+      "notes": "IRB PD/LGD/EAD, IFRS 9 ECL, FRTB SA, COREP. PRA SS1/23 model risk. SAS Risk Intelligence Suite / Moody's Analytics buy candidates. CRO SM&CR accountability."
+    },
+    {
+      "id": "SVC-052",
+      "name": "Credit Decision Service",
+      "classification": "cross_cutting",
+      "tier": "T2",
+      "capability_domain": "Risk Management (CAP-004) \u2014 shared service SSC-003",
+      "dependencies": [
+        {
+          "service_id": "SVC-102",
+          "criticality": "hard",
+          "rationale": "Publishes CreditDecisionMade, LimitApproved, LimitReduced events."
+        },
+        {
+          "service_id": "SVC-104",
+          "criticality": "soft",
+          "rationale": "Credit bureau and behavioural data inputs. Degrades to rule-based scorecard if data platform temporarily unavailable."
+        },
+        {
+          "service_id": "SVC-103",
+          "criticality": "hard",
+          "rationale": "All credit decisions must be immutably logged for Consumer Duty fair value evidence, PRA IRB audit, FOS dispute resolution."
+        }
+      ],
+      "notes": "Versioned credit model API (PRA IRB model change notification requirement). CRO SM&CR accountability. Experian PowerCurve (preferred) / FICO Platform. Consumer Duty GDPR Article 22 automated decision records."
+    },
+    {
+      "id": "SVC-104",
+      "name": "Data Platform",
+      "classification": "foundation",
+      "tier": "T2",
+      "capability_domain": "Platform Infrastructure",
+      "dependencies": [
+        {
+          "service_id": "SVC-102",
+          "criticality": "hard",
+          "rationale": "Domain events from all services streamed into data platform via event bus. Primary ingestion mechanism \u2014 no direct DB queries."
+        },
+        {
+          "service_id": "SVC-103",
+          "criticality": "hard",
+          "rationale": "Data access events logged for UK GDPR ROPA obligations and PRA data quality audit."
+        }
+      ],
+      "notes": "Only system permitted to query across domain service data (SDD-009). Feature store for ML models. COREP/FINREP data aggregation. Consumer Duty outcomes analytics. Databricks Lakehouse (preferred) / Snowflake / AWS Redshift+SageMaker. PCI DSS scoped."
+    },
+    {
+      "id": "SVC-112",
+      "name": "Observability Aggregator",
+      "classification": "observability",
+      "tier": "T2",
+      "capability_domain": "Platform Observability",
+      "dependencies": [
+        {
+          "service_id": "SVC-108",
+          "criticality": "hard",
+          "rationale": "Aggregates log data from SVC-108 for dashboards and alerting."
+        },
+        {
+          "service_id": "SVC-109",
+          "criticality": "hard",
+          "rationale": "Aggregates trace data from SVC-109 for latency analysis."
+        },
+        {
+          "service_id": "SVC-110",
+          "criticality": "hard",
+          "rationale": "Aggregates metrics from SVC-110 for SLA alerting and PRA operational resilience reporting."
+        }
+      ],
+      "notes": "Single pane-of-glass for IT Operations (PER-060). FCA PS21/3 impact tolerance dashboards. CMA Open Banking API performance. Grafana Enterprise (preferred)."
+    },
+    {
+      "id": "SVC-002",
+      "name": "Mortgage Service",
+      "classification": "domain_specific",
+      "tier": "T3",
+      "capability_domain": "Retail Banking (CAP-001)",
+      "dependencies": [
+        {
+          "service_id": "SVC-052",
+          "criticality": "hard",
+          "rationale": "Mortgage AIP requires credit risk decision. MCOB responsible lending obligation."
+        },
+        {
+          "service_id": "SVC-050",
+          "criticality": "hard",
+          "rationale": "New mortgage customers require KYC clearance before mortgage offer."
+        },
+        {
+          "service_id": "SVC-001",
+          "criticality": "soft",
+          "rationale": "Salary credit history and transaction data for affordability assessment."
+        },
+        {
+          "service_id": "SVC-009",
+          "criticality": "soft",
+          "rationale": "Mortgage completion CHAPS drawdown executed via SVC-009."
+        },
+        {
+          "service_id": "SVC-053",
+          "criticality": "soft",
+          "rationale": "MCOB-regulated mortgage communications (initial disclosure, mortgage offer, rate change notices)."
+        }
+      ],
+      "notes": "MCOB regulated. HM Land Registry integration. CHAPS drawdown. Broker channel. LendInvest (shortlisted). T3 because dependent on SVC-001 (T2) and SVC-052 (T2)."
+    },
+    {
+      "id": "SVC-003",
+      "name": "Credit Card Service",
+      "classification": "domain_specific",
+      "tier": "T3",
+      "capability_domain": "Retail Banking (CAP-001)",
+      "dependencies": [
+        {
+          "service_id": "SVC-052",
+          "criticality": "hard",
+          "rationale": "Credit card application assessment and credit limit setting."
+        },
+        {
+          "service_id": "SVC-051",
+          "criticality": "hard",
+          "rationale": "Card transactions above thresholds require real-time sanctions screening."
+        },
+        {
+          "service_id": "SVC-050",
+          "criticality": "hard",
+          "rationale": "New credit card customers require KYC clearance."
+        },
+        {
+          "service_id": "SVC-013",
+          "criticality": "hard",
+          "rationale": "CNP fraud detection is a blocking step in the authorisation path."
+        },
+        {
+          "service_id": "SVC-011",
+          "criticality": "hard",
+          "rationale": "Depends on SVC-011 for BIN management and Visa/Mastercard scheme connectivity."
+        }
+      ],
+      "notes": "PCI DSS CDE. 99.99% SLA. gRPC authorisation path. Section 75 liability. Marqeta (preferred) / Thredd for card processing."
+    },
+    {
+      "id": "SVC-006",
+      "name": "Trade Finance Service",
+      "classification": "domain_specific",
+      "tier": "T3",
+      "capability_domain": "Commercial Banking (CAP-002)",
+      "dependencies": [
+        {
+          "service_id": "SVC-051",
+          "criticality": "hard",
+          "rationale": "All trade finance counterparties must be screened for sanctions before LC issuance."
+        },
+        {
+          "service_id": "SVC-005",
+          "criticality": "soft",
+          "rationale": "LC applicant credit facility headroom from commercial banking core."
+        },
+        {
+          "service_id": "SVC-010",
+          "criticality": "soft",
+          "rationale": "LC reimbursement and trade payment settlements via SWIFT."
+        },
+        {
+          "service_id": "SVC-054",
+          "criticality": "soft",
+          "rationale": "Trade documents stored/retrieved via document management service."
+        }
+      ],
+      "notes": "ETDA 2023. SWIFT MT700-series. UCP 600/URDG 758. Finastra Trade Innovation (preferred). ETDA compliance mandatory from September 2023."
+    },
+    {
+      "id": "SVC-007",
+      "name": "Treasury Service",
+      "classification": "domain_specific",
+      "tier": "T3",
+      "capability_domain": "Commercial Banking (CAP-002)",
+      "dependencies": [
+        {
+          "service_id": "SVC-005",
+          "criticality": "soft",
+          "rationale": "Business account balances and cash positions for notional pooling and sweep structures."
+        },
+        {
+          "service_id": "SVC-010",
+          "criticality": "soft",
+          "rationale": "FX spot and forward settlements via SWIFT."
+        },
+        {
+          "service_id": "SVC-012",
+          "criticality": "soft",
+          "rationale": "Market risk exposures (FX, interest rate) reported to risk engine for FRTB/IRRBB."
+        }
+      ],
+      "notes": "ISDA/CSA. EMIR UK. MiFID II derivatives. Kyriba partnership model. T3 \u2014 dependent on SVC-005 (T2) and SVC-010 (T3, but concurrent deployment acceptable)."
+    },
+    {
+      "id": "SVC-008",
+      "name": "Merchant Acquiring Service",
+      "classification": "domain_specific",
+      "tier": "T3",
+      "capability_domain": "Commercial Banking (CAP-002)",
+      "dependencies": [
+        {
+          "service_id": "SVC-013",
+          "criticality": "hard",
+          "rationale": "CNP transaction authorisation requires real-time fraud scoring. Primary CNP fraud typology."
+        },
+        {
+          "service_id": "SVC-052",
+          "criticality": "hard",
+          "rationale": "Merchant underwriting requires credit risk assessment of merchant entity."
+        },
+        {
+          "service_id": "SVC-005",
+          "criticality": "soft",
+          "rationale": "Merchant settlement funds credited to business current account in SVC-005."
+        }
+      ],
+      "notes": "Acquiring licence and merchant relationship retained. Worldpay/Fiserv bureau for scheme processing. PCI DSS CDE. PSR MR22/1.7 transparency."
+    },
+    {
+      "id": "SVC-010",
+      "name": "International Payments Service",
+      "classification": "domain_specific",
+      "tier": "T3",
+      "capability_domain": "Payment Operations (CAP-003)",
+      "dependencies": [
+        {
+          "service_id": "SVC-051",
+          "criticality": "hard",
+          "rationale": "All international payment beneficiaries must be screened for sanctions. OFAC/OFSI/EU/UN mandatory."
+        },
+        {
+          "service_id": "SVC-013",
+          "criticality": "hard",
+          "rationale": "Cross-border payment fraud (social engineering, account takeover) screened at origination."
+        }
+      ],
+      "notes": "SWIFT CBPR+ ISO 20022 MX (mandatory from November 2025). FATF travel rule. SWIFT gpi. SWIFT SAA Cloud + Volante ISO 20022 translation. T3 \u2014 concurrent with SVC-009 (T2) but requires T2 domain services for balance funding."
+    },
+    {
+      "id": "SVC-011",
+      "name": "Card Processing Service",
+      "classification": "domain_specific",
+      "tier": "T3",
+      "capability_domain": "Payment Operations (CAP-003)",
+      "dependencies": [
+        {
+          "service_id": "SVC-013",
+          "criticality": "hard",
+          "rationale": "Card transaction authorisation calls fraud scoring. Sub-100ms. Approve/decline/challenge in authorisation response."
+        },
+        {
+          "service_id": "SVC-001",
+          "criticality": "soft",
+          "rationale": "Debit card authorisation queries available balance from retail banking core."
+        }
+      ],
+      "notes": "PCI DSS CDE. 99.99% SLA. Marqeta (preferred) / Thredd. BIN management. Visa/Mastercard scheme rules. Strong buy \u2014 bank does not maintain direct scheme processing."
+    },
+    {
+      "id": "SVC-015",
+      "name": "Compliance Core Service",
+      "classification": "domain_specific",
+      "tier": "T3",
+      "capability_domain": "Compliance & Regulatory (CAP-005)",
+      "dependencies": [
+        {
+          "service_id": "SVC-012",
+          "criticality": "soft",
+          "rationale": "COREP/FINREP requires RWA and capital data from risk engine. Event-driven \u2014 not synchronously blocking."
+        },
+        {
+          "service_id": "SVC-104",
+          "criticality": "soft",
+          "rationale": "Regulatory reporting requires cross-system data aggregation from data platform."
+        },
+        {
+          "service_id": "SVC-103",
+          "criticality": "hard",
+          "rationale": "Consumer Duty outcomes monitoring requires immutable audit logs from all customer-facing services."
+        }
+      ],
+      "notes": "COREP, FINREP, PRA 110. Consumer Duty outcomes. SM&CR accountability map. ROPA/DPIA. AxiomSL for reporting; OneTrust for GDPR; Behavox for conduct surveillance."
+    },
+    {
+      "id": "SVC-016",
+      "name": "Wealth Platform Service",
+      "classification": "domain_specific",
+      "tier": "T3",
+      "capability_domain": "Wealth Management (CAP-006)",
+      "dependencies": [
+        {
+          "service_id": "SVC-050",
+          "criticality": "hard",
+          "rationale": "HNW clients require EDD KYC clearance before investment accounts opened."
+        },
+        {
+          "service_id": "SVC-001",
+          "criticality": "soft",
+          "rationale": "Private banking clients have personal current accounts in SVC-001. Holistic client view."
+        },
+        {
+          "service_id": "SVC-010",
+          "criticality": "soft",
+          "rationale": "HNW clients with international assets require FX and international payments."
+        }
+      ],
+      "notes": "MiFID II suitability (COBS 9A). SDR ESG labels (PS23/16). EMIR derivatives. FNZ/SEI platform custody; Wealth Dynamix CRM; BlackRock Aladdin Wealth; Voyant financial planning."
+    },
+    {
+      "id": "SVC-017",
+      "name": "Digital Channels Service",
+      "classification": "channel",
+      "tier": "T3",
+      "capability_domain": "Digital Channels (CAP-007)",
+      "dependencies": [
+        {
+          "service_id": "SVC-009",
+          "criticality": "soft",
+          "rationale": "PISP payment initiation via event. PaymentSettled event consumed for push notification."
+        },
+        {
+          "service_id": "SVC-100",
+          "criticality": "hard",
+          "rationale": "Customer SCA authentication is a blocking dependency for all authenticated digital interactions."
+        },
+        {
+          "service_id": "SVC-101",
+          "criticality": "hard",
+          "rationale": "Open Banking TPP API calls routed through API Gateway for rate limiting and certificate validation."
+        },
+        {
+          "service_id": "SVC-013",
+          "criticality": "hard",
+          "rationale": "APP fraud warnings in payment journey. PSR PS21/3 operational resilience."
+        }
+      ],
+      "notes": "Reclassified from CAP-007 capability to channel service. Sits outside the system boundary. Allowed to call any capability REST API synchronously.",
+      "capability_mappings": []
+    },
+    {
+      "id": "SVC-053",
+      "name": "Notification Service",
+      "classification": "foundation",
+      "tier": "T3",
+      "capability_domain": "Digital Channels (CAP-007) \u2014 shared service SSC-005",
+      "dependencies": [
+        {
+          "service_id": "SVC-102",
+          "criticality": "hard",
+          "rationale": "Subscribes to domain events across all capabilities that trigger customer communications."
+        },
+        {
+          "service_id": "SVC-103",
+          "criticality": "hard",
+          "rationale": "Regulated communications must be immutably logged with delivery confirmation."
+        }
+      ],
+      "notes": "Reclassified to platform layer. Notification is shared infrastructure \u2014 all capabilities publish notification events, the notification service delivers them. Share the mechanism, isolate the state.",
+      "capability_mappings": []
+    },
+    {
+      "id": "SVC-054",
+      "name": "Document Management Service",
+      "classification": "cross_cutting",
+      "tier": "T3",
+      "capability_domain": "Commercial Banking (CAP-002) \u2014 shared service SSC-004",
+      "dependencies": [
+        {
+          "service_id": "SVC-102",
+          "criticality": "hard",
+          "rationale": "Publishes DocumentStored and DocumentRetrieved events for audit trail."
+        },
+        {
+          "service_id": "SVC-103",
+          "criticality": "hard",
+          "rationale": "Document access and modification events must be immutably audited."
+        }
+      ],
+      "notes": "ETDA 2023 electronic trade documents. MLR 2017 5-year minimum retention. AWS S3 + Macie (preferred). UK GDPR right-to-erasure conflict resolution."
+    },
+    {
+      "id": "SVC-055",
+      "name": "Workflow Engine",
+      "classification": "cross_cutting",
+      "tier": "T3",
+      "capability_domain": "Compliance & Regulatory (CAP-005) \u2014 shared service SSC-006",
+      "dependencies": [
+        {
+          "service_id": "SVC-102",
+          "criticality": "hard",
+          "rationale": "Workflow state transitions published as events. Domain services subscribe to workflow completion events."
+        },
+        {
+          "service_id": "SVC-100",
+          "criticality": "hard",
+          "rationale": "Human task assignment requires authenticated user identities for maker-checker and approval chains."
+        }
+      ],
+      "notes": "Corporate EDD, mortgage origination, trade finance LC workflows, commercial credit committee. SM&CR approval chains. Temporal (preferred) / Camunda."
+    },
+    {
+      "id": "SVC-113",
+      "name": "Zero-Trust Policy Engine",
+      "classification": "security",
+      "tier": "T3",
+      "capability_domain": "Platform Security",
+      "dependencies": [
+        {
+          "service_id": "SVC-100",
+          "criticality": "hard",
+          "rationale": "Policy decisions reference IAM attributes (SM&CR functions, user roles). IAM is the identity data source."
+        },
+        {
+          "service_id": "SVC-106",
+          "criticality": "hard",
+          "rationale": "Service mesh identity (SPIFFE) is a principal in zero-trust policy decisions."
+        },
+        {
+          "service_id": "SVC-013",
+          "criticality": "soft",
+          "rationale": "Risk signals from fraud detection can inform dynamic access policy decisions (e.g. elevated-risk session triggers step-up auth)."
+        }
+      ],
+      "notes": "OPA (Open Policy Agent) / Styra DAS. Declarative policy-as-code. SM&CR access governance. PCI DSS CDE access decisions. MLRO-gated data access. T3 \u2014 centralised policy governance layer deployed once T0-T2 services are operational and policy subjects exist."
+    },
+    {
+      "id": "SVC-004",
+      "name": "Insurance Distribution Service",
+      "classification": "domain_specific",
+      "tier": "T4",
+      "capability_domain": "Retail Banking (CAP-001) \u2014 overlay",
+      "dependencies": [
+        {
+          "service_id": "SVC-001",
+          "criticality": "soft",
+          "rationale": "Queries retail customer profile data for pre-population of insurance quotes and trigger-based cross-sell."
+        },
+        {
+          "service_id": "SVC-053",
+          "criticality": "soft",
+          "rationale": "ICOBS-regulated insurance communications via notification service."
+        },
+        {
+          "service_id": "SVC-054",
+          "criticality": "soft",
+          "rationale": "Policy documents and IPID stored via document management service."
+        }
+      ],
+      "notes": "T4 overlay \u2014 distribution only (bank is not the underwriter). ICOBS. Insurance Distribution Directive. No other service depends on SVC-004. Can be deployed independently after T3 core banking is operational. ICOBS FCA authorisation as a distinct regulatory step."
+    }
+  ],
+  "dependency_criticality_matrix": {
+    "hard_dependency_pairs": [
+      {
+        "from_service": "SVC-101",
+        "to_service": "SVC-100",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-105",
+        "to_service": "SVC-100",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-106",
+        "to_service": "SVC-100",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-050",
+        "to_service": "SVC-051",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-050",
+        "to_service": "SVC-102",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-051",
+        "to_service": "SVC-102",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-051",
+        "to_service": "SVC-103",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-001",
+        "to_service": "SVC-050",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-001",
+        "to_service": "SVC-052",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-001",
+        "to_service": "SVC-100",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-001",
+        "to_service": "SVC-102",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-005",
+        "to_service": "SVC-050",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-005",
+        "to_service": "SVC-052",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-005",
+        "to_service": "SVC-051",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-005",
+        "to_service": "SVC-102",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-009",
+        "to_service": "SVC-051",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-009",
+        "to_service": "SVC-013",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-052",
+        "to_service": "SVC-102",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-052",
+        "to_service": "SVC-103",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-002",
+        "to_service": "SVC-052",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-002",
+        "to_service": "SVC-050",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-003",
+        "to_service": "SVC-052",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-003",
+        "to_service": "SVC-051",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-003",
+        "to_service": "SVC-050",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-003",
+        "to_service": "SVC-013",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-003",
+        "to_service": "SVC-011",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-006",
+        "to_service": "SVC-051",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-008",
+        "to_service": "SVC-013",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-008",
+        "to_service": "SVC-052",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-010",
+        "to_service": "SVC-051",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-010",
+        "to_service": "SVC-013",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-011",
+        "to_service": "SVC-013",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-013",
+        "to_service": "SVC-102",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-015",
+        "to_service": "SVC-103",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-016",
+        "to_service": "SVC-050",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-017",
+        "to_service": "SVC-100",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-017",
+        "to_service": "SVC-101",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-017",
+        "to_service": "SVC-013",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-053",
+        "to_service": "SVC-102",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-053",
+        "to_service": "SVC-103",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-054",
+        "to_service": "SVC-102",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-054",
+        "to_service": "SVC-103",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-055",
+        "to_service": "SVC-102",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-055",
+        "to_service": "SVC-100",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-104",
+        "to_service": "SVC-102",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-104",
+        "to_service": "SVC-103",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-108",
+        "to_service": "SVC-107",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-109",
+        "to_service": "SVC-107",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-110",
+        "to_service": "SVC-107",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-111",
+        "to_service": "SVC-103",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-112",
+        "to_service": "SVC-108",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-112",
+        "to_service": "SVC-109",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-112",
+        "to_service": "SVC-110",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-113",
+        "to_service": "SVC-100",
+        "criticality": "hard"
+      },
+      {
+        "from_service": "SVC-113",
+        "to_service": "SVC-106",
+        "criticality": "hard"
+      }
+    ],
+    "summary": {
+      "total_hard_dependencies": 54,
+      "total_soft_dependencies": 24,
+      "highest_fan_in_service": "SVC-100 (Identity & Access Management) \u2014 depended on by 10+ services as hard dependency; universal platform foundation",
+      "highest_fan_out_service": "SVC-003 (Credit Card Service) \u2014 5 hard upstream dependencies: SVC-052, SVC-051, SVC-050, SVC-013, SVC-011 all must be available for card operations"
+    }
+  },
+  "build_order": [
+    {
+      "phase": 1,
+      "name": "Platform Bedrock",
+      "tiers": [
+        "T0"
+      ],
+      "services_in_phase": [
+        "SVC-100",
+        "SVC-101",
+        "SVC-102",
+        "SVC-103",
+        "SVC-105",
+        "SVC-106",
+        "SVC-107"
+      ],
+      "regulatory_rationale": "PRA authorisation conditions require the bank to have identity management (SVC-100) and audit logging (SVC-103) operational before any personal data is processed. UK GDPR requires encryption key management (SVC-105) before customer data is stored. PCI DSS requires IAM and audit logging before any cardholder data environment is provisioned. FCA PS21/3 operational resilience requires an observability pipeline (SVC-107) from Day 1 to evidence important business service recovery within impact tolerances. The Service Mesh (SVC-106) with deny-all baseline is a prerequisite for PCI DSS network segmentation evidence. No other phase can commence without all T0 services passing health checks.",
+      "gate_criteria": [
+        "SVC-100: SCA-compliant customer authentication demonstrated (PSD2 RTS test)",
+        "SVC-101: API Gateway routing 100% of test traffic via TLS 1.3; rate limiting validated",
+        "SVC-102: Event Bus producing and consuming test events with schema registry operational",
+        "SVC-103: Immutable audit log receiving and tamper-evidence verifiable; PCI DSS key management audit passed",
+        "SVC-105: HSM-backed key storage operational; dynamic credential rotation demonstrated",
+        "SVC-106: mTLS verified between all T0 services; deny-all baseline with allow-list documented for PCI DSS auditor",
+        "SVC-107: OTel Collector receiving traces, metrics, and logs from all T0 services"
+      ],
+      "estimated_duration_weeks": 12
+    },
+    {
+      "phase": 2,
+      "name": "Compliance Prerequisites & Observability Stores",
+      "tiers": [
+        "T1"
+      ],
+      "services_in_phase": [
+        "SVC-013",
+        "SVC-050",
+        "SVC-051",
+        "SVC-108",
+        "SVC-109",
+        "SVC-110",
+        "SVC-111",
+        "SVC-014"
+      ],
+      "regulatory_rationale": "MLR 2017 (Money Laundering Regulations) requires CDD (SVC-050, SVC-014) and sanctions screening (SVC-051) to be operational before the bank can accept any customer funds or process any payment. OFSI sanctions screening (SVC-051) is a hard legal obligation \u2014 operation without it creates direct criminal liability. PSR PS23/3 (APP fraud reimbursement mandatory from October 2024) requires fraud detection (SVC-013) before any FPS payment processing. POCA 2002 requires MLRO-owned KYC infrastructure before any commercial activity. The WORM audit log store (SVC-111) must be active before any regulated financial transaction to establish the tamper-evident evidence trail required by MLR 2017 (5 years) and PRA (7 years). Observability stores (SVC-108-110) must be active to receive T0 telemetry for FCA PS21/3 evidence.",
+      "gate_criteria": [
+        "SVC-051: Sanctions screening demonstrated against OFSI, OFAC, UN, and EU consolidated lists; no-degradation test passed",
+        "SVC-050: Retail synchronous KYC path demonstrated (sub-1s); corporate EDD asynchronous path validated",
+        "SVC-013: Fraud scoring demonstrated against test transaction set; sub-100ms gRPC SLA verified",
+        "SVC-014: MLRO SAR escalation workflow demonstrated; NCA UKFIU test submission completed",
+        "SVC-111: WORM write-once verified; cryptographic seal tamper-evidence test passed; 7-year retention policy configured",
+        "SVC-108/109/110: Observability stores receiving telemetry from T0 services; retention policies validated",
+        "FCA/PRA notification: Compliance readiness evidence submitted to FCA Supervision team per SM&CR obligations"
+      ],
+      "estimated_duration_weeks": 10
+    },
+    {
+      "phase": 3,
+      "name": "Core Banking \u2014 Retail, Commercial, Payments, Risk",
+      "tiers": [
+        "T2"
+      ],
+      "services_in_phase": [
+        "SVC-001",
+        "SVC-005",
+        "SVC-009",
+        "SVC-012",
+        "SVC-052",
+        "SVC-104",
+        "SVC-112"
+      ],
+      "regulatory_rationale": "PRA deposit-taking permission requires the bank to demonstrate functioning retail (SVC-001) and commercial (SVC-005) ledger capabilities before accepting customer deposits commercially. The domestic payment rail (SVC-009) is required for FCA payment institution authorisation \u2014 the bank cannot execute Faster Payments, BACS, or CHAPS without it, and Pay.UK requires direct participant testing before live access. Basel 3.1 (PRA PS17/23) requires the risk engine (SVC-012) to calculate Pillar 1 capital (COREP) before lending commences \u2014 the CRO must be able to demonstrate capital adequacy at all times. The credit decision service (SVC-052) is required before any consumer credit agreement (CCA 1974) can be executed \u2014 retail lending without an auditable credit decision engine creates regulatory liability. The data platform (SVC-104) and observability aggregator (SVC-112) are deployed in this phase to support regulatory reporting and FCA PS21/3 impact tolerance evidence from the point core services go live.",
+      "gate_criteria": [
+        "SVC-001: End-to-end retail account opening demonstrated with KYC clearance (SVC-050) as prerequisite; FSCS eligibility data model validated",
+        "SVC-005: Commercial account opening with KYB clearance demonstrated; covenant monitoring active",
+        "SVC-009: Pay.UK FPS direct participant certification completed; CHAPS Bank of England RT2 testing passed; CoP live",
+        "SVC-012: COREP capital calculation demonstrated to PRA; IFRS 9 ECL provisioning model validated; PRA IRB model submission (if applicable)",
+        "SVC-052: Versioned credit model API demonstrated; Consumer Duty GDPR Article 22 automated decision audit trail verified",
+        "SVC-104: Cross-domain event ingestion from SVC-001, SVC-005, SVC-009 via event bus demonstrated; feature store active for SVC-013 and SVC-052",
+        "SVC-112: Impact tolerance dashboards operational; CMA Open Banking API performance dashboard active",
+        "PRA: Pillar 2A ICAAP submission updated to reflect T2 services going live"
+      ],
+      "estimated_duration_weeks": 20
+    },
+    {
+      "phase": 4,
+      "name": "Cards & International Payments",
+      "tiers": [
+        "T3 \u2014 card and payments subset"
+      ],
+      "services_in_phase": [
+        "SVC-009",
+        "SVC-010",
+        "SVC-011"
+      ],
+      "regulatory_rationale": "Note: SVC-009 (Domestic Payments) is already deployed in Phase 3 as T2. This sub-phase focuses on the T3 card and international payment services. Card Processing (SVC-011) requires PCI DSS CDE certification before Visa/Mastercard authorisation can go live \u2014 this takes 6-12 weeks of PCI DSS assessment alongside scheme testing. International Payments (SVC-010) requires SWIFT Alliance certification, ISO 20022 CBPR+ compliance testing, and FATF travel rule implementation before live cross-border transactions \u2014 SWIFT mandates a formal certification process for new direct participants. Card processing and international payments are deployed in the same phase because both depend on fraud detection (SVC-013, T1) and sanctions screening (SVC-051, T1) already being live.",
+      "gate_criteria": [
+        "SVC-011: PCI DSS v4.0 Report on Compliance (ROC) issued by QSA; Marqeta/Thredd BIN management configuration certified; Visa/Mastercard scheme testing passed",
+        "SVC-010: SWIFT Alliance Access / SAA Cloud certification completed; ISO 20022 MX message test suite passed; FATF structured address validation demonstrated",
+        "Visa/Mastercard: Scheme participation agreements signed; interchange transparency records format confirmed per PSR MR22/1.7",
+        "PCI DSS: CDE network segmentation evidence (service mesh policy) reviewed by QSA"
+      ],
+      "estimated_duration_weeks": 14
+    },
+    {
+      "phase": 5,
+      "name": "Commercial Banking Extensions & Compliance Core",
+      "tiers": [
+        "T3 \u2014 commercial and compliance subset"
+      ],
+      "services_in_phase": [
+        "SVC-006",
+        "SVC-007",
+        "SVC-008",
+        "SVC-015",
+        "SVC-054",
+        "SVC-055"
+      ],
+      "regulatory_rationale": "Trade Finance (SVC-006) requires ETDA 2023 compliance testing before electronic trade documents can be issued \u2014 the Electronic Trade Documents Act 2023 requires the bank to demonstrate that electronic equivalents of bills of lading and bills of exchange meet the transferable record requirements. Treasury Service (SVC-007) requires EMIR UK trade reporting to be active before derivative transactions commence \u2014 FCA EMIR reporting obligation applies from the first derivative trade. Merchant Acquiring (SVC-008) requires acquiring licence registration and PCI DSS CDE (shared with SVC-011 from Phase 4). Compliance Core Service (SVC-015) can only produce accurate COREP/FINREP returns once T2 core services are generating data \u2014 this is the first phase where regulatory reporting is complete enough to submit real returns. Document Management (SVC-054) and Workflow Engine (SVC-055) underpin the commercial product workflows deployed in this phase.",
+      "gate_criteria": [
+        "SVC-006: ETDA 2023 electronic trade document issuance and transfer demonstrated; SWIFT MT700-series messaging tested with correspondent banks",
+        "SVC-007: EMIR UK trade reporting registration completed; ISDA/CSA documentation workflow tested; MiFID II transaction reporting live",
+        "SVC-008: Acquiring licence registration with FCA confirmed; merchant onboarding workflow tested; PSR MR22/1.7 scheme fee transparency disclosure live",
+        "SVC-015: First COREP capital return submitted to PRA via regulatory gateway (CH-007); Consumer Duty board-level outcomes report generated",
+        "SVC-054/055: Corporate EDD workflow (multi-day) demonstrated end-to-end; document retention policies validated for each document type"
+      ],
+      "estimated_duration_weeks": 16
+    },
+    {
+      "phase": 6,
+      "name": "Retail Extensions, Digital Channels & Wealth",
+      "tiers": [
+        "T3 \u2014 retail and digital subset"
+      ],
+      "services_in_phase": [
+        "SVC-002",
+        "SVC-003",
+        "SVC-016",
+        "SVC-017",
+        "SVC-053",
+        "SVC-113"
+      ],
+      "regulatory_rationale": "Mortgage Service (SVC-002) requires MCOB authorisation and FCA registration before mortgage lending commences \u2014 PRA mortgage capital requirements under Basel 3.1 must be demonstrated before the first mortgage offer. Credit Card Service (SVC-003) requires Consumer Credit Act 1974 regulated credit agreement infrastructure to be PRA/FCA approved before card issuance. Digital Channels Service (SVC-017) requires CMA Order Open Banking API certification by the Open Banking Implementation Entity (now Open Banking Ltd) before TPP access can go live \u2014 the CMA9 obligation requires a formal conformance testing process. Wealth Platform (SVC-016) requires FCA COBS 9A suitability records infrastructure before investment advice can be provided \u2014 MiFID II requires suitability records from the first investment recommendation. Zero-Trust Policy Engine (SVC-113) is deployed in this phase to enforce centralised access governance across the now-complete service estate.",
+      "gate_criteria": [
+        "SVC-002: MCOB-compliant mortgage origination workflow tested; HM Land Registry integration validated; PRA residential mortgage capital weight demonstrated in COREP",
+        "SVC-003: Consumer Credit Act regulated credit agreement generation and delivery tested; Section 75 liability workflow demonstrated; PCI DSS CDE scope verified with QSA",
+        "SVC-017: CMA Order Open Banking API conformance testing passed (Open Banking Ltd); FAPI 1.0 Advanced profile penetration test passed; OBIE API performance reporting active",
+        "SVC-016: MiFID II suitability records demonstrated (COBS 9A); SDR ESG label disclosure live for qualifying products; FNZ/SEI custody integration tested",
+        "SVC-053: GDPR/PECR consent management tested; regulated communications delivery (MCOB, CONC) with audit trail demonstrated",
+        "SVC-113: Zero-trust policy-as-code reviewed by Platform Security; SM&CR access governance policies deployed; PCI DSS CDE access decisions via OPA validated"
+      ],
+      "estimated_duration_weeks": 18
+    },
+    {
+      "phase": 7,
+      "name": "Insurance Distribution Overlay",
+      "tiers": [
+        "T4"
+      ],
+      "services_in_phase": [
+        "SVC-004"
+      ],
+      "regulatory_rationale": "Insurance Distribution (SVC-004) is a T4 overlay \u2014 no other service depends on it. FCA ICOBS authorisation as an insurance intermediary is a distinct regulatory process from the core banking PRA authorisation. The bank must complete ICOBS product governance (FCA PROD target market assessments, fair value assessments) for each insurance product line before distribution commences. Consumer Duty applies to all insurance products distributed through the bank \u2014 the Consumer Duty board-level annual assessment (from SVC-015, live in Phase 5) must include insurance distribution outcomes before the first insurance sale. Insurance underwriter contracts and panel management are commercial prerequisites for this phase rather than regulatory prerequisites \u2014 underwriter relationships take 3-6 months to negotiate.",
+      "gate_criteria": [
+        "SVC-004: FCA ICOBS authorisation as insurance intermediary confirmed for all product lines (home, travel, life)",
+        "SVC-004: FCA PROD target market assessments completed for each insurance product distributed",
+        "SVC-004: Consumer Duty fair value assessments for each insurance product reviewed by Board",
+        "SVC-004: Insurance underwriter contracts executed; panel management workflow tested end-to-end",
+        "SVC-004: IPID (Insurance Product Information Document) generation and delivery tested; ICOBS regulated communications via SVC-053 validated"
+      ],
+      "estimated_duration_weeks": 10
+    }
+  ]
+}

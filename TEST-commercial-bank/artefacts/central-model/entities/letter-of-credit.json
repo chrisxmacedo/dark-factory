@@ -1,0 +1,284 @@
+{
+  "id": "ENT-036",
+  "name": "LetterOfCredit",
+  "description": "Aggregate root for a documentary letter of credit. Captures the full lifecycle from application through issuance to settlement or expiry. Owned exclusively by SVC-006 (Trade Finance Service). References BusinessCustomer (ENT-B001) and BusinessAccount (ENT-B002) from SVC-005 by foreign key \u2014 no local copies.",
+  "owning_service": "SVC-006",
+  "fields": [
+    {
+      "name": "lc_id",
+      "type": "UUID v4",
+      "description": "Immutable LC identifier \u2014 primary key",
+      "required": true
+    },
+    {
+      "name": "lc_reference",
+      "type": "string",
+      "description": "Bank-assigned LC reference number (SWIFT field 20, max 16 chars alphanumeric)",
+      "required": true
+    },
+    {
+      "name": "business_customer_id",
+      "type": "UUID v4 (FK \u2192 ENT-B001)",
+      "description": "Applicant \u2014 references BusinessCustomer in SVC-005. Read via same-capability API. No local copy.",
+      "required": true
+    },
+    {
+      "name": "account_id",
+      "type": "UUID v4 (FK \u2192 ENT-B002)",
+      "description": "Applicant's BusinessAccount to be debited on settlement. References SVC-005 entity by FK.",
+      "required": true
+    },
+    {
+      "name": "lc_type",
+      "type": "enum (sight | usance | standby | revolving)",
+      "description": "Letter of credit type. sight = immediate payment on compliant presentation. usance = deferred payment at tenor.",
+      "required": true
+    },
+    {
+      "name": "status",
+      "type": "enum (application_submitted | under_review | compliance_blocked | credit_declined | issued | documents_presented | documents_under_examination | settled | expired | documents_refused | cancelled)",
+      "description": "Current lifecycle status of the LC.",
+      "required": true
+    },
+    {
+      "name": "credit_status",
+      "type": "enum (pending | facility_confirmed | credit_approved | credit_declined)",
+      "description": "Result of PH-053 credit/facility headroom check.",
+      "required": true
+    },
+    {
+      "name": "compliance_status",
+      "type": "enum (not_started | screening_requested | cleared | blocked)",
+      "description": "Result of PH-054 compliance screening.",
+      "required": true
+    },
+    {
+      "name": "compliance_cleared_at",
+      "type": "ISO 8601 UTC timestamp",
+      "description": "Timestamp when EVT-077 (LCComplianceCleared) was received from SVC-051.",
+      "required": false
+    },
+    {
+      "name": "beneficiary_name",
+      "type": "string (max 140 chars)",
+      "description": "Full legal name of the beneficiary (seller / exporter). Used in SWIFT MT700 field 59.",
+      "required": true
+    },
+    {
+      "name": "beneficiary_address",
+      "type": "string (max 280 chars)",
+      "description": "Beneficiary full postal address.",
+      "required": true
+    },
+    {
+      "name": "beneficiary_country_iso2",
+      "type": "string (ISO 3166-1 alpha-2)",
+      "description": "Beneficiary country \u2014 used in sanctions and export control screening.",
+      "required": true
+    },
+    {
+      "name": "advising_bank_swift_bic",
+      "type": "string (BIC8 or BIC11)",
+      "description": "SWIFT BIC of the advising bank (beneficiary's bank). SWIFT MT700 field 57.",
+      "required": true
+    },
+    {
+      "name": "advising_bank_name",
+      "type": "string (max 140 chars)",
+      "description": "Name of advising bank.",
+      "required": true
+    },
+    {
+      "name": "currency_iso3",
+      "type": "string (ISO 4217 3-letter code)",
+      "description": "LC currency (e.g. USD, EUR, GBP).",
+      "required": true
+    },
+    {
+      "name": "lc_amount",
+      "type": "decimal (18,2)",
+      "description": "Face value of the LC in the nominated currency.",
+      "required": true
+    },
+    {
+      "name": "tolerance_pct",
+      "type": "decimal (5,2)",
+      "description": "UCP 600 Article 18(b) tolerance \u2014 default 5% over/under. Stored as percentage (e.g. 5.00).",
+      "required": false
+    },
+    {
+      "name": "goods_description",
+      "type": "string (max 2000 chars)",
+      "description": "Description of goods as they will appear in the LC (SWIFT MT700 field 45A). Must not be vague \u2014 UCP 600 and ISBP 745 require sufficiently specific description.",
+      "required": true
+    },
+    {
+      "name": "hs_tariff_codes",
+      "type": "array of string (6-digit HS codes)",
+      "description": "Harmonised System tariff codes for goods. Used for export control / dual-use screening by SVC-051.",
+      "required": true
+    },
+    {
+      "name": "incoterms_rule",
+      "type": "enum (EXW | FCA | CPT | CIP | DAP | DPU | DDP | FAS | FOB | CFR | CIF)",
+      "description": "Incoterms 2020 rule governing delivery obligations and risk transfer.",
+      "required": true
+    },
+    {
+      "name": "port_of_loading",
+      "type": "string (max 140 chars)",
+      "description": "Named place / port of loading for shipment.",
+      "required": true
+    },
+    {
+      "name": "port_of_discharge",
+      "type": "string (max 140 chars)",
+      "description": "Named place / port of discharge.",
+      "required": true
+    },
+    {
+      "name": "latest_shipment_date",
+      "type": "ISO 8601 date",
+      "description": "Latest date on which goods may be shipped (bill of lading date constraint). SWIFT MT700 field 44C.",
+      "required": true
+    },
+    {
+      "name": "expiry_date",
+      "type": "ISO 8601 date",
+      "description": "Date on which the LC expires. Documents must be presented on or before this date. SWIFT MT700 field 31D.",
+      "required": true
+    },
+    {
+      "name": "expiry_place",
+      "type": "string (max 140 chars)",
+      "description": "Place where the LC expires \u2014 typically at the counters of the issuing bank.",
+      "required": true
+    },
+    {
+      "name": "presentation_period_days",
+      "type": "integer",
+      "description": "Maximum days after shipment date for document presentation. Default 21 days per UCP 600 Article 14(c). May be shorter by LC terms.",
+      "required": true
+    },
+    {
+      "name": "required_documents",
+      "type": "array of object { document_type: string, copies_required: integer, originals_required: integer, special_conditions: string }",
+      "description": "Document checklist as specified in the LC. Forms the basis for PH-057 examination.",
+      "required": true
+    },
+    {
+      "name": "partial_shipments_permitted",
+      "type": "boolean",
+      "description": "Whether partial shipments are permitted. Default false.",
+      "required": true
+    },
+    {
+      "name": "transshipment_permitted",
+      "type": "boolean",
+      "description": "Whether transshipment is permitted. Default false for sensitive goods/routes.",
+      "required": true
+    },
+    {
+      "name": "usance_period_days",
+      "type": "integer",
+      "description": "For usance LCs: deferred payment tenor in days from bill of lading date or sight. Null for sight LCs.",
+      "required": false
+    },
+    {
+      "name": "usance_maturity_date",
+      "type": "ISO 8601 date",
+      "description": "Calculated maturity date for deferred payment. Populated after compliant document examination.",
+      "required": false
+    },
+    {
+      "name": "swift_reference",
+      "type": "string (max 16 chars)",
+      "description": "SWIFT MT700 field 20 \u2014 documentary credit number as transmitted to advising bank.",
+      "required": false
+    },
+    {
+      "name": "issue_date",
+      "type": "ISO 8601 date",
+      "description": "Date LC was issued and SWIFT MT700 transmitted.",
+      "required": false
+    },
+    {
+      "name": "settlement_date",
+      "type": "ISO 8601 date",
+      "description": "Date on which settlement payment was made.",
+      "required": false
+    },
+    {
+      "name": "settlement_amount",
+      "type": "decimal (18,2)",
+      "description": "Actual settlement amount \u2014 may differ from lc_amount due to partial drawings or tolerance.",
+      "required": false
+    },
+    {
+      "name": "facility_check_timestamp",
+      "type": "ISO 8601 UTC timestamp",
+      "description": "Timestamp of PH-053 facility headroom verification against SVC-005.",
+      "required": false
+    },
+    {
+      "name": "channel",
+      "type": "enum (portal | rm_assisted | api)",
+      "description": "Channel through which the LC application was submitted.",
+      "required": true
+    },
+    {
+      "name": "etda_compliant_platform",
+      "type": "boolean",
+      "description": "True if LC issued via ETDA 2023-compliant electronic trade document platform (Bolero / essDOCS).",
+      "required": true
+    },
+    {
+      "name": "created_at",
+      "type": "ISO 8601 UTC timestamp",
+      "description": "Record creation timestamp (PH-052 application submission).",
+      "required": true
+    },
+    {
+      "name": "updated_at",
+      "type": "ISO 8601 UTC timestamp",
+      "description": "Last modification timestamp \u2014 updated on every status transition.",
+      "required": true
+    }
+  ],
+  "relationships": [
+    {
+      "type": "has_many",
+      "target": "ENT-037 (LCAmendment)",
+      "description": "An LC may have zero or more amendments. Each amendment references lc_id."
+    },
+    {
+      "type": "has_many",
+      "target": "ENT-038 (TradeDocument)",
+      "description": "An LC has one or more document presentations. Each TradeDocument set references lc_id."
+    },
+    {
+      "type": "has_many",
+      "target": "ENT-039 (DocumentExamination)",
+      "description": "An LC has one DocumentExamination per presentation event."
+    },
+    {
+      "type": "references",
+      "target": "ENT-B001 (BusinessCustomer) \u2014 SVC-005",
+      "description": "FK reference to applicant. No local copy. Read via SVC-005 GET /business-customers/{id}."
+    },
+    {
+      "type": "references",
+      "target": "ENT-B002 (BusinessAccount) \u2014 SVC-005",
+      "description": "FK reference to settlement account. No local copy. Read via SVC-005 GET /business-accounts/{id}."
+    }
+  ],
+  "design_decisions": [
+    "status field is the master lifecycle state machine. All phase transitions map to a status transition.",
+    "hs_tariff_codes is an array to support multi-commodity shipments. Each code is a 6-digit HS code; sub-heading extensions (8/10 digit) stored in goods_description for document examination.",
+    "required_documents array stores the exact document checklist specified in the LC terms. Used as the reference set for PH-057 examination checklist generation in ENT-039.",
+    "usance_maturity_date is computed by SVC-006 on receipt of compliant documents, based on usance_period_days from the bill of lading date \u2014 it is not stored at issuance to avoid stale data if BL date differs from expected shipment date."
+  ],
+  "source_journeys": [
+    "JRN-013"
+  ]
+}

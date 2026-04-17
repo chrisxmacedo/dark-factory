@@ -1,0 +1,167 @@
+{
+  "journey_id": "JRN-007",
+  "document_version": "1.0.0",
+  "status": "Draft",
+  "per_phase_nfrs": [
+    {
+      "phase_id": "PH-017",
+      "phase_name": "Loan Application",
+      "nfrs": [
+        {
+          "id": "NFR-JRN007-PH017-01",
+          "category": "performance",
+          "requirement": "LoanApplication creation (ENT-017) and EVT-031 publication must complete within 3 seconds of portal form submission, measured at the SVC-005 API boundary.",
+          "rationale": "FCA SME lending review (GOV-002-R05) signals that poor application experience is a switching driver. Sub-3s confirmation is table stakes vs challenger lenders (OakNorth, iwoca)."
+        },
+        {
+          "id": "NFR-JRN007-PH017-02",
+          "category": "availability",
+          "requirement": "Business loan application submission endpoint (POST /loan-applications) must be available 99.9% of calendar month.",
+          "rationale": "Commercial banking loan origination is a revenue-critical workflow. Unplanned downtime during business hours directly blocks NIM-generating origination activity."
+        }
+      ]
+    },
+    {
+      "phase_id": "PH-018",
+      "phase_name": "Credit Assessment",
+      "nfrs": [
+        {
+          "id": "NFR-JRN007-PH018-01",
+          "category": "performance",
+          "requirement": "SVC-012 must publish EVT-033 (CreditAssessmentCompleted) within 60 seconds of consuming EVT-032 (CreditAssessmentRequested) for automated scoring under standard model parameters. Complex cases requiring manual data retrieval (e.g. first-time borrowers without existing financial data) may extend to 300 seconds.",
+          "rationale": "Credit Analyst (PER-056) queue routing depends on EVT-033. A 60-second SLA for automated scoring is consistent with digital lending benchmarks (OakNorth ACORN). The 300-second extended path covers edge cases where SVC-012 must fetch external financial data."
+        },
+        {
+          "id": "NFR-JRN007-PH018-02",
+          "category": "data_integrity",
+          "requirement": "CreditAssessment.pd_score, lgd_estimate, ead, and ecl_provision must each be computed using the current PRA-approved IRB model version. The scoring_model_version field in EVT-033 payload must match the model version registered in the SVC-012 model registry. Mismatched versions must trigger an alert and block publication of EVT-033.",
+          "rationale": "PRA PS17/23 requires IRB model outputs to be traceable to an approved model version. Unversioned or mismatched outputs invalidate the RWA calculation and create regulatory non-compliance."
+        }
+      ]
+    },
+    {
+      "phase_id": "PH-019",
+      "phase_name": "Underwriting",
+      "nfrs": [
+        {
+          "id": "NFR-JRN007-PH019-01",
+          "category": "regulatory_sla",
+          "requirement": "Credit committee decision must be recorded in SVC-005 (EVT-034 or EVT-035 published) within 10 business days of EVT-031 (LoanApplicationSubmitted) for standard SME term loans up to £1m.",
+          "rationale": "GOV-002-R05 (FCA SME Lending Rules) — expected rules require disclosure of time-to-decision on SME credit applications. The 10-day SLA is the bank's target to remain competitive with challenger lenders while maintaining credit quality."
+        },
+        {
+          "id": "NFR-JRN007-PH019-02",
+          "category": "auditability",
+          "requirement": "Every credit decision (EVT-034 or EVT-035) must include the staff_id of the approving/declining officer in the event payload. The corresponding credit paper must be archived in the SVC-005 document store before the event is published.",
+          "rationale": "SMCR requires all material credit decisions to be attributable to a named Certified Function holder. PRA examination requires production of the credit paper and decision record on demand."
+        }
+      ]
+    },
+    {
+      "phase_id": "PH-020",
+      "phase_name": "Facility Agreement",
+      "nfrs": [
+        {
+          "id": "NFR-JRN007-PH020-01",
+          "category": "legal_integrity",
+          "requirement": "FacilityAgreement.signed_date must only be set when at least one of: (a) wet ink signature document uploaded and verified, or (b) ETDA-compliant electronic signature platform confirmation received with audit trail. Drawdown (PH-021) is hard-blocked until this condition is met.",
+          "rationale": "GOV-002-R02 (ETDA 2023) — the facility agreement must have legal standing under either paper or ETDA-compliant electronic execution. An unsigned agreement has no legal enforceability and would leave the bank without security rights."
+        }
+      ]
+    },
+    {
+      "phase_id": "PH-021",
+      "phase_name": "Drawdown",
+      "nfrs": [
+        {
+          "id": "NFR-JRN007-PH021-01",
+          "category": "performance",
+          "requirement": "CHAPS drawdown instruction must be submitted to SVC-009 within 30 minutes of a customer drawdown instruction received before 14:00 London time. Drawdown instructions received after 14:00 are processed next business day.",
+          "rationale": "CHAPS Bank of England RT2 cut-off for same-day settlement is 17:00 for CHAPS finality. Submission by 14:00 provides sufficient processing headroom for a T+0 settlement. This SLA is communicated to PER-002 at PH-020."
+        },
+        {
+          "id": "NFR-JRN007-PH021-02",
+          "category": "idempotency",
+          "requirement": "SVC-005 must implement idempotent drawdown processing keyed on application_id + drawdown_instruction_id. Duplicate drawdown requests for the same instruction must be rejected after first successful processing. Prevents double-disbursement of loan funds.",
+          "rationale": "Double-disbursement of commercial loan funds is a catastrophic financial error. CHAPS payments are irrevocable. Idempotency is the primary safeguard against retry-induced duplicate disbursement."
+        }
+      ]
+    },
+    {
+      "phase_id": "PH-022",
+      "phase_name": "Ongoing Monitoring",
+      "nfrs": [
+        {
+          "id": "NFR-JRN007-PH022-01",
+          "category": "timeliness",
+          "requirement": "Covenant test results must be recorded (CovenantMonitoring record created with compliance_status set) within 5 business days of the covenant test due date defined in FacilityAgreement.covenants. If borrower financial information is not received within 3 business days of the due date, SVC-005 must auto-flag the LoanAccount as 'watch_list'.",
+          "rationale": "Late covenant testing creates a gap in the IFRS 9 SICR assessment cycle. Under IAS 39/IFRS 9, the bank must be able to demonstrate timely identification of significant increases in credit risk to auditors."
+        },
+        {
+          "id": "NFR-JRN007-PH022-02",
+          "category": "data_integrity",
+          "requirement": "CovenantMonitoring records are immutable once compliance_status is set. Status can only change from 'breached' to 'waived' via a separate waiver workflow requiring credit committee authorisation — not by overwriting the original record.",
+          "rationale": "Overwriting breach records would destroy the IFRS 9 impairment evidence trail and BBRS dispute resolution audit trail (GOV-002-R03)."
+        }
+      ]
+    }
+  ],
+  "cross_cutting_nfrs": [
+    {
+      "id": "NFR-JRN007-CC-01",
+      "category": "event_ordering",
+      "requirement": "All events within a single loan origination application must be published and consumed in strict causal order: EVT-031 → EVT-032 → EVT-033 → EVT-034/035 → EVT-036 → EVT-037 → EVT-038 → EVT-039. The application_id partition key on all commercial.loan-applications and commercial.credit-assessments topics ensures per-application total ordering via SVC-102 (Kafka).",
+      "affected_phases": ["PH-017", "PH-018", "PH-019", "PH-020", "PH-021", "PH-022"]
+    },
+    {
+      "id": "NFR-JRN007-CC-02",
+      "category": "data_classification",
+      "requirement": "All events tagged data_classification: financial (EVT-031 through EVT-039) must be routed to the WORM audit pipeline (SVC-111) in addition to primary consumers. Retention minimum 7 years. Encryption at rest using SVC-105 keys. Access to WORM store restricted to compliance, audit, and PRA-authorised inspection roles.",
+      "affected_phases": ["PH-017", "PH-018", "PH-019", "PH-020", "PH-021", "PH-022"]
+    },
+    {
+      "id": "NFR-JRN007-CC-03",
+      "category": "cross_capability_isolation",
+      "requirement": "SVC-005 (CAP-002) must not make synchronous API calls to SVC-012 (CAP-004) for any purpose. All interactions between these services must flow via SVC-102 (Event Bus) using EVT-032 / EVT-033. This constraint must be enforced at the service mesh (SVC-106) deny-list level — an attempt by SVC-005 to call SVC-012 API directly must return HTTP 403.",
+      "affected_phases": ["PH-018", "PH-022"]
+    },
+    {
+      "id": "NFR-JRN007-CC-04",
+      "category": "scalability",
+      "requirement": "SVC-005 loan origination workflow must handle concurrent origination of at least 500 LoanApplication records at any point in time without degradation in EVT-031 publication latency below the 3-second SLA. Kafka topic commercial.loan-applications must be partitioned with at least 12 partitions to support this concurrency.",
+      "affected_phases": ["PH-017", "PH-018", "PH-019"]
+    },
+    {
+      "id": "NFR-JRN007-CC-05",
+      "category": "availability",
+      "requirement": "SVC-005 loan account servicing endpoints (GET /loan-accounts/{id}, GET /loan-accounts/{id}/covenants) must be available 99.95% of calendar month. These are the primary endpoints consumed by the business portal for in-life loan management.",
+      "affected_phases": ["PH-021", "PH-022"]
+    }
+  ],
+  "regulatory_slas": [
+    {
+      "id": "RSLA-JRN007-01",
+      "regulation": "GOV-002-R01 (Basel 3.1 — PRA PS17/23)",
+      "requirement": "IRB parameters (PD, LGD, EAD) in ENT-018 must be computed using PRA-approved model versions. CreditAssessment records must be retained for the minimum of: loan term + 7 years, or 7 years from origination. PRA has the right to examine any credit assessment on demand.",
+      "phase": "PH-018"
+    },
+    {
+      "id": "RSLA-JRN007-02",
+      "regulation": "GOV-002-R03 (BBRS — SME dispute resolution)",
+      "requirement": "On loan decline (EVT-035), the written decline communication to PER-002 must include BBRS signposting if the customer's annual turnover is <= £10m. BBRS complaints must be acknowledged within 5 working days and resolved within 8 weeks before BBRS referral becomes available.",
+      "phase": "PH-019"
+    },
+    {
+      "id": "RSLA-JRN007-03",
+      "regulation": "GOV-002-R05 (FCA SME Lending Rules)",
+      "requirement": "Loan offer letter must include a standardised APRC-equivalent cost of credit disclosure for facilities > £25,000. Affordability stress-test summary must be available to the borrower on request. Any unsolicited credit increases must include a 14-day cooling-off period.",
+      "phase": "PH-020"
+    },
+    {
+      "id": "RSLA-JRN007-04",
+      "regulation": "GOV-002-R01 (Basel 3.1 — IFRS 9)",
+      "requirement": "IFRS 9 ECL provision (ENT-018.ecl_provision) must be reassessed at every IFRS reporting date (minimum quarterly for half-year and year-end reporting). LoanAccount IFRS 9 stage must be reviewed whenever a Significant Increase in Credit Risk trigger is detected (including EVT-039 CovenantBreachDetected).",
+      "phase": "PH-022"
+    }
+  ]
+}

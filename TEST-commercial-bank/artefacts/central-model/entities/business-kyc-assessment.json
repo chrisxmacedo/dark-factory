@@ -1,0 +1,165 @@
+{
+  "entity_id": "ENT-B005",
+  "name": "BusinessKycAssessment",
+  "description": "Company-level KYC/CDD assessment record produced by SVC-014 (KYC/AML Service) in BPH-005. Extends the KycAssessment pattern (ENT-003) for legal entities: company-level PEP/sanctions/adverse media screening, sector risk assessment, jurisdictional risk, aggregated UBO/director individual screening results, and composite risk scoring. The MLRO (PER-052) holds accountability for this assessment under MLR 2017 SMF17. This is the bank's primary audit record for MLR 2017 Regulation 28 compliance for each business customer. Note: BusinessKycAssessment is a SEPARATE entity from ENT-003 (KycAssessment) — they share a conceptual pattern but are not a subtype/supertype. Each evolves independently per its capability domain.",
+  "owning_service": "SVC-014",
+  "owning_capability": "CAP-005 (Compliance & Regulatory)",
+  "reachable_from_phases": ["BPH-005", "BPH-006"],
+  "aggregate_root": false,
+  "fields": [
+    {
+      "name": "assessment_id",
+      "type": "UUID",
+      "validation_rule": "RFC 4122 UUID v4. System-generated. Immutable.",
+      "source": "BPH-005",
+      "governed_by": null
+    },
+    {
+      "name": "business_customer_id",
+      "type": "UUID",
+      "validation_rule": "Required. Cross-service reference to BusinessCustomer.business_customer_id (not a DB FK — resolved via event payload). Immutable.",
+      "source": "BPH-005",
+      "governed_by": null
+    },
+    {
+      "name": "company_sanctions_screening_result",
+      "type": "object",
+      "validation_rule": "Required. Object: status (enum: clear | blocked | pending_review), match_detail (string, null if clear), lists_checked (array: OFSI | OFAC | UN | EU), screened_at (timestamp). Hard limit: 3,000ms (GOV-005-R02).",
+      "source": "BPH-005",
+      "governed_by": "GOV-005-R02"
+    },
+    {
+      "name": "company_pep_screening_result",
+      "type": "object",
+      "validation_rule": "Required. Object: status (enum: clear | match | pending_review), match_detail (string, null if clear), data_source (string), screened_at (timestamp). Screens the company for PEP-linked entities.",
+      "source": "BPH-005",
+      "governed_by": "GOV-005-R01"
+    },
+    {
+      "name": "company_adverse_media_result",
+      "type": "object",
+      "validation_rule": "Required. Object: status (enum: clear | flagged | pending_review), summary (string, null if clear), severity (enum: none | low | medium | high), screened_at (timestamp).",
+      "source": "BPH-005",
+      "governed_by": "GOV-005-R01"
+    },
+    {
+      "name": "sector_risk_assessment",
+      "type": "object",
+      "validation_rule": "Required. Object: sic_code_risk_tier (enum: low | medium | high | prohibited), sector_notes (string, nullable), prohibited_sector (boolean). Prohibited sectors result in automatic decline.",
+      "source": "BPH-005",
+      "governed_by": "GOV-005-R01"
+    },
+    {
+      "name": "jurisdictional_risk",
+      "type": "object",
+      "validation_rule": "Required. Object: country_of_incorporation_risk (enum: low | medium | high), operating_countries (array of ISO 3166-1 alpha-2), high_risk_jurisdiction_flag (boolean — true if any country on FATF grey/black list or HM Treasury designated list).",
+      "source": "BPH-005",
+      "governed_by": "GOV-005-R01"
+    },
+    {
+      "name": "ubo_individual_assessments",
+      "type": "array<UboAssessmentSummary>",
+      "validation_rule": "Required. Array of summary screening results per UBO. Each: ubo_id (UUID), pep_status (enum), sanctions_status (enum), adverse_media_status (enum), individual_risk_contribution (enum: low | medium | high).",
+      "source": "BPH-005",
+      "governed_by": "GOV-005-R01"
+    },
+    {
+      "name": "director_individual_assessments",
+      "type": "array<DirectorAssessmentSummary>",
+      "validation_rule": "Required. Same structure as ubo_individual_assessments but for directors not already in ubo_individual_assessments.",
+      "source": "BPH-005",
+      "governed_by": "GOV-005-R01"
+    },
+    {
+      "name": "risk_score",
+      "type": "integer",
+      "validation_rule": "Required. 0–100. Composite score: company-level findings + individual UBO/director findings. Bands: 0–30 = standard; 31–60 = standard_elevated; 61–100 = enhanced (EDD required).",
+      "source": "BPH-005",
+      "governed_by": "GOV-005-R01",
+      "transparency_note": "Not surfaced to PER-002 or PER-050. MLRO-only."
+    },
+    {
+      "name": "risk_category",
+      "type": "enum",
+      "validation_rule": "Required. Enum: standard | standard_elevated | enhanced. 'enhanced' maps to EDD required (AP-B001). MLR 2017 Regulation 33 compliance.",
+      "source": "BPH-005",
+      "governed_by": "GOV-005-R01"
+    },
+    {
+      "name": "edd_required",
+      "type": "boolean",
+      "validation_rule": "Required. Default: false. Set to true when risk_category = enhanced, any UBO/director pep_status = match, or high_risk_jurisdiction_flag = true.",
+      "source": "BPH-005",
+      "governed_by": "GOV-005-R01"
+    },
+    {
+      "name": "edd_trigger_reasons",
+      "type": "array<enum>",
+      "validation_rule": "Conditional. Required when edd_required = true. Enum values: pep_director | pep_ubo | high_risk_jurisdiction | complex_structure | elevated_risk_score | sector_risk_high.",
+      "source": "BPH-005",
+      "governed_by": "GOV-005-R01"
+    },
+    {
+      "name": "assessment_date",
+      "type": "date",
+      "validation_rule": "Required. ISO 8601 (YYYY-MM-DD). Date CDD assessment completed.",
+      "source": "BPH-005",
+      "governed_by": null
+    },
+    {
+      "name": "next_review_date",
+      "type": "date",
+      "validation_rule": "Required. Calculated: standard = +3 years; standard_elevated = +2 years; enhanced = +1 year. Drives pKYC scheduling.",
+      "source": "BPH-005",
+      "governed_by": "GOV-005-R01"
+    },
+    {
+      "name": "assessor",
+      "type": "enum",
+      "validation_rule": "Required. Enum: automated | manual.",
+      "source": "BPH-005",
+      "governed_by": null
+    },
+    {
+      "name": "mlro_referral",
+      "type": "boolean",
+      "validation_rule": "Required. Default: false. True when EDD required or manual MLRO review triggered.",
+      "source": "BPH-005",
+      "governed_by": "GOV-005-R06"
+    },
+    {
+      "name": "mlro_sign_off_by",
+      "type": "UUID",
+      "validation_rule": "Conditional. Required when mlro_referral = true and outcome = cleared. FK → Staff.staff_id for PER-052.",
+      "source": "BPH-005",
+      "governed_by": "GOV-005-R06"
+    },
+    {
+      "name": "mlro_sign_off_at",
+      "type": "timestamp",
+      "validation_rule": "Conditional. Required when mlro_sign_off_by populated. ISO 8601 UTC. Immutable.",
+      "source": "BPH-005",
+      "governed_by": "GOV-005-R06"
+    }
+  ],
+  "relationships": [
+    {
+      "target_entity": "ENT-B001",
+      "type": "many-to-one",
+      "description": "BusinessKycAssessment belongs to one BusinessCustomer (cross-service reference via business_customer_id)."
+    }
+  ],
+  "design_decisions": [
+    {
+      "id": "DD-ENTB005-01",
+      "decision": "BusinessKycAssessment is owned by SVC-014, not SVC-005, even though UBO/Director records are owned by SVC-005.",
+      "rationale": "MLRO accountability under POCA 2002 and MLR 2017 requires the CDD assessment to sit in a single system of record under MLRO governance. SVC-014 is that system. Individual assessment summaries are included by value (not by FK) to avoid cross-service reads."
+    },
+    {
+      "id": "DD-ENTB005-02",
+      "decision": "BusinessKycAssessment is separate from ENT-003 (KycAssessment). They share a pattern but are not a subtype relationship.",
+      "rationale": "Corporate CDD has materially different fields (sector risk, jurisdictional risk, UBO assessments, EDD triggers) from individual CDD. Subtyping would couple CAP-001 and CAP-002 at the schema level. Separate entities allow independent evolution."
+    }
+  ],
+  "source_journeys": ["JRN-004"]
+}

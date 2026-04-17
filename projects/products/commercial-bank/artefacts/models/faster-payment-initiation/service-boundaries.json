@@ -1,0 +1,214 @@
+{
+  "journey_id": "JRN-002",
+  "document_version": "0.1.0",
+  "status": "Draft",
+  "description": "Service boundary definitions for the Faster Payment Initiation journey. Documents which service owns which entity and event, what each service's responsibilities are within this journey, and how services interact. Cross-capability communication is exclusively via async events on SVC-102. The channel (SVC-017) is the only caller of capability APIs synchronously.",
+  "architectural_principles": [
+    "A service owns its entities exclusively — no shared databases between services",
+    "Cross-capability communication is exclusively asynchronous events via SVC-102 (event bus)",
+    "The channel (SVC-017) orchestrates the user interaction; the event bus orchestrates the cross-capability consequences",
+    "Capabilities never call each other's APIs directly — API calls are only channel → capability",
+    "Services fail closed on dependency unavailability for compliance-critical checks (sanctions screening)"
+  ],
+  "services": [
+    {
+      "service_id": "SVC-001",
+      "service_name": "Retail Banking Core",
+      "capability_id": "CAP-001",
+      "capability_name": "Retail Banking",
+      "tier": "T2",
+      "role_in_journey": "Primary orchestrator of the payment lifecycle from the channel API perspective. Owns the PaymentIntent aggregate. Validates account state, balance, and limits at initiation. Waits for cross-capability check results via events. Makes the PaymentCleared / PaymentFailed / PaymentFraudBlocked decision. Debits the account ledger on PaymentExecuted.",
+      "owned_entities_this_journey": ["ENT-008 (PaymentIntent)", "ENT-004 (Account — extended with last_payment_date, daily_payment_total)"],
+      "api_responsibilities": [
+        "POST /payments — create PaymentIntent after SCA; validate account status, balance, and daily limit",
+        "GET /payments/{id} — return current PaymentIntent status for channel polling",
+        "POST /payments/{id}/cancel — cancel a pending or scheduled PaymentIntent (only before PaymentCleared)"
+      ],
+      "event_responsibilities": {
+        "publishes": [
+          "EVT-P01 PaymentIntentCreated — triggers concurrent sanctions and fraud checks",
+          "EVT-P04 PaymentCleared — signals that all pre-execution checks are clear; consumed by SVC-009",
+          "EVT-P06 AccountDebited — confirms account has been debited; consumed by SVC-014 for transaction monitoring",
+          "EVT-P07 PaymentFailed — published on insufficient funds, daily limit exceeded, FPS rejection, or sanctions review",
+          "EVT-P08 PaymentFraudBlocked — published when fraud score triggers a block"
+        ],
+        "consumes": [
+          "EVT-P02 SanctionsScreeningCompleted (from SVC-051) — updates PaymentIntent.sanctions_screening_result_id and evaluates outcome",
+          "EVT-P03 FraudScoreCompleted (from SVC-013) — updates PaymentIntent.fraud_score and fraud_risk_level",
+          "EVT-P05 PaymentExecuted (from SVC-009) — triggers account debit and AccountDebited publication"
+        ]
+      },
+      "decision_logic": {
+        "payment_cleared_condition": "EVT-P02.outcome = clear AND EVT-P03.risk_level in (low | medium | high) — i.e. not block",
+        "fraud_blocked_condition": "EVT-P03.risk_level = block",
+        "sanctions_blocked_condition": "EVT-P02.outcome = hit",
+        "ordering_note": "SVC-001 uses a correlation map keyed on payment_intent_id to track receipt of both EVT-P02 and EVT-P03. Both must arrive before a decision is made. Timeout: if either event is not received within 5 seconds of PaymentIntentCreated, SVC-001 applies fail-closed behaviour."
+      },
+      "source_journeys_addition": "JRN-002"
+    },
+    {
+      "service_id": "SVC-009",
+      "service_name": "Domestic Payments",
+      "capability_id": "CAP-003",
+      "capability_name": "Payment Operations",
+      "tier": "T2",
+      "role_in_journey": "Executes the Faster Payment via Pay.UK/Vocalink FPS infrastructure. Owns the PaymentExecution entity. Also provides the CoP check proxy — the channel calls SVC-009 synchronously for CoP before creating the PaymentIntent. SVC-009 is a new service introduced by JRN-002.",
+      "owned_entities_this_journey": ["ENT-009 (PaymentExecution)"],
+      "cop_proxy_responsibility": "SVC-009 exposes a synchronous CoP endpoint (POST /cop/verify) that the channel calls during payment entry. SVC-009 proxies this to the Pay.UK CoP service and returns the result. This is a channel → SVC-009 synchronous call — not cross-capability event coordination.",
+      "api_responsibilities": [
+        "POST /cop/verify — synchronous CoP check proxy for the channel; called before SCA and PaymentIntent creation",
+        "Internal event consumer — no publicly documented API for PaymentCleared consumption; SVC-009 is an event-driven consumer"
+      ],
+      "event_responsibilities": {
+        "publishes": [
+          "EVT-P05 PaymentExecuted — published on FPS acceptance with fps_reference, execution_timestamp, settlement_status = accepted",
+          "EVT-P07 PaymentFailed — published if FPS submission fails after retry exhaustion"
+        ],
+        "consumes": [
+          "EVT-P04 PaymentCleared (from SVC-001) — triggers FPS submission. SVC-009 constructs the ISO 20022 pacs.008 message and submits to Vocalink."
+        ]
+      },
+      "fps_submission_detail": {
+        "message_format": "ISO 20022 pacs.008 (FIToFICustomerCreditTransfer)",
+        "scheme_connectivity": "Direct FPS participant via Vocalink infrastructure (build/buy decision: Form3 or equivalent managed service provider)",
+        "retry_policy": "Up to 2 retries with exponential backoff (3 seconds, 6 seconds) before publishing PaymentFailed",
+        "cop_service": "Pay.UK CoP service (SVC-009 holds the scheme connectivity; channel does not call Pay.UK directly)"
+      },
+      "is_new_service": true,
+      "new_service_rationale": "SVC-009 was not required for JRN-001 (account opening). JRN-002 is the first journey requiring FPS scheme execution. A new service is introduced to own the domestic payment execution concern — consistent with the principle that SVC-001 (Retail Banking Core) owns the customer instruction and ledger, while a separate service owns scheme connectivity.",
+      "source_journeys": ["JRN-002"]
+    },
+    {
+      "service_id": "SVC-051",
+      "service_name": "Sanctions Screening Service",
+      "capability_id": "CAP-005",
+      "capability_name": "Compliance & Regulatory",
+      "tier": "T1",
+      "role_in_journey": "Stateless screening service. Consumes PaymentIntentCreated, runs a real-time OFSI/UN/EU/OFAC sanctions screen against the payee details, and publishes SanctionsScreeningCompleted. Reuses the same service established in JRN-001 — no new entity or schema introduced. JRN-002 adds payment-specific screening fields to the screening request (payee sort code, account number, amount alongside payee name).",
+      "owned_entities_this_journey": [],
+      "stateless_note": "SVC-051 owns no entities. All screening results are persisted in: (1) the SVC-103 audit log (OFSI obligation), and (2) PaymentIntent.sanctions_screening_result_id (a reference to the SVC-103 audit log entry). SVC-051 itself stores nothing between requests.",
+      "event_responsibilities": {
+        "publishes": [
+          "EVT-P02 SanctionsScreeningCompleted — published after screening completes with outcome (clear | hit | error)"
+        ],
+        "consumes": [
+          "EVT-P01 PaymentIntentCreated (from SVC-001) — triggers the sanctions screening check"
+        ]
+      },
+      "screening_inputs_for_fps": [
+        "payee_name (from PaymentIntent)",
+        "payee_sort_code (from PaymentIntent)",
+        "payee_account_number (from PaymentIntent)",
+        "amount (from PaymentIntent)",
+        "customer_id (from PaymentIntent — for payer-side beneficial ownership chain check)"
+      ],
+      "jrn001_reuse_note": "SVC-051 is fully reused from JRN-001 with no structural changes. The screening engine is the same. JRN-002 adds new screening inputs (payee sort code / account number for account-level sanctions matching) and introduces a new event consumer pattern (EVT-P01 vs the synchronous call pattern used in JRN-001).",
+      "source_journeys": ["JRN-001", "JRN-002"]
+    },
+    {
+      "service_id": "SVC-013",
+      "service_name": "Fraud Detection",
+      "capability_id": "CAP-004",
+      "capability_name": "Fraud & Risk",
+      "tier": "T1",
+      "role_in_journey": "Stateless fraud scoring service. Consumes PaymentIntentCreated, runs ML-based fraud scoring against the payment and account history, and publishes FraudScoreCompleted with a risk score and risk level. Does not own any persistent entities for this journey — scores are stored on PaymentIntent by SVC-001.",
+      "owned_entities_this_journey": [],
+      "stateless_note": "SVC-013 owns no entities in this journey. The fraud_score and fraud_risk_level output is provided via the FraudScoreCompleted event payload and persisted on ENT-008 (PaymentIntent) by SVC-001. SVC-013 maintains its own internal ML model state and feature store, but these are not modelled as journey entities.",
+      "event_responsibilities": {
+        "publishes": [
+          "EVT-P03 FraudScoreCompleted — published after fraud scoring with risk_score (0.0–1.0), risk_level (low | medium | high | block), and model_version"
+        ],
+        "consumes": [
+          "EVT-P01 PaymentIntentCreated (from SVC-001) — triggers fraud scoring"
+        ]
+      },
+      "fraud_scoring_features": [
+        "Payment amount (absolute and relative to account history)",
+        "Payee sort code and account number (known-good payee history)",
+        "CoP result (no_match payments receive elevated base score)",
+        "Customer account age and payment history",
+        "Device fingerprint (from channel session metadata in event payload)",
+        "Behavioural biometrics score (typing cadence, navigation pattern — from channel session metadata)",
+        "Time of day and day of week patterns",
+        "Channel (web vs mobile — mobile has lower false positive rate)"
+      ],
+      "source_journeys": ["JRN-002"]
+    }
+  ],
+  "interaction_summary": {
+    "synchronous_channel_calls": [
+      {
+        "caller": "SVC-017 (Digital Channels / Channel)",
+        "callee": "SVC-009",
+        "endpoint": "POST /cop/verify",
+        "timing": "Before SCA, during PY-001",
+        "purpose": "CoP check — verify payee name against receiving bank account"
+      },
+      {
+        "caller": "SVC-017 (Digital Channels / Channel)",
+        "callee": "SVC-100 (IAM)",
+        "endpoint": "POST /sca/validate",
+        "timing": "SCA step, PY-001",
+        "purpose": "Validate FIDO2/WebAuthn SCA assertion with dynamic linking"
+      },
+      {
+        "caller": "SVC-017 (Digital Channels / Channel)",
+        "callee": "SVC-001",
+        "endpoint": "POST /payments",
+        "timing": "After SCA success, PY-001",
+        "purpose": "Create PaymentIntent — single channel API call to initiate the payment lifecycle"
+      },
+      {
+        "caller": "SVC-017 (Digital Channels / Channel)",
+        "callee": "SVC-001",
+        "endpoint": "GET /payments/{id}",
+        "timing": "Poll during PY-002 to PY-005",
+        "purpose": "Check PaymentIntent status — channel polls every 1 second until status is terminal"
+      }
+    ],
+    "async_event_flow": [
+      {
+        "step": 1,
+        "event": "EVT-P01 PaymentIntentCreated",
+        "publisher": "SVC-001",
+        "consumers": ["SVC-051 (sanctions check)", "SVC-013 (fraud scoring)", "SVC-103 (audit log)"],
+        "concurrent": true
+      },
+      {
+        "step": 2,
+        "event": "EVT-P02 SanctionsScreeningCompleted",
+        "publisher": "SVC-051",
+        "consumers": ["SVC-001 (evaluation)", "SVC-103 (audit log)"],
+        "concurrent": true,
+        "note": "Concurrent with EVT-P03"
+      },
+      {
+        "step": 2,
+        "event": "EVT-P03 FraudScoreCompleted",
+        "publisher": "SVC-013",
+        "consumers": ["SVC-001 (evaluation)", "SVC-103 (audit log)"],
+        "concurrent": true,
+        "note": "Concurrent with EVT-P02"
+      },
+      {
+        "step": 3,
+        "event": "EVT-P04 PaymentCleared",
+        "publisher": "SVC-001",
+        "consumers": ["SVC-009 (FPS execution)", "SVC-103 (audit log)"],
+        "condition": "Only published if both EVT-P02 and EVT-P03 return clear/non-block"
+      },
+      {
+        "step": 4,
+        "event": "EVT-P05 PaymentExecuted",
+        "publisher": "SVC-009",
+        "consumers": ["SVC-001 (account debit)", "SVC-051 (OFSI audit)", "SVC-103 (audit log)"]
+      },
+      {
+        "step": 5,
+        "event": "EVT-P06 AccountDebited",
+        "publisher": "SVC-001",
+        "consumers": ["SVC-014 (AML transaction monitoring)", "SVC-017 (confirmation trigger)", "SVC-103 (audit log)"]
+      }
+    ]
+  }
+}

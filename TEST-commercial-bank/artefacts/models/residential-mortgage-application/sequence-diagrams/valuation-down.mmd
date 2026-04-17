@@ -1,0 +1,48 @@
+sequenceDiagram
+    title JRN-006 — Exception Path EX-001: Down-Valuation
+
+    actor PER001 as Customer (PER-001)
+    participant Portal as Customer Portal / App
+    participant SVC002 as SVC-002 Mortgage Service
+    participant EventBus as SVC-102 Event Bus
+    participant SVC053 as SVC-053 Notification Service
+    participant Surveyor as External Surveyor (Drive-By)
+
+    Note over PER001,Surveyor: Entry: PH-012 Valuation<br/>Preconditions: Full application submitted, hard credit check passed<br/>Property: £390,000 | Loan: £292,500 | Deposit: £97,500 | LTV: 75%
+
+    rect rgb(255, 248, 220)
+        Note over SVC002,Surveyor: PH-012 — Valuation Instructed (drive-by: LTV >= 75%)
+        Note over SVC002: Determine valuation type: drive-by (LTV=75% triggers surveyor)<br/>Create ENT-014 PropertyValuation (status: instructed, type: drive_by)<br/>Transition status: valuation_pending
+        SVC002->>EventBus: Publish EVT-024 ValuationInstructed (type: drive_by)
+        SVC002->>Surveyor: Instruct drive-by survey (SLA: 2–3 business days)
+        Note over Surveyor: 2 business days: surveyor conducts drive-by inspection
+        Surveyor-->>SVC002: Valuation report: £355,000 (vs purchase price £390,000)
+    end
+
+    rect rgb(255, 200, 200)
+        Note over SVC002,SVC053: DOWN-VALUATION DETECTED
+        Note over SVC002: Update ENT-014 PropertyValuation:<br/>valuation_amount: £355,000 | down_valuation_flag: TRUE<br/>Recalculate LTV: £292,500 / £355,000 = 82.39%<br/>⚠ Exceeds product limit (max 80%)<br/>Transition status: valuation_complete
+        SVC002->>EventBus: Publish EVT-025 ValuationCompleted (amount: £355,000, down_val: TRUE, ltv: 82.39%)
+        EventBus-)SVC053: Consume EVT-025 (down_valuation_flag: true)
+        SVC053->>PER001: Email: Down-valuation notification<br/>Surveyor value: £355,000 vs purchase: £390,000<br/>Options: 1) Renegotiate price  2) Increase deposit  3) Withdraw<br/>Respond within 28 days
+    end
+
+    rect rgb(255, 248, 200)
+        Note over PER001,SVC002: Customer selects Option 2: Increase deposit by £35,000
+        Note over PER001: Customer reviews with solicitor.<br/>Decides to increase deposit to maintain purchase price.
+        PER001->>Portal: Select: Increase deposit by £35,000<br/>New deposit: £132,500 | New loan: £257,500
+        Portal->>SVC002: PATCH /mortgage-applications/{id}<br/>(deposit_amount: 132500, loan_amount: 257500)
+        Note over SVC002: Update ENT-012 MortgageApplication:<br/>deposit_amount: £132,500 | loan_amount: £257,500<br/>ltv_ratio: £257,500 / £355,000 = 72.54% ✓ (within 80% limit)<br/>Recalculate monthly payment at new loan amount
+        SVC002-->>Portal: 200 OK — LTV: 72.54% — proceeding to underwriting
+        Portal-->>PER001: Application updated. Proceeding to underwriting.
+    end
+
+    rect rgb(230, 255, 230)
+        Note over SVC002,SVC053: PH-013 — Underwriting (amended application)
+        Note over SVC002: Transition status: underwriting<br/>PER-055 assigned — notified of down-valuation history
+        Note over SVC002: PER-055 review:<br/>Loan: £257,500 | LTV: 72.54% ✓<br/>Affordability (stress 7%): PASS ✓<br/>Credit score: 715: PASS ✓<br/>Down-valuation: resolved (deposit increased) ✓<br/>Decision: APPROVE
+        SVC002->>EventBus: Publish EVT-026 MortgageUnderwritingCompleted (approved, loan: £257,500)
+        Note over PER001,Surveyor: Journey continues on happy path → PH-014 Mortgage Offer (£257,500)
+    end
+
+    Note over PER001,Surveyor: Alternative resolutions (not shown):<br/>Option A: Renegotiate price to £355,000 → same end state, different deposit/price ratio<br/>Option B: Withdraw → status = withdrawn, no further processing

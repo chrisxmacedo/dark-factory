@@ -1,0 +1,295 @@
+{
+  "$schema": "../../schemas/security-model.schema.json",
+  "document_version": "0.1.0",
+  "status": "Draft",
+
+  "security_posture_controls": [
+    {
+      "control_id": "SEC-CTL-001",
+      "name": "Zero-Trust Policy Map",
+      "description": "A machine-readable, version-controlled allow-list of every permitted service-to-service call across all 23 services. The policy map is the authoritative source of truth for the service mesh (SVC-106) AuthorizationPolicy resources. Any service-to-service call not listed in the policy map is blocked by default at the Envoy sidecar proxy layer.",
+      "implementation": "Istio AuthorizationPolicy manifests generated from the policy map via CI pipeline. Policy map stored as JSON in a security-controlled repository. Changes require CISO-team review and a two-person approval gate. The policy map is published as a dashboard in Grafana showing current allow-listed paths, last-updated timestamps, and any deviations detected by the mesh.",
+      "dashboard_signal": "Service-to-service call matrix: allowed calls (green), blocked attempts (amber alert), policy drift detections (red alert). Updated from mesh telemetry every 60 seconds.",
+      "regulatory_references": [
+        "PCI DSS v4.0 Req 1.2 (network security controls)",
+        "FCA operational resilience SS1/21 (important business service dependency mapping)",
+        "PRA DORA-equivalent ICT network security controls"
+      ]
+    },
+    {
+      "control_id": "SEC-CTL-002",
+      "name": "mTLS Edge Status",
+      "description": "Real-time visibility into mutual TLS coverage across the service mesh. Every service-to-service call within the bank's Kubernetes clusters must use mTLS. The control tracks: percentage of traffic encrypted with mTLS, services operating in PERMISSIVE mode (mTLS not enforced — this is a policy violation in production), certificate expiry across all workload certificates, and any plaintext traffic detected.",
+      "implementation": "SVC-106 (Service Mesh / Istio) exports mTLS coverage metrics via OTel Collector to the Metrics Store. A Grafana dashboard shows mTLS coverage as a percentage (target: 100%) per namespace. Istio PeerAuthentication policies are set to STRICT mode in production. PERMISSIVE mode is only permitted in CI environments for a maximum of 48 hours during service bring-up.",
+      "dashboard_signal": "mTLS coverage percentage (target 100%); PERMISSIVE services list with time-in-permissive-mode; certificate expiry heatmap (red = <30 days).",
+      "regulatory_references": [
+        "PCI DSS v4.0 Req 4.2.1 (encryption in transit for cardholder data)",
+        "PRA DORA-equivalent ICT security in-transit encryption requirements",
+        "FCA operational resilience ICT risk management"
+      ]
+    },
+    {
+      "control_id": "SEC-CTL-003",
+      "name": "Secret Rotation Age",
+      "description": "Tracks the age of every secret managed by SVC-105 (Secrets Management / HashiCorp Vault). Secrets are classified by type (TLS certificate, database password, API key, HSM-backed cryptographic key) with maximum rotation periods. The control provides a freshness badge per secret showing days since last rotation vs policy-mandated maximum.",
+      "implementation": "SVC-105 emits a secret_age_days metric per secret to the OTel Collector → Metrics Store. Grafana dashboard shows all secrets sorted by age. Alerting rules: warn at 80% of maximum rotation period, critical at 100% (overdue). PCI DSS keys (SVC-003, SVC-008, SVC-011) have a maximum 365-day rotation period. Database credentials use dynamic secrets (Vault database engine) with 1-hour TTL to eliminate static credential risk.",
+      "dashboard_signal": "Secret age heatmap by service; overdue secrets count (target 0); days-to-expiry sorted list.",
+      "regulatory_references": [
+        "PCI DSS v4.0 Req 3.6.1 (cryptographic key management procedures)",
+        "UK GDPR encryption key management for personal data at rest",
+        "FCA operational resilience cryptographic availability"
+      ]
+    },
+    {
+      "control_id": "SEC-CTL-004",
+      "name": "Blast Radius Visualiser",
+      "description": "An interactive service dependency graph visualisation that, given a hypothetical service compromise, computes and displays the full set of services that are reachable via permitted service-to-service calls (the blast radius). Used by the CISO team and incident commanders to scope containment actions during security incidents.",
+      "implementation": "Generated from the Zero-Trust Policy Map (SEC-CTL-001) and service.yaml manifests (INST-006). Rendered as a directed graph in Grafana using the Node Graph panel. During an incident, an operator selects a compromised service node and the visualiser highlights all downstream reachable services in the current policy map. Updated every 24 hours from the service catalogue (FRS-001 freshness contract).",
+      "dashboard_signal": "Interactive dependency graph; blast radius heat score per service (1–10 based on downstream service count and data classification); last topology refresh timestamp.",
+      "regulatory_references": [
+        "FCA SS1/21 operational resilience important business service impact mapping",
+        "PRA SS2/21 outsourcing and third-party risk management ICT dependency mapping"
+      ]
+    },
+    {
+      "control_id": "SEC-CTL-005",
+      "name": "CVE Exposure Badges",
+      "description": "Per-service vulnerability posture badges showing the count of critical, high, medium, and low CVEs in the current production container image for each service. Embedded in the service catalogue and available as a Grafana panel. Drives the patching backlog for SRE and service teams.",
+      "implementation": "Container images scanned by Trivy in CI pipeline and by a runtime scanner (Trivy Operator or equivalent) in Kubernetes every 4 hours. Results stored in a vulnerability database. Grafana plugin (or JSON API integration) renders CVE counts as colour-coded badges: critical (red), high (amber), medium (yellow), low (grey). PCI DSS-scoped services (SVC-003, SVC-008, SVC-011, SVC-104, SVC-105) have a mandatory patching SLA: critical within 30 days, high within 60 days.",
+      "dashboard_signal": "CVE count badges per service; total critical CVE count across estate (target 0 >30 days old); PCI DSS-scoped service compliance percentage.",
+      "regulatory_references": [
+        "PCI DSS v4.0 Req 6.3.3 (all system components protected against known vulnerabilities)",
+        "FCA operational resilience ICT vulnerability management",
+        "PRA DORA-equivalent ICT patch management"
+      ]
+    },
+    {
+      "control_id": "SEC-CTL-006",
+      "name": "Audit Log Separation Verification",
+      "description": "Continuous verification that the Audit Store (WORM, 7-year retention) is physically separate from the Log Store and that no service engineer or SRE has read or delete access to it. The control monitors access policy drift and verifies daily that the WORM lock is still applied to all Audit Store buckets.",
+      "implementation": "Daily automated test (run via CI/CD cron job) that: (1) verifies S3 Object Lock Compliance mode is active on all Audit Store buckets; (2) attempts a delete operation using the service engineer IAM role and asserts that it is denied (negative test); (3) verifies audit log volume completeness against FRS-007 freshness contract. Results are written to the compliance dashboard. Any failure triggers a P1 incident to the MLRO and CISO.",
+      "dashboard_signal": "WORM status (active/inactive) per Audit Store bucket; last verified timestamp; access policy drift alerts; audit log volume completeness score.",
+      "regulatory_references": [
+        "MLR 2017 minimum 5-year AML record retention",
+        "PRA 7-year financial records retention requirement",
+        "PCI DSS v4.0 Req 10.5.1 (audit log protection from destruction or modification)",
+        "POCA 2002 SAR audit trail protection"
+      ]
+    }
+  ],
+
+  "service_to_service_auth": {
+    "primary_mechanism": "Mutual TLS (mTLS) enforced by the service mesh (SVC-106 / Istio) for all service-to-service communication within the Kubernetes cluster. No plaintext service calls are permitted in RC or production environments.",
+    "workload_identity": {
+      "standard": "SPIFFE (Secure Production Identity Framework for Everyone) with SPIRE as the identity issuance agent embedded in SVC-106",
+      "issuer": "Bank-internal PKI (intermediate CA) managed by SVC-105 (Secrets Management / HashiCorp Vault PKI engine). The root CA is offline HSM-backed. Intermediate CA rotates every 90 days.",
+      "certificate_ttl": "24 hours for workload certificates. Istio citadel rotates certificates automatically before expiry. Services never handle certificate rotation manually."
+    },
+    "jwt_propagation": {
+      "header": "Authorization: Bearer <JWT>",
+      "claims_required": ["sub", "iss", "aud", "exp", "iat", "jti", "scope", "service_id"],
+      "audience_enforcement": true
+    },
+    "policy_enforcement": {
+      "engine": "Istio AuthorizationPolicy (Envoy-based) enforcing the Zero-Trust Policy Map (SEC-CTL-001). OPA (Open Policy Agent) is used for fine-grained attribute-based policy in services that require it (e.g. SVC-015 regulatory data access rules).",
+      "default_policy": "deny-all. No service may call any other service unless an explicit AuthorizationPolicy allow rule exists for that source-destination-port-method combination.",
+      "exceptions_require": "Written request to CISO team, risk acceptance sign-off from service owner and security architect, time-limited exception with automatic expiry, and a committed date to implement the permanent allow-list entry."
+    }
+  },
+
+  "data_classification": {
+    "levels": [
+      {
+        "level_id": "DC-1",
+        "name": "Public",
+        "description": "Information intentionally published for public consumption. No confidentiality requirement.",
+        "handling_requirements": [
+          "No encryption at rest required (but encryption in transit via TLS is still mandatory)",
+          "No access control beyond standard CDN/web serving",
+          "Examples: marketing content, published API documentation, public interest disclosures"
+        ]
+      },
+      {
+        "level_id": "DC-2",
+        "name": "Internal",
+        "description": "General internal bank information. Disclosure would be embarrassing or mildly harmful but not material.",
+        "handling_requirements": [
+          "Encryption at rest (AES-256) and in transit (TLS 1.2+ minimum, TLS 1.3 preferred)",
+          "RBAC-controlled access via SVC-100",
+          "Examples: internal project plans, non-sensitive operational runbooks"
+        ]
+      },
+      {
+        "level_id": "DC-3",
+        "name": "Confidential",
+        "description": "Business-sensitive information. Unauthorised disclosure would cause material business harm.",
+        "handling_requirements": [
+          "Encryption at rest with keys managed by SVC-105",
+          "Encryption in transit TLS 1.3",
+          "Need-to-know RBAC access",
+          "Audit logging of all access events to Log Store",
+          "Examples: commercial lending terms, product pricing strategies, vendor contracts, internal risk model parameters"
+        ]
+      },
+      {
+        "level_id": "DC-4",
+        "name": "Restricted — Personal Data",
+        "description": "UK GDPR personal data. Unauthorised processing or disclosure creates regulatory and legal liability.",
+        "handling_requirements": [
+          "Encryption at rest with HSM-backed keys (SVC-105)",
+          "TLS 1.3 in transit",
+          "Purpose limitation enforced — data may only be processed for the stated lawful basis",
+          "Pseudonymisation applied in operational logs and telemetry",
+          "Right-to-erasure workflow integrated in SVC-054 (Document Management) and SVC-015",
+          "Data minimisation: only collect what is necessary",
+          "ROPA record maintained in SVC-015",
+          "Audit logging to both Log Store and Audit Store"
+        ]
+      },
+      {
+        "level_id": "DC-5",
+        "name": "Restricted — Financial / PCI",
+        "description": "Payment card data (PAN, CVV, expiry) and detailed financial account data. PCI DSS Cardholder Data Environment scoped.",
+        "handling_requirements": [
+          "PCI DSS CDE controls apply: network segmentation, penetration testing, file integrity monitoring",
+          "PANs must be stored only as truncated or tokenised form; CVVs must never be stored post-authorisation",
+          "HSM-backed encryption (SVC-105)",
+          "Access restricted to PCI-scoped services only (SVC-003, SVC-008, SVC-011)",
+          "Quarterly ASV vulnerability scans and annual QSA assessment",
+          "Audit logging to Audit Store (PCI DSS Req 10)"
+        ]
+      },
+      {
+        "level_id": "DC-6",
+        "name": "Regulated — AML / Supervisory",
+        "description": "Highest sensitivity tier. MLRO-protected SAR data, PRA supervisory data, OFSI sanctions intelligence. Criminal law protections apply (POCA 2002 tipping-off offence).",
+        "handling_requirements": [
+          "Data must not leave UK jurisdiction under any circumstances",
+          "Access restricted to designated MLRO and compliance team roles — no access by service engineers",
+          "All access events logged to WORM Audit Store with two-person access control",
+          "SAR data must be isolated in a dedicated data store accessible only by SVC-014 and the MLRO function",
+          "No external API exposure — all access is via internal compliance workflows only"
+        ]
+      }
+    ],
+    "service_classifications": [
+      { "service_id": "SVC-001", "service_name": "Retail Banking Core", "data_level": "DC-4", "rationale": "Owns retail customer ledger — UK GDPR personal data, FSCS eligibility data, credit records.", "pci_dss_scope": false },
+      { "service_id": "SVC-002", "service_name": "Mortgage Service", "data_level": "DC-4", "rationale": "Mortgage records, HM Land Registry data, affordability assessment — regulated personal data under MCOB.", "pci_dss_scope": false },
+      { "service_id": "SVC-003", "service_name": "Credit Card Service", "data_level": "DC-5", "rationale": "PCI DSS CDE: processes and stores (tokenised) credit card PAN, transaction authorisation data.", "pci_dss_scope": true },
+      { "service_id": "SVC-004", "service_name": "Insurance Distribution Service", "data_level": "DC-4", "rationale": "Customer insurance policy records, ICOBS-regulated communications — personal data under UK GDPR.", "pci_dss_scope": false },
+      { "service_id": "SVC-005", "service_name": "Commercial Banking Core", "data_level": "DC-4", "rationale": "Commercial ledger, RM workflow — UK GDPR business personal data, SM&CR accountability records.", "pci_dss_scope": false },
+      { "service_id": "SVC-006", "service_name": "Trade Finance Service", "data_level": "DC-3", "rationale": "Trade finance credit exposure records — confidential commercial data. ETDA 2023 electronic documents.", "pci_dss_scope": false },
+      { "service_id": "SVC-007", "service_name": "Treasury Service", "data_level": "DC-3", "rationale": "ISDA/CSA derivative records, EMIR reporting data — confidential financial data.", "pci_dss_scope": false },
+      { "service_id": "SVC-008", "service_name": "Merchant Acquiring Service", "data_level": "DC-5", "rationale": "PCI DSS CDE: merchant cardholder transaction data, acquiring settlement records.", "pci_dss_scope": true },
+      { "service_id": "SVC-009", "service_name": "Domestic Payments Service", "data_level": "DC-4", "rationale": "FPS/BACS/CHAPS payment records — personal data of payers/payees. Pay.UK participant rules.", "pci_dss_scope": false },
+      { "service_id": "SVC-010", "service_name": "International Payments Service", "data_level": "DC-4", "rationale": "SWIFT payment messages — FATF travel rule data, cross-border personal data. CBPR+ ISO 20022.", "pci_dss_scope": false },
+      { "service_id": "SVC-011", "service_name": "Card Processing Service", "data_level": "DC-5", "rationale": "PCI DSS CDE: BIN management, card authorisation, Visa/Mastercard scheme data.", "pci_dss_scope": true },
+      { "service_id": "SVC-012", "service_name": "Risk Engine Service", "data_level": "DC-3", "rationale": "PRA IRB model data, ICAAP — confidential supervisory data. Not personal data but PRA-protected.", "pci_dss_scope": false },
+      { "service_id": "SVC-013", "service_name": "Fraud Detection Service", "data_level": "DC-4", "rationale": "Behavioural analytics, transaction patterns — personal data under UK GDPR. PSR reimbursement case records.", "pci_dss_scope": false },
+      { "service_id": "SVC-014", "service_name": "KYC/AML Service", "data_level": "DC-6", "rationale": "SAR data (POCA 2002 tipping-off protection), MLRO accountability records, NCA UKFIU submissions.", "pci_dss_scope": false },
+      { "service_id": "SVC-015", "service_name": "Compliance Core Service", "data_level": "DC-6", "rationale": "PRA/FCA supervisory data, SM&CR accountability evidence, GDPR ROPA — highest regulatory sensitivity.", "pci_dss_scope": false },
+      { "service_id": "SVC-016", "service_name": "Wealth Platform Service", "data_level": "DC-4", "rationale": "MiFID II suitability records, investment account data — regulated personal data.", "pci_dss_scope": false },
+      { "service_id": "SVC-017", "service_name": "Digital Channels Service", "data_level": "DC-4", "rationale": "Customer session data, Open Banking consent records, push notification preferences — UK GDPR.", "pci_dss_scope": false },
+      { "service_id": "SVC-050", "service_name": "Customer Onboarding Service", "data_level": "DC-6", "rationale": "CDD/EDD identity documents, UBO determination, client risk scores — MLR 2017 and MLRO-protected.", "pci_dss_scope": false },
+      { "service_id": "SVC-051", "service_name": "Sanctions Screening Service", "data_level": "DC-6", "rationale": "OFSI sanctions intelligence, screening decisions — OFSI-protected. Every BLOCKED decision is criminal law evidence.", "pci_dss_scope": false },
+      { "service_id": "SVC-052", "service_name": "Credit Decision Service", "data_level": "DC-4", "rationale": "PRA IRB model inputs/outputs, Consumer Duty fair value records — personal data under UK GDPR Art. 22.", "pci_dss_scope": false },
+      { "service_id": "SVC-053", "service_name": "Notification Service", "data_level": "DC-4", "rationale": "Customer communication preferences, GDPR consent records, PECR electronic marketing consent.", "pci_dss_scope": false },
+      { "service_id": "SVC-054", "service_name": "Document Management Service", "data_level": "DC-4", "rationale": "KYC documents, mortgage legal papers, regulated credit agreements — long-retention personal data.", "pci_dss_scope": false },
+      { "service_id": "SVC-055", "service_name": "Workflow Engine", "data_level": "DC-3", "rationale": "SM&CR approval chain records, EDD workflow state — confidential but not directly personal data.", "pci_dss_scope": false },
+      { "service_id": "SVC-100", "service_name": "Identity & Access Management", "data_level": "DC-4", "rationale": "Customer credentials, employee identity, SCA authentication records — UK GDPR authentication data.", "pci_dss_scope": false },
+      { "service_id": "SVC-101", "service_name": "API Gateway", "data_level": "DC-3", "rationale": "API call metadata, rate limit records, OBIE performance data — internal confidential.", "pci_dss_scope": false },
+      { "service_id": "SVC-102", "service_name": "Event Bus", "data_level": "DC-4", "rationale": "Event payloads may contain personal data. UK GDPR data minimisation required on all event schemas.", "pci_dss_scope": false },
+      { "service_id": "SVC-103", "service_name": "Audit & Logging", "data_level": "DC-5", "rationale": "PCI DSS audit logs, MLRO audit records, SM&CR evidence — combined regulatory sensitivity.", "pci_dss_scope": true },
+      { "service_id": "SVC-104", "service_name": "Data Platform", "data_level": "DC-5", "rationale": "Consolidated customer, financial, and model data — cross-domain. PCI DSS analytics data for card services.", "pci_dss_scope": true },
+      { "service_id": "SVC-105", "service_name": "Secrets Management", "data_level": "DC-5", "rationale": "HSM-backed cryptographic key material. PCI DSS key management requirements apply.", "pci_dss_scope": true },
+      { "service_id": "SVC-106", "service_name": "Service Mesh", "data_level": "DC-2", "rationale": "Service mesh itself stores no application data — only mTLS certificates and policy configuration.", "pci_dss_scope": false }
+    ]
+  },
+
+  "network_segmentation": [
+    {
+      "zone_id": "ZONE-DMZ",
+      "name": "DMZ (Demilitarised Zone)",
+      "description": "Internet-facing ingress. Hosts the API Gateway (SVC-101), WAF, DDoS scrubbing, and CDN edge. All inbound traffic from the public internet terminates here. No direct access to application services from this zone — all traffic must pass through SVC-101.",
+      "services_in_zone": ["SVC-101"],
+      "ingress_policy": "Allow HTTPS/443 and HTTPS/8443 from internet. All other inbound blocked. Rate limiting enforced at CDN layer before reaching SVC-101.",
+      "egress_policy": "Allow HTTPS to Application Zone only (SVC-017 and SVC-100 for authentication). All other egress blocked.",
+      "pci_dss_cde": false
+    },
+    {
+      "zone_id": "ZONE-APP",
+      "name": "Application Zone",
+      "description": "Core application tier. All domain services (SVC-001 to SVC-017) and cross-cutting services (SVC-050 to SVC-055) run here. Service mesh (SVC-106) enforces mTLS and zero-trust policy between all services. The Application Zone is subdivided into Kubernetes namespaces aligned to capability domains for additional blast radius containment.",
+      "services_in_zone": [
+        "SVC-001", "SVC-002", "SVC-003", "SVC-004", "SVC-005",
+        "SVC-006", "SVC-007", "SVC-008", "SVC-009", "SVC-010",
+        "SVC-011", "SVC-012", "SVC-013", "SVC-014", "SVC-015",
+        "SVC-016", "SVC-017",
+        "SVC-050", "SVC-051", "SVC-052", "SVC-053", "SVC-054", "SVC-055"
+      ],
+      "ingress_policy": "Allow from DMZ (via SVC-101 only), Management Zone (monitoring probes), and Data Zone (event bus inbound). All traffic must be mTLS authenticated. Deny-all baseline with explicit service mesh allow-list.",
+      "egress_policy": "Allow to Data Zone (databases, event bus), Compliance Zone (audit logging), and external systems (payments rails, SWIFT, sanctions data) via egress proxies only. No direct internet egress.",
+      "pci_dss_cde": false
+    },
+    {
+      "zone_id": "ZONE-PCI",
+      "name": "PCI CDE Zone (PCI Cardholder Data Environment)",
+      "description": "Physically and logically segregated namespace within the Application Zone hosting PCI DSS CDE-scoped services. Additional network controls, file integrity monitoring, and quarterly ASV scanning apply. Only SVC-003, SVC-008, and SVC-011 reside here. All ingress and egress passes through dedicated PCI zone ingress/egress controllers.",
+      "services_in_zone": ["SVC-003", "SVC-008", "SVC-011"],
+      "ingress_policy": "Allow only from card networks (Visa/Mastercard authorisation endpoint), SVC-001 (balance queries, mTLS only), SVC-013 (fraud scoring, mTLS only), and SVC-052 (credit decisions, mTLS only). All other inbound blocked.",
+      "egress_policy": "Allow to card network settlement endpoints (HTTPS, allow-listed IP ranges), Data Zone (audit logs only), and Compliance Zone. Explicit deny to non-PCI Application Zone services.",
+      "pci_dss_cde": true
+    },
+    {
+      "zone_id": "ZONE-DATA",
+      "name": "Data Zone",
+      "description": "Persistence and event streaming tier. Hosts all service-specific databases, the Kafka cluster (SVC-102), and the Data Platform (SVC-104). No direct access from internet or DMZ. Accessed only from Application Zone services via service mesh.",
+      "services_in_zone": ["SVC-102", "SVC-103", "SVC-104"],
+      "ingress_policy": "Allow from Application Zone services (mTLS authenticated, service mesh policy enforced). No internet ingress. Database access requires dynamic secrets from SVC-105 — no static credentials.",
+      "egress_policy": "Allow to Compliance Zone (Audit Store write path). Allow to Management Zone (metrics and health). No internet egress.",
+      "pci_dss_cde": false
+    },
+    {
+      "zone_id": "ZONE-COMPLIANCE",
+      "name": "Compliance Zone",
+      "description": "Hosts the Audit Store (WORM, 7-year), SVC-105 (Secrets Management), and SVC-015 (Compliance Core) data stores. Highest trust boundary in the bank's infrastructure. No service engineer access. All access via two-person control process.",
+      "services_in_zone": ["SVC-105", "SVC-015"],
+      "ingress_policy": "Accept audit log writes from OTel Collector via dedicated OTLP pipeline (write-only path). Compliance team read access via bastion host with MFA and session recording. All other ingress blocked.",
+      "egress_policy": "Allow HTTPS to FCA/PRA regulatory portals for supervisory submissions (allow-listed endpoints). Allow to NCA UKFIU for SAR submissions. No other egress.",
+      "pci_dss_cde": false
+    },
+    {
+      "zone_id": "ZONE-MGMT",
+      "name": "Management Zone",
+      "description": "Operations and observability tier. Hosts the OTel Collector gateway, Grafana, Prometheus/Mimir, Tempo, Loki, and the CI/CD pipeline. Accesses all other zones for monitoring probes only (read health endpoints, scrape metrics). No data plane access.",
+      "services_in_zone": ["SVC-100", "SVC-106"],
+      "ingress_policy": "Allow from CI/CD systems (pipeline-initiated deployments). Allow VPN-authenticated SRE access. All other ingress blocked.",
+      "egress_policy": "Allow monitoring probes (HTTPS/health, OTLP) to all Application, Data, and Compliance Zone services. Allow CI/CD deployments to all zones (via Kubernetes API with RBAC). No internet egress except to cloud provider management APIs (allow-listed).",
+      "pci_dss_cde": false
+    }
+  ],
+
+  "design_decisions": [
+    {
+      "id": "SEC-DD-001",
+      "decision": "Zero-trust deny-all policy is the baseline for all service-to-service communication. New services start with zero permitted calls. Connectivity is provisioned on a named, documented, time-limited or permanent basis via the Zero-Trust Policy Map.",
+      "rationale": "The service mesh's SDD-010 design decision (inherited from SVC-106) establishes the deny-all baseline for PCI DSS network segmentation. This security model extends that decision to the entire estate. An allow-all baseline with selective denies has repeatedly failed in financial services security incidents — allow-all creates implicit trust that is exploited during lateral movement after a perimeter breach. The FCA and PRA's operational resilience supervision (SS1/21) expects demonstrable isolation between important business services. Deny-all is the only approach that provides audit-ready evidence of segmentation.",
+      "alternatives_considered": ["Allow-all within namespaces with deny rules for cross-namespace calls"],
+      "rejected_because": "Namespace-only segmentation does not prevent lateral movement between services within the same namespace, many of which have very different data classifications and regulatory obligations (e.g. SVC-009 and SVC-013 are in the same payment-operations namespace but SVC-013 has access to transaction patterns that must not be reachable from a compromised SVC-009)."
+    },
+    {
+      "id": "SEC-DD-002",
+      "decision": "The PCI DSS Cardholder Data Environment (CDE) is a physically separate Kubernetes namespace with its own ingress/egress controllers, dedicated network policies, and is excluded from the general Application Zone service mesh allow-list. SVC-003, SVC-008, and SVC-011 are the only services that may reside in the PCI CDE Zone.",
+      "rationale": "PCI DSS v4.0 Requirement 1.3.1 requires that inbound and outbound traffic to/from the CDE is restricted to the minimum necessary. Kubernetes namespace-based segmentation supported by Istio AuthorizationPolicy and dedicated NetworkPolicy objects provides demonstrable CDE isolation for QSA assessment. Running PCI-scoped and non-PCI services in the same namespace creates CDE boundary ambiguity and typically results in QSA findings. Isolation in a dedicated zone simplifies the annual QSA scope and reduces the surface area of required penetration testing.",
+      "alternatives_considered": ["Isolate PCI services using labels and NetworkPolicy only within the same namespace as non-PCI services"],
+      "rejected_because": "Label-based isolation has a weaker security boundary than namespace isolation. A misconfigured label selector can accidentally expand the CDE scope. QSA assessors increasingly require namespace-level CDE isolation evidence. Namespace isolation is the current industry practice for PCI DSS Kubernetes compliance."
+    },
+    {
+      "id": "SEC-DD-003",
+      "decision": "Data classification is defined at the service level (not the field level) for access control, network policy, and audit logging decisions, but field-level classification metadata is maintained in SVC-104 (Data Platform) and enforced by OTel Collector PII scrubbing rules. This two-tier approach provides a pragmatic boundary for infrastructure controls while still protecting field-level PII.",
+      "rationale": "Service-level classification is the right granularity for network policy, Kubernetes RBAC, and database access control — implementing field-level controls at the infrastructure layer is prohibitively complex. However, field-level classification is essential for UK GDPR data minimisation, OTel PII scrubbing, and ROPA (Records of Processing Activities) obligations. The two-tier model provides service-level controls for infrastructure and field-level controls for data governance and telemetry, without attempting to enforce both at the same layer.",
+      "alternatives_considered": ["Implement field-level data classification controls at the service mesh and network policy layer"],
+      "rejected_because": "Service mesh and network policy operate at the connection level, not the data field level. Field-level enforcement at the infrastructure layer would require content inspection that adds >10ms latency per call — incompatible with SVC-009 (payments) and SVC-051 (sanctions) sub-100ms SLAs."
+    }
+  ]
+}

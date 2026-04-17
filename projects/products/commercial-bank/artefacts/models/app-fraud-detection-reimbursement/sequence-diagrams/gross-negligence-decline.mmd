@@ -1,0 +1,64 @@
+sequenceDiagram
+    autonumber
+    participant PER001 as PER-001 Customer
+    participant APP as SVC-017 Digital Channels
+    participant SVC013 as SVC-013 Fraud Detection
+    participant EVTBUS as SVC-102 Event Bus
+    participant SVC001 as SVC-001 Retail Banking Core
+    participant SVC053 as SVC-053 Notification Service
+    participant SVC111 as SVC-111 WORM Store
+    participant PER054 as PER-054 Fraud Analyst
+    participant PER059 as PER-059 Senior Manager
+
+    Note over PER001,PER059: PH-064 — Fraud Alert Trigger
+
+    PER001->>APP: Report fraud via mobile app
+    APP->>SVC013: POST /fraud-cases (trigger_type=customer_report)
+    SVC013->>SVC013: Create FraudCase status=open. Publish FraudCaseCreated (EVT-090)
+    SVC013-)SVC053: Dispatch case confirmation to PER-001
+
+    Note over PER001,PER059: PH-065 — Case Creation
+
+    PER054->>SVC013: GET /fraud-cases/{id}
+    Note over SVC013,EVTBUS: Cross-capability async: CAP-004 → CAP-001 via Event Bus (no direct sync calls)
+    SVC013-)EVTBUS: Publish FraudDataRequested (payment_intent_id)
+    EVTBUS-)SVC001: SVC-001 consumes FraudDataRequested — retrieves PaymentIntent
+    SVC001-)EVTBUS: Publish FraudDataProvided (£28,000, cop_result=no_match, cop_override_confirmed=true, fraud_risk_level=high)
+    EVTBUS-)SVC013: SVC-013 consumes FraudDataProvided
+    PER054->>SVC013: POST /fraud-cases/{id}/evidence (evidence_type=cop_result, psr_relevance=supports_gross_negligence)
+    PER054->>SVC013: PATCH /fraud-cases/{id} status=investigating. Publish FraudInvestigationStarted (EVT-091)
+
+    Note over PER001,PER059: PH-066 — Investigation
+
+    SVC013-)EVTBUS: Publish FraudWarningLogRequested (payment_intent_id) [cross-capability async: CAP-004→CAP-001]
+    EVTBUS-)SVC001: SVC-001 consumes FraudWarningLogRequested — retrieves payment_warning_log
+    SVC001-)EVTBUS: Publish FraudWarningLogProvided: CoP no_match acknowledged 14:23:05Z + fraud warning 'Continue anyway' 14:23:07Z + high-risk confirmation 14:23:12Z
+    EVTBUS-)SVC013: SVC-013 consumes FraudWarningLogProvided
+    PER054->>SVC013: POST /fraud-cases/{id}/evidence (evidence_type=payment_warning_log, psr_relevance=supports_gross_negligence)
+    PER054->>SVC013: PATCH /fraud-cases/{id} vulnerability_assessment=[none_identified]
+    PER054->>SVC013: POST /fraud-cases/{id}/evidence (evidence_type=communication_log — contradictory customer statements)
+    PER054->>SVC013: PATCH /fraud-cases/{id} status=decision_pending
+
+    Note over PER001,PER059: Analyst identifies gross negligence + value > £25,000 — mandatory escalation to PER-059
+
+    PER054->>PER059: Escalate: decline decision + value £28,000 require Senior Manager co-sign
+
+    Note over PER001,PER059: PH-067 — Reimbursement Decision (Senior Manager review)
+
+    PER059->>SVC013: GET /fraud-cases/{id} — review case and all evidence
+    SVC013-->>PER059: Full FraudCase + FraudEvidence (CoP log, warning acknowledgements, vulnerability assessment)
+    PER059->>SVC013: PATCH /fraud-cases/{id} (senior_manager_sign_off=true, senior_manager_id={manager_id})
+    PER054->>SVC013: POST /fraud-cases/{id}/decision (decision=decline, gross_negligence_evidence='...', senior_manager_sign_off=true)
+    SVC013->>SVC013: Validate senior_manager_sign_off=true. Update FraudCase status=declined. Publish FraudReimbursementDeclined (EVT-093)
+    SVC013-)SVC053: Dispatch regulated outcome letter (decline) — plain language, FOS signpost mandatory
+    SVC053-)PER001: Email: Outcome letter — not eligible for reimbursement. Right to complain to FOS within 6 months.
+
+    Note over PER001,PER059: No ReimbursementCredited. No ReimbursementClaim. SVC-001 and SVC-009 take no payment action on EVT-093.
+
+    SVC001-)SVC001: Consume EVT-093 — no credit action (optional: customer account monitoring flag)
+
+    Note over PER001,PER059: PH-070 — Case Closure
+
+    PER054->>SVC013: PATCH /fraud-cases/{id} status=closed
+    SVC013->>SVC013: Set closed_at. Publish FraudCaseClosed (EVT-097). Publish FraudPatternDetected (EVT-098). PSR quarterly counter: declined case.
+    SVC013-)SVC111: Archive full case (including gross_negligence_evidence) to WORM — 7yr retention for FOS evidence

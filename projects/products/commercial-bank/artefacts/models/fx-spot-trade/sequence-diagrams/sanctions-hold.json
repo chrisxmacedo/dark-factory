@@ -1,0 +1,169 @@
+{
+  "journey_id": "JRN-014",
+  "sequence_id": "sanctions-hold",
+  "name": "FX Spot Trade - Sanctions Hold",
+  "source": "Derived from sanctions-hold.mmd",
+  "participants": [
+    {"id": "PER003", "label": "PER-003 Corporate Client", "type": "persona"},
+    {"id": "PER053", "label": "PER-053 Treasury Dealer", "type": "persona"},
+    {"id": "PER058", "label": "PER-058 MLRO", "type": "persona"},
+    {"id": "SVC007", "label": "SVC-007 Treasury Services (CAP-002)", "type": "service"},
+    {"id": "SVC102", "label": "SVC-102 Event Bus", "type": "infrastructure"},
+    {"id": "SVC051", "label": "SVC-051 Sanctions Screening (CAP-005)", "type": "service"},
+    {"id": "SVC053", "label": "SVC-053 Notification Service", "type": "service"}
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "from": "PER003",
+      "to": "SVC007",
+      "action": "POST /treasury/fx-trades/{trade_id}/accept — client accepts quote (PH-061 abbreviated, same as happy path up to booking)",
+      "async": false,
+      "data": "trade_id, quote_id, client_legal_name='Restricted Metals Corp'"
+    },
+    {
+      "step": 2,
+      "from": "SVC007",
+      "to": "SVC007",
+      "action": "Book trade: FXQuote.status=accepted, FXTrade.status=booked, dealt_at and value_date set",
+      "async": false,
+      "data": "trade_id, status=booked, dealt_at, value_date"
+    },
+    {
+      "step": 3,
+      "from": "SVC007",
+      "to": "SVC102",
+      "action": "Publish EVT-085 FXTradeExecuted — trade booked",
+      "async": true,
+      "data": "trade_id, status=booked, topic=commercial.treasury"
+    },
+    {
+      "step": 4,
+      "from": "SVC007",
+      "to": "SVC102",
+      "action": "Publish EVT-089 FXCounterpartySanctionsScreened [CROSS-CAPABILITY]",
+      "async": true,
+      "data": "trade_id, client_id, client_legal_name='Restricted Metals Corp', sell_amount=500000, screening_request_id=SCR-2026-004521, topic=compliance.sanctions-screening"
+    },
+    {
+      "step": 5,
+      "from": "SVC007",
+      "to": "PER003",
+      "action": "200 OK — trade booked",
+      "async": false,
+      "data": "trade_id, status=booked"
+    },
+    {
+      "step": 6,
+      "from": "SVC102",
+      "to": "SVC051",
+      "action": "Deliver EVT-089 [CROSS-CAPABILITY received by CAP-005]",
+      "async": true,
+      "data": "trade_id, client_id, client_legal_name='Restricted Metals Corp', sell_amount=500000, screening_request_id=SCR-2026-004521"
+    },
+    {
+      "step": 7,
+      "from": "SVC051",
+      "to": "SVC051",
+      "action": "Screen OFSI Consolidated List — 'Restricted Metals Corp': MATCH DETECTED — exact name match, SDN list, confidence HIGH (97%)",
+      "async": false,
+      "data": "screening_request_id=SCR-2026-004521, client_legal_name='Restricted Metals Corp', list=OFSI_CONSOLIDATED, match_type=exact_name_match, confidence=0.97"
+    },
+    {
+      "step": 8,
+      "from": "SVC051",
+      "to": "SVC102",
+      "action": "Publish FXCounterpartySanctionsHitDetected [CROSS-CAPABILITY]",
+      "async": true,
+      "data": "screening_request_id=SCR-2026-004521, trade_id, outcome=hit, list=OFSI_CONSOLIDATED, confidence=0.97, topic=compliance.sanctions-screening"
+    },
+    {
+      "step": 9,
+      "from": "SVC102",
+      "to": "SVC007",
+      "action": "Deliver sanctions hit notification [CROSS-CAPABILITY received by CAP-002]",
+      "async": true,
+      "data": "screening_request_id=SCR-2026-004521, trade_id, outcome=hit, list=OFSI_CONSOLIDATED, confidence=0.97"
+    },
+    {
+      "step": 10,
+      "from": "SVC007",
+      "to": "SVC007",
+      "action": "Create ENT-042 FXSettlement with settlement_status=sanctions_hold",
+      "async": false,
+      "data": "settlement_id, trade_id, settlement_status=sanctions_hold, screening_request_id=SCR-2026-004521"
+    },
+    {
+      "step": 11,
+      "from": "SVC007",
+      "to": "SVC007",
+      "action": "Set FXTrade.status=settlement_held — EVT-087 FXSettlementInitiated withheld (settlement instruction NOT published)",
+      "async": false,
+      "data": "trade_id, status=settlement_held — EVT-087 suppressed"
+    },
+    {
+      "step": 12,
+      "from": "SVC007",
+      "to": "SVC102",
+      "action": "Publish FXSettlementHeld (internal alert event)",
+      "async": true,
+      "data": "trade_id, settlement_id, hold_reason=sanctions_hit, screening_request_id=SCR-2026-004521"
+    },
+    {
+      "step": 13,
+      "from": "SVC102",
+      "to": "SVC053",
+      "action": "Deliver FXSettlementHeld alert — trigger MLRO notification via secure case management channel",
+      "async": true,
+      "data": "trade_id, hold_reason=sanctions_hit, client_legal_name='Restricted Metals Corp', screening_request_id=SCR-2026-004521"
+    },
+    {
+      "step": 14,
+      "from": "SVC053",
+      "to": "PER058",
+      "action": "URGENT notification to MLRO — sanctions hold on FX trade, action required within 4 hours",
+      "async": false,
+      "data": "message='URGENT: Sanctions hold on FX trade {trade_id}. Client: Restricted Metals Corp — OFSI match (HIGH confidence). Action required within 4 hours.'"
+    },
+    {
+      "step": 15,
+      "from": "SVC053",
+      "to": "PER003",
+      "action": "Generic settlement delay notification — tipping-off prohibition active (POCA 2002 s333A), specific reason NOT disclosed to PER-003",
+      "async": false,
+      "data": "message='Your trade is under review — you will be contacted within 24 hours'"
+    },
+    {
+      "step": 16,
+      "from": "PER058",
+      "to": "PER058",
+      "action": "MLRO reviews OFSI match — determines false positive (name collision, different entity, OFSI reference confirms). Authorises settlement release with documented rationale.",
+      "async": false,
+      "data": "resolution=false_positive, ofsi_reference confirms different entity, rationale documented"
+    },
+    {
+      "step": 17,
+      "from": "PER058",
+      "to": "SVC007",
+      "action": "POST /treasury/fx-trades/{trade_id}/sanctions-release — MLRO authorises settlement release",
+      "async": false,
+      "data": "trade_id, mlro_id, resolution=false_positive, ofsi_reference, rationale"
+    },
+    {
+      "step": 18,
+      "from": "SVC007",
+      "to": "SVC007",
+      "action": "Update FXSettlement.settlement_status=initiated, FXTrade.status=confirmed, log immutable audit entry on FXTrade for resolution",
+      "async": false,
+      "data": "trade_id, status=confirmed, settlement_id, settlement_status=initiated, resolution=false_positive, mlro_id, ofsi_reference"
+    },
+    {
+      "step": 19,
+      "from": "SVC007",
+      "to": "SVC102",
+      "action": "Publish EVT-087 FXSettlementInitiated — settlement released, proceeds as per happy path PH-063",
+      "async": true,
+      "data": "settlement_id, trade_id, topic=commercial.treasury (settlement proceeds via CAP-003 as per happy path)"
+    }
+  ]
+}

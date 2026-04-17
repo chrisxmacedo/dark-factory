@@ -1,0 +1,161 @@
+{
+  "entity_id": "ENT-011",
+  "name": "SARInvestigationRecord",
+  "description": "The MLRO's internal investigation record that supports the SAR decision. Created by SVC-014 when a suspicion trigger is received — whether from an automated system event (SanctionsHitDetected, FraudScoreCompleted) or a manual staff disclosure. Exists for all investigations regardless of outcome: filed SAR, defensive SAR, or dismissed. Contains all evidence gathered, the documented decision rationale, and a full WORM timeline of investigation steps. This is the evidentiary foundation for the SAR (where filed) and the audit trail of the MLRO's considered judgment (where dismissed). All evidence_items and timeline entries are append-only and immutable after addition. Subject to 7-year WORM retention.",
+  "owning_service": "SVC-014",
+  "data_classification": "auditor_only",
+  "retention": "7 years WORM from decision date (MLR 2017 Regulation 40)",
+  "aggregate_root": false,
+  "reachable_from_phases": ["SAR-PH-001", "SAR-PH-002", "SAR-PH-003", "SAR-PH-006"],
+  "fields": [
+    {
+      "name": "investigation_id",
+      "type": "UUID",
+      "validation_rule": "RFC 4122 UUID v4. System-generated. Immutable after creation.",
+      "source": "SAR-PH-001",
+      "governed_by": null
+    },
+    {
+      "name": "customer_id",
+      "type": "UUID",
+      "validation_rule": "Required. FK → Customer.customer_id (ENT-001). Immutable after creation.",
+      "source": "SAR-PH-001",
+      "governed_by": "GOV-005-R01"
+    },
+    {
+      "name": "trigger_type",
+      "type": "enum",
+      "validation_rule": "Required. Enum: automated_event | staff_disclosure | mlro_investigation. Immutable after creation.",
+      "source": "SAR-PH-001",
+      "governed_by": null
+    },
+    {
+      "name": "trigger_detail",
+      "type": "object",
+      "validation_rule": "Required. Object: { trigger_source (string), trigger_timestamp (ISO 8601 UTC), trigger_narrative (string), related_event_id (string, null if manual) }. Immutable after creation.",
+      "source": "SAR-PH-001",
+      "governed_by": null
+    },
+    {
+      "name": "assigned_to_mlro_id",
+      "type": "UUID",
+      "validation_rule": "Required. FK → Staff.staff_id. Must reference MLRO or Deputy MLRO role holder.",
+      "source": "SAR-PH-001",
+      "governed_by": "GOV-005-R04"
+    },
+    {
+      "name": "evidence_items",
+      "type": "array<object>",
+      "validation_rule": "Required. Array of: { evidence_id (UUID), evidence_type (enum: transaction_record | kyc_document | staff_note | adverse_media | prior_sar | external_intelligence | account_statement), description (string, min 20 chars), added_by_mlro_id (UUID), added_at (ISO 8601 UTC), document_ref (string, null) }. WORM — items can be added but never modified or deleted.",
+      "source": "SAR-PH-002",
+      "governed_by": "GOV-005-R01"
+    },
+    {
+      "name": "transaction_refs",
+      "type": "array<string>",
+      "validation_rule": "Optional. Internal transaction IDs reviewed during investigation. Used to maintain cross-reference between investigation and transaction data in SVC-001.",
+      "source": "SAR-PH-002",
+      "governed_by": null
+    },
+    {
+      "name": "kyc_assessment_ref",
+      "type": "UUID",
+      "validation_rule": "Conditional. FK → KycAssessment.assessment_id (ENT-003). Links investigation to KYC assessment reviewed. Null if no KYC assessment exists.",
+      "source": "SAR-PH-002",
+      "governed_by": null
+    },
+    {
+      "name": "timeline",
+      "type": "array<object>",
+      "validation_rule": "System-maintained + MLRO-appended. Array of: { entry_id (UUID), entry_type (enum: trigger_received | investigation_opened | evidence_added | mlro_note | decision_recorded | sar_submitted | consent_response_received | investigation_closed), description (string), recorded_by (UUID or 'system'), recorded_at (ISO 8601 UTC) }. WORM — entries can be added but never modified or deleted.",
+      "source": "SAR-PH-001",
+      "governed_by": "GOV-005-R01"
+    },
+    {
+      "name": "mlro_decision",
+      "type": "enum",
+      "validation_rule": "Required on decision. Enum: file_sar | file_defensive_sar | dismissed. Immutable after creation.",
+      "source": "SAR-PH-003",
+      "governed_by": "GOV-005-R01"
+    },
+    {
+      "name": "mlro_decision_rationale",
+      "type": "string",
+      "validation_rule": "Required when mlro_decision is set. Free text. Minimum 200 characters. Immutable after sign-off.",
+      "source": "SAR-PH-003",
+      "governed_by": "GOV-005-R01"
+    },
+    {
+      "name": "mlro_decision_date",
+      "type": "date",
+      "validation_rule": "Required when mlro_decision is set. ISO 8601 (YYYY-MM-DD). Immutable. Starts 5-business-day SLA clock where decision = file or file_defensive.",
+      "source": "SAR-PH-003",
+      "governed_by": "GOV-005-R01"
+    },
+    {
+      "name": "sar_id",
+      "type": "UUID",
+      "validation_rule": "Conditional. FK → SuspiciousActivityReport.sar_id (ENT-008). Populated when mlro_decision = file_sar or file_defensive_sar. Null when mlro_decision = dismissed.",
+      "source": "SAR-PH-003",
+      "governed_by": null
+    },
+    {
+      "name": "status",
+      "type": "enum",
+      "validation_rule": "Required. Enum: open | decision_pending | dismissed | sar_in_progress | closed. Transitions: open → decision_pending → (dismissed | sar_in_progress) → closed.",
+      "source": "SAR-PH-001",
+      "governed_by": "GOV-005-R01"
+    },
+    {
+      "name": "created_at",
+      "type": "timestamp",
+      "validation_rule": "System-generated. ISO 8601 UTC. Immutable.",
+      "source": "SAR-PH-001",
+      "governed_by": null
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamp",
+      "validation_rule": "System-generated. ISO 8601 UTC. WORM — all versions retained.",
+      "source": "SAR-PH-001",
+      "governed_by": null
+    },
+    {
+      "name": "closed_at",
+      "type": "timestamp",
+      "validation_rule": "Conditional. ISO 8601 UTC. Populated when status = dismissed or closed. Immutable.",
+      "source": "SAR-PH-006",
+      "governed_by": null
+    }
+  ],
+  "relationships": [
+    {
+      "target_entity": "ENT-001",
+      "type": "many-to-one",
+      "description": "SARInvestigationRecord belongs to one Customer. A customer may be the subject of multiple investigations over time."
+    },
+    {
+      "target_entity": "ENT-010",
+      "type": "one-to-one",
+      "description": "SARInvestigationRecord produces zero or one SuspiciousActivityReport (zero if dismissed)."
+    },
+    {
+      "target_entity": "ENT-003",
+      "type": "many-to-one",
+      "description": "SARInvestigationRecord optionally references one KycAssessment via kyc_assessment_ref."
+    }
+  ],
+  "design_decisions": [
+    {
+      "id": "DD-ENT009-01",
+      "decision": "evidence_items and timeline are append-only WORM arrays. No modification or deletion is permitted after an item is added.",
+      "rationale": "MLRO investigation records must withstand judicial and regulatory scrutiny. Modification or deletion of evidence would undermine evidentiary integrity and could constitute perverting the course of justice. Append-only is the only safe design."
+    },
+    {
+      "id": "DD-ENT009-02",
+      "decision": "SARInvestigationRecord exists for all investigation outcomes — including dismissed investigations. SuspiciousActivityReport is created only when the MLRO decides to file.",
+      "rationale": "MLR 2017 Regulation 40 requires records of all suspicious activity disclosures received, including those where the MLRO decided not to file. The dismissal rationale provides the audit trail of the MLRO's considered judgment. FCA supervision may ask for evidence that all internal disclosures were reviewed — this record provides that evidence."
+    }
+  ],
+  "source_journeys": ["JRN-003"]
+}

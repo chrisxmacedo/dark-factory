@@ -1,0 +1,85 @@
+sequenceDiagram
+    title JRN-008 Credit Card Application and Issuance — Happy Path
+
+    actor PER001 as Customer (PER-001)
+    participant Portal as Customer App / Portal
+    participant SVC003 as SVC-003 Credit Card Service
+    participant SVC001 as SVC-001 Retail Banking Core
+    participant EventBus as SVC-102 Event Bus
+    participant SVC012 as SVC-012 Risk Engine (CAP-004)
+    participant CardProc as Card Processing Platform (PCI CDE)
+    participant SVC053 as SVC-053 Notification Service
+
+    rect rgb(230, 245, 255)
+        Note over PER001,SVC003: PH-023 — Application
+        PER001->>Portal: Browse card products. Select product.<br/>Enter income, employment status. Review APR (CONC 3.5.3).<br/>Consent to hard credit check (CCA s56).
+        Portal->>SVC003: POST /credit-card-applications<br/>(customer_id, product_id, income_declared,<br/>employment_status, hard_credit_check_consent: true)
+        Note over SVC003: Eligibility pre-check: active customer ✓ | UK resident ✓ | product criteria ✓<br/>Create ENT-022 CreditCardApplication (status: submitted)
+        SVC003->>EventBus: Publish EVT-040 CreditCardApplicationSubmitted
+        SVC003-->>Portal: 202 Accepted (application_id, status: submitted)
+        Portal-->>PER001: Application received. Checking eligibility...
+        EventBus-)SVC053: Consume EVT-040 — send application received notification
+        SVC053->>PER001: Email: Application received. Reference: [app_id]. Hard search will appear on credit file.
+    end
+
+    rect rgb(230, 255, 230)
+        Note over SVC003,SVC012: PH-024 — Eligibility and Credit Check [Target: < 60s P95]
+        SVC003->>SVC001: GET /customers/{customer_id} [same-capability sync — CAP-001]
+        SVC001-->>SVC003: 200 Customer data (name, address, DOB, nationality)
+        SVC003->>EventBus: Publish EVT-041 CreditCheckRequested<br/>(check_type: hard, customer_id, income_declared: £32,000)
+        Note over EventBus: CROSS-CAPABILITY: CAP-001 → CAP-004<br/>Async only — no synchronous cross-capability calls
+        EventBus-)SVC012: Consume EVT-041 CreditCheckRequested (hard)
+        Note over SVC012: Submit hard search to Experian (bureau footprint recorded)<br/>Full credit report retrieved<br/>Internal scoring model run: Score 680 — PASS (threshold: 620)<br/>Recommended limit: £4,500 (income £32k × policy factor)<br/>Risk band: B
+        SVC012->>EventBus: Publish EVT-042 CreditCheckCompleted<br/>(outcome: pass, risk_band: B, recommended_limit: £4,500,<br/>cra_used: experian, credit_assessment_reference: UUID)
+        EventBus-)SVC003: Consume EVT-042 CreditCheckCompleted
+        Note over SVC003: Update ENT-022: store credit_assessment_reference, risk_band: B<br/>Transition status: assessment_complete
+    end
+
+    rect rgb(255, 248, 220)
+        Note over SVC003,SVC053: PH-025 — Decision [Target: < 5s]
+        Note over SVC003: Apply credit policy rules:<br/>outcome: pass ✓ | income £32k sufficient ✓ | employment: employed_full_time ✓<br/>assigned_credit_limit: £4,500 (= recommended; no customer request)<br/>APR: 24.9% (band B pricing)<br/>Decision: APPROVE<br/>Transition ENT-022 status: approved
+        SVC003->>EventBus: Publish EVT-043 CreditCardApproved<br/>(application_id, assigned_credit_limit: £4,500, apr: 24.9%)
+        EventBus-)SVC053: Consume EVT-043 — send approval notification
+        SVC053->>PER001: Push + Email: Approved! Credit limit: £4,500 | APR: 24.9%<br/>Virtual card available shortly in the app.
+    end
+
+    rect rgb(255, 235, 220)
+        Note over SVC003,CardProc: PH-026 — Card Issuance (PCI DSS Scoped)
+        Note over SVC003: Create ENT-023 CreditCardAccount<br/>(credit_limit: £4,500, apr: 24.9%, status: issued,<br/>persistent_debt_flag: false, persistent_debt_months: 0)
+        SVC003->>CardProc: POST /cards (generate PAN, issue token, provision virtual card)<br/>[SVC-003 → PCI CDE boundary]
+        Note over CardProc: PAN generated within PCI CDE<br/>Format-preserving tokenisation: PAN → card_number_token<br/>Virtual card credentials provisioned in secure vault<br/>Physical card embossing queued
+        CardProc-->>SVC003: 201 { card_number_token: 'tok_4929...', virtual_card_ready: true }<br/>⚠️ No raw PAN in response — token only (PCI DSS v4.0 Req 3.5)
+        Note over SVC003: Persist card_number_token on ENT-023<br/>Submit physical card embossing order (dispatch: today+1)
+        SVC003->>EventBus: Publish EVT-045 CreditCardIssued<br/>(account_id, card_number_token, virtual_card_available: true)<br/>⚠️ PCI DSS: no raw PAN in payload
+        EventBus-)SVC001: Consume EVT-045 — update Customer product holdings
+        EventBus-)SVC053: Consume EVT-045 — send card issuance notification
+        SVC053->>PER001: Push + Email: Virtual card ready in app now.<br/>Physical card dispatched — arrives 3–5 business days.
+        PER001->>Portal: View virtual card in secure in-app viewer
+        Note over Portal: PCI-compliant in-app CDE viewer<br/>Card details displayed but not cached<br/>No PAN exposed to app layer
+    end
+
+    rect rgb(240, 220, 255)
+        Note over PER001,SVC003: PH-027 — Card Activation
+        Note over PER001: 3–5 business days — physical card received
+        PER001->>Portal: Activate card via app<br/>(SCA: push notification [possession] + PIN [knowledge])
+        Portal->>SVC003: POST /credit-card-accounts/{id}/activate<br/>(sca_session_token, card_number_token, activation_method: explicit_app)
+        Note over SVC003: Validate SCA session token (PSR 2017 Reg. 100) ✓<br/>Transition ENT-023 status: issued → active<br/>Set activated_at timestamp
+        SVC003->>EventBus: Publish EVT-046 CreditCardActivated<br/>(account_id, card_number_token, activation_method: explicit_app)
+        SVC003-->>Portal: 200 OK (status: active, credit_limit: £4,500, first_statement_date: [date])
+        Portal-->>PER001: Card activated! Credit limit: £4,500. First statement: [date].
+        EventBus-)SVC053: Consume EVT-046 — send activation confirmation
+        SVC053->>PER001: Email: Card activated. Use it anywhere Visa/Mastercard accepted.<br/>First statement: [date]. Minimum payment: [date + 25 days].
+    end
+
+    rect rgb(220, 255, 240)
+        Note over SVC003,SVC053: PH-028 — Ongoing Management (First Statement)
+        Note over SVC003: ~30 days pass. Customer makes purchases.<br/>Statement date reached (statement_date_day).
+        Note over SVC003: Scheduled job: generate statement<br/>opening_balance: £0 → closing_balance: £487.23<br/>interest_charged: £0 (no prior balance, interest-free period)<br/>minimum_payment_due: £25.00 (covers all interest + min principal)<br/>payment_due_date: statement_date + 25 days (CONC minimum)<br/>persistent_debt_months: 0 — no threshold crossed<br/>Create ENT-025 StatementCycle
+        SVC003->>EventBus: Publish EVT-047 StatementGenerated<br/>(cycle_id, account_id, closing_balance: £487.23,<br/>minimum_payment_due: £25.00, payment_due_date: [date],<br/>persistent_debt_months: 0)
+        EventBus-)SVC053: Consume EVT-047 — send statement notification
+        SVC053->>PER001: Email + Push: Statement ready.<br/>Closing balance: £487.23. Min payment: £25.00 due [date]. Pay now.
+        PER001->>Portal: View statement in app
+        Portal->>SVC003: GET /credit-card-accounts/{id}/statements?months=1
+        SVC003-->>Portal: 200 StatementCycle (cycle_id, dates, balances, payments)
+        Portal-->>PER001: Statement displayed in app
+    end

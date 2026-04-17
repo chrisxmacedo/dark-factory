@@ -1,0 +1,186 @@
+{
+  "journey_id": "JRN-011",
+  "document_version": "0.1.0",
+  "status": "Draft",
+  "description": "Non-functional requirements for the Card Transaction Authorisation journey. All requirements are derived from Visa and Mastercard scheme rules (authorisation latency), PCI DSS v4.0 (cardholder data security, audit logging), FCA SCA obligations (PSRs 2017), FCA operational resilience (SS1/21), and the bank's internal card service SLAs. The <500ms authorisation response requirement is the dominant constraint that shapes the entire architecture of this journey.",
+  "per_phase_nfrs": [
+    {
+      "phase_id": "PH-041",
+      "phase_name": "Authorisation Request",
+      "nfr_id": "NFR-JRN011-PH041-001",
+      "category": "Performance — Request Ingestion",
+      "requirement": "SVC-011 must ingest, parse, and tokenise an authorisation request and create the CardAuthorisation entity within 50ms of receipt.",
+      "target": "P99 < 50ms from network receipt to CardAuthorisation creation",
+      "rationale": "50ms budget for request ingestion leaves 450ms for decision + response formatting + network transmission (total 500ms Visa/Mastercard SLA)."
+    }
+  ],
+  "cross_cutting_nfrs": [
+    {
+      "nfr_id": "NFR-JRN011-001",
+      "category": "Performance — Authorisation Response Latency",
+      "requirement": "SVC-011 must return an authorisation response to the card network within 500ms of receiving the authorisation request. This is a HARD scheme rule — exceeding this threshold results in a network timeout which is treated as a decline by the acquirer.",
+      "target": "P99 < 500ms from request receipt to response transmission",
+      "breakdown": {
+        "request_ingestion_and_tokenisation": "< 50ms",
+        "card_status_cache_lookup": "< 5ms",
+        "balance_cache_lookup": "< 5ms",
+        "fraud_rule_evaluation": "< 50ms",
+        "sca_and_3ds_check": "< 5ms (3DS result embedded in request — no external call)",
+        "decision_derivation_and_auth_code_generation": "< 10ms",
+        "response_formatting_and_transmission": "< 20ms",
+        "headroom_for_infrastructure_jitter": "< 355ms",
+        "total_p99": "< 500ms"
+      },
+      "measurement_point": "From timestamp of first byte received from card scheme network to timestamp of first byte of response transmitted to card scheme network on the SVC-011 card scheme host gateway.",
+      "regulatory_basis": "Visa Core Rules Section 1 — Transaction Processing. Mastercard Transaction Processing Rules Chapter 2. Network timeout = decline for cardholder. Non-compliance affects card scheme membership standing.",
+      "failure_mode": "If SVC-011 cannot produce a response within 450ms (internal SLA with 50ms safety margin), it must transmit a decline (Do Not Honour — scheme code D05) to preserve the scheme connection. A network timeout is worse than a decline from a scheme compliance perspective.",
+      "alert_threshold": "Alert at processing_time_ms > 400ms (NFR-JRN011-001-ALERT). PagerDuty escalation at > 450ms.",
+      "services_in_scope": ["SVC-011"]
+    },
+    {
+      "nfr_id": "NFR-JRN011-002",
+      "category": "Throughput",
+      "requirement": "SVC-011 must sustain a minimum authorisation throughput of 2,000 transactions per second (TPS) with P99 latency < 500ms, and support burst throughput of up to 5,000 TPS during peak periods (Black Friday, Boxing Day, payday peaks).",
+      "target": "2,000 TPS sustained; 5,000 TPS burst (30-minute burst window). P99 < 500ms at all throughput levels.",
+      "rationale": "UK total card transaction volume: ~20 billion transactions per year (UK Finance 2024). Bank's estimated 3–4% market share implies approximately 220 TPS average. Peak-to-average ratio for card transactions is approximately 10:1 intraday (Black Friday peak). 2,000 TPS sustained provides 9x headroom over average load; 5,000 TPS burst covers 22x average load for exceptional peak events.",
+      "horizontal_scaling_requirement": "SVC-011 authorisation decision engine must be stateless (reading from the local cache) to support horizontal scaling. The local balance/fraud rule cache must be a shared distributed cache (Redis Cluster or equivalent) accessible to all SVC-011 instances.",
+      "services_in_scope": ["SVC-011"]
+    },
+    {
+      "nfr_id": "NFR-JRN011-003",
+      "category": "Availability",
+      "requirement": "The card authorisation service (SVC-011) must achieve 99.99% availability, measured monthly. Planned maintenance must be performed during card scheme maintenance windows (typically 02:00–04:00 UTC on low-volume nights).",
+      "target": "99.99% monthly availability (< 4.38 minutes downtime per month)",
+      "impact_tolerance": "0 minutes unplanned downtime tolerated during peak payment hours (08:00–23:00 daily). Out-of-hours maintenance window: up to 2 hours during card scheme maintenance windows.",
+      "regulatory_basis": "FCA Operational Resilience PS21/3 and SS1/21 — card authorisation is an important business service. Visa and Mastercard scheme rules require issuers to maintain authorisation availability above 99.9%. FCA Consumer Duty — customers must not be denied access to their funds due to bank system outages.",
+      "stand_in_processing": "SVC-011 must support Visa/Mastercard stand-in processing mode: if SVC-011 is unavailable for > 30 seconds, the card schemes apply their own stand-in parameters to approve or decline transactions on behalf of the issuer. SVC-011 must be configured with Visa STIP (Stand-In Processing) and Mastercard SMS (Stand-In Management Service) parameters.",
+      "services_in_scope": ["SVC-011"]
+    },
+    {
+      "nfr_id": "NFR-JRN011-004",
+      "category": "Performance — Post-Authorisation Balance Reservation",
+      "requirement": "SVC-001 (debit) and SVC-003 (credit) must apply the balance reservation (decrement available_balance) within 2 seconds of CardAuthorisationCompleted (EVT-065) publication.",
+      "target": "P99 < 2 seconds from EVT-065 publication to available_balance updated in ENT-004 or ENT-023",
+      "rationale": "The balance reservation is a consumer-facing control. If a cardholder uses their card twice in quick succession, the second authorisation must reflect the balance reduction from the first. A 2-second window aligns with the typical cardholder interaction time between two transactions.",
+      "consumer_routing_note": "Both SVC-001 and SVC-003 subscribe to the card.authorisations topic. Each must filter on card_type. Idempotent processing on auth_id is required to handle at-least-once Kafka delivery.",
+      "services_in_scope": ["SVC-001", "SVC-003"]
+    },
+    {
+      "nfr_id": "NFR-JRN011-005",
+      "category": "Settlement Processing",
+      "requirement": "SVC-011 must process the card scheme end-of-day clearing file and publish CardSettlementProcessed (EVT-067) for all matched authorisations by 06:00 on T+1.",
+      "target": "100% of clearing items matched and settlement events published by 06:00 T+1",
+      "rationale": "SVC-001/SVC-003 must post settled transactions to account statements before the start of the UK business day. FCA BCOBS requires accurate account records. Card scheme settlement rules require confirmation of settlement processing within the scheme's T+1 window.",
+      "unmatched_clearing_items": "Clearing items that cannot be matched to a pre-authorisation (e.g. forced transactions, late presentments) are processed via an exception workflow. Payment Operations team (PER-040) reviews and manually posts within 24 hours.",
+      "services_in_scope": ["SVC-011", "SVC-001", "SVC-003", "SVC-009"]
+    },
+    {
+      "nfr_id": "NFR-JRN011-006",
+      "category": "Security — PCI DSS v4.0",
+      "requirement": "SVC-011 must maintain compliance with PCI DSS v4.0. No raw PAN may be stored, transmitted, or logged outside the SVC-011 PCI CDE. card_number_token must be used exclusively as the card identifier in all event payloads, API responses, and entity fields outside the CDE. HSM-backed tokenisation is mandatory.",
+      "target": "100% PAN tokenisation on ingress; 0 PAN leakage events in audit log review",
+      "pci_controls": [
+        "Req 3.5.1 — PAN stored only in the HSM-backed tokenisation vault within SVC-011 PCI CDE",
+        "Req 4.2.1 — PAN transmitted only over encrypted channels (TLS 1.2+ for card scheme network connectivity)",
+        "Req 7.2.1 — Access to PAN restricted to roles with documented business need within SVC-011 only",
+        "Req 10.2.1 — All access to cardholder data logged to WORM audit pipeline",
+        "Req 8.3 — Multi-factor authentication for all personnel with access to PCI CDE"
+      ],
+      "regulatory_basis": "PCI DSS v4.0 (effective April 2024). Visa/Mastercard scheme membership requires PCI DSS compliance for issuers.",
+      "services_in_scope": ["SVC-011"]
+    },
+    {
+      "nfr_id": "NFR-JRN011-007",
+      "category": "Security — SCA (Strong Customer Authentication)",
+      "requirement": "3DS 2.x (EMV 3-D Secure) must be applied to all card-not-present (CNP) transactions where a TRA, recurring, or other SCA exemption does not apply. SCA exemptions must be recorded on ENT-032 (sca_exemption_applied field) for FCA compliance audit.",
+      "target": "100% of non-exempt CNP transactions protected by 3DS 2.x authentication",
+      "exemption_limits": {
+        "low_value_contactless": "£100 per transaction; cumulative 5 transactions or £300 since last SCA (PSRs 2017 Schedule 6 Part 2)",
+        "transaction_risk_analysis": "Applicable for low-risk CNP transactions below £30 where fraud rate below scheme threshold (FCA SCA RTS Article 18)",
+        "recurring_transaction": "Subsequent recurring transactions after initial SCA (FCA SCA RTS Article 14)",
+        "merchant_initiated": "Merchant-initiated transactions with valid mandate"
+      },
+      "regulatory_basis": "PSRs 2017 Regulation 100 (strong customer authentication); FCA SCA RTS; EBA RTS on SCA (onshored). 3DS 2.x liability shift: if SVC-011 applies an exemption and the transaction is fraudulent, liability remains with the issuer. If SVC-011 requests 3DS and the ACS authenticates, liability shifts to the acquirer/merchant for CNP fraud.",
+      "services_in_scope": ["SVC-011"]
+    },
+    {
+      "nfr_id": "NFR-JRN011-008",
+      "category": "Audit & Retention",
+      "requirement": "All CardAuthorisation and CardSettlement records, and all card authorisation events (EVT-064 through EVT-068), must be immutably logged to SVC-111 (WORM audit pipeline) and retained for 7 years minimum.",
+      "target": "100% of card authorisation events written to SVC-111 WORM pipeline within 500ms of publication",
+      "retention_basis": {
+        "pci_dss_req_10_7": "12 months immediately available; 36 months in secure archive (minimum)",
+        "fca_bcobs": "7 years for account transaction records",
+        "visa_mastercard_dispute_window": "120 days chargeback window; records must be available throughout",
+        "adopted_retention": "7 years (binding constraint is FCA BCOBS — exceeds PCI DSS minimum)"
+      },
+      "services_in_scope": ["SVC-111", "SVC-011", "SVC-013"]
+    },
+    {
+      "nfr_id": "NFR-JRN011-009",
+      "category": "Fraud Detection — Post-Auth Latency",
+      "requirement": "SVC-013 must consume CardAuthorisationCompleted (EVT-065) and update velocity counters and behaviour models within 5 seconds of event publication. SuspiciousCardActivityDetected (EVT-068) must be published within 10 seconds of the triggering EVT-065 consumption where a suspicious pattern is detected.",
+      "target": "P99 model update < 5 seconds; P99 EVT-068 publication (if triggered) < 10 seconds from EVT-065",
+      "rationale": "Post-auth fraud detection latency affects the window in which a card can be blocked before subsequent fraudulent transactions. A 10-second detection window limits fraud exposure to approximately 2-3 additional transactions in the worst case for high-velocity attacks.",
+      "services_in_scope": ["SVC-013"]
+    },
+    {
+      "nfr_id": "NFR-JRN011-010",
+      "category": "Resilience — Balance Cache Refresh",
+      "requirement": "SVC-011's local balance cache must be refreshed by SVC-001/SVC-003 within 30 seconds of any Account.available_balance or CreditCardAccount.available_balance change. Cache staleness policy (EX-CA-006) must be applied consistently during any cache refresh outage.",
+      "target": "P99 cache refresh latency < 30 seconds from balance change event to SVC-011 cache update",
+      "cache_failure_mode": "EX-CA-006 applies: if cache age > 30 seconds, approve if cached_balance > amount * 1.10; decline otherwise. This is a conscious trade-off between false declines and overdraft risk, governed by the Card Processing team risk appetite.",
+      "services_in_scope": ["SVC-011", "SVC-001", "SVC-003"]
+    },
+    {
+      "nfr_id": "NFR-JRN011-011",
+      "category": "Resilience — Stand-In Processing",
+      "requirement": "SVC-011 must be configured for Visa STIP and Mastercard SMS stand-in processing. Stand-in parameters (floor limits by MCC category, velocity limits) must be reviewed and updated quarterly by the Card Processing team in alignment with fraud risk appetite.",
+      "target": "STIP/SMS parameters current and reviewed quarterly. Stand-in activation within 30 seconds of SVC-011 unavailability detection.",
+      "rationale": "Card scheme stand-in processing prevents 100% decline rates during SVC-011 outages. Parameters must balance fraud risk (stand-in approves without fraud rules) against customer experience (transactions processed vs. all declined during outage).",
+      "services_in_scope": ["SVC-011", "EXT-CARD-SCHEME-VISA", "EXT-CARD-SCHEME-MC"]
+    }
+  ],
+  "regulatory_slas": [
+    {
+      "sla_id": "REG-SLA-JRN011-001",
+      "regulatory_requirement": "Visa Core Rules — Authorisation Response Time",
+      "obligation": "Issuer must respond to authorisation requests within 500ms. Timeout = network decline.",
+      "bank_target": "P99 < 500ms (NFR-JRN011-001)",
+      "consequences_of_breach": "Repeated timeouts above scheme tolerance thresholds can result in Visa/Mastercard issuer performance review and potential scheme membership sanctions."
+    },
+    {
+      "sla_id": "REG-SLA-JRN011-002",
+      "regulatory_requirement": "PCI DSS v4.0 Requirement 3.5.1 — PAN Protection",
+      "obligation": "PAN must be protected; must not be stored in clear text outside the CDE",
+      "bank_target": "0 raw PAN events in external systems (100% tokenisation rate)",
+      "consequences_of_breach": "PCI DSS non-compliance can result in removal from card scheme programmes (Visa/Mastercard account data compromise programme). Fines up to $100,000/month per scheme. Mandatory forensic investigation."
+    },
+    {
+      "sla_id": "REG-SLA-JRN011-003",
+      "regulatory_requirement": "FCA PSRs 2017 Regulation 100 — SCA",
+      "obligation": "Strong Customer Authentication required for CNP transactions above exemption thresholds",
+      "bank_target": "100% of non-exempt CNP transactions authenticated via 3DS 2.x (NFR-JRN011-007)",
+      "consequences_of_breach": "FCA enforcement action for SCA non-compliance. Liability shift for CNP fraud if SCA not applied. Visa/Mastercard liability allocation rules penalise issuers without 3DS."
+    },
+    {
+      "sla_id": "REG-SLA-JRN011-004",
+      "regulatory_requirement": "FCA Operational Resilience SS1/21 — Important Business Service",
+      "obligation": "Card authorisation is designated an important business service. Impact tolerance must be set.",
+      "bank_target": "0 minutes unplanned downtime during core hours (08:00–23:00). Impact tolerance: 30 minutes maximum outage before reputational and customer harm threshold is reached.",
+      "consequences_of_breach": "FCA supervisory engagement; potential Section 166 FSMA skilled persons review for persistent resilience failures. Consumer Duty poor outcome if customers systematically declined during bank outages."
+    }
+  ],
+  "nfr_summary_table": {
+    "authorisation_response_p99": "< 500ms (hard scheme rule)",
+    "throughput_sustained": "2,000 TPS",
+    "throughput_burst": "5,000 TPS",
+    "availability": "99.99% monthly",
+    "balance_reservation_p99": "< 2 seconds post-EVT-065",
+    "settlement_processing_cutoff": "06:00 T+1",
+    "pci_dss_pan_leakage": "0 events",
+    "sca_3ds_coverage": "100% of non-exempt CNP transactions",
+    "fraud_pattern_detection_p99": "< 10 seconds post-auth",
+    "audit_retention": "7 years (WORM)"
+  }
+}

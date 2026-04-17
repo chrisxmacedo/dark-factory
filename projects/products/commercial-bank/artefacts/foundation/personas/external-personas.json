@@ -1,0 +1,138 @@
+{
+  "group": "external",
+  "description": "External personas who interact with the UK commercial bank's capabilities as customers, partners, regulated third parties, or supervisory bodies. Covers the full range of counterparties revealed by capability market research, including TPPs under PSD2, ESG rating agencies, RegTech vendors, robo-advisory platforms, and correspondent banks.",
+  "personas": [
+    {
+      "id": "PER-001",
+      "name": "Personal Customer",
+      "type": "external",
+      "description": "An individual consumer holding one or more retail banking products with the bank — typically a current account, savings account, debit card, and possibly a personal loan, credit card, or mortgage. May range from a digital-native under-35 who rarely visits a branch, to an older customer who values phone and branch support. Subject to FCA Consumer Duty, FSCS deposit protection, and SCA requirements. Increasingly benchmarks the bank against Monzo, Starling, and Revolut for UX and pricing.",
+      "capability_touchpoints": ["CAP-001", "CAP-003", "CAP-007"],
+      "access_classification": "authenticated_customer",
+      "channels": ["mobile_app", "online_banking", "branch", "telephone"],
+      "frequency": "daily",
+      "volume_estimate": "c. 68 million UK adult bank account holders; a mid-tier commercial bank may hold 2–5 million retail customer relationships"
+    },
+    {
+      "id": "PER-002",
+      "name": "Business Customer (SME)",
+      "type": "external",
+      "description": "A small or medium-sized enterprise (sole trader to £25m annual turnover) holding a business current account and potentially an overdraft, term loan, merchant acquiring facility, or trade finance product. SME customers are increasingly served through digital onboarding channels and may use Open Banking API integrations with accounting software (Xero, QuickBooks, Sage). Subject to BBRS dispute resolution and FCA SME lending review outcomes. Highly price-sensitive on FX and payment fees.",
+      "capability_touchpoints": ["CAP-002", "CAP-003", "CAP-007"],
+      "access_classification": "authenticated_customer",
+      "channels": ["online_banking", "mobile_app", "telephone", "api"],
+      "frequency": "daily",
+      "volume_estimate": "c. 5.5 million SMEs in the UK; a mid-tier commercial bank may hold 150,000–500,000 active SME current accounts"
+    },
+    {
+      "id": "PER-003",
+      "name": "Corporate Client",
+      "type": "external",
+      "description": "A large company (typically £25m+ turnover) with a multi-product banking relationship including cash management, term lending, revolving credit facilities, FX, trade finance, and potentially capital markets access. Interacts via a dedicated Relationship Manager and a corporate banking portal or host-to-host API. Treasury teams use ERP integrations (SAP, Oracle) for bulk payment file submission. Highly sensitive to API quality, CHAPS cutoff times, and FX pricing transparency. Represents the highest revenue-per-customer segment.",
+      "capability_touchpoints": ["CAP-002", "CAP-003", "CAP-004", "CAP-007"],
+      "access_classification": "authenticated_customer",
+      "channels": ["online_banking", "api", "telephone", "swift"],
+      "frequency": "intraday",
+      "volume_estimate": "c. 30,000–50,000 large UK corporates; a mid-tier bank may hold 2,000–8,000 active corporate banking relationships"
+    },
+    {
+      "id": "PER-004",
+      "name": "High Net Worth (HNW) Client",
+      "type": "external",
+      "description": "An individual with investable assets typically above £250,000–£500,000 who holds a discretionary or advisory portfolio management relationship alongside private banking services. Requires personalised suitability assessments, regular portfolio reviews, and access to a dedicated Wealth Advisor. Subject to MiFID suitability rules, Consumer Duty fair value requirements, and SDR ESG label expectations. Sensitive to RM attrition — departure of their Wealth Advisor puts 30–40% of book at risk.",
+      "capability_touchpoints": ["CAP-001", "CAP-006", "CAP-007"],
+      "access_classification": "authenticated_customer",
+      "channels": ["online_banking", "mobile_app", "telephone"],
+      "frequency": "weekly",
+      "volume_estimate": "c. 2.5 million HNW individuals in the UK (assets >£250k); a wealth arm of a mid-tier bank may serve 20,000–80,000 HNW clients"
+    },
+    {
+      "id": "PER-005",
+      "name": "Mortgage Applicant",
+      "type": "external",
+      "description": "An individual applying for a residential mortgage, either as a first-time buyer, home mover, or remortgager. Interacts primarily through the digital application channel, broker intermediary, or branch. Subject to MCOB suitability assessment, affordability stress-testing (PRA stress rate), and Consumer Duty fair value obligations. Mortgage application and origination workflow overlaps with Retail Banking (distribution) and Risk Management (credit decisioning) capabilities.",
+      "capability_touchpoints": ["CAP-001", "CAP-004"],
+      "access_classification": "authenticated_customer",
+      "channels": ["online_banking", "mobile_app", "branch", "telephone"],
+      "frequency": "ad_hoc",
+      "volume_estimate": "c. 800,000–1,000,000 UK mortgage completions annually; a mid-tier bank may complete 30,000–80,000 residential mortgages per year"
+    },
+    {
+      "id": "PER-006",
+      "name": "Third Party Provider (TPP)",
+      "type": "external",
+      "description": "An FCA-authorised Account Information Service Provider (AISP) or Payment Initiation Service Provider (PISP) accessing the bank's Open Banking APIs under PSD2/PSR 2017. Examples: TrueLayer, Yapily, Bud (data aggregation), Volt, Modulr, Token.io (payment initiation). Accesses customer accounts with explicit customer consent via OBIE-compliant APIs. A subset are also Commercial VRP providers under the incoming cVRP scheme. The bank must not impose unnecessary obstacles on TPP access while managing fraud and operational risk.",
+      "capability_touchpoints": ["CAP-003", "CAP-007"],
+      "access_classification": "regulated_third_party",
+      "channels": ["open_banking_api"],
+      "frequency": "real_time",
+      "volume_estimate": "c. 200M+ open banking API calls per month across UK banking sector (2024); a mid-tier bank's APIs may serve 300–800 registered TPPs"
+    },
+    {
+      "id": "PER-007",
+      "name": "Merchant",
+      "type": "external",
+      "description": "A business customer that accepts the bank's card scheme payments (debit, commercial card) through the bank's acquiring service or a third-party acquirer. Interacts with the bank via card terminal provisioning, dispute and chargeback management, and settlement reporting. Subject to PSR card acquiring market review remedies (pricing transparency). As open banking A2A payment adoption grows (TrueLayer PayDirect, cVRP), merchants are evaluating card payment substitution for e-commerce.",
+      "capability_touchpoints": ["CAP-002", "CAP-003"],
+      "access_classification": "authenticated_customer",
+      "channels": ["online_banking", "api", "telephone"],
+      "frequency": "daily",
+      "volume_estimate": "c. 1.2 million UK card-accepting merchants; a mid-tier bank's acquiring portfolio may cover 50,000–200,000 merchants"
+    },
+    {
+      "id": "PER-008",
+      "name": "Correspondent Bank",
+      "type": "external",
+      "description": "A foreign or domestic financial institution that holds a nostro/vostro account relationship with the bank to facilitate cross-border payment settlement via SWIFT. The bank acts as respondent (using the correspondent's nostro account) or as correspondent (holding accounts for other institutions). SWIFT CBPR+ ISO 20022 is now mandatory for cross-border messaging. Correspondent relationships require EDD under MLR 2017 and are subject to FATF Recommendation 13 (correspondent banking). De-risking of correspondent relationships has reduced coverage in emerging markets.",
+      "capability_touchpoints": ["CAP-003", "CAP-005"],
+      "access_classification": "authenticated_partner",
+      "channels": ["swift", "correspondent_network"],
+      "frequency": "intraday",
+      "volume_estimate": "A mid-tier UK commercial bank may maintain 30–100 active correspondent banking relationships globally"
+    },
+    {
+      "id": "PER-009",
+      "name": "Regulator (FCA / PRA)",
+      "type": "external",
+      "description": "The Financial Conduct Authority (FCA) and Prudential Regulation Authority (PRA) as supervisory authorities. Interact with the bank via supervisory visits, data requests, regulatory reporting submissions (COREP, FINREP, PRA returns), enforcement investigations, and policy consultations. The bank must respond to regulatory information requests within prescribed timescales, submit regulatory returns on schedule, and notify regulators of material incidents and breaches. PRA supervises prudential matters; FCA supervises conduct, consumer protection, and market integrity.",
+      "capability_touchpoints": ["CAP-001", "CAP-002", "CAP-003", "CAP-004", "CAP-005", "CAP-006", "CAP-007"],
+      "access_classification": "supervisory",
+      "channels": ["regulatory_portal", "email", "telephone"],
+      "frequency": "monthly",
+      "volume_estimate": "Two primary supervisory bodies (FCA and PRA); supplementary regulators include the ICO (data protection), OFSI (sanctions), PSR (payment systems), and NCA (financial crime)"
+    },
+    {
+      "id": "PER-010",
+      "name": "Card Network (Visa / Mastercard)",
+      "type": "external",
+      "description": "Visa and Mastercard as four-party payment scheme operators governing the rules under which the bank issues debit and commercial cards and, where applicable, acquires card transactions. The bank must comply with scheme rules (Network Regulations), PCI DSS v4.0, and dispute / chargeback rules. Card networks are the subject of PSR market review remedies on interchange transparency. The bank pays scheme fees and interchange per the network tariff. Growing competition from open banking A2A rails creates a strategic threat to card network revenue.",
+      "capability_touchpoints": ["CAP-003"],
+      "access_classification": "authenticated_partner",
+      "channels": ["card_network", "api"],
+      "frequency": "real_time",
+      "volume_estimate": "Two dominant networks (Visa and Mastercard) serving the UK market; combined UK card transaction volume >11 billion transactions per year (2024)"
+    },
+    {
+      "id": "PER-011",
+      "name": "Insurance Underwriter",
+      "type": "external",
+      "description": "An insurance company or Lloyd's syndicate that underwrites insurance products distributed through the bank's retail or commercial banking channels (e.g. packaged account travel insurance, payment protection insurance, commercial property insurance, trade credit insurance). The bank acts as an insurance intermediary under ICOBS and FCA PROD. Consumer Duty applies to insurance products distributed through the bank. The bank must conduct target market assessments and fair value assessments for all insurance products it distributes.",
+      "capability_touchpoints": ["CAP-001", "CAP-002"],
+      "access_classification": "authenticated_partner",
+      "channels": ["api", "email", "telephone"],
+      "frequency": "monthly",
+      "volume_estimate": "A mid-tier UK bank may have relationships with 5–15 insurance underwriters covering retail and commercial product lines"
+    },
+    {
+      "id": "PER-012",
+      "name": "ESG Rating Agency",
+      "type": "external",
+      "description": "An organisation that provides ESG (environmental, social, governance) ratings, data, and analytics to investors and the bank itself. Examples: MSCI ESG Ratings, Sustainalytics (Morningstar), CDP, ISS ESG. The bank consumes ESG ratings data to evaluate the sustainability credentials of corporate lending counterparties and investment holdings for SDR-labelled portfolios. As an issuer itself (green bonds, sustainability-linked bonds), the bank is also rated by these agencies. FCA has consulted on bringing ESG rating providers within its regulatory perimeter.",
+      "capability_touchpoints": ["CAP-002", "CAP-006"],
+      "access_classification": "authenticated_partner",
+      "channels": ["api", "email"],
+      "frequency": "monthly",
+      "volume_estimate": "c. 10 major ESG rating providers globally; the bank's wealth and commercial teams may subscribe to 2–4 primary ESG data providers"
+    }
+  ]
+}

@@ -1,0 +1,127 @@
+{
+  "journey_id": "JRN-012",
+  "document_version": "1.0.0",
+  "status": "Draft",
+  "per_phase_nfrs": [
+    {
+      "phase_id": "PH-046",
+      "phase_name": "DDI Setup",
+      "performance": {
+        "api_response_time_p99": "2,000ms — POST /v1/direct-debits must return 202 Accepted within 2 seconds for digital channel setups",
+        "sca_completion_budget": "< 30 seconds customer action budget for SCA step"
+      },
+      "availability": "99.95% — aligned with CAP-003 T2 availability floor. BACS DDI setup is time-insensitive (not a real-time payment) but customer expects digital channel responsiveness.",
+      "data_integrity": "DirectDebitInstruction (ENT-034) must be persisted before EVT-069 is published. Transactional outbox pattern required.",
+      "security": "SCA required for digital channel DDI setup. FIDO2/WebAuthn or TOTP with session token validation via SVC-100."
+    },
+    {
+      "phase_id": "PH-047",
+      "phase_name": "DDI Validation",
+      "performance": {
+        "validation_completion": "< 5 seconds for synchronous modulus check and account confirmation event round-trip",
+        "auddis_submission_sla": "AUDDIS 0N must be submitted to BACS within the same BACS processing window (T+0 of instruction receipt)"
+      },
+      "availability": "Dependent on BACS/Vocalink AUDDIS service availability. Bank-side processing: 99.95%.",
+      "data_integrity": "AUDDIS submission must be idempotent — duplicate submissions must be detected and rejected to prevent duplicate DDI creation."
+    },
+    {
+      "phase_id": "PH-048",
+      "phase_name": "DDI Confirmation",
+      "performance": {
+        "customer_notification_sla": "Push notification dispatched within 1 business day of BACS confirmation receipt",
+        "dd_guarantee_disclosure": "Direct Debit Guarantee summary must be included in the activation notification — no exceptions"
+      },
+      "availability": "SVC-053 (Notification Service) must deliver notification. Retry policy: 3 attempts over 30 minutes for failed delivery.",
+      "regulatory": "DD Guarantee disclosure is mandatory under BACS scheme rules. Non-delivery of activation confirmation is a scheme compliance failure."
+    },
+    {
+      "phase_id": "PH-049",
+      "phase_name": "First Collection Submission",
+      "performance": {
+        "file_processing_sla": "BACS collection file processed within 2 hours of receipt from Vocalink",
+        "advance_notice_timing": "Customer advance notice notification dispatched within 1 hour of collection file processing"
+      },
+      "availability": "BACS file processing is batch — SVC-009 must process files within the BACS D-2 window. Failure to process at D-2 is a scheme obligation breach.",
+      "data_integrity": "DirectDebitCollection (ENT-035) must be created atomically with EVT-071 publication (transactional outbox pattern)."
+    },
+    {
+      "phase_id": "PH-050",
+      "phase_name": "Collection Processing",
+      "performance": {
+        "account_debit_sla": "Account debit (cross-capability SVC-001 processing) must complete within 4 hours of BACS D-0 settlement window opening",
+        "event_driven_latency": "EVT-072 or EVT-073 must be published within 5 minutes of AccountDebited or DirectDebitInsufficientFunds event receipt"
+      },
+      "availability": "99.95% — BACS D-0 processing is a scheme obligation. Unavailability during the BACS settlement window constitutes a scheme participation failure.",
+      "data_integrity": "Account debit and DirectDebitCollection status update must be atomic. Idempotent on collection_id — duplicate debit signals must not result in double debit."
+    },
+    {
+      "phase_id": "PH-051",
+      "phase_name": "Indemnity and Disputes",
+      "performance": {
+        "indemnity_credit_sla": "Account must be credited within 30 seconds of EVT-074 (DirectDebitIndemnityClaimFiled) publication. This is a regulatory obligation under the Direct Debit Guarantee ('immediate' refund).",
+        "api_response_time_p99": "POST /v1/direct-debits/{ddi_id}/indemnity-claim must return 202 Accepted within 2,000ms P99",
+        "bacs_recovery_submission": "BACS indemnity recovery instruction must be submitted to BACS within 2 working days of the claim"
+      },
+      "availability": "99.99% — indemnity claim handling is a regulatory obligation. Unavailability prevents the bank from meeting the DD Guarantee immediate credit requirement.",
+      "regulatory": "DD Guarantee requires 'immediate' credit. The 30-second SLA is the operational definition of 'immediate' in this context — aligns with customer expectation of real-time banking."
+    }
+  ],
+  "cross_cutting_nfrs": [
+    {
+      "id": "NFR-JRN012-CC-01",
+      "category": "Event ordering",
+      "requirement": "All JRN-012 events on topic payments.direct-debit must be strictly ordered per account_id partition key. Out-of-order events (e.g. EVT-072 before EVT-071) must be detected and rejected by consumers.",
+      "rationale": "BACS lifecycle events have a defined sequence. Out-of-order processing would result in incorrect DirectDebitInstruction and DirectDebitCollection state transitions."
+    },
+    {
+      "id": "NFR-JRN012-CC-02",
+      "category": "Idempotency",
+      "requirement": "All SVC-009 event publishers and SVC-001 event consumers must implement idempotency on their respective entity IDs (ddi_id for ENT-034, collection_id for ENT-035, claim_id for indemnity claims). Duplicate events must not result in duplicate entity creation, duplicate debits, or duplicate credits.",
+      "rationale": "BACS file processing may produce duplicate messages in failure/retry scenarios. Idempotency is critical for financial integrity."
+    },
+    {
+      "id": "NFR-JRN012-CC-03",
+      "category": "WORM audit retention",
+      "requirement": "All six JRN-012 events (EVT-069 through EVT-074) must be routed to SVC-111 (WORM audit log). Retention: 7 years minimum per PRA regulatory requirements.",
+      "rationale": "BACS scheme rules and Consumer Duty require full lifecycle audit of DDI setup, collections, and indemnity claims."
+    },
+    {
+      "id": "NFR-JRN012-CC-04",
+      "category": "Data classification",
+      "requirement": "All JRN-012 event payloads are classified as 'financial'. They must not include unnecessary PII beyond account_id and must never include full sort code + account number in event payloads visible outside SVC-009/SVC-001 (use account_id UUID internally).",
+      "rationale": "UK GDPR data minimisation principle. account_id UUID is sufficient for cross-capability coordination."
+    },
+    {
+      "id": "NFR-JRN012-CC-05",
+      "category": "BACS scheme compliance",
+      "requirement": "SVC-009 must maintain compliance with Pay.UK BACS Participation Rules for all AUDDIS and collection file processing. BACS processing windows and file format specifications (BACS Standard 18 for AUDDIS; BACS ARUDD) must be adhered to.",
+      "rationale": "Pay.UK participation rules are a scheme obligation. Non-compliance may result in suspension from the BACS scheme."
+    }
+  ],
+  "regulatory_slas": [
+    {
+      "rule": "Direct Debit Guarantee — Immediate Refund",
+      "requirement": "Bank must credit the customer's account immediately on an indemnity claim under the DD Guarantee. No evidence or justification required from the customer.",
+      "operational_sla": "Account credited within 30 seconds of EVT-074 publication",
+      "source": "BACS Direct Debit Guarantee scheme rules"
+    },
+    {
+      "rule": "Consumer Duty — Advance Notice of Variable Direct Debits",
+      "requirement": "Customers should receive advance notice of upcoming collections, particularly for variable-amount Direct Debits, to allow them to ensure sufficient funds.",
+      "operational_sla": "Advance notice notification dispatched within 1 hour of EVT-071 (D-2)",
+      "source": "FCA Consumer Duty (PS22/9)"
+    },
+    {
+      "rule": "BACS AUDDIS Submission Window",
+      "requirement": "AUDDIS 0N (new DDI) and 0C (cancellation) instructions must be submitted within the BACS processing window (same T+0 business day of instruction receipt).",
+      "operational_sla": "AUDDIS submission within BACS T+0 window",
+      "source": "Pay.UK BACS Participation Rules — AUDDIS scheme"
+    },
+    {
+      "rule": "BACS D-2 Collection File Processing",
+      "requirement": "Originator collection files received at D-2 must be processed and validated within the BACS processing window. Late processing may result in D-0 debit failure.",
+      "operational_sla": "Collection file processed within 2 hours of Vocalink delivery",
+      "source": "Pay.UK BACS Participation Rules"
+    }
+  ]
+}

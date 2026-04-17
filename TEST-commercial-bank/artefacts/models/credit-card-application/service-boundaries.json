@@ -1,0 +1,171 @@
+{
+  "journey_id": "JRN-008",
+  "journey_name": "Credit Card Application and Issuance",
+  "version": "1.0.0",
+  "status": "Draft",
+  "architectural_principles": [
+    "A service owns its entities exclusively — no shared databases between services.",
+    "Cross-capability communication is async events only (via SVC-102 event bus). No synchronous cross-capability calls.",
+    "Same-capability services (within CAP-001) may communicate directly (synchronous API calls permitted).",
+    "SVC-003 (Credit Card Service) is a promoted sub-capability of CAP-001 (Retail Banking). It shares capability-level data access with SVC-001 (Retail Banking Core) but is a separate bounded context with its own entity ownership.",
+    "PCI DSS: no raw PAN in event payloads, API responses, or any storage outside the PCI CDE. card_number_token is used throughout SVC-003.",
+    "Event payloads carry minimum data required for consumers to act. income_declared is not propagated beyond EVT-041 (needed by SVC-012 for creditworthiness check)."
+  ],
+  "service_boundaries": [
+    {
+      "service_id": "SVC-003",
+      "service_name": "Credit Card Service",
+      "capability_domain": "CAP-001 (Retail Banking — Credit Cards sub-capability, promoted to standalone)",
+      "tier": "T2",
+      "description": "Owns the end-to-end credit card application and account lifecycle for JRN-008. Promoted sub-capability of CAP-001. Holds all credit-card-specific entities (ENT-022, ENT-023, ENT-024, ENT-025). Communicates with SVC-001 (same capability) via direct synchronous API for customer identity data. Communicates with SVC-012 (Risk Engine, CAP-004) exclusively via async events through SVC-102. Manages PCI DSS obligations: card_number_token used throughout; raw PAN handled only via the card processing platform PCI CDE.",
+      "owned_entities": [
+        "ENT-022",
+        "ENT-023",
+        "ENT-024",
+        "ENT-025"
+      ],
+      "owned_entity_names": {
+        "ENT-022": "CreditCardApplication",
+        "ENT-023": "CreditCardAccount",
+        "ENT-024": "CardProduct",
+        "ENT-025": "StatementCycle"
+      },
+      "published_events": [
+        "EVT-040",
+        "EVT-041",
+        "EVT-043",
+        "EVT-044",
+        "EVT-045",
+        "EVT-046",
+        "EVT-047",
+        "EVT-048"
+      ],
+      "consumed_events": [
+        {
+          "event_id": "EVT-042",
+          "event_name": "CreditCheckCompleted",
+          "provider_service_id": "SVC-012",
+          "provider_capability": "CAP-004 (Risk Management)",
+          "communication_pattern": "async — cross-capability boundary. SVC-003 subscribes via SVC-102 event bus.",
+          "purpose": "SVC-003 receives the credit check outcome (pass | decline | refer), credit_risk_band, recommended_credit_limit, and credit_assessment_reference from SVC-012. Transitions ENT-022 status to 'assessment_complete'. Triggers the PH-025 decisioning workflow. Idempotent on application_id + check_type."
+        }
+      ],
+      "synchronous_dependencies": [
+        {
+          "provider_service_id": "SVC-001",
+          "provider_service_name": "Retail Banking Core",
+          "capability": "CAP-001 (same capability)",
+          "call_pattern": "Synchronous (direct API call — same-capability permitted)",
+          "purpose": "SVC-003 calls SVC-001 GET /customers/{id} at PH-024 to retrieve customer identity data (name, address, date of birth, nationality) required for credit bureau submission. Also used to confirm customer is active and UK resident (eligibility pre-check at PH-023). No local copy of Customer fields maintained in SVC-003.",
+          "dependency_criticality": "hard"
+        },
+        {
+          "provider_service_id": "SVC-102",
+          "provider_service_name": "Event Bus",
+          "call_pattern": "Asynchronous publish (event bus for all cross-capability events)",
+          "purpose": "SVC-003 publishes EVT-041 CreditCheckRequested to SVC-102 for routing to SVC-012 (CAP-004). SVC-003 subscribes to SVC-102 to receive EVT-042 CreditCheckCompleted from SVC-012.",
+          "dependency_criticality": "hard"
+        },
+        {
+          "provider_service_id": "SVC-053",
+          "provider_service_name": "Notification Service",
+          "call_pattern": "Asynchronous (fire-and-forget with delivery confirmation via event)",
+          "purpose": "SVC-003 publishes events that SVC-053 consumes to dispatch customer notifications: application received, decision (approve/decline), card issued, card activated, statement available, persistent debt communications.",
+          "dependency_criticality": "soft"
+        },
+        {
+          "provider_service_id": "EXT-CARD-PROCESSING",
+          "provider_service_name": "Card Processing Platform (Marqeta/Thredd or equivalent)",
+          "call_pattern": "Synchronous API call (SVC-003 → Card Processing Platform, within PCI CDE boundary at PH-026)",
+          "purpose": "SVC-003 calls the card processing platform to: (1) generate a new PAN within the PCI CDE, (2) issue a card_number_token via format-preserving tokenisation, (3) provision the virtual card credentials. The card processing platform also handles PIN generation (HSM) and physical card embossing instructions.",
+          "dependency_criticality": "hard",
+          "pci_note": "This integration operates within the PCI CDE. The card processing platform is the only component that handles raw PANs. SVC-003 receives only the card_number_token in the API response."
+        }
+      ],
+      "api_endpoints": [
+        "POST /credit-card-applications",
+        "GET /credit-card-applications/{id}",
+        "POST /credit-card-accounts/{id}/activate",
+        "GET /credit-card-accounts/{id}/statements"
+      ],
+      "source_journeys": ["JRN-008"]
+    },
+    {
+      "service_id": "SVC-012",
+      "service_name": "Risk Engine",
+      "capability_domain": "CAP-004 (Risk Management)",
+      "tier": "T1",
+      "description": "Provides credit scoring and risk assessment services for JRN-008. Consumed by SVC-003 exclusively via async events. SVC-012 receives EVT-041 CreditCheckRequested from SVC-003 (hard credit check), calls the credit bureau (Experian/Equifax/TransUnion), runs the bank's internal credit scoring model, derives a recommended credit limit, and publishes EVT-042 CreditCheckCompleted back to SVC-102 for SVC-003 consumption.",
+      "owned_entities": [],
+      "published_events": ["EVT-042"],
+      "consumed_events": [
+        {
+          "event_id": "EVT-041",
+          "event_name": "CreditCheckRequested",
+          "provider_service_id": "SVC-003",
+          "provider_capability": "CAP-001 (Retail Banking)",
+          "communication_pattern": "async — cross-capability boundary. SVC-012 subscribes via SVC-102 event bus.",
+          "purpose": "SVC-012 receives the credit check request from SVC-003. Retrieves Customer identity data from SVC-001 (SVC-012 may call SVC-001 directly). Submits hard search to credit bureau. Runs internal scoring model (calibrated against bank's credit loss history and PD/LGD model). Derives recommended_credit_limit using income_declared (from event payload) and bureau data. Publishes EVT-042 CreditCheckCompleted."
+        }
+      ],
+      "cross_capability_note": "All communication between SVC-003 and SVC-012 is exclusively via async events (EVT-041 → SVC-012, EVT-042 ← SVC-012). No synchronous calls across the CAP-001 / CAP-004 boundary.",
+      "source_journeys": ["JRN-006", "JRN-007", "JRN-008"]
+    },
+    {
+      "service_id": "SVC-001",
+      "service_name": "Retail Banking Core",
+      "capability_domain": "CAP-001 (Retail Banking)",
+      "tier": "T2",
+      "description": "Same-capability peer to SVC-003. SVC-003 may call SVC-001 directly (synchronous) to read Customer data. SVC-001 consumes EVT-045 CreditCardIssued from SVC-102 to update the customer's product holdings record with the new CreditCardAccount (ENT-023.account_id). SVC-001 does not call SVC-003 directly.",
+      "integration_with_svc003": {
+        "pattern": "same-capability direct API call (SVC-003 calls SVC-001 GET /customers/{id})",
+        "data_shared": "Customer identity data (name, address, date of birth, nationality) for credit bureau submission and card issuance",
+        "direction": "SVC-003 → SVC-001 (read-only, synchronous)",
+        "no_reverse_call": "SVC-001 does not call SVC-003 directly. SVC-001 consumes EVT-045 (CreditCardIssued) from SVC-102 to update Customer product holdings. This is the only inbound integration from SVC-003 to SVC-001."
+      },
+      "source_journeys": ["JRN-001", "JRN-002", "JRN-003", "JRN-005", "JRN-006", "JRN-008"]
+    }
+  ],
+  "capability_boundary_map": {
+    "description": "Defines which service interactions cross capability boundaries and must be async, and which are within the same capability and may be synchronous.",
+    "intra_capability_sync_allowed": [
+      {
+        "from": "SVC-003",
+        "to": "SVC-001",
+        "capability": "CAP-001",
+        "pattern": "synchronous direct API — GET /customers/{id}"
+      }
+    ],
+    "cross_capability_async_required": [
+      {
+        "from": "SVC-003",
+        "to": "SVC-012",
+        "boundary": "CAP-001 → CAP-004",
+        "events": ["EVT-041 (published by SVC-003)", "EVT-042 (consumed by SVC-003, published by SVC-012)"],
+        "justification": "CAP-004 (Risk Management) is an independent capability domain. Synchronous calls would create a temporal coupling between the credit card application flow and the Risk Engine availability. Async decoupling allows SVC-003 to accept the application (return 202 to the customer) while the credit check processes asynchronously."
+      }
+    ],
+    "intra_capability_events": [
+      {
+        "from": "SVC-003",
+        "to": "SVC-001",
+        "pattern": "event notification (SVC-001 subscribes to EVT-045 via SVC-102)",
+        "events": ["EVT-045 CreditCardIssued — consumed by SVC-001 to update Customer product holdings"],
+        "note": "Although intra-capability, this update is delivered via event rather than synchronous API to preserve loose coupling and avoid a synchronous dependency from SVC-003 on SVC-001 state writes."
+      }
+    ]
+  },
+  "pci_dss_boundary": {
+    "description": "PCI DSS v4.0 scoping for JRN-008. The Cardholder Data Environment (CDE) is limited to the card processing platform (EXT-CARD-PROCESSING). SVC-003 is out-of-scope for raw PAN storage by design.",
+    "in_scope_for_cde": ["EXT-CARD-PROCESSING (PAN generation, tokenisation vault, PIN management HSM)"],
+    "out_of_scope_via_tokenisation": ["SVC-003 (Credit Card Service)", "SVC-102 (Event Bus)", "SVC-053 (Notification Service)", "SVC-103 (Audit & Logging)"],
+    "tokenisation_control": "All PAN references in SVC-003, event payloads, and API responses use card_number_token (format-preserving token from the card processing platform vault). Raw PAN never leaves the CDE.",
+    "controls_reference": [
+      "PCI DSS v4.0 Req 3.3.1 — SAD not stored after authorisation",
+      "PCI DSS v4.0 Req 3.5 — PAN protected wherever stored",
+      "PCI DSS v4.0 Req 4.2.1 — PAN encrypted in transit (TLS 1.2+)",
+      "PCI DSS v4.0 Req 8.3 — PIN via HSM only",
+      "PCI DSS v4.0 Req 10.2 — card issuance and activation events logged"
+    ]
+  }
+}

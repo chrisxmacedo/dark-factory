@@ -1,0 +1,526 @@
+{
+  "journey_id": "JRN-006",
+  "journey_name": "Residential Mortgage Application",
+  "version": "1.0.0",
+  "status": "Draft",
+  "events": [
+    {
+      "event_id": "EVT-020",
+      "name": "MortgageEnquiryStarted",
+      "source_service": "SVC-002",
+      "source_service_name": "Mortgage Service",
+      "source_entity": "ENT-012",
+      "source_entity_name": "MortgageApplication",
+      "trigger": "Customer submits mortgage enquiry (PH-009). SVC-002 creates ENT-012 MortgageApplication with status = 'enquiry' and publishes this event. Affordability pre-check is run before publication.",
+      "journey_phase": "PH-009",
+      "journey_phase_name": "Mortgage Enquiry",
+      "capability_scope": "cross-capability",
+      "capability_scope_rationale": "Published by CAP-001 (SVC-002). Consumed by CAP-005 (SVC-014) for KYC status check. Crosses CAP-001 → CAP-005 boundary — must be async.",
+      "payload_schema": {
+        "application_id": "string (UUID v4) — ENT-012 identifier",
+        "customer_id": "string (UUID v4) — FK to ENT-001",
+        "application_type": "string enum (purchase | remortgage | buy_to_let | shared_ownership)",
+        "property_postcode": "string — UK postcode (partial — not full address, PII minimisation)",
+        "loan_amount": "number — requested loan in GBP",
+        "ltv_ratio": "number — indicative LTV at enquiry stage (percentage)",
+        "started_at": "string (ISO 8601 UTC timestamp)"
+      },
+      "consumers": [
+        {
+          "service": "SVC-014",
+          "service_name": "KYC/AML Service",
+          "action": "Checks if customer_id has a current valid KYC record. If existing customer with active KYC: publishes KYCClearanceGranted (EVT-004) reusing existing assessment. If new customer or expired KYC: initiates KYC workflow."
+        },
+        {
+          "service": "SVC-103",
+          "service_name": "Audit & Logging",
+          "action": "Creates immutable audit log entry for the mortgage enquiry initiation."
+        }
+      ],
+      "ordering_guarantees": "Per-customer strict ordering via customer_id partition key on topic retail.mortgages.",
+      "topic": "retail.mortgages",
+      "data_classification": "pii",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "Contains customer_id (PII). MCOB record-keeping: mortgage enquiry is the start of the application audit trail. Retained for 7 years.",
+      "retention": "7 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.retail.mortgage.enquiry.started",
+      "governance_references": ["GOV-001-R01"],
+      "source_journeys": ["JRN-006"]
+    },
+    {
+      "event_id": "EVT-021",
+      "name": "DIPIssued",
+      "source_service": "SVC-002",
+      "source_service_name": "Mortgage Service",
+      "source_entity": "ENT-012",
+      "source_entity_name": "MortgageApplication",
+      "trigger": "Automated DIP processing completes: soft credit check passes (EVT-023 received), affordability assessment passes. SVC-002 transitions MortgageApplication.status to 'dip_issued', sets dip_date and dip_expiry, and publishes this event.",
+      "journey_phase": "PH-010",
+      "journey_phase_name": "Decision in Principle",
+      "capability_scope": "intra-capability",
+      "capability_scope_rationale": "Published and primarily consumed within CAP-001 (SVC-002 and SVC-017). Also consumed by SVC-053 for notification dispatch.",
+      "payload_schema": {
+        "application_id": "string (UUID v4)",
+        "customer_id": "string (UUID v4)",
+        "dip_date": "string (ISO 8601 date) — date DIP was issued",
+        "dip_expiry": "string (ISO 8601 date) — DIP expiry date (dip_date + 90 days)",
+        "indicative_loan_amount": "number — loan amount DIP is valid for",
+        "indicative_ltv": "number — LTV at DIP stage",
+        "issued_at": "string (ISO 8601 UTC timestamp)"
+      },
+      "consumers": [
+        {
+          "service": "SVC-053",
+          "service_name": "Notification Service",
+          "action": "Dispatches DIP certificate email and ESIS document to customer. Includes 90-day validity window and next steps for full application."
+        },
+        {
+          "service": "SVC-103",
+          "service_name": "Audit & Logging",
+          "action": "Records DIP issuance in the WORM audit trail."
+        }
+      ],
+      "ordering_guarantees": "Per-customer strict ordering via customer_id partition key on topic retail.mortgages.",
+      "topic": "retail.mortgages",
+      "data_classification": "pii",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "Contains customer_id and financial terms. MCOB record-keeping obligation. 7-year retention.",
+      "retention": "7 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.retail.mortgage.dip.issued",
+      "governance_references": ["GOV-001-R01"],
+      "source_journeys": ["JRN-006"]
+    },
+    {
+      "event_id": "EVT-022",
+      "name": "CreditCheckRequested",
+      "source_service": "SVC-002",
+      "source_service_name": "Mortgage Service",
+      "source_entity": "ENT-012",
+      "source_entity_name": "MortgageApplication",
+      "trigger": "SVC-002 requires a credit check from the Risk Engine (SVC-012). Published at two points: (1) DIP stage — soft credit check (no bureau footprint). (2) Full application stage — hard credit check (bureau footprint recorded). check_type field distinguishes the two.",
+      "journey_phase": "PH-010 (soft) and PH-011 (hard)",
+      "journey_phase_name": "Decision in Principle / Full Application",
+      "capability_scope": "cross-capability",
+      "capability_scope_rationale": "Published by CAP-001 (SVC-002). Consumed by CAP-004 (SVC-012) for credit scoring and CAP-005 (SVC-014) for AML check trigger on full application. Crosses two capability boundaries — must be async.",
+      "payload_schema": {
+        "application_id": "string (UUID v4)",
+        "customer_id": "string (UUID v4)",
+        "check_type": "string enum (soft | hard)",
+        "check_reason": "string enum (dip | full_application)",
+        "loan_amount": "number — loan amount requested",
+        "customer_date_of_birth": "string (ISO 8601 date) — for bureau identity matching",
+        "customer_first_name": "string",
+        "customer_last_name": "string",
+        "customer_postcode": "string — for bureau address matching (partial address only)",
+        "requested_at": "string (ISO 8601 UTC timestamp)"
+      },
+      "consumers": [
+        {
+          "service": "SVC-012",
+          "service_name": "Risk Engine",
+          "action": "Receives credit check request. Calls credit bureau (Experian/Equifax/TransUnion) with customer identity data. Performs soft or hard check per check_type. Publishes CreditCheckCompleted (EVT-023)."
+        },
+        {
+          "service": "SVC-014",
+          "service_name": "KYC/AML Service",
+          "action": "On check_reason = full_application: initiates AML source-of-funds check for the property purchase amount. Parallel to the credit check."
+        },
+        {
+          "service": "SVC-103",
+          "service_name": "Audit & Logging",
+          "action": "Records credit check request in audit trail. Required for MCOB record-keeping."
+        }
+      ],
+      "ordering_guarantees": "Per-customer strict ordering via customer_id partition key on topic retail.mortgage-risk.",
+      "topic": "retail.mortgage-risk",
+      "data_classification": "pii",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "Contains customer PII (name, DOB, postcode) and financial data. Required for MCOB audit trail. Hard credit check events are particularly sensitive — bureau footprint evidence.",
+      "retention": "7 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.risk.credit.check.requested",
+      "governance_references": ["GOV-001-R01"],
+      "source_journeys": ["JRN-006"]
+    },
+    {
+      "event_id": "EVT-023",
+      "name": "CreditCheckCompleted",
+      "source_service": "SVC-012",
+      "source_service_name": "Risk Engine",
+      "source_entity": "ENT-012",
+      "source_entity_name": "MortgageApplication",
+      "trigger": "SVC-012 has received the credit bureau response and processed the credit check. Published in response to EVT-022. Contains credit score, outcome, and report reference. Consumed by SVC-002 to progress the mortgage application.",
+      "journey_phase": "PH-010 (soft) and PH-011 (hard)",
+      "journey_phase_name": "Decision in Principle / Full Application",
+      "capability_scope": "cross-capability",
+      "capability_scope_rationale": "Published by CAP-004 (SVC-012). Consumed by CAP-001 (SVC-002). Crosses CAP-004 → CAP-001 boundary — async event response to EVT-022.",
+      "payload_schema": {
+        "application_id": "string (UUID v4) — correlates to EVT-022 application_id",
+        "customer_id": "string (UUID v4)",
+        "check_type": "string enum (soft | hard) — matches the request",
+        "check_reason": "string enum (dip | full_application)",
+        "credit_score": "number — numeric credit score (bureau-agnostic normalised score 0–1000)",
+        "outcome": "string enum (pass | refer | fail)",
+        "report_reference": "string — credit bureau report reference ID (for record-keeping, not full report content)",
+        "adverse_indicators": "array<string> — flag names only (e.g. 'CCJ_within_6_years', 'IVA', 'missed_payments_12m'). No raw bureau data.",
+        "completed_at": "string (ISO 8601 UTC timestamp)"
+      },
+      "consumers": [
+        {
+          "service": "SVC-002",
+          "service_name": "Mortgage Service",
+          "action": "On DIP (soft check): if outcome = pass, completes affordability assessment and issues DIP (EVT-021). If outcome = fail/refer: declines DIP or routes to manual review. On full application (hard check): stores credit result for underwriter review. Updates MortgageApplication status."
+        },
+        {
+          "service": "SVC-103",
+          "service_name": "Audit & Logging",
+          "action": "Records credit check result in WORM audit trail. Bureau reference stored for 7 years per MCOB."
+        }
+      ],
+      "ordering_guarantees": "Per-customer strict ordering via customer_id partition key on topic retail.mortgage-risk.",
+      "topic": "retail.mortgage-risk",
+      "data_classification": "financial",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "Contains credit decision data and financial risk indicators. MCOB record-keeping: lending decisions must be evidenced for 7 years. Adverse indicators are sensitive personal data.",
+      "retention": "7 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.risk.credit.check.completed",
+      "governance_references": ["GOV-001-R01"],
+      "source_journeys": ["JRN-006"]
+    },
+    {
+      "event_id": "EVT-024",
+      "name": "ValuationInstructed",
+      "source_service": "SVC-002",
+      "source_service_name": "Mortgage Service",
+      "source_entity": "ENT-014",
+      "source_entity_name": "PropertyValuation",
+      "trigger": "SVC-002 instructs a property valuation in PH-012. ENT-014 PropertyValuation is created with status = 'instructed'. Event published after the surveyor panel instruction is sent.",
+      "journey_phase": "PH-012",
+      "journey_phase_name": "Valuation",
+      "capability_scope": "intra-capability",
+      "capability_scope_rationale": "Published by CAP-001 (SVC-002). Consumed within CAP-001 for audit purposes. Valuation instruction is an external call (not event-based).",
+      "payload_schema": {
+        "valuation_id": "string (UUID v4) — ENT-014 identifier",
+        "application_id": "string (UUID v4)",
+        "customer_id": "string (UUID v4)",
+        "property_postcode": "string — UK postcode of subject property",
+        "valuation_type": "string enum (desktop | drive_by | full)",
+        "surveyor_id": "string — appointed surveyor or 'AVM' for desktop",
+        "instructed_at": "string (ISO 8601 UTC timestamp)"
+      },
+      "consumers": [
+        {
+          "service": "SVC-053",
+          "service_name": "Notification Service",
+          "action": "Sends customer notification: 'Valuation has been instructed for your property. Expected completion: [SLA by type]'."
+        },
+        {
+          "service": "SVC-103",
+          "service_name": "Audit & Logging",
+          "action": "Records valuation instruction in audit trail."
+        }
+      ],
+      "ordering_guarantees": "Per-application ordering via application_id partition key on topic retail.mortgages.",
+      "topic": "retail.mortgages",
+      "data_classification": "internal",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "MCOB record-keeping: valuation instruction is part of the lending decision audit trail.",
+      "retention": "7 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.retail.mortgage.valuation.instructed",
+      "governance_references": ["GOV-001-R01"],
+      "source_journeys": ["JRN-006"]
+    },
+    {
+      "event_id": "EVT-025",
+      "name": "ValuationCompleted",
+      "source_service": "SVC-002",
+      "source_service_name": "Mortgage Service",
+      "source_entity": "ENT-014",
+      "source_entity_name": "PropertyValuation",
+      "trigger": "SVC-002 receives the valuation report from the external surveyor (or AVM result). ENT-014 is updated with valuation_amount, valuation_date, and status = 'completed'. LTV is recalculated on ENT-012. down_valuation_flag is set if valuation_amount < purchase_price.",
+      "journey_phase": "PH-012",
+      "journey_phase_name": "Valuation",
+      "capability_scope": "intra-capability",
+      "capability_scope_rationale": "Published by CAP-001 (SVC-002). Consumed within CAP-001 for application progression and notification. down_valuation_flag = true triggers EX-001 exception path.",
+      "payload_schema": {
+        "valuation_id": "string (UUID v4)",
+        "application_id": "string (UUID v4)",
+        "customer_id": "string (UUID v4)",
+        "valuation_amount": "number — surveyor's assessed market value in GBP",
+        "valuation_date": "string (ISO 8601 date)",
+        "valuation_type": "string enum (desktop | drive_by | full)",
+        "down_valuation_flag": "boolean — true if valuation_amount < purchase_price",
+        "recalculated_ltv": "number — new LTV using min(purchase_price, valuation_amount) as denominator",
+        "completed_at": "string (ISO 8601 UTC timestamp)"
+      },
+      "consumers": [
+        {
+          "service": "SVC-053",
+          "service_name": "Notification Service",
+          "action": "If down_valuation_flag = false: sends 'Valuation received — application proceeding to underwriting'. If down_valuation_flag = true: sends down-valuation notification with three options (EX-001 path)."
+        },
+        {
+          "service": "SVC-103",
+          "service_name": "Audit & Logging",
+          "action": "Records valuation completion with amount and down-valuation flag."
+        }
+      ],
+      "ordering_guarantees": "Per-application ordering via application_id partition key on topic retail.mortgages.",
+      "topic": "retail.mortgages",
+      "data_classification": "financial",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "Valuation amount is a key financial decision input. MCOB requires evidence of property valuation for all mortgage lending decisions.",
+      "retention": "7 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.retail.mortgage.valuation.completed",
+      "governance_references": ["GOV-001-R01"],
+      "source_journeys": ["JRN-006"]
+    },
+    {
+      "event_id": "EVT-026",
+      "name": "MortgageUnderwritingCompleted",
+      "source_service": "SVC-002",
+      "source_service_name": "Mortgage Service",
+      "source_entity": "ENT-012",
+      "source_entity_name": "MortgageApplication",
+      "trigger": "PER-055 (Mortgage Underwriter) submits their underwriting decision in the workflow system. SVC-002 records the decision on ENT-012 and publishes this event. Decision values: approved | referred | declined.",
+      "journey_phase": "PH-013",
+      "journey_phase_name": "Underwriting",
+      "capability_scope": "intra-capability",
+      "capability_scope_rationale": "Published by CAP-001 (SVC-002). Consumed within CAP-001 for offer generation (approved) or notification (referred/declined). Regulatory significance: MCOB requires evidence of underwriting decision.",
+      "payload_schema": {
+        "application_id": "string (UUID v4)",
+        "customer_id": "string (UUID v4)",
+        "decision": "string enum (approved | referred | declined)",
+        "underwriter_id": "string — staff ID of PER-055 (or PER-051 for complex cases)",
+        "lti_ratio": "number — loan-to-income ratio at decision",
+        "final_ltv": "number — final LTV at decision",
+        "approved_loan_amount": "number (only present if decision = approved) — final approved loan amount",
+        "conditions": "array<string> (conditions list if decision = referred)",
+        "decline_reason_code": "string (only present if decision = declined) — internal reason code",
+        "decided_at": "string (ISO 8601 UTC timestamp)"
+      },
+      "consumers": [
+        {
+          "service": "SVC-002",
+          "service_name": "Mortgage Service",
+          "action": "Internal: if approved → trigger offer generation. If referred → notify customer of conditions. If declined → notify customer with FOS signpost."
+        },
+        {
+          "service": "SVC-053",
+          "service_name": "Notification Service",
+          "action": "Dispatches underwriting decision notification to customer."
+        },
+        {
+          "service": "SVC-103",
+          "service_name": "Audit & Logging",
+          "action": "Records underwriting decision with full decision metadata in WORM audit trail."
+        }
+      ],
+      "ordering_guarantees": "Per-application ordering via application_id partition key on topic retail.mortgages.",
+      "topic": "retail.mortgages",
+      "data_classification": "financial",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "Underwriting decision is the core MCOB-regulated lending decision. Must be retained for 7 years with full rationale. FCA can request lending decision evidence on supervisory visit.",
+      "retention": "7 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.retail.mortgage.underwriting.completed",
+      "governance_references": ["GOV-001-R01"],
+      "source_journeys": ["JRN-006"]
+    },
+    {
+      "event_id": "EVT-027",
+      "name": "MortgageOfferIssued",
+      "source_service": "SVC-002",
+      "source_service_name": "Mortgage Service",
+      "source_entity": "ENT-015",
+      "source_entity_name": "MortgageOffer",
+      "trigger": "SVC-002 creates ENT-015 MortgageOffer following an approved underwriting decision. The offer document is generated. MortgageApplication.status transitions to 'offer_issued'. Event published when the offer is ready for customer receipt.",
+      "journey_phase": "PH-014",
+      "journey_phase_name": "Mortgage Offer",
+      "capability_scope": "intra-capability",
+      "capability_scope_rationale": "Published by CAP-001 (SVC-002). Consumed within CAP-001 and by SVC-053 for dispatch. Offer document dispatch to customer and solicitor is a regulatory obligation (MCOB 6.4).",
+      "payload_schema": {
+        "offer_id": "string (UUID v4) — ENT-015 identifier",
+        "application_id": "string (UUID v4)",
+        "customer_id": "string (UUID v4)",
+        "offered_amount": "number — approved loan amount in GBP",
+        "offered_rate": "number — initial interest rate as annual percentage",
+        "apr": "number — Annual Percentage Rate (MCOB 10 prescribed calculation)",
+        "monthly_payment": "number — monthly repayment in GBP",
+        "term_years": "number — mortgage term in years",
+        "offer_date": "string (ISO 8601 date)",
+        "expiry_date": "string (ISO 8601 date) — offer_date + 6 months",
+        "reflection_period_end": "string (ISO 8601 date) — offer_date + 7 days (MCOB 6.7)",
+        "conditions": "array<string>",
+        "issued_at": "string (ISO 8601 UTC timestamp)"
+      },
+      "consumers": [
+        {
+          "service": "SVC-053",
+          "service_name": "Notification Service",
+          "action": "Dispatches mortgage offer document to customer (email + post — MCOB 6.4 requires durable medium). Also dispatches copy to solicitor/conveyancer. Schedules reminder if not accepted within 5 days of reflection period end."
+        },
+        {
+          "service": "SVC-103",
+          "service_name": "Audit & Logging",
+          "action": "Records offer issuance with full terms in WORM audit trail."
+        }
+      ],
+      "ordering_guarantees": "Per-application ordering via application_id partition key on topic retail.mortgages.",
+      "topic": "retail.mortgages",
+      "data_classification": "financial",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "Mortgage offer is a legally binding document. MCOB requires evidence of offer terms issued to customer. 7-year retention.",
+      "retention": "7 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.retail.mortgage.offer.issued",
+      "governance_references": ["GOV-001-R01"],
+      "source_journeys": ["JRN-006"]
+    },
+    {
+      "event_id": "EVT-028",
+      "name": "MortgageOfferAccepted",
+      "source_service": "SVC-002",
+      "source_service_name": "Mortgage Service",
+      "source_entity": "ENT-015",
+      "source_entity_name": "MortgageOffer",
+      "trigger": "Customer formally accepts the mortgage offer via the portal or branch. SVC-002 validates the 7-day reflection period has elapsed (MCOB 6.7). ENT-015 updated (customer_accepted: true, accepted_date). MortgageApplication.status transitions to 'offer_accepted'.",
+      "journey_phase": "PH-014",
+      "journey_phase_name": "Mortgage Offer",
+      "capability_scope": "intra-capability",
+      "capability_scope_rationale": "Published by CAP-001 (SVC-002). Consumed within CAP-001 to trigger completion processing queue. Signals the application is ready for completion.",
+      "payload_schema": {
+        "offer_id": "string (UUID v4)",
+        "application_id": "string (UUID v4)",
+        "customer_id": "string (UUID v4)",
+        "accepted_date": "string (ISO 8601 date)",
+        "days_after_issue": "number — accepted_date - offer_date in calendar days (must be >= 7)",
+        "accepted_at": "string (ISO 8601 UTC timestamp)"
+      },
+      "consumers": [
+        {
+          "service": "SVC-002",
+          "service_name": "Mortgage Service",
+          "action": "Internal: transitions application to completion queue. Awaits solicitor requisition for funds."
+        },
+        {
+          "service": "SVC-053",
+          "service_name": "Notification Service",
+          "action": "Sends offer acceptance confirmation to customer and solicitor."
+        },
+        {
+          "service": "SVC-103",
+          "service_name": "Audit & Logging",
+          "action": "Records offer acceptance with acceptance date. Evidence that 7-day reflection period was honoured."
+        }
+      ],
+      "ordering_guarantees": "Per-application ordering via application_id partition key on topic retail.mortgages.",
+      "topic": "retail.mortgages",
+      "data_classification": "financial",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "Offer acceptance is the binding customer commitment. MCOB requires evidence of reflection period compliance (accepted_date >= offer_date + 7 days).",
+      "retention": "7 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.retail.mortgage.offer.accepted",
+      "governance_references": ["GOV-001-R01"],
+      "source_journeys": ["JRN-006"]
+    },
+    {
+      "event_id": "EVT-029",
+      "name": "MortgageCompleted",
+      "source_service": "SVC-002",
+      "source_service_name": "Mortgage Service",
+      "source_entity": "ENT-012",
+      "source_entity_name": "MortgageApplication",
+      "trigger": "CHAPS funds are confirmed as released to the solicitor on completion day. SVC-002 transitions MortgageApplication.status to 'completed'. Published before ENT-016 MortgageAccount is created.",
+      "journey_phase": "PH-015",
+      "journey_phase_name": "Completion",
+      "capability_scope": "cross-capability",
+      "capability_scope_rationale": "Published by CAP-001 (SVC-002). Consumed by CAP-001 (SVC-001) for customer product holdings update and by SVC-053 for notification. Also consumed by CAP-005 (SVC-014) for AML post-completion monitoring trigger.",
+      "payload_schema": {
+        "application_id": "string (UUID v4)",
+        "customer_id": "string (UUID v4)",
+        "offer_id": "string (UUID v4)",
+        "completion_date": "string (ISO 8601 date)",
+        "chaps_payment_reference": "string — CHAPS settlement reference",
+        "loan_amount_released": "number — GBP amount released via CHAPS",
+        "property_postcode": "string — postcode of completed property",
+        "completed_at": "string (ISO 8601 UTC timestamp)"
+      },
+      "consumers": [
+        {
+          "service": "SVC-001",
+          "service_name": "Retail Banking Core",
+          "action": "Updates Customer product holdings to reflect completed mortgage. Updates Single Customer View."
+        },
+        {
+          "service": "SVC-014",
+          "service_name": "KYC/AML Service",
+          "action": "Records property completion for AML transaction monitoring. Large CHAPS outflow on completion day is expected and recorded to prevent false-positive AML alerts in post-completion monitoring."
+        },
+        {
+          "service": "SVC-103",
+          "service_name": "Audit & Logging",
+          "action": "Records mortgage completion with CHAPS reference in WORM audit trail."
+        }
+      ],
+      "ordering_guarantees": "Per-customer strict ordering via customer_id partition key on topic retail.mortgages.",
+      "topic": "retail.mortgages",
+      "data_classification": "financial",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "Mortgage completion is a major financial transaction. CHAPS reference links to irrevocable payment. POCA 2002 / MLR 2017: large property transactions must be documented in audit trail.",
+      "retention": "7 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.retail.mortgage.completed",
+      "governance_references": ["GOV-001-R01"],
+      "source_journeys": ["JRN-006"]
+    },
+    {
+      "event_id": "EVT-030",
+      "name": "MortgageAccountOpened",
+      "source_service": "SVC-002",
+      "source_service_name": "Mortgage Service",
+      "source_entity": "ENT-016",
+      "source_entity_name": "MortgageAccount",
+      "trigger": "SVC-002 successfully creates ENT-016 MortgageAccount following CHAPS settlement confirmation. Direct debit mandate is established. Account status = 'active'. Published as the final event in the JRN-006 happy path.",
+      "journey_phase": "PH-015",
+      "journey_phase_name": "Completion",
+      "capability_scope": "cross-capability",
+      "capability_scope_rationale": "Published by CAP-001 (SVC-002). Consumed by CAP-001 (SVC-001) for Single Customer View update and by SVC-053 for welcome pack dispatch.",
+      "payload_schema": {
+        "account_id": "string (UUID v4) — ENT-016 identifier",
+        "customer_id": "string (UUID v4)",
+        "mortgage_offer_id": "string (UUID v4)",
+        "application_id": "string (UUID v4)",
+        "outstanding_balance": "number — initial outstanding balance (= loan amount released) in GBP",
+        "monthly_payment": "number — monthly repayment in GBP",
+        "rate": "number — initial interest rate as annual percentage",
+        "term_remaining_months": "number — total term in months",
+        "opened_date": "string (ISO 8601 date) — completion date",
+        "first_payment_date": "string (ISO 8601 date)",
+        "opened_at": "string (ISO 8601 UTC timestamp)"
+      },
+      "consumers": [
+        {
+          "service": "SVC-001",
+          "service_name": "Retail Banking Core",
+          "action": "Updates Customer (ENT-001) product holdings to include new mortgage account. Updates Single Customer View for FSCS reporting purposes."
+        },
+        {
+          "service": "SVC-053",
+          "service_name": "Notification Service",
+          "action": "Dispatches mortgage welcome pack to customer: account details, monthly payment amount and schedule, first payment date, direct debit confirmation, FSCS information (mortgage is not FSCS-protected — liability not deposit)."
+        },
+        {
+          "service": "SVC-103",
+          "service_name": "Audit & Logging",
+          "action": "Records mortgage account opening in WORM audit trail."
+        }
+      ],
+      "ordering_guarantees": "Per-customer strict ordering via customer_id partition key on topic retail.mortgages.",
+      "topic": "retail.mortgages",
+      "data_classification": "financial",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "Mortgage account opening is a regulated lending product creation event. MCOB requires evidence of account terms at opening. 7-year retention.",
+      "retention": "7 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.retail.mortgage.account.opened",
+      "governance_references": ["GOV-001-R01"],
+      "source_journeys": ["JRN-006"]
+    }
+  ]
+}

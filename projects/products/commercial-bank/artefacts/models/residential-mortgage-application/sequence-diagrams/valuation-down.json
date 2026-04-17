@@ -1,0 +1,177 @@
+{
+  "diagram_id": "SEQ-006-002",
+  "journey_id": "JRN-006",
+  "name": "Residential Mortgage Application — Down-Valuation Exception Path",
+  "description": "Exception path EX-001: the surveyor's valuation amount is less than the purchase price. The bank's maximum loan is recalculated against the lower valuation amount. The customer is notified and offered three options: renegotiate purchase price, increase deposit to maintain LTV, or withdraw application. This diagram picks up from the start of PH-012 (Valuation) and shows the exception resolution.",
+  "exception_path": "EX-001 (Down-Valuation)",
+  "entry_point": "PH-012 — Valuation instructed",
+  "participants": [
+    {"id": "PER001", "label": "Customer (PER-001)", "type": "actor"},
+    {"id": "Portal", "label": "Customer Portal / App", "type": "ui"},
+    {"id": "SVC002", "label": "SVC-002 Mortgage Service", "type": "service"},
+    {"id": "EventBus", "label": "SVC-102 Event Bus", "type": "infrastructure"},
+    {"id": "SVC053", "label": "SVC-053 Notification Service", "type": "service"},
+    {"id": "Surveyor", "label": "External Surveyor", "type": "external"}
+  ],
+  "preconditions": [
+    "Full application submitted and hard credit check completed (PH-011 complete)",
+    "Application status: documents_complete",
+    "Property: £390,000 purchase price, £292,500 loan, £97,500 deposit (LTV: 75%)",
+    "Valuation type: drive-by survey (LTV >= 75% threshold triggered full surveyor instruction)"
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "phase": "PH-012",
+      "type": "internal",
+      "actor": "SVC002",
+      "label": "Determine valuation type: LTV = 75% → drive-by survey (not desktop AVM). Create ENT-014 PropertyValuation (status: instructed, type: drive_by). Transition application status: valuation_pending."
+    },
+    {
+      "step": 2,
+      "phase": "PH-012",
+      "type": "async_publish",
+      "from": "SVC002",
+      "to": "EventBus",
+      "label": "Publish EVT-024 ValuationInstructed (application_id, valuation_id, type: drive_by)"
+    },
+    {
+      "step": 3,
+      "phase": "PH-012",
+      "type": "sync",
+      "from": "SVC002",
+      "to": "Surveyor",
+      "label": "Instruct drive-by survey via surveyor panel. SLA: 2–3 business days."
+    },
+    {
+      "step": 4,
+      "phase": "PH-012",
+      "type": "note",
+      "label": "2 business days elapse. Surveyor conducts drive-by inspection."
+    },
+    {
+      "step": 5,
+      "phase": "PH-012",
+      "type": "sync_return",
+      "from": "Surveyor",
+      "to": "SVC002",
+      "label": "Valuation report received: valuation_amount = £355,000 (vs purchase price £390,000). DOWN-VALUATION."
+    },
+    {
+      "step": 6,
+      "phase": "PH-012",
+      "type": "internal",
+      "actor": "SVC002",
+      "label": "Update ENT-014 PropertyValuation:\n- valuation_amount: 355000\n- valuation_date: today\n- status: completed\n- down_valuation_flag: TRUE (355000 < 390000)\nRecalculate LTV on ENT-012:\n- New LTV = 292500 / 355000 = 82.39%\n- Original LTV was 75.00% — now exceeds product limit (max 80% for this product)\nTransition application status: valuation_complete."
+    },
+    {
+      "step": 7,
+      "phase": "PH-012",
+      "type": "async_publish",
+      "from": "SVC002",
+      "to": "EventBus",
+      "label": "Publish EVT-025 ValuationCompleted (application_id, valuation_amount: 355000, down_valuation_flag: TRUE, recalculated_ltv: 82.39)"
+    },
+    {
+      "step": 8,
+      "phase": "PH-012",
+      "type": "async_consume",
+      "from": "EventBus",
+      "to": "SVC053",
+      "label": "Consume EVT-025 (down_valuation_flag: true). Trigger down-valuation customer notification."
+    },
+    {
+      "step": 9,
+      "phase": "PH-012",
+      "type": "notification",
+      "from": "SVC053",
+      "to": "PER001",
+      "label": "Email: Down-valuation notification.\nSurveyor valued property at £355,000 vs. purchase price £390,000.\nYour options:\n1. Renegotiate purchase price down to £355,000\n2. Increase deposit by £35,000 (new deposit: £132,500) to keep LTV at 75%\n3. Withdraw application\nPlease respond within 28 days."
+    },
+    {
+      "step": 10,
+      "phase": "PH-012",
+      "type": "note",
+      "label": "Customer reviews options with solicitor / financial adviser. Customer decides to increase deposit."
+    },
+    {
+      "step": 11,
+      "phase": "PH-012",
+      "type": "sync",
+      "from": "PER001",
+      "to": "Portal",
+      "label": "Select option 2: Increase deposit by £35,000. New deposit: £132,500. New loan: £257,500."
+    },
+    {
+      "step": 12,
+      "phase": "PH-012",
+      "type": "sync",
+      "from": "Portal",
+      "to": "SVC002",
+      "label": "PATCH /mortgage-applications/{id} (deposit_amount: 132500, loan_amount: 257500)"
+    },
+    {
+      "step": 13,
+      "phase": "PH-012",
+      "type": "internal",
+      "actor": "SVC002",
+      "label": "Update ENT-012 MortgageApplication:\n- deposit_amount: 132500\n- loan_amount: 257500\n- ltv_ratio: 257500/355000 = 72.54% ✓ (within 80% product limit)\nAffordability reassessment triggered: new monthly payment recalculated."
+    },
+    {
+      "step": 14,
+      "phase": "PH-012",
+      "type": "sync_return",
+      "from": "SVC002",
+      "to": "Portal",
+      "label": "200 OK. Application updated. New LTV: 72.54%. Proceeding to underwriting."
+    },
+    {
+      "step": 15,
+      "phase": "PH-012",
+      "type": "notification",
+      "from": "SVC002",
+      "to": "PER001",
+      "label": "Notification: Application updated with new deposit amount. Proceeding to underwriting."
+    },
+    {
+      "step": 16,
+      "phase": "PH-013",
+      "type": "internal",
+      "actor": "SVC002",
+      "label": "Application enters underwriting queue. PER-055 assigned.\nTransition status: underwriting.\nPER-055 notified of down-valuation history and amended deposit."
+    },
+    {
+      "step": 17,
+      "phase": "PH-013",
+      "type": "internal",
+      "actor": "SVC002",
+      "label": "PER-055 reviews amended application:\n- New loan: £257,500 @ LTV 72.54% ✓\n- Affordability with reduced loan: re-run stress test — PASS ✓\n- Credit score: 715 PASS ✓\n- Down-valuation noted and resolved (deposit increased)\nDecision: APPROVE (reduced loan amount)"
+    },
+    {
+      "step": 18,
+      "phase": "PH-013",
+      "type": "async_publish",
+      "from": "SVC002",
+      "to": "EventBus",
+      "label": "Publish EVT-026 MortgageUnderwritingCompleted (decision: approved, loan_amount: 257500)"
+    },
+    {
+      "step": 19,
+      "phase": "PH-013",
+      "type": "note",
+      "label": "Journey continues on happy path from PH-014 (Mortgage Offer) with amended loan amount of £257,500."
+    }
+  ],
+  "alternative_resolution_paths": [
+    {
+      "option": "Option A — Renegotiate purchase price",
+      "description": "If customer renegotiates purchase price down to £355,000: original deposit (£97,500) now represents 27.5%. New LTV: 267,500/355,000 = 75.35% — still within product limit but requires new property purchase price on application. Stamp duty recalculation may apply.",
+      "steps_affected": "Steps 12–15 replaced: customer updates purchase_price to 355000. New loan_amount: 257500. LTV: 72.54%."
+    },
+    {
+      "option": "Option B — Withdraw application",
+      "description": "Customer withdraws application. ENT-012 status transitions to 'withdrawn'. No refund of valuation fee. FOS signpost provided if customer disputes bank's process.",
+      "steps_affected": "From step 10: customer selects withdraw. SVC-002 transitions status to 'withdrawn'. EVT-022 tombstone published. No further processing."
+    }
+  ]
+}

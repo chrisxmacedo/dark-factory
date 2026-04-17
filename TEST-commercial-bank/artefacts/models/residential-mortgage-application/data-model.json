@@ -1,0 +1,612 @@
+{
+  "journey_id": "JRN-006",
+  "journey_name": "Residential Mortgage Application",
+  "version": "1.0.0",
+  "status": "Draft",
+  "owning_service": "SVC-002",
+  "owning_service_name": "Mortgage Service",
+  "entities": [
+    {
+      "entity_id": "ENT-012",
+      "name": "MortgageApplication",
+      "description": "The core aggregate for a residential mortgage application. Created when a customer proceeds from enquiry to DIP (PH-010). Tracks the application lifecycle from initial enquiry through to completion. Owned exclusively by SVC-002.",
+      "owning_service": "SVC-002",
+      "aggregate_root": true,
+      "reachable_from_phases": ["PH-009", "PH-010", "PH-011", "PH-012", "PH-013", "PH-014", "PH-015"],
+      "fields": [
+        {
+          "name": "application_id",
+          "type": "UUID",
+          "validation_rule": "RFC 4122 UUID v4. System-generated. Immutable after creation. Globally unique within SVC-002.",
+          "source": "PH-009",
+          "governed_by": null
+        },
+        {
+          "name": "customer_id",
+          "type": "UUID",
+          "validation_rule": "Required. FK → Customer.customer_id (ENT-001, owned by SVC-001). Must reference an existing Customer record. Immutable after creation.",
+          "source": "PH-009",
+          "governed_by": null
+        },
+        {
+          "name": "property_address",
+          "type": "object",
+          "validation_rule": "Required. Sub-object: line1 (required, max 100 chars), line2 (optional), city (required), county (optional), postcode (required, UK postcode format), country_code (required, ISO 3166-1 alpha-2, must be GB for residential UK mortgage).",
+          "source": "PH-009",
+          "governed_by": "GOV-001-R01"
+        },
+        {
+          "name": "purchase_price",
+          "type": "decimal",
+          "validation_rule": "Required. Positive decimal, max 2 decimal places, expressed in GBP. Must be > 0. Must be >= loan_amount + deposit_amount.",
+          "source": "PH-009",
+          "governed_by": null
+        },
+        {
+          "name": "deposit_amount",
+          "type": "decimal",
+          "validation_rule": "Required. Positive decimal, max 2 decimal places, expressed in GBP. Must be >= 5% of purchase_price (minimum deposit). deposit_amount + loan_amount must equal purchase_price.",
+          "source": "PH-009",
+          "governed_by": null
+        },
+        {
+          "name": "loan_amount",
+          "type": "decimal",
+          "validation_rule": "Required. Positive decimal, max 2 decimal places, expressed in GBP. Derived: purchase_price - deposit_amount. Must be <= 95% of purchase_price (max LTV). Immutable after PH-010 DIP unless customer amends.",
+          "source": "PH-009",
+          "governed_by": null
+        },
+        {
+          "name": "ltv_ratio",
+          "type": "decimal",
+          "validation_rule": "Required. Computed: loan_amount / min(purchase_price, valuation_amount) × 100. Expressed as a percentage to 2 decimal places. Updated after valuation (PH-012) using valuation_amount if valuation_amount < purchase_price. Must be <= 95.00 for standard residential products.",
+          "source": "PH-009",
+          "governed_by": null
+        },
+        {
+          "name": "term_years",
+          "type": "integer",
+          "validation_rule": "Required. Integer. Minimum 5 years. Maximum 40 years. Must result in mortgage end date not exceeding the oldest applicant's 75th birthday (product policy).",
+          "source": "PH-009",
+          "governed_by": null
+        },
+        {
+          "name": "rate_type",
+          "type": "enum",
+          "validation_rule": "Required. Enum: fixed | variable | tracker. Immutable after DIP unless customer amends within the pre-application window.",
+          "source": "PH-009",
+          "governed_by": null
+        },
+        {
+          "name": "product_id",
+          "type": "string",
+          "validation_rule": "Required. References the selected mortgage product from SVC-002 product catalogue. Must be a valid, currently active product_id. Product eligibility (LTV, income, property type) validated at DIP stage.",
+          "source": "PH-009",
+          "governed_by": null
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "validation_rule": "Required. Enum: enquiry | dip_pending | dip_issued | dip_expired | dip_declined | full_application_submitted | documents_complete | valuation_pending | valuation_complete | underwriting | approved | referred | declined | offer_issued | offer_accepted | offer_expired | completed | withdrawn. Transitions are strictly controlled by domain events. No backward transitions once 'completed'.",
+          "source": "PH-009",
+          "governed_by": null
+        },
+        {
+          "name": "application_type",
+          "type": "enum",
+          "validation_rule": "Required. Enum: purchase | remortgage | buy_to_let | shared_ownership. Determines affordability rules applied.",
+          "source": "PH-009",
+          "governed_by": null
+        },
+        {
+          "name": "dip_date",
+          "type": "date",
+          "validation_rule": "Conditional. Required when status transitions to 'dip_issued'. ISO 8601 (YYYY-MM-DD). The date the DIP was issued.",
+          "source": "PH-010",
+          "governed_by": null
+        },
+        {
+          "name": "dip_expiry",
+          "type": "date",
+          "validation_rule": "Conditional. Required when dip_date is set. Computed: dip_date + 90 days. DIP is valid for 90 calendar days from issue. Application automatically transitions to 'dip_expired' if full_application_date is not set before dip_expiry.",
+          "source": "PH-010",
+          "governed_by": null
+        },
+        {
+          "name": "full_application_date",
+          "type": "date",
+          "validation_rule": "Conditional. Required when status transitions to 'full_application_submitted'. ISO 8601 (YYYY-MM-DD). Must be on or before dip_expiry.",
+          "source": "PH-011",
+          "governed_by": null
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "validation_rule": "System-generated. ISO 8601 UTC. Immutable.",
+          "source": "PH-009",
+          "governed_by": null
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "validation_rule": "System-generated. ISO 8601 UTC. Updated on any field mutation.",
+          "source": "PH-009",
+          "governed_by": null
+        }
+      ],
+      "relationships": [
+        {
+          "target_entity": "ENT-001",
+          "type": "many-to-one",
+          "description": "MortgageApplication belongs to one Customer via customer_id FK. Cross-service reference: ENT-001 is owned by SVC-001. SVC-002 holds customer_id only — no direct join. Customer data fetched via SVC-001 API when needed."
+        },
+        {
+          "target_entity": "ENT-013",
+          "type": "one-to-many",
+          "description": "MortgageApplication may have multiple AffordabilityAssessment records (one at DIP, one at full application). Latest assessment is authoritative for underwriting."
+        },
+        {
+          "target_entity": "ENT-014",
+          "type": "one-to-one",
+          "description": "MortgageApplication has one PropertyValuation record (created when valuation is instructed in PH-012)."
+        },
+        {
+          "target_entity": "ENT-015",
+          "type": "one-to-one",
+          "description": "MortgageApplication has at most one active MortgageOffer record (created after underwriting approval in PH-014)."
+        }
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-ENT012-01",
+          "decision": "MortgageApplication is the aggregate root for the mortgage journey. All downstream entities (AffordabilityAssessment, PropertyValuation, MortgageOffer) reference application_id as their FK.",
+          "rationale": "Consistent with DDD aggregate root pattern. All mortgage journey state changes are reflected through the MortgageApplication status machine. Single point of truth for application lifecycle."
+        },
+        {
+          "id": "DD-ENT012-02",
+          "decision": "customer_id is stored as a plain UUID FK — SVC-002 does not store any Customer fields locally. Customer data is fetched from SVC-001 via direct API call (same-capability allowed per architecture rules).",
+          "rationale": "Avoids data duplication. SVC-001 is the authoritative source for Customer data. Same-capability direct call (both in CAP-001) is architecturally permitted."
+        }
+      ],
+      "source_journeys": ["JRN-006"]
+    },
+    {
+      "entity_id": "ENT-013",
+      "name": "AffordabilityAssessment",
+      "description": "Captures the results of an MCOB-compliant affordability assessment for a mortgage application. Created at DIP stage (PH-010) for the soft-check assessment, and again at full application (PH-011) for the binding affordability determination. The latest completed assessment is the authoritative record used by underwriting.",
+      "owning_service": "SVC-002",
+      "aggregate_root": false,
+      "reachable_from_phases": ["PH-010", "PH-011", "PH-013"],
+      "fields": [
+        {
+          "name": "assessment_id",
+          "type": "UUID",
+          "validation_rule": "RFC 4122 UUID v4. System-generated. Immutable.",
+          "source": "PH-010",
+          "governed_by": null
+        },
+        {
+          "name": "application_id",
+          "type": "UUID",
+          "validation_rule": "Required. FK → MortgageApplication.application_id (ENT-012). Must reference an existing MortgageApplication. Immutable.",
+          "source": "PH-010",
+          "governed_by": null
+        },
+        {
+          "name": "assessment_stage",
+          "type": "enum",
+          "validation_rule": "Required. Enum: dip | full_application. Indicates whether this assessment was produced at DIP or full application stage.",
+          "source": "PH-010",
+          "governed_by": null
+        },
+        {
+          "name": "gross_income",
+          "type": "decimal",
+          "validation_rule": "Required. Positive decimal, max 2 decimal places, GBP per annum. At DIP stage: customer-declared. At full application: verified against income documents. Must be > 0.",
+          "source": "PH-010",
+          "governed_by": "GOV-001-R01",
+          "transparency_note": "Used solely for affordability calculation. Stored under MCOB record-keeping obligation (7 years). Not surfaced to customer in raw form post-assessment."
+        },
+        {
+          "name": "net_income",
+          "type": "decimal",
+          "validation_rule": "Required. Positive decimal, max 2 decimal places, GBP per annum. Must be <= gross_income. Derived from gross_income after estimated tax, NI, and pension deductions (or confirmed via payslips at full application stage).",
+          "source": "PH-010",
+          "governed_by": null
+        },
+        {
+          "name": "committed_expenditure",
+          "type": "decimal",
+          "validation_rule": "Required. Positive decimal or 0.00, max 2 decimal places, GBP per month. Includes: existing loan repayments, credit card minimum payments, hire purchase, childcare costs. Sourced from credit bureau data and customer declaration. Must include stress-tested mortgage payment in the total.",
+          "source": "PH-010",
+          "governed_by": null
+        },
+        {
+          "name": "stress_test_rate",
+          "type": "decimal",
+          "validation_rule": "Required. Positive decimal expressed as annual percentage rate (%). Must be >= max(initial_mortgage_rate + 3.0, 7.0) per MCOB 11.6.5. Immutable after assessment creation.",
+          "source": "PH-010",
+          "governed_by": "GOV-001-R01"
+        },
+        {
+          "name": "monthly_payment_at_stress_rate",
+          "type": "decimal",
+          "validation_rule": "Required. Computed monthly payment assuming stress_test_rate applied over full term_years. GBP, max 2 decimal places.",
+          "source": "PH-010",
+          "governed_by": null
+        },
+        {
+          "name": "affordability_result",
+          "type": "enum",
+          "validation_rule": "Required. Enum: pass | fail | marginal. 'pass': (net_income / 12) - committed_expenditure - monthly_payment_at_stress_rate > bank's minimum surplus threshold. 'fail': negative or below threshold. 'marginal': within 10% above threshold — flagged for underwriter review.",
+          "source": "PH-010",
+          "governed_by": null
+        },
+        {
+          "name": "assessor",
+          "type": "string",
+          "validation_rule": "Required. Enum: automated | PER-055 | PER-051. 'automated' for system-generated assessments. Staff ID for manual or reviewed assessments.",
+          "source": "PH-010",
+          "governed_by": null
+        },
+        {
+          "name": "assessed_at",
+          "type": "timestamp",
+          "validation_rule": "System-generated. ISO 8601 UTC. Immutable.",
+          "source": "PH-010",
+          "governed_by": null
+        }
+      ],
+      "relationships": [
+        {
+          "target_entity": "ENT-012",
+          "type": "many-to-one",
+          "description": "AffordabilityAssessment belongs to one MortgageApplication via application_id FK."
+        }
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-ENT013-01",
+          "decision": "AffordabilityAssessment is created twice per application (once at DIP, once at full application) rather than updated in place. The full application assessment supersedes the DIP assessment for underwriting purposes.",
+          "rationale": "MCOB record-keeping requires audit evidence of both the DIP-stage and full application-stage assessments. Immutable records support regulatory audit trail. Creates a clear historical record if income changes between DIP and full application."
+        }
+      ],
+      "source_journeys": ["JRN-006"]
+    },
+    {
+      "entity_id": "ENT-014",
+      "name": "PropertyValuation",
+      "description": "Records the result of the property valuation instructed by the bank in PH-012. Captures the surveyor's assessed market value, valuation type, and status. The valuation_amount is the authoritative value used for LTV recalculation and underwriting.",
+      "owning_service": "SVC-002",
+      "aggregate_root": false,
+      "reachable_from_phases": ["PH-012", "PH-013"],
+      "fields": [
+        {
+          "name": "valuation_id",
+          "type": "UUID",
+          "validation_rule": "RFC 4122 UUID v4. System-generated. Immutable.",
+          "source": "PH-012",
+          "governed_by": null
+        },
+        {
+          "name": "application_id",
+          "type": "UUID",
+          "validation_rule": "Required. FK → MortgageApplication.application_id (ENT-012). Immutable.",
+          "source": "PH-012",
+          "governed_by": null
+        },
+        {
+          "name": "property_address",
+          "type": "object",
+          "validation_rule": "Required. Same structure as MortgageApplication.property_address. Must match the property_address on the parent MortgageApplication (cross-validated at creation).",
+          "source": "PH-012",
+          "governed_by": null
+        },
+        {
+          "name": "valuation_amount",
+          "type": "decimal",
+          "validation_rule": "Required when status = 'completed'. Positive decimal, max 2 decimal places, GBP. The surveyor's assessed open market value. May differ from purchase_price. Triggers LTV recalculation on MortgageApplication when received.",
+          "source": "PH-012",
+          "governed_by": null
+        },
+        {
+          "name": "valuation_date",
+          "type": "date",
+          "validation_rule": "Required when status = 'completed'. ISO 8601 (YYYY-MM-DD). The date the property was valued (inspection date for physical valuations; report date for AVM). Valuation must be no older than 3 months at time of mortgage completion.",
+          "source": "PH-012",
+          "governed_by": null
+        },
+        {
+          "name": "surveyor_id",
+          "type": "string",
+          "validation_rule": "Required for physical valuations. Identifier of the appointed RICS-qualified surveyor or AVM provider. References SVC-002 external surveyor panel. 'AVM' for automated desktop valuations.",
+          "source": "PH-012",
+          "governed_by": null
+        },
+        {
+          "name": "valuation_type",
+          "type": "enum",
+          "validation_rule": "Required. Enum: desktop | drive_by | full. 'desktop': AVM automated model (typically LTV < 60%, standard property type). 'drive_by': external visual inspection only (LTV 60–75%, no access to interior). 'full': RICS HomeBuyer Survey or Building Survey (LTV > 75%, non-standard construction, or surveyor discretion).",
+          "source": "PH-012",
+          "governed_by": null
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "validation_rule": "Required. Enum: instructed | in_progress | completed | failed | cancelled. 'failed': surveyor unable to access property or complete valuation. 'cancelled': application withdrawn before valuation completed.",
+          "source": "PH-012",
+          "governed_by": null
+        },
+        {
+          "name": "down_valuation_flag",
+          "type": "boolean",
+          "validation_rule": "Required when status = 'completed'. Computed: true if valuation_amount < MortgageApplication.purchase_price. Triggers EX-001 (Down-Valuation) exception path notification.",
+          "source": "PH-012",
+          "governed_by": null
+        },
+        {
+          "name": "report_reference",
+          "type": "string",
+          "validation_rule": "Optional. External report reference number from the surveying firm. Stored for cross-reference with surveyor's records.",
+          "source": "PH-012",
+          "governed_by": null
+        },
+        {
+          "name": "instructed_at",
+          "type": "timestamp",
+          "validation_rule": "System-generated. ISO 8601 UTC. Set when ValuationInstructed (EVT-024) is published. Immutable.",
+          "source": "PH-012",
+          "governed_by": null
+        },
+        {
+          "name": "completed_at",
+          "type": "timestamp",
+          "validation_rule": "Conditional. ISO 8601 UTC. Set when ValuationCompleted (EVT-025) is published. Null until status = 'completed'.",
+          "source": "PH-012",
+          "governed_by": null
+        }
+      ],
+      "relationships": [
+        {
+          "target_entity": "ENT-012",
+          "type": "many-to-one",
+          "description": "PropertyValuation belongs to one MortgageApplication via application_id FK."
+        }
+      ],
+      "source_journeys": ["JRN-006"]
+    },
+    {
+      "entity_id": "ENT-015",
+      "name": "MortgageOffer",
+      "description": "The formal mortgage offer issued to the customer following underwriting approval (PH-014). The offer document sets out binding terms: loan amount, interest rate, term, conditions. The customer has a 7-day reflection period before acceptance. The offer is valid for 6 months from issue date.",
+      "owning_service": "SVC-002",
+      "aggregate_root": false,
+      "reachable_from_phases": ["PH-014", "PH-015"],
+      "fields": [
+        {
+          "name": "offer_id",
+          "type": "UUID",
+          "validation_rule": "RFC 4122 UUID v4. System-generated. Immutable.",
+          "source": "PH-014",
+          "governed_by": null
+        },
+        {
+          "name": "application_id",
+          "type": "UUID",
+          "validation_rule": "Required. FK → MortgageApplication.application_id (ENT-012). Immutable.",
+          "source": "PH-014",
+          "governed_by": null
+        },
+        {
+          "name": "offered_amount",
+          "type": "decimal",
+          "validation_rule": "Required. Positive decimal, max 2 decimal places, GBP. The loan amount the bank is prepared to lend. Must be <= loan_amount requested on MortgageApplication (may be lower if affordability requires reduction). Immutable.",
+          "source": "PH-014",
+          "governed_by": null
+        },
+        {
+          "name": "offered_rate",
+          "type": "decimal",
+          "validation_rule": "Required. Positive decimal expressed as annual percentage rate (%). The initial interest rate applicable to the mortgage product. Immutable.",
+          "source": "PH-014",
+          "governed_by": null
+        },
+        {
+          "name": "apr",
+          "type": "decimal",
+          "validation_rule": "Required. Annual Percentage Rate (APR) inclusive of all fees and charges over the term of the mortgage. Expressed as a percentage. Computed per FCA MCOB 10 prescribed formula. Immutable.",
+          "source": "PH-014",
+          "governed_by": "GOV-001-R01"
+        },
+        {
+          "name": "offer_date",
+          "type": "date",
+          "validation_rule": "Required. ISO 8601 (YYYY-MM-DD). The date the offer was issued to the customer. Immutable. Used as start of 7-day reflection period and 6-month validity calculation.",
+          "source": "PH-014",
+          "governed_by": null
+        },
+        {
+          "name": "expiry_date",
+          "type": "date",
+          "validation_rule": "Required. Computed: offer_date + 6 months. ISO 8601 (YYYY-MM-DD). If not accepted by expiry_date, offer lapses and MortgageApplication.status transitions to 'offer_expired'.",
+          "source": "PH-014",
+          "governed_by": null
+        },
+        {
+          "name": "conditions",
+          "type": "array<string>",
+          "validation_rule": "Optional. List of conditions that must be satisfied before completion. Examples: 'Buildings insurance in place at completion', 'Life assurance policy assigned to lender'. Each condition is a string, max 500 characters.",
+          "source": "PH-014",
+          "governed_by": null
+        },
+        {
+          "name": "customer_accepted",
+          "type": "boolean",
+          "validation_rule": "Required. Default: false. Set to true when customer formally accepts the offer. Cannot be set to true before offer_date + 7 days (7-day reflection period per MCOB 6.7) unless written waiver is recorded.",
+          "source": "PH-014",
+          "governed_by": null
+        },
+        {
+          "name": "accepted_date",
+          "type": "date",
+          "validation_rule": "Conditional. Required when customer_accepted = true. ISO 8601 (YYYY-MM-DD). Must be >= offer_date + 7 days (reflection period) and <= expiry_date.",
+          "source": "PH-014",
+          "governed_by": null
+        },
+        {
+          "name": "monthly_payment",
+          "type": "decimal",
+          "validation_rule": "Required. Positive decimal, max 2 decimal places, GBP. Monthly repayment amount at the offered_rate for the full term. Computed by SVC-002 amortisation engine. Immutable.",
+          "source": "PH-014",
+          "governed_by": null
+        }
+      ],
+      "relationships": [
+        {
+          "target_entity": "ENT-012",
+          "type": "many-to-one",
+          "description": "MortgageOffer belongs to one MortgageApplication via application_id FK."
+        },
+        {
+          "target_entity": "ENT-016",
+          "type": "one-to-one",
+          "description": "MortgageOffer is the source for one MortgageAccount created at completion (PH-015)."
+        }
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-ENT015-01",
+          "decision": "The 7-day reflection period is enforced at the data layer: customer_accepted cannot be set to true before offer_date + 7 days. The API validates this constraint and returns a 422 Unprocessable Entity if a premature acceptance is attempted.",
+          "rationale": "MCOB 6.7 compliance — the reflection period is a mandatory regulatory requirement. Enforcing it at the data layer rather than only at the UI layer ensures compliance regardless of channel or API caller."
+        }
+      ],
+      "source_journeys": ["JRN-006"]
+    },
+    {
+      "entity_id": "ENT-016",
+      "name": "MortgageAccount",
+      "description": "The live mortgage account created at completion (PH-015) when CHAPS funds are released and legal title transfers. Represents the ongoing mortgage liability on the bank's books. Owned by SVC-002. Linked to the customer's current account (ENT-004) in SVC-001 for direct debit collection.",
+      "owning_service": "SVC-002",
+      "aggregate_root": false,
+      "reachable_from_phases": ["PH-015"],
+      "fields": [
+        {
+          "name": "account_id",
+          "type": "UUID",
+          "validation_rule": "RFC 4122 UUID v4. System-generated. Immutable after creation.",
+          "source": "PH-015",
+          "governed_by": null
+        },
+        {
+          "name": "customer_id",
+          "type": "UUID",
+          "validation_rule": "Required. FK → Customer.customer_id (ENT-001, SVC-001). Immutable. Used for direct debit mandate linkage and correspondence.",
+          "source": "PH-015",
+          "governed_by": null
+        },
+        {
+          "name": "mortgage_offer_id",
+          "type": "UUID",
+          "validation_rule": "Required. FK → MortgageOffer.offer_id (ENT-015). Immutable. The offer from which this account was created. Used for audit trail linking back to full application history.",
+          "source": "PH-015",
+          "governed_by": null
+        },
+        {
+          "name": "property_address",
+          "type": "object",
+          "validation_rule": "Required. Same structure as MortgageApplication.property_address. Copied from PropertyValuation at completion. Represents the secured property address.",
+          "source": "PH-015",
+          "governed_by": null
+        },
+        {
+          "name": "outstanding_balance",
+          "type": "decimal",
+          "validation_rule": "Required. Positive decimal or 0.00, max 2 decimal places, GBP. Initial value: offered_amount from MortgageOffer. Reduced by each monthly repayment principal component. Updated monthly by SVC-002 mortgage ledger process. 0.00 when mortgage is fully redeemed.",
+          "source": "PH-015",
+          "governed_by": null
+        },
+        {
+          "name": "monthly_payment",
+          "type": "decimal",
+          "validation_rule": "Required. Positive decimal, max 2 decimal places, GBP. Monthly repayment amount. Initially equal to MortgageOffer.monthly_payment. Updated when rate changes (variable/tracker) or after partial overpayment recalculation.",
+          "source": "PH-015",
+          "governed_by": null
+        },
+        {
+          "name": "rate",
+          "type": "decimal",
+          "validation_rule": "Required. Current interest rate as annual percentage (%). Initially equal to MortgageOffer.offered_rate. Updated when initial fixed period ends and reverts to SVR, or when tracker rate moves with base rate.",
+          "source": "PH-015",
+          "governed_by": null
+        },
+        {
+          "name": "term_remaining",
+          "type": "integer",
+          "validation_rule": "Required. Remaining term in months. Initially = term_years × 12. Decremented monthly. Zero when mortgage is fully redeemed.",
+          "source": "PH-015",
+          "governed_by": null
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "validation_rule": "Required. Enum: active | arrears | redeemed. 'active': performing mortgage, payments up to date. 'arrears': one or more missed payments — MCOB 13 arrears management applies. 'redeemed': mortgage fully repaid or transferred. Transitions: active → arrears (missed payment); arrears → active (arrears cleared); active|arrears → redeemed (full redemption).",
+          "source": "PH-015",
+          "governed_by": null
+        },
+        {
+          "name": "opened_date",
+          "type": "date",
+          "validation_rule": "Required. ISO 8601 (YYYY-MM-DD). The completion date. Immutable.",
+          "source": "PH-015",
+          "governed_by": null
+        },
+        {
+          "name": "next_payment_date",
+          "type": "date",
+          "validation_rule": "Required. ISO 8601 (YYYY-MM-DD). Date of next scheduled direct debit collection. Updated monthly after each successful payment.",
+          "source": "PH-015",
+          "governed_by": null
+        },
+        {
+          "name": "direct_debit_reference",
+          "type": "string",
+          "validation_rule": "Required. Bacs direct debit mandate reference. Unique. Links to the customer's nominated current account (sort code + account number) for monthly payment collection.",
+          "source": "PH-015",
+          "governed_by": null
+        },
+        {
+          "name": "chaps_payment_reference",
+          "type": "string",
+          "validation_rule": "Required. The CHAPS payment reference under which completion funds were released. Immutable. Used for reconciliation with the CHAPS settlement record.",
+          "source": "PH-015",
+          "governed_by": null
+        }
+      ],
+      "relationships": [
+        {
+          "target_entity": "ENT-001",
+          "type": "many-to-one",
+          "description": "MortgageAccount belongs to one Customer via customer_id FK."
+        },
+        {
+          "target_entity": "ENT-015",
+          "type": "many-to-one",
+          "description": "MortgageAccount was created from one MortgageOffer via mortgage_offer_id FK."
+        },
+        {
+          "target_entity": "ENT-004",
+          "type": "cross-service reference",
+          "description": "MortgageAccount direct debit collection targets an Account (ENT-004, SVC-001). Reference held as sort code + account number for Bacs mandate. SVC-002 does not hold a direct FK to ENT-004 account_id — the Bacs mandate is the integration point."
+        }
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-ENT016-01",
+          "decision": "outstanding_balance is stored as a field on MortgageAccount and updated monthly rather than derived from transaction ledger.",
+          "rationale": "Mortgages are amortising loans with a defined repayment schedule. The outstanding balance is a well-defined computed value updated on a known schedule (monthly payment processing). Unlike a current account (where balance is a continuous ledger computation), mortgage outstanding balance is updated in a controlled batch process. Storing it directly supports efficient account servicing and customer queries without ledger traversal."
+        }
+      ],
+      "source_journeys": ["JRN-006"]
+    }
+  ]
+}

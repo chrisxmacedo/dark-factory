@@ -1,151 +1,188 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "service-dependencies.schema.json",
-  "title": "Service Dependencies",
-  "description": "Maps every service to a build tier (T0–T4) with typed dependency edges. Tier assignment determines build order; criticality determines blast radius when a dependency fails.",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://bank.internal/schemas/service-dependencies.schema.json",
+  "title": "ServiceDependencies",
+  "description": "Schema for the service-dependencies architecture artefact. Maps all platform, domain, and cross-cutting services to deployment tiers T0-T4, records dependency criticality, and defines the phased build order with regulatory rationale.",
   "type": "object",
-  "required": ["_meta", "tier_definitions", "services", "build_order"],
+  "required": ["$schema", "document_version", "status", "tier_definitions", "services", "build_order"],
+  "additionalProperties": false,
   "properties": {
-    "_meta": {
-      "type": "object",
-      "required": ["generated", "description"],
-      "properties": {
-        "generated": { "type": "string", "format": "date" },
-        "description": { "type": "string" },
-        "source_files": {
-          "type": "array",
-          "items": { "type": "string" }
-        }
-      }
+    "$schema": {
+      "type": "string",
+      "description": "URI reference to this schema."
+    },
+    "document_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Semantic version of this document."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["Draft", "Review", "Approved"],
+      "description": "Lifecycle status of this artefact."
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable purpose statement for this artefact."
     },
     "tier_definitions": {
-      "type": "array",
-      "minItems": 5,
-      "items": {
-        "type": "object",
-        "required": ["tier", "label", "description", "upstream_tiers_allowed"],
-        "properties": {
-          "tier": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 4,
-            "description": "Tier number (0 = Foundation, 4 = Overlay)"
-          },
-          "label": {
-            "type": "string",
-            "description": "Short label e.g. T0 FOUNDATION"
-          },
-          "description": {
-            "type": "string",
-            "description": "What this tier represents and its build position"
-          },
-          "upstream_tiers_allowed": {
-            "type": "array",
-            "items": { "type": "integer", "minimum": 0, "maximum": 4 },
-            "description": "Tiers a service in this tier may depend on (empty = no upstream allowed)"
+      "type": "object",
+      "description": "Canonical definitions for each deployment tier.",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^T[0-4]$": {
+          "type": "object",
+          "required": ["label", "description", "deployment_order", "availability_floor"],
+          "additionalProperties": false,
+          "properties": {
+            "label": { "type": "string" },
+            "description": { "type": "string" },
+            "deployment_order": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 5,
+              "description": "Numerical deployment sequence (1 = first)."
+            },
+            "availability_floor": {
+              "type": "string",
+              "description": "Minimum availability SLA for services in this tier."
+            },
+            "regulatory_rationale": {
+              "type": "string",
+              "description": "Why this tier must exist before downstream tiers."
+            }
           }
         }
       }
     },
     "services": {
       "type": "array",
+      "description": "Flat list of all services with their tier assignment and dependency map.",
       "items": {
         "type": "object",
-        "required": ["id", "name", "tier", "type", "depends_on", "needed_by", "build_notes", "enables"],
+        "required": ["id", "name", "classification", "tier", "dependencies"],
+        "additionalProperties": false,
         "properties": {
           "id": {
             "type": "string",
-            "pattern": "^SVC-[0-9]{3}$",
-            "description": "Unique service identifier"
+            "pattern": "^SVC-\\d{3}$",
+            "description": "Unique service identifier."
           },
           "name": {
             "type": "string",
-            "description": "Human-readable service name"
+            "description": "Human-readable service name."
+          },
+          "classification": {
+            "type": "string",
+            "enum": ["foundation", "domain_specific", "cross_cutting", "observability", "security"],
+            "description": "Architectural classification of the service."
           },
           "tier": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 4,
-            "description": "Build tier assignment (0 = Foundation, 4 = Overlay)"
-          },
-          "type": {
             "type": "string",
-            "enum": ["DATABASE", "SERVICE", "COMPLIANCE", "INFRASTRUCTURE", "OBSERVABILITY"],
-            "description": "Broad service category"
+            "enum": ["T0", "T1", "T2", "T3", "T4"],
+            "description": "Deployment tier assignment."
           },
-          "depends_on": {
+          "capability_domain": {
+            "type": "string",
+            "description": "Primary capability domain this service belongs to."
+          },
+          "dependencies": {
             "type": "array",
-            "description": "Typed dependency edges to upstream services",
+            "description": "Services this service depends on, with criticality classification.",
             "items": {
               "type": "object",
-              "required": ["service_id", "protocol", "criticality"],
+              "required": ["service_id", "criticality"],
+              "additionalProperties": false,
               "properties": {
                 "service_id": {
                   "type": "string",
-                  "pattern": "^SVC-[0-9]{3}$"
-                },
-                "protocol": {
-                  "type": "string",
-                  "enum": ["REST", "gRPC", "Kafka", "JDBC", "AMQP", "Internal"],
-                  "description": "Integration protocol between caller and dependency"
+                  "pattern": "^SVC-\\d{3}$"
                 },
                 "criticality": {
                   "type": "string",
                   "enum": ["hard", "soft"],
-                  "description": "hard = sync; caller fails immediately if dependency is down. soft = async/degradable; caller continues in degraded mode."
+                  "description": "hard = service cannot operate without this dependency (blocking); soft = degraded mode possible if dependency is unavailable."
+                },
+                "rationale": {
+                  "type": "string",
+                  "description": "Why this dependency exists."
                 }
               }
             }
           },
-          "needed_by": {
-            "type": "array",
-            "description": "IDs of services that depend on this service (reverse lookup)",
-            "items": {
-              "type": "string",
-              "pattern": "^SVC-[0-9]{3}$"
-            }
-          },
-          "build_notes": {
+          "notes": {
             "type": "string",
-            "description": "Rationale for tier placement and what this service unblocks"
-          },
-          "enables": {
-            "type": "array",
-            "description": "Descriptions of capabilities or services this unlocks when built",
-            "items": { "type": "string" }
+            "description": "Additional design or regulatory notes for this service."
+          }
+        }
+      }
+    },
+    "dependency_criticality_matrix": {
+      "type": "object",
+      "description": "Summary matrix of hard vs soft dependency counts by tier pairing.",
+      "properties": {
+        "hard_dependency_pairs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["from_service", "to_service", "criticality"],
+            "properties": {
+              "from_service": { "type": "string" },
+              "to_service": { "type": "string" },
+              "criticality": { "type": "string", "enum": ["hard", "soft"] }
+            }
+          }
+        },
+        "summary": {
+          "type": "object",
+          "properties": {
+            "total_hard_dependencies": { "type": "integer" },
+            "total_soft_dependencies": { "type": "integer" },
+            "highest_fan_in_service": { "type": "string" },
+            "highest_fan_out_service": { "type": "string" }
           }
         }
       }
     },
     "build_order": {
       "type": "array",
-      "description": "Recommended phased build sequence. Services within a phase may be built in parallel.",
+      "description": "Ordered build phases mapping tiers to delivery phases with regulatory rationale.",
       "items": {
         "type": "object",
-        "required": ["phase", "tier", "services", "rationale"],
+        "required": ["phase", "name", "tiers", "services_in_phase", "regulatory_rationale", "gate_criteria"],
+        "additionalProperties": false,
         "properties": {
           "phase": {
             "type": "integer",
             "minimum": 1,
-            "description": "Sequential phase number"
+            "description": "Sequential phase number."
           },
-          "tier": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 4,
-            "description": "Tier these services belong to"
-          },
-          "services": {
-            "type": "array",
-            "description": "Service IDs to build in this phase (parallelisable within the phase)",
-            "items": {
-              "type": "string",
-              "pattern": "^SVC-[0-9]{3}$"
-            }
-          },
-          "rationale": {
+          "name": {
             "type": "string",
-            "description": "Regulatory and business justification for this phase boundary"
+            "description": "Human-readable phase name."
+          },
+          "tiers": {
+            "type": "array",
+            "items": { "type": "string", "enum": ["T0", "T1", "T2", "T3", "T4"] },
+            "description": "Tier(s) delivered in this phase."
+          },
+          "services_in_phase": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^SVC-\\d{3}$" },
+            "description": "Service IDs deployed in this phase."
+          },
+          "regulatory_rationale": {
+            "type": "string",
+            "description": "Regulatory or compliance reason for this phase's ordering."
+          },
+          "gate_criteria": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Must-pass criteria before progressing to the next phase."
+          },
+          "estimated_duration_weeks": {
+            "type": "integer",
+            "description": "Indicative delivery duration in weeks."
           }
         }
       }

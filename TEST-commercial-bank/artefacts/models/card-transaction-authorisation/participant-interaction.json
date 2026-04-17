@@ -1,0 +1,275 @@
+{
+  "journey_id": "JRN-011",
+  "document_version": "0.1.0",
+  "status": "Draft",
+  "description": "Participant interaction model for the Card Transaction Authorisation journey. Documents every touchpoint between each persona and the system, including information surfaced and withheld, notification channels, and exception interaction paths. Key constraint: the authorisation decision (PH-042) is fully automated — no human participant intervenes in the standard real-time path. Human interaction occurs only in exception paths (fraud case investigation, settlement reconciliation exceptions).",
+  "participants": [
+    {
+      "persona_id": "PER-001",
+      "persona_name": "Personal Customer (Cardholder)",
+      "role_in_journey": "The cardholder whose debit or credit card is being used for a transaction. PER-001 does not directly interact with the bank's systems during the real-time authorisation path — they interact with the merchant terminal. The bank's involvement is transparent to the cardholder at the point of transaction.",
+      "channel_access": ["CH-002 (Mobile App) — for post-auth transaction notifications and fraud alerts", "CH-001 (Web Portal) — for transaction history review"],
+      "touchpoints": [
+        {
+          "phase_id": "PH-041",
+          "phase_name": "Authorisation Request",
+          "interaction_type": "passive (indirect)",
+          "description": "Cardholder presents their card at the merchant terminal (or completes CNP payment at checkout). The card scheme routes the authorisation request to SVC-011 without cardholder direct involvement with the bank's system. Cardholder waits at the terminal for the result.",
+          "information_surfaced": [
+            "Nothing from the bank directly at this phase — cardholder sees the merchant terminal's waiting indicator"
+          ],
+          "information_withheld": [
+            "That an authorisation request is being processed by the bank",
+            "That fraud rules are being evaluated",
+            "Balance information (not surfaced at point of purchase)"
+          ]
+        },
+        {
+          "phase_id": "PH-042",
+          "phase_name": "Real-Time Decision",
+          "interaction_type": "passive",
+          "description": "Automated decision. No cardholder interaction with the bank. Cardholder sees only the terminal screen.",
+          "information_surfaced": [],
+          "information_withheld": [
+            "Specific fraud rule evaluation results",
+            "Internal balance cache values",
+            "decline_reason if the transaction is declined — cardholder sees only the terminal's generic 'DECLINED' message or the acquirer's decline text"
+          ]
+        },
+        {
+          "phase_id": "PH-043",
+          "phase_name": "Authorisation Response",
+          "interaction_type": "passive (indirect)",
+          "description": "Cardholder sees the authorisation result on the merchant terminal. For approved transactions: the terminal prints/displays a receipt. For declined transactions: the terminal shows a generic decline message (the decline reason is NOT disclosed to the cardholder at this point).",
+          "information_surfaced": [
+            "Approved: 'APPROVED' on merchant terminal, transaction receipt (merchant name, amount, timestamp)",
+            "Declined: 'DECLINED' on merchant terminal — generic decline only"
+          ],
+          "information_withheld": [
+            "Specific reason for decline (e.g. fraud_rule_triggered, insufficient_funds — the 4-digit scheme response code is shown to merchant only)",
+            "That a fraud rule was triggered",
+            "Balance information on decline (balance not surfaced at POS for security reasons)"
+          ],
+          "notifications": [
+            {
+              "trigger": "CardAuthorisationCompleted (EVT-065) consumed by SVC-053 (Notification Service)",
+              "channel": "Push notification (CH-002 mobile app) for transactions above £20",
+              "content": "Transaction of [amount] at [merchant_name]. If you didn't make this payment, call us immediately on [fraud line].",
+              "timing": "Within 5 seconds of EVT-065 publication",
+              "regulatory_basis": "FCA Consumer Duty — customers must be kept informed of account activity"
+            },
+            {
+              "trigger": "CardAuthorisationDeclined (EVT-066) for specific decline types (insufficient_funds, card_suspended)",
+              "channel": "Push notification (CH-002 mobile app)",
+              "content": "Insufficient balance: A payment of [amount] at [merchant_name] was declined. Check your available balance in the app.",
+              "timing": "Within 5 seconds of EVT-066 publication",
+              "regulatory_basis": "FCA Consumer Duty — customer right to understand why a transaction was declined (for non-fraud reasons)"
+            }
+          ],
+          "declined_notification_policy": "If declined for fraud_rule_triggered or card_blocked: NO specific reason disclosed in notification. Generic: 'We were unable to process a payment at [merchant_name]. If you attempted this payment, please contact us.' This prevents disclosure of fraud controls that could be exploited."
+        },
+        {
+          "phase_id": "PH-044",
+          "phase_name": "Post-Authorisation Processing",
+          "interaction_type": "passive",
+          "description": "Cardholder sees their available balance updated in the mobile app or online banking portal (reflecting the balance reservation applied by SVC-001/SVC-003). Approved transactions appear as 'pending' in their transaction history until settlement.",
+          "information_surfaced": [
+            "Updated available balance in mobile app / web portal (reduced by the authorised amount)",
+            "Pending transaction visible in transaction list: merchant_name, amount, 'Pending' status",
+            "If SuspiciousCardActivityDetected (EVT-068) is published with recommended_action including customer notification: fraud alert notification"
+          ],
+          "information_withheld": [
+            "That fraud pattern analysis is occurring in the background",
+            "Risk scores or pattern types from SVC-013",
+            "Card status cache state"
+          ],
+          "notifications": [
+            {
+              "trigger": "SuspiciousCardActivityDetected (EVT-068) with recommended_action in (block_card | notify_customer)",
+              "channel": "Push notification (CH-002) and email to registered email address",
+              "content": "We've detected unusual activity on your card ending [last 4 digits]. Your card has been temporarily blocked for your security. If you need assistance, call [fraud line] or use the app to unblock.",
+              "timing": "Within 30 seconds of EVT-068 publication",
+              "regulatory_basis": "FCA Consumer Duty — customers must be protected and informed of security actions affecting their account"
+            }
+          ]
+        },
+        {
+          "phase_id": "PH-045",
+          "phase_name": "Clearing and Settlement",
+          "interaction_type": "passive",
+          "description": "Cardholder sees the transaction move from 'pending' to 'settled' on their statement. The settled amount may differ slightly from the authorised amount (foreign currency rate variance, gratuity). FX transactions: the final GBP amount settled may differ from the estimated amount shown at authorisation time.",
+          "information_surfaced": [
+            "Transaction moves from 'Pending' to 'Posted' / 'Settled' in transaction history",
+            "Final settled amount in GBP (may differ from initial authorisation amount for FX transactions)",
+            "Merchant name and date of transaction in monthly statement"
+          ],
+          "information_withheld": [
+            "interchange_fee and scheme_fee — internal bank economics, not customer-facing",
+            "Settlement batch processing details"
+          ]
+        }
+      ],
+      "data_visible_to_persona": [
+        "Available balance (updated after balance reservation in PH-044)",
+        "Pending transaction: merchant_name, amount, status = pending",
+        "Settled transaction: merchant_name, settled_amount, settlement_date",
+        "Last 4 digits of card_number_token (for fraud alert notifications)"
+      ],
+      "data_never_visible_to_persona": [
+        "card_number_token full value",
+        "Raw PAN (never outside PCI CDE)",
+        "auth_id or other internal identifiers",
+        "decline_reason enum value (specific reason)",
+        "Fraud score or risk level",
+        "Fraud rule details or threshold values",
+        "processing_time_ms",
+        "interchange_fee or scheme_fee"
+      ]
+    },
+    {
+      "persona_id": "PER-009",
+      "persona_name": "Card Network (Visa / Mastercard)",
+      "role_in_journey": "External system actor. PER-009 routes authorisation requests from the acquirer to SVC-011 and returns the authorisation response to the acquirer. PER-009 also delivers the daily clearing file and operates the stand-in processing service (STIP/SMS) when SVC-011 is unavailable.",
+      "channel_access": ["Card scheme network — ISO 8583 / ISO 20022 connectivity (dedicated leased line or IP VPN to card scheme data centre)"],
+      "touchpoints": [
+        {
+          "phase_id": "PH-041",
+          "phase_name": "Authorisation Request",
+          "interaction_type": "active (automated system)",
+          "description": "Card scheme routes authorisation request from acquiring bank to SVC-011 based on BIN routing.",
+          "information_surfaced": [
+            "ISO 8583 / ISO 20022 authorisation request fields: card number (PAN — transmitted encrypted; tokenised by SVC-011 on ingress), merchant ID, merchant name, MCC, amount, currency, transaction type, 3DS result, terminal country code"
+          ],
+          "information_withheld": [
+            "Bank's internal fraud rules or balance information — card network receives only the authorisation response code"
+          ]
+        },
+        {
+          "phase_id": "PH-043",
+          "phase_name": "Authorisation Response",
+          "interaction_type": "passive (receives response)",
+          "description": "Card scheme receives the authorisation response from SVC-011 and forwards to the acquiring bank.",
+          "information_surfaced": [
+            "ISO 8583 Field 39 / ISO 20022 action code: '00' (approved) + auth_code, or decline code (e.g. '51', '05')",
+            "Transaction timestamp",
+            "Authorisation code (for approved transactions)"
+          ],
+          "information_withheld": [
+            "Internal decline_reason — scheme receives only the scheme-standard response code"
+          ]
+        },
+        {
+          "phase_id": "PH-045",
+          "phase_name": "Clearing and Settlement",
+          "interaction_type": "active (automated system)",
+          "description": "Card scheme delivers end-of-day clearing file to SVC-011 and processes settlement.",
+          "information_surfaced": [
+            "Clearing file: settled transactions with final amounts, interchange rates, scheme fees, settlement netting instructions"
+          ],
+          "information_withheld": [
+            "Internal bank account details or customer identifiers beyond the card token"
+          ]
+        }
+      ],
+      "data_visible_to_persona": [
+        "Authorisation response code and auth_code",
+        "Processing time (per Visa/Mastercard scheme reporting requirements)",
+        "Settlement confirmation"
+      ],
+      "data_never_visible_to_persona": [
+        "Internal decline_reason (card testing attack prevention)",
+        "Customer_id or account_id",
+        "Balance information",
+        "Fraud scores or model outputs"
+      ]
+    },
+    {
+      "persona_id": "PER-054",
+      "persona_name": "Fraud Analyst",
+      "role_in_journey": "Exception handler — investigates fraud cases created when SVC-013 publishes SuspiciousCardActivityDetected (EVT-068). Reviews the card transaction pattern, evaluates whether the activity represents genuine fraud, and determines whether to maintain the card block or release it.",
+      "channel_access": ["Internal Fraud Operations Platform (INTL-003)"],
+      "touchpoints": [
+        {
+          "phase_id": "PH-044",
+          "phase_name": "Post-Authorisation Processing (Exception Path EX-CA-005)",
+          "interaction_type": "active (exception handling)",
+          "description": "PER-054 receives a fraud case alert in the Fraud Operations Platform (INTL-003) when EVT-068 is published. Reviews the fraud pattern detected by SVC-013, the transaction history, and the recommended_action.",
+          "information_surfaced": [
+            "Full EVT-068 payload: pattern_type, risk_score, recommended_action, affected_transactions (auth_ids)",
+            "CardAuthorisation records for all affected transactions (from SVC-011 via INTL-003 integration)",
+            "Customer profile and transaction history (from SVC-001/SVC-003 via INTL-003)",
+            "Card activity timeline: all recent authorisations and declines for the card",
+            "channel_country_code sequence showing geographic pattern",
+            "Model version and feature contributions from SVC-013"
+          ],
+          "information_withheld": [
+            "Customer passwords, PINs, or biometric data",
+            "SCA biometric raw data (hashed/tokenised only)"
+          ],
+          "actions_available": [
+            "Maintain card block: Confirm genuine fraud. Card remains suspended_fraud_investigation in SVC-011 cache. Proceed with fraud case (JRN-005 if customer reports as fraud). Alert customer.",
+            "Release card block: Confirm false positive. SVC-011 cache updated to status = active. Customer notified. Fraud case closed as false_positive.",
+            "Escalate to MLRO: If suspicious activity may indicate money laundering (e.g. unusual merchant patterns suggesting structuring), escalate for SAR assessment."
+          ],
+          "sla": "Case review and action within 30 minutes of EVT-068 alert for high-risk patterns (pattern_type = geographic_impossibility or risk_score > 0.9). 2 hours for medium-risk patterns."
+        }
+      ],
+      "data_visible_to_persona": [
+        "Full EVT-068 payload including risk_score and pattern_type",
+        "CardAuthorisation records for affected transactions",
+        "Customer transaction history (read-only access via INTL-003)",
+        "Merchant name, MCC, country for each affected transaction"
+      ]
+    },
+    {
+      "persona_id": "PER-040",
+      "persona_name": "Payment Operations Agent",
+      "role_in_journey": "Settlement reconciliation exception handler. Investigates unmatched clearing items in PH-045 (clearing items that cannot be matched to a pre-authorisation record in ENT-032). Also handles referred authorisation requests in ALT-CA-003.",
+      "channel_access": ["Internal Payment Operations Platform (INTL-002)"],
+      "touchpoints": [
+        {
+          "phase_id": "PH-045",
+          "phase_name": "Clearing and Settlement (Exception — Unmatched Clearing Item)",
+          "interaction_type": "active (exception handling)",
+          "description": "PER-040 reviews clearing items that SVC-011 could not automatically match to a pre-authorisation record. May represent forced transactions (card-present transactions processed offline), late presentments (authorisation expired before clearing), or scheme processing errors.",
+          "information_surfaced": [
+            "Clearing item details: card_number_token, merchant_id, merchant_name, amount, clearing_date",
+            "Pre-authorisation search results from ENT-032 (potential matches for manual review)",
+            "Scheme error codes and rejection reasons from the clearing file"
+          ],
+          "information_withheld": [
+            "Raw PAN",
+            "Customer personal details beyond customer_id (PER-040 accesses only card and transaction data)"
+          ],
+          "actions_available": [
+            "Manual match: Link clearing item to an existing CardAuthorisation record",
+            "Forced post: Post a new CardSettlement without a pre-authorisation (rare — requires management approval)",
+            "Reject clearing item: Return to card scheme as unacceptable (scheme error scenarios)"
+          ],
+          "sla": "All unmatched clearing items reviewed and resolved within 24 hours of clearing file receipt"
+        },
+        {
+          "phase_id": "PH-042",
+          "phase_name": "Real-Time Decision — Referral (ALT-CA-003)",
+          "interaction_type": "active (rare exception)",
+          "description": "If the automated rule engine produces a referred decision (status = referred in ENT-032), PER-040 may receive a call from the merchant requesting a manual authorisation approval. PER-040 reviews the CardAuthorisation record and can approve or decline.",
+          "information_surfaced": [
+            "CardAuthorisation record: card_number_token (last 4 digits displayed), merchant_id, merchant_name, amount, rule_trigger",
+            "Customer account status from SVC-001/SVC-003 (via internal platform)"
+          ],
+          "information_withheld": [
+            "Full card_number_token beyond last 4 digits",
+            "Fraud model scores (PER-040 does not have access to SVC-013 model outputs)"
+          ],
+          "sla": "Referral call response within 60 seconds"
+        }
+      ]
+    }
+  ],
+  "channel_summary": {
+    "external_channels": ["Card Scheme Network (ISO 8583 / ISO 20022 — PER-009)", "Merchant Terminal (indirect — cardholder presents card)"],
+    "customer_channels": ["CH-002 (Mobile App — post-auth notifications and fraud alerts)", "CH-001 (Web Portal — transaction history and balance)"],
+    "internal_channels": ["INTL-003 (Fraud Operations Platform — PER-054)", "INTL-002 (Payment Operations Platform — PER-040)"],
+    "notification_service": "SVC-053 (Notification Service) dispatches push notifications and emails on CardAuthorisationCompleted, declined (non-fraud) notifications, and SuspiciousCardActivityDetected fraud alerts"
+  }
+}

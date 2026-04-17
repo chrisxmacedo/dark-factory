@@ -1,652 +1,945 @@
 {
   "$schema": "../schemas/technical-service.schema.json",
-  "_meta": {
-    "generated": "2026-04-15",
-    "description": "Consolidated service catalogue aggregated from domain-services.json, cross-cutting-services.json, and foundation-services.json. All services are in 'planned' status — this is a greenfield architecture design.",
-    "source_files": [
-      "artefacts/foundation/technical-services/domain-services.json",
-      "artefacts/foundation/technical-services/cross-cutting-services.json",
-      "artefacts/foundation/technical-services/foundation-services.json"
-    ]
-  },
-  "summary": {
-    "total_services": 30,
-    "by_classification": {
-      "domain_specific": 17,
-      "cross_cutting": 6,
-      "foundation": 7
-    },
-    "by_api_style": {
-      "REST/OpenAPI": 26,
-      "gRPC": 3,
-      "AMQP": 1
-    },
-    "by_data_store": {
-      "PostgreSQL": 14,
-      "TimescaleDB": 3,
-      "MongoDB": 3,
-      "Redis": 2,
-      "Elasticsearch": 3,
-      "Kafka": 1,
-      "PostgreSQL + Redis": 2,
-      "PostgreSQL + Elasticsearch": 2
-    },
-    "by_sla": {
-      "99.99%": 5,
-      "99.999%": 7,
-      "99.95%": 18
-    },
-    "dependency_matrix": {
-      "description": "Services ranked by number of inbound dependencies (dependents). Higher count = more critical — a failure in this service would cascade to more consumers.",
-      "ranked": [
-        {
-          "service_id": "SVC-103",
-          "service_name": "Audit & Logging Service",
-          "classification": "foundation",
-          "inbound_dependent_count": 29,
-          "depended_on_by": [
-            "SVC-001", "SVC-002", "SVC-003", "SVC-004", "SVC-005", "SVC-006",
-            "SVC-007", "SVC-008", "SVC-009", "SVC-010", "SVC-011", "SVC-012",
-            "SVC-013", "SVC-014", "SVC-015", "SVC-016", "SVC-017",
-            "SVC-050", "SVC-051", "SVC-052", "SVC-053", "SVC-054", "SVC-055",
-            "SVC-100", "SVC-101", "SVC-102", "SVC-104", "SVC-105", "SVC-106"
-          ]
-        },
-        {
-          "service_id": "SVC-100",
-          "service_name": "Identity & Access Management",
-          "classification": "foundation",
-          "inbound_dependent_count": 27,
-          "depended_on_by": [
-            "SVC-001", "SVC-002", "SVC-003", "SVC-004", "SVC-005", "SVC-006",
-            "SVC-007", "SVC-008", "SVC-009", "SVC-010", "SVC-011", "SVC-012",
-            "SVC-013", "SVC-014", "SVC-015", "SVC-016", "SVC-017",
-            "SVC-050", "SVC-051", "SVC-052", "SVC-053", "SVC-054", "SVC-055",
-            "SVC-101", "SVC-102", "SVC-104", "SVC-106"
-          ]
-        },
-        {
-          "service_id": "SVC-101",
-          "service_name": "API Gateway",
-          "classification": "foundation",
-          "inbound_dependent_count": 23,
-          "depended_on_by": [
-            "SVC-001", "SVC-002", "SVC-003", "SVC-004", "SVC-005", "SVC-006",
-            "SVC-007", "SVC-008", "SVC-009", "SVC-010", "SVC-011", "SVC-012",
-            "SVC-013", "SVC-014", "SVC-015", "SVC-016", "SVC-017",
-            "SVC-050", "SVC-051", "SVC-052", "SVC-053", "SVC-054", "SVC-055"
-          ]
-        },
-        {
-          "service_id": "SVC-102",
-          "service_name": "Event Bus",
-          "classification": "foundation",
-          "inbound_dependent_count": 20,
-          "depended_on_by": [
-            "SVC-001", "SVC-002", "SVC-004", "SVC-005", "SVC-006", "SVC-007",
-            "SVC-008", "SVC-009", "SVC-010", "SVC-012", "SVC-013",
-            "SVC-014", "SVC-015", "SVC-016", "SVC-017",
-            "SVC-050", "SVC-051", "SVC-052", "SVC-053", "SVC-055"
-          ]
-        },
-        {
-          "service_id": "SVC-054",
-          "service_name": "Document Management Service",
-          "classification": "cross_cutting",
-          "inbound_dependent_count": 11,
-          "depended_on_by": [
-            "SVC-001", "SVC-003", "SVC-004", "SVC-007", "SVC-010", "SVC-012",
-            "SVC-013", "SVC-016", "SVC-017", "SVC-051", "SVC-052"
-          ]
-        },
-        {
-          "service_id": "SVC-050",
-          "service_name": "Customer Onboarding Service",
-          "classification": "cross_cutting",
-          "inbound_dependent_count": 9,
-          "depended_on_by": [
-            "SVC-001", "SVC-002", "SVC-003", "SVC-006", "SVC-010", "SVC-012",
-            "SVC-013", "SVC-017", "SVC-051"
-          ]
-        },
-        {
-          "service_id": "SVC-051",
-          "service_name": "Sanctions Screening Service",
-          "classification": "cross_cutting",
-          "inbound_dependent_count": 8,
-          "depended_on_by": [
-            "SVC-004", "SVC-006", "SVC-007", "SVC-008", "SVC-010", "SVC-014",
-            "SVC-016", "SVC-050"
-          ]
-        },
-        {
-          "service_id": "SVC-104",
-          "service_name": "Data Platform",
-          "classification": "foundation",
-          "inbound_dependent_count": 7,
-          "depended_on_by": [
-            "SVC-005", "SVC-009", "SVC-015", "SVC-016", "SVC-017", "SVC-052",
-            "SVC-105"
-          ]
-        },
-        {
-          "service_id": "SVC-052",
-          "service_name": "Credit Decision Service",
-          "classification": "cross_cutting",
-          "inbound_dependent_count": 5,
-          "depended_on_by": [
-            "SVC-001", "SVC-002", "SVC-004", "SVC-017", "SVC-050"
-          ]
-        },
-        {
-          "service_id": "SVC-105",
-          "service_name": "Secrets Management",
-          "classification": "foundation",
-          "inbound_dependent_count": 4,
-          "depended_on_by": [
-            "SVC-102", "SVC-103", "SVC-104", "SVC-106"
-          ]
-        },
-        {
-          "service_id": "SVC-009",
-          "service_name": "Fraud Detection Service",
-          "classification": "domain_specific",
-          "inbound_dependent_count": 4,
-          "depended_on_by": [
-            "SVC-002", "SVC-006", "SVC-008", "SVC-014"
-          ]
-        },
-        {
-          "service_id": "SVC-008",
-          "service_name": "Card Processing Service",
-          "classification": "domain_specific",
-          "inbound_dependent_count": 3,
-          "depended_on_by": [
-            "SVC-002", "SVC-006", "SVC-009"
-          ]
-        },
-        {
-          "service_id": "SVC-055",
-          "service_name": "Workflow Engine",
-          "classification": "cross_cutting",
-          "inbound_dependent_count": 3,
-          "depended_on_by": [
-            "SVC-010", "SVC-016", "SVC-050"
-          ]
-        },
-        {
-          "service_id": "SVC-053",
-          "service_name": "Notification Service",
-          "classification": "cross_cutting",
-          "inbound_dependent_count": 3,
-          "depended_on_by": [
-            "SVC-003", "SVC-012", "SVC-013"
-          ]
-        },
-        {
-          "service_id": "SVC-015",
-          "service_name": "Risk Engine Service",
-          "classification": "domain_specific",
-          "inbound_dependent_count": 3,
-          "depended_on_by": [
-            "SVC-005", "SVC-017", "SVC-052"
-          ]
-        },
-        {
-          "service_id": "SVC-014",
-          "service_name": "Domestic Payments Service",
-          "classification": "domain_specific",
-          "inbound_dependent_count": 2,
-          "depended_on_by": [
-            "SVC-007", "SVC-011"
-          ]
-        },
-        {
-          "service_id": "SVC-010",
-          "service_name": "KYC/AML Service",
-          "classification": "domain_specific",
-          "inbound_dependent_count": 2,
-          "depended_on_by": [
-            "SVC-013", "SVC-016"
-          ]
-        },
-        {
-          "service_id": "SVC-013",
-          "service_name": "Commercial Accounts Service",
-          "classification": "domain_specific",
-          "inbound_dependent_count": 2,
-          "depended_on_by": [
-            "SVC-005", "SVC-014"
-          ]
-        },
-        {
-          "service_id": "SVC-012",
-          "service_name": "Retail Accounts Service",
-          "classification": "domain_specific",
-          "inbound_dependent_count": 2,
-          "depended_on_by": [
-            "SVC-011", "SVC-014"
-          ]
-        },
-        {
-          "service_id": "SVC-007",
-          "service_name": "International Payments Service",
-          "classification": "domain_specific",
-          "inbound_dependent_count": 1,
-          "depended_on_by": ["SVC-004"]
-        },
-        {
-          "service_id": "SVC-106",
-          "service_name": "Service Mesh",
-          "classification": "foundation",
-          "inbound_dependent_count": 0,
-          "depended_on_by": []
-        },
-        {
-          "service_id": "SVC-001",
-          "service_name": "Mortgage Service",
-          "classification": "domain_specific",
-          "inbound_dependent_count": 0,
-          "depended_on_by": []
-        },
-        {
-          "service_id": "SVC-003",
-          "service_name": "Insurance Distribution Service",
-          "classification": "domain_specific",
-          "inbound_dependent_count": 0,
-          "depended_on_by": []
-        },
-        {
-          "service_id": "SVC-005",
-          "service_name": "Treasury Service",
-          "classification": "domain_specific",
-          "inbound_dependent_count": 0,
-          "depended_on_by": []
-        },
-        {
-          "service_id": "SVC-011",
-          "service_name": "Open Banking API Service",
-          "classification": "domain_specific",
-          "inbound_dependent_count": 0,
-          "depended_on_by": []
-        },
-        {
-          "service_id": "SVC-016",
-          "service_name": "Compliance Service",
-          "classification": "domain_specific",
-          "inbound_dependent_count": 0,
-          "depended_on_by": []
-        },
-        {
-          "service_id": "SVC-017",
-          "service_name": "Wealth Platform Service",
-          "classification": "domain_specific",
-          "inbound_dependent_count": 0,
-          "depended_on_by": []
-        }
-      ]
-    }
-  },
+  "document_version": "0.1.0",
+  "status": "Draft",
+  "description": "Consolidated flat catalogue of all 30 services in the UK commercial bank's target architecture. Includes the 17 domain services, 6 cross-cutting shared services, and 7 foundation platform services from the foundation technical service files, plus the 7 new observability and security services introduced in Step 5 (SVC-107 through SVC-113). Each entry records classification, capability mappings, owner team, SLA, API style, data store, tier, and status. Total: 37 services across all tiers.",
   "services": [
     {
       "id": "SVC-001",
-      "name": "Mortgage Service",
+      "name": "Retail Banking Core",
       "classification": "domain_specific",
-      "capability_mappings": ["CAP-001.04"],
-      "owner_team": "Retail Banking Engineering",
+      "capability_mappings": [
+        {
+          "capability_id": "CAP-001",
+          "capability_name": "Retail Banking",
+          "sub_capabilities": [
+            "CAP-001.01",
+            "CAP-001.02",
+            "CAP-001.03"
+          ]
+        }
+      ],
+      "owner_team": "Retail Banking Platform Team",
       "status": "planned",
-      "dependencies": ["SVC-050", "SVC-052", "SVC-054", "SVC-100", "SVC-101", "SVC-102", "SVC-103"],
       "api_style": "REST/OpenAPI",
-      "data_store": "PostgreSQL",
-      "sla": "99.95%"
+      "data_store": "PostgreSQL (primary ledger) + Redis (real-time balance cache)",
+      "sla": "99.95%",
+      "tier": "T2",
+      "pci_dss_scope": false,
+      "data_residency": "UK only",
+      "notes": "Core retail ledger. Publishes AccountOpened, BalanceUpdated, LoanOriginated events. Hard dependency on SVC-050 (KYC clearance) and SVC-052 (credit decisions). Buy candidate: Thought Machine Vault / Mambu / 10x SuperCore."
     },
     {
       "id": "SVC-002",
-      "name": "Credit Card Service",
+      "name": "Mortgage Service",
       "classification": "domain_specific",
-      "capability_mappings": ["CAP-001.05"],
-      "owner_team": "Retail Banking Engineering",
+      "capability_mappings": [
+        {
+          "capability_id": "CAP-001.04",
+          "capability_name": "Mortgages",
+          "sub_capabilities": [
+            "CAP-001.04"
+          ]
+        }
+      ],
+      "owner_team": "Mortgage Origination Team",
       "status": "planned",
-      "dependencies": ["SVC-008", "SVC-050", "SVC-052", "SVC-009", "SVC-100", "SVC-101", "SVC-102", "SVC-103"],
       "api_style": "REST/OpenAPI",
-      "data_store": "PostgreSQL + Redis",
-      "sla": "99.99%"
+      "data_store": "PostgreSQL (mortgage lifecycle records) + S3 (valuation and legal documents via SVC-054)",
+      "sla": "99.95%",
+      "tier": "T3",
+      "pci_dss_scope": false,
+      "data_residency": "UK only",
+      "notes": "MCOB-regulated mortgage origination through to account management. Hard dependency on SVC-052 for AIP. CHAPS drawdown via SVC-009. HM Land Registry integration."
     },
     {
       "id": "SVC-003",
-      "name": "Insurance Distribution Service",
+      "name": "Credit Card Service",
       "classification": "domain_specific",
-      "capability_mappings": ["CAP-001.06"],
-      "owner_team": "Retail Banking Engineering",
+      "capability_mappings": [
+        {
+          "capability_id": "CAP-001.05",
+          "capability_name": "Credit Cards",
+          "sub_capabilities": [
+            "CAP-001.05"
+          ]
+        }
+      ],
+      "owner_team": "Cards & Payments Product Team",
       "status": "planned",
-      "dependencies": ["SVC-050", "SVC-054", "SVC-053", "SVC-100", "SVC-101", "SVC-103"],
-      "api_style": "REST/OpenAPI",
-      "data_store": "PostgreSQL",
-      "sla": "99.95%"
+      "api_style": "gRPC (authorisation path) + REST/OpenAPI (account management)",
+      "data_store": "PostgreSQL (card accounts, statement cycles) + dedicated PCI DSS CDE datastore",
+      "sla": "99.99%",
+      "tier": "T3",
+      "pci_dss_scope": true,
+      "data_residency": "UK only (PCI DSS CDE with UK residency)",
+      "notes": "PCI DSS CDE-scoped. Sub-100ms authorisation path via gRPC to SVC-013 (Fraud). Hard dependency on SVC-011 (Card Processing) for BIN management and scheme connectivity. Section 75 liability management."
     },
     {
       "id": "SVC-004",
-      "name": "Trade Finance Service",
+      "name": "Insurance Distribution Service",
       "classification": "domain_specific",
-      "capability_mappings": ["CAP-002.03"],
-      "owner_team": "Commercial Banking Engineering",
+      "capability_mappings": [
+        {
+          "capability_id": "CAP-001.06",
+          "capability_name": "Insurance Distribution",
+          "sub_capabilities": [
+            "CAP-001.06"
+          ]
+        }
+      ],
+      "owner_team": "Retail Banking Platform Team",
       "status": "planned",
-      "dependencies": ["SVC-013", "SVC-007", "SVC-051", "SVC-054", "SVC-052", "SVC-100", "SVC-101", "SVC-102", "SVC-103"],
       "api_style": "REST/OpenAPI",
-      "data_store": "MongoDB",
-      "sla": "99.95%"
+      "data_store": "PostgreSQL (policy records) + S3 (policy documents via SVC-054)",
+      "sla": "99.5%",
+      "tier": "T4",
+      "pci_dss_scope": false,
+      "data_residency": "UK only",
+      "notes": "FCA-authorised insurance intermediary. ICOBS and Insurance Distribution Directive. T4 overlay \u2014 dependent on SVC-001 for customer profile. Bank does not underwrite; it distributes. Buy candidate: white-labelled insurance distribution platform."
     },
     {
       "id": "SVC-005",
-      "name": "Treasury Service",
+      "name": "Commercial Banking Core",
       "classification": "domain_specific",
-      "capability_mappings": ["CAP-002.04"],
-      "owner_team": "Commercial Banking Engineering",
+      "capability_mappings": [
+        {
+          "capability_id": "CAP-002",
+          "capability_name": "Commercial Banking",
+          "sub_capabilities": [
+            "CAP-002.01",
+            "CAP-002.02"
+          ]
+        }
+      ],
+      "owner_team": "Commercial Banking Platform Team",
       "status": "planned",
-      "dependencies": ["SVC-013", "SVC-007", "SVC-015", "SVC-100", "SVC-101", "SVC-102", "SVC-103", "SVC-104"],
       "api_style": "REST/OpenAPI",
-      "data_store": "TimescaleDB",
-      "sla": "99.95%"
+      "data_store": "PostgreSQL (commercial ledger, facility records) + Redis (real-time position cache)",
+      "sla": "99.95%",
+      "tier": "T2",
+      "pci_dss_scope": false,
+      "data_residency": "UK only",
+      "notes": "Commercial customer ledger. Business accounts and lending. nCino (Salesforce) as commercial lending origination buy candidate. Publishes FacilityApproved, DrawdownCompleted events. Hard dependency on SVC-050 (KYB clearance) and SVC-051 (sanctions)."
     },
     {
       "id": "SVC-006",
-      "name": "Merchant Acquiring Service",
+      "name": "Trade Finance Service",
       "classification": "domain_specific",
-      "capability_mappings": ["CAP-002.05"],
-      "owner_team": "Payments Engineering",
+      "capability_mappings": [
+        {
+          "capability_id": "CAP-002.03",
+          "capability_name": "Trade Finance",
+          "sub_capabilities": [
+            "CAP-002.03"
+          ]
+        }
+      ],
+      "owner_team": "Trade Finance Operations Team",
       "status": "planned",
-      "dependencies": ["SVC-008", "SVC-009", "SVC-050", "SVC-051", "SVC-100", "SVC-101", "SVC-102", "SVC-103"],
       "api_style": "REST/OpenAPI",
-      "data_store": "PostgreSQL",
-      "sla": "99.99%"
+      "data_store": "PostgreSQL (LC and guarantee records) + document repository via SVC-054",
+      "sla": "99.5%",
+      "tier": "T3",
+      "pci_dss_scope": false,
+      "data_residency": "UK only",
+      "notes": "ETDA 2023 electronic trade documents. SWIFT MT700-series messaging. UCP 600/URDG 758 document examination. Hard dependency on SVC-051 (sanctions screening for LC counterparties). Buy candidate: Finastra Trade Innovation or Surecomp RIVO."
     },
     {
       "id": "SVC-007",
-      "name": "International Payments Service",
+      "name": "Treasury Service",
       "classification": "domain_specific",
-      "capability_mappings": ["CAP-003.04"],
-      "owner_team": "Payments Engineering",
+      "capability_mappings": [
+        {
+          "capability_id": "CAP-002.04",
+          "capability_name": "Treasury Services",
+          "sub_capabilities": [
+            "CAP-002.04"
+          ]
+        }
+      ],
+      "owner_team": "Treasury Technology Team",
       "status": "planned",
-      "dependencies": ["SVC-014", "SVC-051", "SVC-009", "SVC-054", "SVC-100", "SVC-101", "SVC-102", "SVC-103"],
       "api_style": "REST/OpenAPI",
-      "data_store": "PostgreSQL",
-      "sla": "99.99%"
+      "data_store": "PostgreSQL (ISDA/EMIR trade records, cash pool structures) + TimescaleDB (intraday position time-series)",
+      "sla": "99.9%",
+      "tier": "T3",
+      "pci_dss_scope": false,
+      "data_residency": "UK only",
+      "notes": "Notional pooling, physical sweeping, FX products, ISDA/CSA documentation, EMIR UK reporting. Kyriba partnership model: bank integrates its products into Kyriba via API. MiFID II appropriateness assessments for derivative clients."
     },
     {
       "id": "SVC-008",
-      "name": "Card Processing Service",
+      "name": "Merchant Acquiring Service",
       "classification": "domain_specific",
-      "capability_mappings": ["CAP-003.05"],
-      "owner_team": "Payments Engineering",
+      "capability_mappings": [
+        {
+          "capability_id": "CAP-002.05",
+          "capability_name": "Merchant Services",
+          "sub_capabilities": [
+            "CAP-002.05"
+          ]
+        }
+      ],
+      "owner_team": "Cards & Payments Product Team",
       "status": "planned",
-      "dependencies": ["SVC-009", "SVC-051", "SVC-100", "SVC-101", "SVC-102", "SVC-103"],
-      "api_style": "gRPC",
-      "data_store": "PostgreSQL + Redis",
-      "sla": "99.99%"
+      "api_style": "gRPC (authorisation path) + REST/OpenAPI (merchant management)",
+      "data_store": "PostgreSQL (merchant records, settlement) + dedicated PCI DSS CDE datastore",
+      "sla": "99.99%",
+      "tier": "T3",
+      "pci_dss_scope": true,
+      "data_residency": "UK only (PCI DSS CDE)",
+      "notes": "Bank retains acquiring licence and merchant relationship; Worldpay/Fiserv bureau handles scheme processing. Sub-100ms authorisation via gRPC. PSR MR22/1.7 scheme fee transparency records. Hard dependency on SVC-013 (CNP fraud scoring)."
     },
     {
       "id": "SVC-009",
-      "name": "Fraud Detection Service",
+      "name": "Domestic Payments Service",
       "classification": "domain_specific",
-      "capability_mappings": ["CAP-004.04"],
-      "owner_team": "Risk Engineering",
+      "capability_mappings": [
+        {
+          "capability_id": "CAP-003",
+          "capability_name": "Payment Operations",
+          "sub_capabilities": [
+            "CAP-003.01",
+            "CAP-003.02",
+            "CAP-003.03",
+            "CAP-003.06"
+          ]
+        }
+      ],
+      "owner_team": "Payments Platform Team",
       "status": "planned",
-      "dependencies": ["SVC-100", "SVC-101", "SVC-102", "SVC-103", "SVC-104"],
-      "api_style": "gRPC",
-      "data_store": "Elasticsearch",
-      "sla": "99.95%"
+      "api_style": "gRPC (payment execution path) + REST/OpenAPI (management and reporting)",
+      "data_store": "PostgreSQL (payment ledger, CoP records) + Kafka (payment event stream via SVC-102)",
+      "sla": "99.99%",
+      "tier": "T2",
+      "pci_dss_scope": false,
+      "data_residency": "UK only (Pay.UK and Bank of England participant rules)",
+      "notes": "Direct FPS and BACS participant (via Vocalink). CHAPS Bank of England RT2 direct participant. Confirmation of Payee (CoP) integrated. APP fraud reimbursement up to \u00a385k (PSR PS23/3 from Oct 2024). Hard blocking dependencies on SVC-051 (sanctions) and SVC-013 (fraud) in the payment execution path. Buy candidate: Form3 cloud-native platform."
     },
     {
       "id": "SVC-010",
-      "name": "KYC/AML Service",
+      "name": "International Payments Service",
       "classification": "domain_specific",
-      "capability_mappings": ["CAP-005.01"],
-      "owner_team": "Compliance Engineering",
+      "capability_mappings": [
+        {
+          "capability_id": "CAP-003.04",
+          "capability_name": "International Payments",
+          "sub_capabilities": [
+            "CAP-003.04"
+          ]
+        }
+      ],
+      "owner_team": "Payments Platform Team",
       "status": "planned",
-      "dependencies": ["SVC-050", "SVC-051", "SVC-054", "SVC-055", "SVC-100", "SVC-101", "SVC-102", "SVC-103"],
       "api_style": "REST/OpenAPI",
-      "data_store": "PostgreSQL + Elasticsearch",
-      "sla": "99.95%"
+      "data_store": "PostgreSQL (SWIFT message records, nostro positions) + TimescaleDB (intraday FX rates)",
+      "sla": "99.9%",
+      "tier": "T3",
+      "pci_dss_scope": false,
+      "data_residency": "UK primary; SWIFT network integration",
+      "notes": "SWIFT CBPR+ ISO 20022 MX mandatory from November 2025. FATF travel rule data. SWIFT gpi status tracking. Hard dependency on SVC-051 for all cross-border beneficiary screening. Buy candidate: SWIFT SAA Cloud + Volante ISO 20022 translation."
     },
     {
       "id": "SVC-011",
-      "name": "Open Banking API Service",
+      "name": "Card Processing Service",
       "classification": "domain_specific",
-      "capability_mappings": ["CAP-007.03"],
-      "owner_team": "Digital Platform Engineering",
+      "capability_mappings": [
+        {
+          "capability_id": "CAP-003.05",
+          "capability_name": "Card Processing",
+          "sub_capabilities": [
+            "CAP-003.05"
+          ]
+        }
+      ],
+      "owner_team": "Cards & Payments Product Team",
       "status": "planned",
-      "dependencies": ["SVC-012", "SVC-014", "SVC-100", "SVC-101", "SVC-103"],
-      "api_style": "REST/OpenAPI",
-      "data_store": "PostgreSQL",
-      "sla": "99.95%"
+      "api_style": "gRPC (authorisation path) + REST/OpenAPI (scheme management)",
+      "data_store": "PostgreSQL (BIN management, dispute records) + PCI DSS CDE datastore (cardholder data)",
+      "sla": "99.99%",
+      "tier": "T3",
+      "pci_dss_scope": true,
+      "data_residency": "UK only (PCI DSS CDE cardholder data)",
+      "notes": "BIN management, real-time Visa/Mastercard authorisation, clearing/settlement, dispute management (120-day cycle). Hard dependency on SVC-013 (fraud scoring in authorisation path \u2014 sub-100ms). Buy candidate: Marqeta / Thredd (formerly GPS). Strong buy \u2014 bank does not maintain direct scheme processing."
     },
     {
       "id": "SVC-012",
-      "name": "Retail Accounts Service",
+      "name": "Risk Engine Service",
       "classification": "domain_specific",
-      "capability_mappings": ["CAP-001.01", "CAP-001.02", "CAP-001.03"],
-      "owner_team": "Retail Banking Engineering",
+      "capability_mappings": [
+        {
+          "capability_id": "CAP-004",
+          "capability_name": "Risk Management",
+          "sub_capabilities": [
+            "CAP-004.01",
+            "CAP-004.02",
+            "CAP-004.03",
+            "CAP-004.05"
+          ]
+        }
+      ],
+      "owner_team": "Risk Technology Team",
       "status": "planned",
-      "dependencies": ["SVC-050", "SVC-053", "SVC-054", "SVC-100", "SVC-101", "SVC-102", "SVC-103"],
       "api_style": "REST/OpenAPI",
-      "data_store": "PostgreSQL",
-      "sla": "99.95%"
+      "data_store": "PostgreSQL (model inventory, ICAAP records) + Data Platform (SVC-104) for batch calculations",
+      "sla": "99.95%",
+      "tier": "T2",
+      "pci_dss_scope": false,
+      "data_residency": "UK only (PRA confidential supervisory data)",
+      "notes": "IRB PD/LGD/EAD models, IFRS 9 ECL provisioning, FRTB Sensitivity-Based Approach, operational risk Basel Standardised, COREP calculation. PRA SS1/23 model risk governance. CRO SM&CR accountability. Buy candidate: SAS Risk Intelligence Suite / Moody's Analytics RiskFoundation."
     },
     {
       "id": "SVC-013",
-      "name": "Commercial Accounts Service",
+      "name": "Fraud Detection Service",
       "classification": "domain_specific",
-      "capability_mappings": ["CAP-002.01", "CAP-002.02"],
-      "owner_team": "Commercial Banking Engineering",
+      "capability_mappings": [
+        {
+          "capability_id": "CAP-004.04",
+          "capability_name": "Fraud Detection",
+          "sub_capabilities": [
+            "CAP-004.04"
+          ]
+        }
+      ],
+      "owner_team": "Financial Crime Technology Team",
       "status": "planned",
-      "dependencies": ["SVC-050", "SVC-010", "SVC-053", "SVC-054", "SVC-100", "SVC-101", "SVC-102", "SVC-103"],
-      "api_style": "REST/OpenAPI",
-      "data_store": "PostgreSQL",
-      "sla": "99.95%"
+      "api_style": "gRPC (real-time scoring path) + REST/OpenAPI (alert management and reporting)",
+      "data_store": "Feature store (SVC-104 Data Platform) + PostgreSQL (fraud case management)",
+      "sla": "99.99%",
+      "tier": "T1",
+      "pci_dss_scope": false,
+      "data_residency": "UK only",
+      "notes": "Sub-100ms real-time fraud scoring via gRPC. Hard blocking dependency for SVC-009 (FPS/CHAPS), SVC-011 (card auth), SVC-008 (CNP). APP fraud PSR reimbursement case management. Cifas FNIF reporting. Strong buy: Featurespace ARIC / Quantexa / NetGuardians."
     },
     {
       "id": "SVC-014",
-      "name": "Domestic Payments Service",
+      "name": "KYC/AML Service",
       "classification": "domain_specific",
-      "capability_mappings": ["CAP-003.01", "CAP-003.02", "CAP-003.03"],
-      "owner_team": "Payments Engineering",
+      "capability_mappings": [
+        {
+          "capability_id": "CAP-005.01",
+          "capability_name": "KYC/AML",
+          "sub_capabilities": [
+            "CAP-005.01"
+          ]
+        }
+      ],
+      "owner_team": "Financial Crime Compliance Team",
       "status": "planned",
-      "dependencies": ["SVC-009", "SVC-051", "SVC-012", "SVC-013", "SVC-100", "SVC-101", "SVC-102", "SVC-103"],
       "api_style": "REST/OpenAPI",
-      "data_store": "PostgreSQL",
-      "sla": "99.99%"
+      "data_store": "PostgreSQL (CDD records, client risk scores) + S3 (identity documents via SVC-054)",
+      "sla": "99.9%",
+      "tier": "T1",
+      "pci_dss_scope": false,
+      "data_residency": "UK only (MLRO accountability records, POCA-protected SAR data)",
+      "notes": "MLRO personal accountability (POCA 2002, SMCR SMF17). Perpetual KYC \u2014 event-triggered refresh. AML transaction monitoring (Napier AI). NCA UKFIU SAR submissions. ComplyAdvantage/Refinitiv for PEP/adverse media data. Onfido/Encompass for identity and corporate KYC."
     },
     {
       "id": "SVC-015",
-      "name": "Risk Engine Service",
+      "name": "Compliance Core Service",
       "classification": "domain_specific",
-      "capability_mappings": ["CAP-004.01", "CAP-004.02", "CAP-004.03", "CAP-004.05"],
-      "owner_team": "Risk Engineering",
+      "capability_mappings": [
+        {
+          "capability_id": "CAP-005",
+          "capability_name": "Compliance & Regulatory",
+          "sub_capabilities": [
+            "CAP-005.02",
+            "CAP-005.03",
+            "CAP-005.04",
+            "CAP-005.05"
+          ]
+        }
+      ],
+      "owner_team": "Compliance Technology Team",
       "status": "planned",
-      "dependencies": ["SVC-100", "SVC-101", "SVC-102", "SVC-103", "SVC-104"],
       "api_style": "REST/OpenAPI",
-      "data_store": "TimescaleDB",
-      "sla": "99.95%"
+      "data_store": "PostgreSQL (regulatory return metadata, ROPA, DPIA records) + Data Platform (SVC-104) for aggregated regulatory data",
+      "sla": "99.5%",
+      "tier": "T3",
+      "pci_dss_scope": false,
+      "data_residency": "UK only (PRA/FCA confidential supervisory data)",
+      "notes": "COREP, FINREP, PRA 110, FCA regulatory returns. Consumer Duty outcomes monitoring. SM&CR accountability map. UK GDPR ROPA, DPIA, SAR handling. Communications surveillance (Behavox). Buy candidates: AxiomSL for reporting; OneTrust for GDPR."
     },
     {
       "id": "SVC-016",
-      "name": "Compliance Service",
+      "name": "Wealth Platform Service",
       "classification": "domain_specific",
-      "capability_mappings": ["CAP-005.02", "CAP-005.03", "CAP-005.04", "CAP-005.05"],
-      "owner_team": "Compliance Engineering",
+      "capability_mappings": [
+        {
+          "capability_id": "CAP-006",
+          "capability_name": "Wealth Management",
+          "sub_capabilities": [
+            "CAP-006.01",
+            "CAP-006.02",
+            "CAP-006.03",
+            "CAP-006.04"
+          ]
+        }
+      ],
+      "owner_team": "Wealth Management Technology Team",
       "status": "planned",
-      "dependencies": ["SVC-010", "SVC-051", "SVC-054", "SVC-055", "SVC-100", "SVC-101", "SVC-102", "SVC-103", "SVC-104"],
       "api_style": "REST/OpenAPI",
-      "data_store": "PostgreSQL + Elasticsearch",
-      "sla": "99.95%"
+      "data_store": "PostgreSQL (portfolio records, suitability assessments) + FNZ custody platform (via integration)",
+      "sla": "99.5%",
+      "tier": "T3",
+      "pci_dss_scope": false,
+      "data_residency": "UK only (MiFID II suitability records)",
+      "notes": "Integrated banking-and-wealth proposition. MiFID II suitability (COBS 9A). SDR ESG labels (PS23/16). MiFID II transaction reporting. EMIR derivatives reporting. Buy candidates: FNZ/SEI for platform custody; Wealth Dynamix CRM; BlackRock Aladdin Wealth for portfolio analytics; Voyant for financial planning."
     },
     {
       "id": "SVC-017",
-      "name": "Wealth Platform Service",
-      "classification": "domain_specific",
-      "capability_mappings": ["CAP-006"],
-      "owner_team": "Wealth Engineering",
+      "name": "Digital Channels Service",
+      "classification": "channel",
+      "capability_mappings": [],
+      "owner_team": "Digital Product Engineering Team",
       "status": "planned",
-      "dependencies": ["SVC-050", "SVC-052", "SVC-054", "SVC-055", "SVC-015", "SVC-100", "SVC-101", "SVC-102", "SVC-103", "SVC-104"],
       "api_style": "REST/OpenAPI",
-      "data_store": "PostgreSQL",
-      "sla": "99.95%"
+      "data_store": "PostgreSQL (consent records, TPP onboarding) + Redis (session cache)",
+      "sla": "99.95%",
+      "tier": "T3",
+      "pci_dss_scope": false,
+      "data_residency": "UK only (customer interaction data, consent records)",
+      "notes": "OBIE Open Banking API programme (CMA Order obligations). AISP/PISP/VRP/cVRP. TPP consent lifecycle. Customer communications orchestration. WCAG 2.1 AA. Hard dependency on SVC-100 (customer SCA) and SVC-013 (APP fraud warnings in payment journey). Buy candidates: TrueLayer for Open Banking connectivity; Twilio/MessageBird for delivery infrastructure; Bud for transaction categorisation."
     },
     {
       "id": "SVC-050",
       "name": "Customer Onboarding Service",
       "classification": "cross_cutting",
-      "capability_mappings": ["CAP-001", "CAP-002"],
-      "owner_team": "Digital Platform Engineering",
+      "capability_mappings": [
+        {
+          "capability_id": "CAP-005.01",
+          "capability_name": "KYC/AML (shared sub-capability SSC-001)",
+          "sub_capabilities": []
+        }
+      ],
+      "owner_team": "Financial Crime Compliance Team",
       "status": "planned",
-      "dependencies": ["SVC-010", "SVC-051", "SVC-054", "SVC-055", "SVC-053", "SVC-100", "SVC-101", "SVC-102", "SVC-103"],
       "api_style": "REST/OpenAPI",
-      "data_store": "PostgreSQL",
-      "sla": "99.95%"
+      "data_store": "PostgreSQL (onboarding workflow state, KYC clearance records)",
+      "sla": "99.95%",
+      "tier": "T1",
+      "pci_dss_scope": false,
+      "data_residency": "UK only (MLRO accountability records, POCA-protected SAR data)",
+      "notes": "Resolves SSC-001. Dual-mode API: synchronous short-path (retail, sub-1s) and asynchronous long-path (corporate EDD, multi-day). Publishes KYCClearanceGranted event. Single MLRO-owned KYC policy for all customer segments. Consumed by SVC-001, SVC-005, SVC-016."
     },
     {
       "id": "SVC-051",
       "name": "Sanctions Screening Service",
       "classification": "cross_cutting",
-      "capability_mappings": ["CAP-005", "CAP-003"],
-      "owner_team": "Compliance Engineering",
+      "capability_mappings": [
+        {
+          "capability_id": "CAP-005.05",
+          "capability_name": "Sanctions Screening (shared sub-capability SSC-002)",
+          "sub_capabilities": []
+        }
+      ],
+      "owner_team": "Financial Crime Compliance Team",
       "status": "planned",
-      "dependencies": ["SVC-054", "SVC-100", "SVC-101", "SVC-102", "SVC-103"],
-      "api_style": "gRPC",
-      "data_store": "Redis",
-      "sla": "99.95%"
+      "api_style": "gRPC (real-time synchronous screening) + REST/OpenAPI (batch rescreening management)",
+      "data_store": "In-memory screening engine (sub-200ms) + PostgreSQL (screening decision audit log)",
+      "sla": "99.99%",
+      "tier": "T1",
+      "pci_dss_scope": false,
+      "data_residency": "UK only (OFSI-protected sanctions intelligence data)",
+      "notes": "Resolves SSC-002. Hard blocking for SVC-009, SVC-010, SVC-006, SVC-050. No graceful degradation permitted (OFSI liability per Starling \u00a329m enforcement, Oct 2024). Active-active multi-region deployment required. OFSI, OFAC, EU, UN lists. ComplyAdvantage/Refinitiv data providers."
     },
     {
       "id": "SVC-052",
       "name": "Credit Decision Service",
       "classification": "cross_cutting",
-      "capability_mappings": ["CAP-004", "CAP-001", "CAP-002"],
-      "owner_team": "Risk Engineering",
+      "capability_mappings": [
+        {
+          "capability_id": "CAP-004.01",
+          "capability_name": "Credit Risk (shared sub-capability SSC-003)",
+          "sub_capabilities": []
+        }
+      ],
+      "owner_team": "Risk Technology Team",
       "status": "planned",
-      "dependencies": ["SVC-015", "SVC-100", "SVC-101", "SVC-102", "SVC-103", "SVC-104"],
       "api_style": "REST/OpenAPI",
-      "data_store": "PostgreSQL",
-      "sla": "99.95%"
+      "data_store": "PostgreSQL (credit decision log, model version registry) + Data Platform (SVC-104) for bureau data inputs",
+      "sla": "99.95%",
+      "tier": "T2",
+      "pci_dss_scope": false,
+      "data_residency": "UK only (PRA IRB model data, credit bureau RBUA)",
+      "notes": "Resolves SSC-003. Versioned credit model API \u2014 PRA IRB model changes require notification/approval. CRO SM&CR accountability for all model outputs. Dual-mode: synchronous real-time (retail, sub-second) and asynchronous batch (SME > \u00a3250k). Consumer Duty GDPR Article 22 automated decision records. Buy candidate: Experian PowerCurve."
     },
     {
       "id": "SVC-053",
       "name": "Notification Service",
-      "classification": "cross_cutting",
-      "capability_mappings": ["CAP-001", "CAP-002", "CAP-003", "CAP-004", "CAP-005", "CAP-006", "CAP-007"],
-      "owner_team": "Digital Platform Engineering",
+      "classification": "foundation",
+      "capability_mappings": [],
+      "owner_team": "Digital Product Engineering Team",
       "status": "planned",
-      "dependencies": ["SVC-100", "SVC-101", "SVC-102", "SVC-103"],
       "api_style": "REST/OpenAPI",
-      "data_store": "PostgreSQL",
-      "sla": "99.95%"
+      "data_store": "PostgreSQL (communication preferences, consent state, delivery audit log)",
+      "sla": "99.9%",
+      "tier": "T3",
+      "pci_dss_scope": false,
+      "data_residency": "UK only (UK GDPR consent and preference records)",
+      "notes": "Resolves SSC-005. Event-driven: subscribes to domain events across all capabilities. GDPR/PECR consent enforcement (marketing opt-out vs regulated communications). Regulated communications (MCOB, CONC, fraud alerts) delivered regardless of marketing consent. Buy: Twilio/MessageBird for delivery layer. Bank owns orchestration and consent logic."
     },
     {
       "id": "SVC-054",
       "name": "Document Management Service",
       "classification": "cross_cutting",
-      "capability_mappings": ["CAP-001", "CAP-002", "CAP-003", "CAP-004", "CAP-005", "CAP-006", "CAP-007"],
-      "owner_team": "Platform Engineering",
+      "capability_mappings": [
+        {
+          "capability_id": "CAP-002.03",
+          "capability_name": "Trade Finance (document management aspect \u2014 SSC-004)",
+          "sub_capabilities": []
+        }
+      ],
+      "owner_team": "Platform Engineering Team",
       "status": "planned",
-      "dependencies": ["SVC-100", "SVC-101", "SVC-103"],
       "api_style": "REST/OpenAPI",
-      "data_store": "MongoDB",
-      "sla": "99.95%"
+      "data_store": "AWS S3 with Intelligent Tiering (object storage) + PostgreSQL (document metadata, classification, retention policy)",
+      "sla": "99.9%",
+      "tier": "T3",
+      "pci_dss_scope": false,
+      "data_residency": "UK only (regulated financial documents and personal data)",
+      "notes": "Resolves SSC-004. ETDA 2023 electronic trade document storage. Regulatory retention periods enforced by document type (MLR 2017: 5 years; PRA financial records: 7 years). UK GDPR right-to-erasure conflict resolution policy. Consumed by SVC-050, SVC-002, SVC-006, SVC-014. Buy candidate: AWS S3 + Macie."
     },
     {
       "id": "SVC-055",
       "name": "Workflow Engine",
       "classification": "cross_cutting",
-      "capability_mappings": ["CAP-001.04", "CAP-002.03", "CAP-005.01"],
-      "owner_team": "Platform Engineering",
+      "capability_mappings": [
+        {
+          "capability_id": "CAP-005.01",
+          "capability_name": "KYC/AML (onboarding workflow \u2014 SSC-001)",
+          "sub_capabilities": []
+        }
+      ],
+      "owner_team": "Platform Engineering Team",
       "status": "planned",
-      "dependencies": ["SVC-100", "SVC-101", "SVC-102", "SVC-103"],
       "api_style": "REST/OpenAPI",
-      "data_store": "PostgreSQL",
-      "sla": "99.95%"
+      "data_store": "PostgreSQL (durable workflow state, task queue)",
+      "sla": "99.9%",
+      "tier": "T3",
+      "pci_dss_scope": false,
+      "data_residency": "UK only",
+      "notes": "Resolves SSC-006. Durable workflow execution for: corporate EDD (multi-day), mortgage origination (AIP \u2192 legal completion), trade finance (LC issuance \u2192 document examination), commercial credit committee. Maker-checker and approval chains for SM&CR accountability. Buy candidate: Temporal / Camunda."
     },
     {
       "id": "SVC-100",
       "name": "Identity & Access Management",
       "classification": "foundation",
-      "capability_mappings": [],
-      "owner_team": "Security Engineering",
+      "capability_mappings": [
+        {
+          "capability_id": "PLATFORM",
+          "capability_name": "Platform Infrastructure",
+          "sub_capabilities": []
+        }
+      ],
+      "owner_team": "Platform Security Team",
       "status": "planned",
-      "dependencies": ["SVC-103"],
-      "api_style": "REST/OpenAPI",
-      "data_store": "PostgreSQL",
-      "sla": "99.999%"
+      "api_style": "REST/OpenAPI (OIDC/OAuth 2.0 standard endpoints)",
+      "data_store": "Managed IAM datastore (ForgeRock Identity Cloud / Okta Auth0 SaaS) \u2014 UK-hosted",
+      "sla": "99.999%",
+      "tier": "T0",
+      "pci_dss_scope": false,
+      "data_residency": "UK only (customer credential data, employee identity records)",
+      "notes": "SCA-compliant authentication (PSD2 RTS). TPP certificate validation for Open Banking FAPI. RBAC/ABAC for SM&CR role assignments. SSO across internal applications (SAML 2.0 / OIDC). DIATF relying party for UK digital identity. Buy candidate: ForgeRock Identity Platform (preferred) / Okta Auth0. Must be active-active multi-zone \u2014 no single point of failure."
     },
     {
       "id": "SVC-101",
       "name": "API Gateway",
       "classification": "foundation",
-      "capability_mappings": [],
-      "owner_team": "Platform Engineering",
+      "capability_mappings": [
+        {
+          "capability_id": "PLATFORM",
+          "capability_name": "Platform Infrastructure",
+          "sub_capabilities": []
+        }
+      ],
+      "owner_team": "Platform Engineering Team",
       "status": "planned",
-      "dependencies": ["SVC-100", "SVC-103"],
-      "api_style": "REST/OpenAPI",
-      "data_store": "Redis",
-      "sla": "99.999%"
+      "api_style": "REST/OpenAPI (management API) \u2014 proxies all API styles",
+      "data_store": "Managed API Gateway datastore (Apigee / AWS API Gateway managed service) + Redis (rate limit counters)",
+      "sla": "99.999%",
+      "tier": "T0",
+      "pci_dss_scope": false,
+      "data_residency": "UK \u2014 API call metadata and analytics",
+      "notes": "External and internal API management. Rate limiting, TLS termination, FAPI compliance for Open Banking. CMA Open Banking performance reporting. Developer portal for TPPs. Buy candidate: Google Apigee (preferred) / AWS API Gateway / Kong."
     },
     {
       "id": "SVC-102",
       "name": "Event Bus",
       "classification": "foundation",
-      "capability_mappings": [],
-      "owner_team": "Platform Engineering",
+      "capability_mappings": [
+        {
+          "capability_id": "PLATFORM",
+          "capability_name": "Platform Infrastructure",
+          "sub_capabilities": []
+        }
+      ],
+      "owner_team": "Platform Engineering Team",
       "status": "planned",
-      "dependencies": ["SVC-100", "SVC-103"],
-      "api_style": "AMQP",
-      "data_store": "Kafka",
-      "sla": "99.999%"
+      "api_style": "Kafka Protocol (pub-sub) \u2014 schema registry over REST/OpenAPI",
+      "data_store": "Confluent Cloud / AWS MSK (managed Kafka) \u2014 UK-hosted. Schema Registry for event contract governance.",
+      "sla": "99.999%",
+      "tier": "T0",
+      "pci_dss_scope": false,
+      "data_residency": "UK only (financial events may contain PII)",
+      "notes": "Primary async integration mechanism between domain services. Schema versioning mandatory: backward-compatible for minimum 2 versions (SDD-008). Financial event replay capability for PRA supervisory investigation. Buy candidate: Confluent Cloud managed Kafka (preferred) / AWS MSK."
     },
     {
       "id": "SVC-103",
-      "name": "Audit & Logging Service",
+      "name": "Audit & Logging",
       "classification": "foundation",
-      "capability_mappings": [],
-      "owner_team": "Security Engineering",
+      "capability_mappings": [
+        {
+          "capability_id": "PLATFORM",
+          "capability_name": "Platform Infrastructure",
+          "sub_capabilities": []
+        }
+      ],
+      "owner_team": "Platform Security Team",
       "status": "planned",
-      "dependencies": ["SVC-105"],
-      "api_style": "REST/OpenAPI",
-      "data_store": "Elasticsearch",
-      "sla": "99.999%"
+      "api_style": "REST/OpenAPI (SIEM query API and audit export API)",
+      "data_store": "Splunk Enterprise Security / Microsoft Sentinel (SIEM) + cryptographically sealed log store. PCI DSS requires 12-month online, 12-month offline retention.",
+      "sla": "99.999%",
+      "tier": "T0",
+      "pci_dss_scope": true,
+      "data_residency": "UK only (audit logs contain PII, financial data, MLRO-protected SAR metadata)",
+      "notes": "Immutable append-only audit log. SIEM with real-time correlation and alerting. MLR 2017: 5-year AML record minimum. PRA: 7-year financial records. SM&CR conduct evidence. PCI DSS cardholder data access logs. UK GDPR ROPA inputs. Buy candidate: Splunk Enterprise Security (preferred)."
     },
     {
       "id": "SVC-104",
       "name": "Data Platform",
       "classification": "foundation",
-      "capability_mappings": [],
-      "owner_team": "Platform Engineering",
+      "capability_mappings": [
+        {
+          "capability_id": "PLATFORM",
+          "capability_name": "Platform Infrastructure",
+          "sub_capabilities": []
+        }
+      ],
+      "owner_team": "Data Engineering Team",
       "status": "planned",
-      "dependencies": ["SVC-100", "SVC-103", "SVC-105"],
-      "api_style": "REST/OpenAPI",
-      "data_store": "TimescaleDB",
-      "sla": "99.999%"
+      "api_style": "REST/OpenAPI (data services API) + Spark/SQL (internal analytics)",
+      "data_store": "Databricks Lakehouse (Delta Lake) / Snowflake \u2014 UK-hosted. Feature store for ML models.",
+      "sla": "99.95%",
+      "tier": "T2",
+      "pci_dss_scope": true,
+      "data_residency": "UK only (consolidated customer and financial data)",
+      "notes": "Enterprise data lake and warehouse. Feature store for SVC-013 (fraud ML), SVC-052 (credit ML), SVC-014 (AML ML). Only system permitted to query across domain service data for analytics (SDD-009). COREP/FINREP regulatory return data derivation. Consumer Duty outcomes analytics. Buy candidate: Databricks Lakehouse Platform (preferred)."
     },
     {
       "id": "SVC-105",
       "name": "Secrets Management",
       "classification": "foundation",
-      "capability_mappings": [],
-      "owner_team": "Security Engineering",
+      "capability_mappings": [
+        {
+          "capability_id": "PLATFORM",
+          "capability_name": "Platform Infrastructure",
+          "sub_capabilities": []
+        }
+      ],
+      "owner_team": "Platform Security Team",
       "status": "planned",
-      "dependencies": ["SVC-103"],
-      "api_style": "REST/OpenAPI",
-      "data_store": "MongoDB",
-      "sla": "99.999%"
+      "api_style": "REST/OpenAPI (Vault API)",
+      "data_store": "HashiCorp Vault Enterprise / AWS Secrets Manager + CloudHSM (UK-hosted hardware HSM)",
+      "sla": "99.999%",
+      "tier": "T0",
+      "pci_dss_scope": true,
+      "data_residency": "UK only (cryptographic key material must not leave UK jurisdiction)",
+      "notes": "HSM-backed key storage. Automatic secrets rotation. Dynamic short-lived credentials (no long-lived database passwords). PCI DSS key management requirements. GDPR encryption key lifecycle. Buy candidate: HashiCorp Vault Enterprise (preferred, cloud-agnostic) / AWS Secrets Manager + KMS."
     },
     {
       "id": "SVC-106",
       "name": "Service Mesh",
       "classification": "foundation",
-      "capability_mappings": [],
-      "owner_team": "Platform Engineering",
+      "capability_mappings": [
+        {
+          "capability_id": "PLATFORM",
+          "capability_name": "Platform Infrastructure",
+          "sub_capabilities": []
+        }
+      ],
+      "owner_team": "Platform Engineering Team",
       "status": "planned",
-      "dependencies": ["SVC-100", "SVC-103", "SVC-105"],
-      "api_style": "REST/OpenAPI",
-      "data_store": "Elasticsearch",
-      "sla": "99.999%"
+      "api_style": "gRPC (Envoy xDS control plane) \u2014 transparent to application services",
+      "data_store": "Etcd (Istio control plane state) \u2014 ephemeral; no persistent business data",
+      "sla": "99.999%",
+      "tier": "T0",
+      "pci_dss_scope": false,
+      "data_residency": "N/A \u2014 infrastructure layer, no application data stored",
+      "notes": "mTLS for all service-to-service calls. Deny-all baseline with explicit allow-list (SDD-010). SPIFFE/SPIRE service identity. PCI DSS network segmentation evidence. FCA operational resilience service dependency mapping. Buy candidate: Istio (preferred, CNCF graduated) / Linkerd."
+    },
+    {
+      "id": "SVC-107",
+      "name": "OTel Collector",
+      "classification": "observability",
+      "capability_mappings": [
+        {
+          "capability_id": "PLATFORM",
+          "capability_name": "Platform Observability",
+          "sub_capabilities": []
+        }
+      ],
+      "owner_team": "Platform Engineering Team",
+      "status": "planned",
+      "api_style": "OTLP gRPC (OpenTelemetry protocol \u2014 not an external API)",
+      "data_store": "Stateless \u2014 routes telemetry to SVC-108, SVC-109, SVC-110, SVC-111",
+      "sla": "99.999%",
+      "tier": "T0",
+      "pci_dss_scope": false,
+      "data_residency": "UK only \u2014 telemetry data may contain PII in log fields",
+      "notes": "OpenTelemetry Collector gateway/sidecar pattern. Receives traces, metrics, and logs from all containerised services via OTLP. Processes (sampling, filtering, PII scrubbing) and routes to observability stores. Deployed alongside T0 platform services \u2014 observability from Day 1 per ADD-005. Open source (CNCF graduated)."
+    },
+    {
+      "id": "SVC-108",
+      "name": "Log Store",
+      "classification": "observability",
+      "capability_mappings": [
+        {
+          "capability_id": "PLATFORM",
+          "capability_name": "Platform Observability",
+          "sub_capabilities": []
+        }
+      ],
+      "owner_team": "Platform Engineering Team",
+      "status": "planned",
+      "api_style": "REST/OpenAPI (Elasticsearch/OpenSearch query API)",
+      "data_store": "Elasticsearch / OpenSearch \u2014 UK-hosted, 90-day hot tier + cold tier archive",
+      "sla": "99.95%",
+      "tier": "T1",
+      "pci_dss_scope": false,
+      "data_residency": "UK only",
+      "notes": "Centralised structured log storage. Receives log streams from SVC-107. Query interface for incident investigation. Feeds SVC-112 (Observability Aggregator) for alerting. Separate from SVC-111 (WORM Audit Log Store) \u2014 general operational logs vs regulatory compliance records."
+    },
+    {
+      "id": "SVC-109",
+      "name": "Trace Store",
+      "classification": "observability",
+      "capability_mappings": [
+        {
+          "capability_id": "PLATFORM",
+          "capability_name": "Platform Observability",
+          "sub_capabilities": []
+        }
+      ],
+      "owner_team": "Platform Engineering Team",
+      "status": "planned",
+      "api_style": "REST/OpenAPI (Jaeger / Grafana Tempo query API)",
+      "data_store": "Jaeger (Cassandra backend) / Grafana Tempo (object storage) \u2014 UK-hosted, 30-day retention",
+      "sla": "99.95%",
+      "tier": "T1",
+      "pci_dss_scope": false,
+      "data_residency": "UK only",
+      "notes": "Distributed trace storage. Receives traces from SVC-107. Enables end-to-end latency analysis across service boundaries. Critical for FCA operational resilience important business service root-cause tracing and impact tolerance measurement. Feeds SVC-112 for SLA alerting."
+    },
+    {
+      "id": "SVC-110",
+      "name": "Metrics Store",
+      "classification": "observability",
+      "capability_mappings": [
+        {
+          "capability_id": "PLATFORM",
+          "capability_name": "Platform Observability",
+          "sub_capabilities": []
+        }
+      ],
+      "owner_team": "Platform Engineering Team",
+      "status": "planned",
+      "api_style": "PromQL (Prometheus query API) + REST/OpenAPI",
+      "data_store": "Prometheus / Thanos \u2014 UK-hosted. 15-day hot Prometheus retention + 13-month Thanos long-term store.",
+      "sla": "99.95%",
+      "tier": "T1",
+      "pci_dss_scope": false,
+      "data_residency": "UK only",
+      "notes": "Time-series metrics storage. Receives metrics from SVC-107. Feeds SVC-112 (Observability Aggregator) for SLA alerting and PRA operational resilience reporting. Prometheus is open source (CNCF graduated); Thanos adds long-term storage and high-availability."
+    },
+    {
+      "id": "SVC-111",
+      "name": "Audit Log Store (WORM)",
+      "classification": "observability",
+      "capability_mappings": [
+        {
+          "capability_id": "PLATFORM",
+          "capability_name": "Platform Observability",
+          "sub_capabilities": []
+        }
+      ],
+      "owner_team": "Platform Security Team",
+      "status": "planned",
+      "api_style": "REST/OpenAPI (read-only query API \u2014 write is append-only, no update/delete)",
+      "data_store": "Write-Once Read-Many immutable store \u2014 AWS S3 Object Lock / Azure Blob immutable storage, WORM-compliant. 7-year minimum retention.",
+      "sla": "99.999%",
+      "tier": "T1",
+      "pci_dss_scope": true,
+      "data_residency": "UK only (contains PII, financial data, MLRO SAR metadata)",
+      "notes": "Regulatory-grade tamper-evident audit records. Receives from SVC-103 (Audit & Logging) for all regulated events (payments, KYC decisions, credit decisions, sanctions screening results, SM&CR accountability events). Cryptographic sealing prevents tampering post-write. Separate from SVC-108 (operational logs) \u2014 WORM only for regulatory compliance records. PRA 7-year financial records minimum."
+    },
+    {
+      "id": "SVC-112",
+      "name": "Observability Aggregator",
+      "classification": "observability",
+      "capability_mappings": [
+        {
+          "capability_id": "PLATFORM",
+          "capability_name": "Platform Observability",
+          "sub_capabilities": []
+        }
+      ],
+      "owner_team": "Platform Engineering Team",
+      "status": "planned",
+      "api_style": "REST/OpenAPI (Grafana / Kibana dashboard API)",
+      "data_store": "Grafana (stateless \u2014 queries SVC-108, SVC-109, SVC-110) + PostgreSQL (alert configuration)",
+      "sla": "99.95%",
+      "tier": "T2",
+      "pci_dss_scope": false,
+      "data_residency": "UK only",
+      "notes": "Dashboards, alerting, and SLA monitoring aggregating from SVC-108/109/110. Single pane-of-glass for IT Operations (PER-060). Important business service impact tolerance dashboards for FCA PS21/3 compliance. Feeds PRA operational resilience self-assessment data. CMA Open Banking API performance dashboard. Buy candidate: Grafana Enterprise."
+    },
+    {
+      "id": "SVC-113",
+      "name": "Zero-Trust Policy Engine",
+      "classification": "security",
+      "capability_mappings": [
+        {
+          "capability_id": "PLATFORM",
+          "capability_name": "Platform Security",
+          "sub_capabilities": []
+        }
+      ],
+      "owner_team": "Platform Security Team",
+      "status": "planned",
+      "api_style": "REST/OpenAPI (OPA policy evaluation API) + gRPC (high-throughput policy checks)",
+      "data_store": "OPA / Styra DAS \u2014 in-memory policy evaluation with PostgreSQL for policy version history",
+      "sla": "99.95%",
+      "tier": "T3",
+      "pci_dss_scope": false,
+      "data_residency": "UK only",
+      "notes": "Centralised policy decision point (PDP) implementing zero-trust authorisation across all services. Evaluates policy-as-code referencing IAM attributes (SVC-100), service mesh identity (SVC-106), risk signals from SVC-013, and SM&CR function attributes. Enables declarative governance for privileged access, PCI DSS CDE access decisions, and MLRO-gated data access. OPA (Open Policy Agent) is CNCF graduated. Styra DAS for policy lifecycle management."
     }
-  ]
+  ],
+  "summary": {
+    "total_services": 37,
+    "by_classification": {
+      "domain_specific": 17,
+      "cross_cutting": 6,
+      "foundation": 7,
+      "observability": 6,
+      "security": 1
+    },
+    "by_tier": {
+      "T0": 8,
+      "T1": 6,
+      "T2": 7,
+      "T3": 13,
+      "T4": 1,
+      "note": "Original brief specified 30 services (17 domain + 6 cross-cutting + 7 foundation) plus 7 new observability/security services = 37 total. Tiers assigned per service-dependencies.json."
+    },
+    "by_sla": {
+      "99.999_percent": [
+        "SVC-100",
+        "SVC-101",
+        "SVC-102",
+        "SVC-103",
+        "SVC-105",
+        "SVC-106",
+        "SVC-107",
+        "SVC-111"
+      ],
+      "99.99_percent": [
+        "SVC-003",
+        "SVC-008",
+        "SVC-009",
+        "SVC-011",
+        "SVC-013",
+        "SVC-051"
+      ],
+      "99.95_percent": [
+        "SVC-001",
+        "SVC-002",
+        "SVC-005",
+        "SVC-012",
+        "SVC-017",
+        "SVC-050",
+        "SVC-052",
+        "SVC-104",
+        "SVC-108",
+        "SVC-109",
+        "SVC-110",
+        "SVC-112"
+      ],
+      "99.9_percent": [
+        "SVC-007",
+        "SVC-010",
+        "SVC-014",
+        "SVC-053",
+        "SVC-054",
+        "SVC-055"
+      ],
+      "99.5_percent": [
+        "SVC-004",
+        "SVC-006",
+        "SVC-015",
+        "SVC-016"
+      ],
+      "rationale": "99.99% for payments/cards (direct revenue and regulatory liability); 99.999% for foundation platform (all services depend on these); 99.95% for core banking and digital channels (FCA important business service); 99.9%+ for compliance-critical services"
+    },
+    "by_api_style": {
+      "rest_openapi_only": 25,
+      "grpc_primary_plus_rest": 6,
+      "kafka_protocol": 1,
+      "otlp_internal": 1,
+      "promql_plus_rest": 1,
+      "grpc_or_rest": 1,
+      "note": "gRPC used for sub-100ms real-time paths: fraud detection, sanctions screening, card authorisation, merchant authorisation, and card processing. All other services use REST/OpenAPI."
+    },
+    "pci_dss_scoped_services": [
+      "SVC-003",
+      "SVC-008",
+      "SVC-011",
+      "SVC-103",
+      "SVC-104",
+      "SVC-105",
+      "SVC-111"
+    ],
+    "services_with_uk_only_data_residency": "All 37 services \u2014 no cross-border data transfer for UK customer data",
+    "dependency_criticality_matrix": {
+      "highest_fan_in_services": [
+        {
+          "service_id": "SVC-051",
+          "name": "Sanctions Screening Service",
+          "inbound_hard_dependencies": 5,
+          "note": "SVC-009, SVC-010, SVC-006, SVC-050, SVC-005 all hard-block on sanctions"
+        },
+        {
+          "service_id": "SVC-013",
+          "name": "Fraud Detection Service",
+          "inbound_hard_dependencies": 5,
+          "note": "SVC-009, SVC-010, SVC-011, SVC-008, SVC-003 all hard-block on fraud scoring"
+        },
+        {
+          "service_id": "SVC-050",
+          "name": "Customer Onboarding Service",
+          "inbound_hard_dependencies": 4,
+          "note": "SVC-001, SVC-002, SVC-003, SVC-005, SVC-016 require KYC clearance"
+        },
+        {
+          "service_id": "SVC-102",
+          "name": "Event Bus",
+          "inbound_hard_dependencies": "all domain services",
+          "note": "Universal platform dependency"
+        },
+        {
+          "service_id": "SVC-100",
+          "name": "Identity & Access Management",
+          "inbound_hard_dependencies": "all services",
+          "note": "Universal platform dependency"
+        }
+      ],
+      "most_critical_hard_dependency_chains": [
+        "Payment execution: SVC-017/CH-001 \u2192 SVC-101 \u2192 SVC-009 \u2192 [SVC-051 gRPC, SVC-013 gRPC] \u2192 Vocalink/FPS",
+        "Card authorisation: Visa/CH-008 \u2192 SVC-011 \u2192 [SVC-013 gRPC sub-100ms] \u2192 approve/decline",
+        "Customer onboarding: Any channel \u2192 SVC-050 \u2192 SVC-051 \u2192 KYCClearanceGranted \u2192 SVC-001/SVC-005/SVC-016"
+      ]
+    }
+  }
 }

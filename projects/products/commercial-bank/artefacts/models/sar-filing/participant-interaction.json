@@ -1,0 +1,219 @@
+{
+  "journey_id": "JRN-003",
+  "name": "SAR Filing by MLRO — Participant Interaction Matrix",
+  "version": "1.0.0",
+  "status": "Draft",
+  "description": "Defines how each participant interacts with the SAR filing journey: what data they see, what actions they can perform, and what they are explicitly prohibited from seeing. The central control is the POCA 2002 s333A tipping-off prohibition — PER-001 (Customer) must receive zero information about SAR activities at any point.",
+  "tipping_off_enforcement_note": "POCA 2002 s333A makes it a criminal offence to disclose to a subject of a SAR, or to any person, that a SAR has been made or that a money laundering investigation is being or may be carried out. All participant interactions are designed with this prohibition as the primary constraint. Any system, notification, or communication that could constitute tipping-off must be reviewed and approved by the MLRO before deployment.",
+  "participants": [
+    {
+      "persona_id": "PER-052",
+      "persona_name": "MLRO (Money Laundering Reporting Officer)",
+      "persona_description": "The bank's nominated officer and SMF17 holder. Holds personal criminal liability under POCA 2002 s331 for failures in SAR reporting. Full access to all SAR investigation data, case management workflow, and submission controls.",
+      "role_in_journey": "Primary actor. Owns all phases of the SAR filing journey end-to-end.",
+      "access_level": "full",
+      "authentication_requirements": "Step-up MFA required for SAR workflow access — beyond standard employee authentication. Hardware token or biometric required. Separate role-gated application — not accessible from standard compliance desktop.",
+      "interactions_by_phase": [
+        {
+          "phase": "SAR-PH-001 (Suspicion Trigger)",
+          "actions": [
+            "Receives secure internal notification of new trigger (automated event or staff disclosure)",
+            "Reviews trigger details in SARInvestigationRecord",
+            "Confirms or modifies trigger classification",
+            "Assigns investigation to self or Deputy MLRO (PER-053)"
+          ],
+          "data_visible": [
+            "SARInvestigationRecord: all fields",
+            "Trigger event details: event type, source service, timestamp",
+            "Staff disclosure: submitting staff member identity, disclosure narrative"
+          ],
+          "data_masked": [],
+          "notifications_received": [
+            {
+              "channel": "secure_internal_case_management",
+              "trigger_event": "SARInvestigationOpened (EVT-014)",
+              "content": "New suspicious activity trigger: [trigger_type]. Investigation ID: [investigation_id]. Customer ref: [internal_ref]. Requires MLRO review."
+            }
+          ]
+        },
+        {
+          "phase": "SAR-PH-002 (MLRO Investigation)",
+          "actions": [
+            "Reads Customer record (ENT-001) — full identity data",
+            "Reads KycAssessment (ENT-003) — PEP/sanctions screening results, risk score, EDD history",
+            "Reads transaction history via SVC-001 read API",
+            "Reads prior SARs for this customer (if any)",
+            "Adds evidence items to SARInvestigationRecord",
+            "Records timeline entries documenting investigation steps",
+            "Requests additional information from operational staff (without disclosing SAR reason)",
+            "Reviews adverse media data"
+          ],
+          "data_visible": [
+            "Customer: all fields including vulnerability_indicators",
+            "KycAssessment: all fields including sanctions_screening_result and pep_screening_result",
+            "Transaction history: full account activity for relevant period",
+            "Prior SARs: all fields (MLRO only)",
+            "Staff disclosure: full narrative",
+            "Adverse media: full screening results"
+          ],
+          "data_masked": []
+        },
+        {
+          "phase": "SAR-PH-003 (SAR Decision)",
+          "actions": [
+            "Records formal decision (file_sar | file_defensive_sar | dismiss)",
+            "Documents decision rationale — must be specific and legally defensible",
+            "Confirms understanding of 5-business-day SLA",
+            "If dismiss: closes SARInvestigationRecord with documented rationale"
+          ],
+          "data_visible": ["SARInvestigationRecord: all fields and evidence"],
+          "data_created": ["SuspiciousActivityReport (ENT-008) — if filing decision"]
+        },
+        {
+          "phase": "SAR-PH-004 (SAR Preparation)",
+          "actions": [
+            "Completes NCA SAR form fields in SVC-014 case management",
+            "Reviews draft SAR for completeness and accuracy",
+            "Confirms tipping-off risk review (mandatory checkbox before submission is enabled)",
+            "Marks SAR as ready_for_submission"
+          ],
+          "data_visible": ["SuspiciousActivityReport: all fields", "SARInvestigationRecord: all evidence"],
+          "form_controls": [
+            "Grounds of suspicion — free text, minimum 100 characters enforced",
+            "Subject details — linked to Customer ENT-001 but anonymised in NCA form",
+            "Transaction details — date, amount, counterparty",
+            "Typology selector — NCA SAR typology codes",
+            "Consent request toggle — if SAR requires NCA consent for a transaction"
+          ]
+        },
+        {
+          "phase": "SAR-PH-005 (SAR Submission)",
+          "actions": [
+            "Triggers SAR submission to NCA SAR Online",
+            "Reviews NCA acknowledgement and reference number",
+            "Confirms SLA compliance (filed within 5 business days)"
+          ],
+          "data_visible": ["SuspiciousActivityReport: all fields including NCA reference on return"],
+          "notifications_received": [
+            {
+              "channel": "secure_internal_case_management",
+              "trigger": "NCA submission acknowledgement",
+              "content": "SAR [sar_id] successfully submitted. NCA reference: [nca_reference]. Filed at: [filed_date]. SLA status: [within_sla | breached]."
+            }
+          ]
+        },
+        {
+          "phase": "SAR-PH-006 (Post-Filing Actions)",
+          "actions": [
+            "Monitors NCA consent response via SAR Online (if consent SAR)",
+            "Determines whether account restrictions are required",
+            "Instructs SVC-001 to apply account restrictions via SARFiled event (if needed)",
+            "Closes SARInvestigationRecord on resolution",
+            "Records SAR outcome for annual MLRO report"
+          ],
+          "data_visible": ["SuspiciousActivityReport: all fields", "SARInvestigationRecord: all fields", "NCA consent status"],
+          "decisions_made": [
+            "Apply account restrictions: yes/no",
+            "Flag for enhanced ongoing monitoring: yes/no",
+            "Escalate to law enforcement contact: yes/no"
+          ]
+        }
+      ],
+      "prohibited_actions": [],
+      "audit_trail": "All MLRO actions in the SAR workflow are immutably logged to SVC-103 with MLRO identity, timestamp, and action detail. Audit log is classified as auditor_only and retained for 7 years WORM."
+    },
+    {
+      "persona_id": "PER-053",
+      "persona_name": "Deputy MLRO",
+      "persona_description": "Delegated authority from PER-052. May carry out investigation phases and SAR preparation under MLRO supervision. Cannot submit SARs without MLRO sign-off except where explicitly delegated in the MLRO's statement of responsibilities.",
+      "role_in_journey": "Delegated investigator. May perform SAR-PH-002 and SAR-PH-004 activities. All submissions must be confirmed by MLRO (PER-052).",
+      "access_level": "delegated_investigation",
+      "access_constraints": "Same step-up MFA requirement as MLRO. Access restricted to investigations explicitly assigned to PER-053 by PER-052.",
+      "prohibited_actions": [
+        "Cannot make the formal SAR decision (SAR-PH-003) without MLRO authorisation",
+        "Cannot submit SAR to NCA without MLRO sign-off",
+        "Cannot dismiss an investigation without MLRO sign-off"
+      ]
+    },
+    {
+      "persona_id": "PER-001",
+      "persona_name": "Customer",
+      "persona_description": "The individual who is the subject of the SAR investigation. Under POCA 2002 s333A this person must never be told that a SAR has been filed or is under consideration.",
+      "role_in_journey": "NONE — the customer has no role in this journey and must receive no information relating to it.",
+      "access_level": "none",
+      "tipping_off_prohibition": {
+        "applies": true,
+        "legislation": "POCA 2002 s333A",
+        "enforcement": "Strictly enforced. Criminal offence."
+      },
+      "interactions_by_phase": [
+        {
+          "phase": "ALL PHASES",
+          "actions": "NONE",
+          "data_visible": "NONE — zero access to any SAR-related data, records, events, or communications",
+          "notifications_received": "NONE — no notifications of any kind are sent to PER-001 at any stage of this journey",
+          "prohibited": [
+            "Customer must not receive any communication referencing a SAR, suspicious activity investigation, NCA, or POCA",
+            "Customer must not see any account status message that reveals a SAR is the cause of any account restriction — generic 'account under review' language only",
+            "Customer must not see SARFiled, SARInvestigationOpened, SARDecisionMade, SARConsentRequested, or SARConsentGranted events reflected in any customer-facing interface",
+            "Any customer-facing account restriction notice must use language pre-approved by the MLRO and Legal to avoid tipping-off risk"
+          ]
+        }
+      ],
+      "account_restriction_customer_view": {
+        "description": "If account restrictions are applied following SAR filing, the customer may notice that their account is restricted. The only permissible communication is a generic 'your account is temporarily under review' message — no reference to financial crime, SAR, NCA, or POCA.",
+        "approved_language": "Your account is currently subject to a review. We are unable to process this transaction at this time. Please contact us if you have any questions.",
+        "prohibited_language": [
+          "Any reference to money laundering, financial crime, suspicious activity",
+          "Any reference to NCA, POCA, Terrorism Act, or MLR",
+          "Any statement that a report has been made",
+          "Any statement that the bank suspects illegal activity"
+        ]
+      }
+    },
+    {
+      "persona_id": "PER-SVC-103",
+      "persona_name": "Audit & Logging Service (SVC-103)",
+      "persona_description": "System participant. Receives all SAR-related events for immutable WORM audit logging. No human access except through auditor-only access controls.",
+      "role_in_journey": "Passive auditor. Receives and stores all events immutably.",
+      "access_level": "write_only_worm",
+      "human_access": "Auditor-only access — requires dual-person integrity (two senior compliance officers) and is logged separately. No operational staff can access SAR audit records."
+    }
+  ],
+  "notification_matrix": {
+    "description": "Summary of all notifications in this journey — confirms customer receives nothing",
+    "notifications": [
+      {
+        "recipient": "PER-052 (MLRO)",
+        "trigger": "SARInvestigationOpened (EVT-014)",
+        "channel": "Secure internal case management system",
+        "content_summary": "New investigation trigger alert",
+        "customer_facing": false
+      },
+      {
+        "recipient": "PER-052 (MLRO)",
+        "trigger": "NCA submission acknowledgement",
+        "channel": "Secure internal case management system",
+        "content_summary": "SAR submission confirmation with NCA reference",
+        "customer_facing": false
+      },
+      {
+        "recipient": "PER-052 (MLRO)",
+        "trigger": "SLA warning — 4 business days elapsed since decision",
+        "channel": "Secure internal case management system — automated SLA alert",
+        "content_summary": "SAR SLA warning: 1 business day remaining to file",
+        "customer_facing": false
+      },
+      {
+        "recipient": "PER-001 (Customer)",
+        "trigger": "ANY",
+        "channel": "ANY",
+        "content_summary": "NO NOTIFICATION — tipping-off prohibition strictly applied. Zero communications to customer.",
+        "customer_facing": true,
+        "prohibited": true,
+        "legal_basis": "POCA 2002 s333A"
+      }
+    ]
+  },
+  "source_journeys": ["JRN-003"]
+}

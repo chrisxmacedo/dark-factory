@@ -1,0 +1,569 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Payment Operations API — CAP-003",
+    "description": "Published API contract for the Payment Operations capability (CAP-003). This is the capability-level API — it covers all Direct Debit operations introduced by JRN-012. It extends the existing Payment Operations API surface (Confirmation of Payee and FPS operations from JRN-002 are documented in the faster-payment-initiation model).\n\nThis file covers the BACS Direct Debit sub-capability (CAP-003.02): DDI management, collection enquiry, and indemnity claims.\n\n**Architecture rule:** API contracts are per-capability. The channel (SVC-017) and other consumers call this capability API. Internal service routing (SVC-009 as the implementing service) is invisible to consumers.\n\n**Persona interaction pattern:** PER-001 → Channel (SVC-017) → CAP-003 Payment Operations API. Never PER-001 → SVC-009 directly.\n\n**Cross-capability:** CAP-001 (Retail Banking) interactions are exclusively via async events on SVC-102 (Event Bus). This API has no synchronous dependencies on CAP-001.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Payment Operations Team",
+      "email": "payment-ops-api@bank.internal"
+    },
+    "x-capability-id": "CAP-003",
+    "x-capability-name": "Payment Operations",
+    "x-sub-capability": "CAP-003.02 BACS Processing",
+    "x-implementing-service": "SVC-009",
+    "x-journey-ids": ["JRN-012"],
+    "x-architecture-note": "API contracts are per-capability (CAP-003), not per-service (SVC-009). Internal service implementation details are not exposed in this contract."
+  },
+  "servers": [
+    {
+      "url": "https://api.bank.internal/payments/v1",
+      "description": "Internal API gateway — production. Route: CAP-003 Payment Operations. Not accessible from external networks."
+    },
+    {
+      "url": "https://api.sandbox.bank.internal/payments/v1",
+      "description": "Sandbox environment"
+    }
+  ],
+  "security": [
+    {
+      "BearerAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Direct Debit Instructions",
+      "description": "BACS Direct Debit Instruction (DDI) management — setup, enquiry, and cancellation via AUDDIS"
+    },
+    {
+      "name": "Direct Debit Collections",
+      "description": "BACS Direct Debit collection enquiry"
+    },
+    {
+      "name": "Indemnity Claims",
+      "description": "Direct Debit Guarantee indemnity claim filing"
+    }
+  ],
+  "paths": {
+    "/direct-debits": {
+      "post": {
+        "operationId": "createDirectDebitInstruction",
+        "summary": "Create a Direct Debit Instruction (customer-initiated)",
+        "description": "Creates a DirectDebitInstruction (ENT-034) and initiates AUDDIS 0N submission to BACS. For customer-initiated DDI setup via digital channel only. Originator-initiated DDIs arrive via BACS/AUDDIS directly — not through this API.\n\n**Pre-conditions:**\n- Customer session authenticated (OAuth 2.0 Bearer token with direct-debits:write scope)\n- SCA completed (FIDO2/WebAuthn or TOTP) — required for mandate authorisation\n- Account must be in status = active\n\n**Business rules:**\n- Originator SUN must be registered in BACS scheme directory\n- No duplicate active DDI for same originator_sun + reference combination on this account\n- Account must be eligible for Direct Debits (not a savings account or restricted account)\n\n**Publishes:** EVT-069 (DirectDebitInstructionCreated)\n\n**Returns:** 202 Accepted. DDI is in status = pending. Activation (status = active) occurs asynchronously after BACS AUDDIS confirmation.",
+        "tags": ["Direct Debit Instructions"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDirectDebitRequest"
+              },
+              "example": {
+                "account_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+                "originator_name": "BRITISH GAS",
+                "originator_sun": "123456",
+                "reference": "BGS-REF-001234567",
+                "amount_type": "variable",
+                "first_collection_date": "2026-05-15",
+                "sca_assertion_ref": "sca-9e8d7c6b-5a4f-3e2d-1c0b-a9f8e7d6c5b4"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "DDI accepted. AUDDIS 0N submission initiated. Poll GET /direct-debits/{ddi_id} for activation status, or await EVT-070 (DirectDebitInstructionValidated) notification.",
+            "headers": {
+              "Location": {
+                "description": "URL of the created DDI resource",
+                "schema": {
+                  "type": "string",
+                  "example": "/payments/v1/direct-debits/a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateDirectDebitResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error — invalid request body, originator SUN not recognised, or missing required fields",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/ErrorResponse"}
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict — an active DDI already exists for this originator SUN and reference on this account",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/ErrorResponse"},
+                "example": {
+                  "error_code": "DD_DUPLICATE_INSTRUCTION",
+                  "message": "An active Direct Debit instruction already exists for this originator and reference.",
+                  "existing_ddi_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Account not eligible for Direct Debits (e.g. account closed, frozen, or savings account)",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/ErrorResponse"}
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "listDirectDebitInstructions",
+        "summary": "List Direct Debit Instructions for an account",
+        "description": "Returns all DirectDebitInstruction records (ENT-034) for the authenticated customer's account. Supports filtering by status.",
+        "tags": ["Direct Debit Instructions"],
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "query",
+            "required": true,
+            "schema": {"type": "string", "format": "uuid"},
+            "description": "Account ID to list DDIs for. Must belong to the authenticated customer."
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["pending", "active", "cancelled", "suspended"]
+            },
+            "description": "Filter by DDI status. Defaults to active."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of Direct Debit Instructions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "direct_debits": {
+                      "type": "array",
+                      "items": {"$ref": "#/components/schemas/DirectDebitInstruction"}
+                    },
+                    "total": {"type": "integer"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/direct-debits/{ddi_id}": {
+      "get": {
+        "operationId": "getDirectDebitInstruction",
+        "summary": "Get a Direct Debit Instruction by ID",
+        "description": "Returns the DirectDebitInstruction (ENT-034) for the given ddi_id. The ddi_id must belong to an account owned by the authenticated customer.",
+        "tags": ["Direct Debit Instructions"],
+        "parameters": [
+          {
+            "name": "ddi_id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string", "format": "uuid"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Direct Debit Instruction details",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/DirectDebitInstruction"}
+              }
+            }
+          },
+          "404": {
+            "description": "DDI not found or does not belong to authenticated customer",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/ErrorResponse"}
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "cancelDirectDebitInstruction",
+        "summary": "Cancel a Direct Debit Instruction",
+        "description": "Cancels the DirectDebitInstruction (ENT-034). Updates status = cancelled and submits AUDDIS 0C (cancellation) to BACS. Any pending collections at D-2 status may still be processed by BACS — cancellation does not guarantee prevention of an in-flight collection.\n\n**SCA required** for cancellation via digital channel.\n\n**Publishes:** No specific cancellation event in the JRN-012 catalogue, but ENT-034.status update will be reflected in subsequent GET calls. BACS AUDDIS 0C submission is the authoritative cancellation signal.",
+        "tags": ["Direct Debit Instructions"],
+        "parameters": [
+          {
+            "name": "ddi_id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string", "format": "uuid"}
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "sca_assertion_ref": {
+                    "type": "string",
+                    "description": "SCA assertion reference for digital channel cancellations. Required for PER-001 self-service cancellation."
+                  },
+                  "cancellation_reason": {
+                    "type": "string",
+                    "maxLength": 250,
+                    "description": "Optional reason for cancellation."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Cancellation accepted. AUDDIS 0C submission initiated. DDI status will transition to cancelled after BACS confirmation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ddi_id": {"type": "string", "format": "uuid"},
+                    "status": {"type": "string", "enum": ["cancelled"]},
+                    "cancelled_at": {"type": "string", "format": "date-time"}
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "DDI not found",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorResponse"}}}
+          },
+          "422": {
+            "description": "DDI is already cancelled or in a terminal state",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorResponse"}}}
+          }
+        }
+      }
+    },
+    "/direct-debits/{ddi_id}/collections": {
+      "get": {
+        "operationId": "listDirectDebitCollections",
+        "summary": "List Direct Debit Collections for a DDI",
+        "description": "Returns all DirectDebitCollection records (ENT-035) for the given ddi_id, ordered by collection_date descending.",
+        "tags": ["Direct Debit Collections"],
+        "parameters": [
+          {
+            "name": "ddi_id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string", "format": "uuid"}
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["submitted", "collected", "returned", "indemnity_claimed"]
+            }
+          },
+          {
+            "name": "from_date",
+            "in": "query",
+            "required": false,
+            "schema": {"type": "string", "format": "date"},
+            "description": "Filter collections from this date (inclusive). ISO 8601 date."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of Direct Debit Collections",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "collections": {
+                      "type": "array",
+                      "items": {"$ref": "#/components/schemas/DirectDebitCollection"}
+                    },
+                    "total": {"type": "integer"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/direct-debits/{ddi_id}/indemnity-claim": {
+      "post": {
+        "operationId": "fileIndemnityClaimDirectDebit",
+        "summary": "File an indemnity claim under the Direct Debit Guarantee",
+        "description": "Files an indemnity claim under the Direct Debit Guarantee for a disputed collection. The bank is obligated to credit the claimed amount to the customer's account **immediately and unconditionally** — no evidence or justification required.\n\n**Regulatory obligation:** The Direct Debit Guarantee requires the bank to act immediately on a customer's indemnity claim. The account credit must be processed within 30 seconds of this call returning 202 Accepted (NFR-JRN012-CC-01).\n\n**Process:**\n1. This call creates the claim and publishes EVT-074 (DirectDebitIndemnityClaimFiled)\n2. SVC-001 (CAP-001) consumes EVT-074 and credits the account immediately\n3. SVC-009 initiates BACS indemnity recovery from the originator\n4. If mandate_cancel_requested = true, AUDDIS 0C is submitted to BACS\n\n**Publishes:** EVT-074 (DirectDebitIndemnityClaimFiled)",
+        "tags": ["Indemnity Claims"],
+        "parameters": [
+          {
+            "name": "ddi_id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string", "format": "uuid"},
+            "description": "DDI ID associated with the disputed collection"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IndemnityClaimRequest"
+              },
+              "example": {
+                "collection_id": "c1d2e3f4-a5b6-7890-cdef-012345678901",
+                "claimed_amount": 87.50,
+                "claim_reason": "Amount taken was incorrect — I did not authorise this amount",
+                "mandate_cancel_requested": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Indemnity claim accepted. EVT-074 published. Account credit initiated. The claimed_amount will appear in the account within 30 seconds.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IndemnityClaimResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request — collection_id not found under this DDI, or claimed_amount exceeds collected amount",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/ErrorResponse"}
+              }
+            }
+          },
+          "404": {
+            "description": "DDI or collection not found, or does not belong to authenticated customer",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/ErrorResponse"}
+              }
+            }
+          },
+          "409": {
+            "description": "An indemnity claim has already been filed for this collection_id",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/ErrorResponse"},
+                "example": {
+                  "error_code": "DD_INDEMNITY_ALREADY_FILED",
+                  "message": "An indemnity claim has already been filed for this collection.",
+                  "claim_id": "d1e2f3a4-b5c6-7890-def0-123456789012",
+                  "filed_at": "2026-04-15T10:30:00Z"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CreateDirectDebitRequest": {
+        "type": "object",
+        "required": ["account_id", "originator_name", "originator_sun", "reference", "amount_type", "sca_assertion_ref"],
+        "properties": {
+          "account_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Account to set up the DDI for. Must belong to the authenticated customer and be in status = active."
+          },
+          "originator_name": {
+            "type": "string",
+            "maxLength": 18,
+            "description": "Originator organisation name as registered in the BACS scheme. Max 18 characters (BACS field limit)."
+          },
+          "originator_sun": {
+            "type": "string",
+            "pattern": "^[0-9]{6}$",
+            "description": "BACS Service User Number (SUN) — 6-digit numeric string."
+          },
+          "reference": {
+            "type": "string",
+            "maxLength": 18,
+            "description": "Originator's customer reference. Max 18 characters."
+          },
+          "amount_type": {
+            "type": "string",
+            "enum": ["fixed", "variable"],
+            "description": "Fixed: same amount each collection. Variable: amount may differ per collection."
+          },
+          "fixed_amount": {
+            "type": "number",
+            "format": "decimal",
+            "minimum": 0.01,
+            "description": "Required when amount_type = fixed. Collection amount in GBP."
+          },
+          "first_collection_date": {
+            "type": "string",
+            "format": "date",
+            "description": "Expected date of first collection. ISO 8601 (YYYY-MM-DD). Optional — informational only."
+          },
+          "sca_assertion_ref": {
+            "type": "string",
+            "description": "SCA assertion reference from SVC-100 IAM. Required for digital channel DDI setup. Must be a valid, unused SCA assertion."
+          }
+        }
+      },
+      "CreateDirectDebitResponse": {
+        "type": "object",
+        "properties": {
+          "ddi_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "System-generated DDI identifier (ENT-034.ddi_id)"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pending"],
+            "description": "Initial status. Will transition to 'active' after BACS AUDDIS confirmation."
+          },
+          "originator_name": {"type": "string"},
+          "originator_sun": {"type": "string"},
+          "reference": {"type": "string"},
+          "amount_type": {"type": "string", "enum": ["fixed", "variable"]},
+          "created_at": {"type": "string", "format": "date-time"},
+          "poll_url": {
+            "type": "string",
+            "description": "URL to poll for DDI activation status.",
+            "example": "/payments/v1/direct-debits/a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+          }
+        }
+      },
+      "DirectDebitInstruction": {
+        "type": "object",
+        "description": "DirectDebitInstruction entity (ENT-034) response representation",
+        "properties": {
+          "ddi_id": {"type": "string", "format": "uuid"},
+          "account_id": {"type": "string", "format": "uuid"},
+          "originator_name": {"type": "string"},
+          "originator_sun": {"type": "string"},
+          "reference": {"type": "string"},
+          "amount_type": {"type": "string", "enum": ["fixed", "variable"]},
+          "fixed_amount": {"type": "number", "format": "decimal", "nullable": true},
+          "status": {"type": "string", "enum": ["pending", "active", "cancelled", "suspended"]},
+          "setup_date": {"type": "string", "format": "date"},
+          "first_collection_date": {"type": "string", "format": "date", "nullable": true},
+          "bacs_reference": {"type": "string", "nullable": true, "description": "Assigned after BACS AUDDIS confirmation (status = active)"},
+          "setup_channel": {"type": "string", "enum": ["digital", "paper", "auddis_originator"]},
+          "created_at": {"type": "string", "format": "date-time"},
+          "updated_at": {"type": "string", "format": "date-time"}
+        }
+      },
+      "DirectDebitCollection": {
+        "type": "object",
+        "description": "DirectDebitCollection entity (ENT-035) response representation",
+        "properties": {
+          "collection_id": {"type": "string", "format": "uuid"},
+          "ddi_id": {"type": "string", "format": "uuid"},
+          "amount": {"type": "number", "format": "decimal"},
+          "collection_date": {"type": "string", "format": "date"},
+          "submission_date": {"type": "string", "format": "date"},
+          "status": {"type": "string", "enum": ["submitted", "collected", "returned", "indemnity_claimed"]},
+          "return_reason": {"type": "string", "nullable": true, "description": "BACS ARUDD reason code. Present when status = returned."},
+          "bacs_transaction_reference": {"type": "string", "nullable": true},
+          "indemnity_claimed_at": {"type": "string", "format": "date-time", "nullable": true},
+          "created_at": {"type": "string", "format": "date-time"},
+          "updated_at": {"type": "string", "format": "date-time"}
+        }
+      },
+      "IndemnityClaimRequest": {
+        "type": "object",
+        "required": ["collection_id", "claimed_amount"],
+        "properties": {
+          "collection_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "DirectDebitCollection (ENT-035) identifier for the disputed collection."
+          },
+          "claimed_amount": {
+            "type": "number",
+            "format": "decimal",
+            "minimum": 0.01,
+            "description": "Amount to be refunded. Must be <= the original collected amount. GBP."
+          },
+          "claim_reason": {
+            "type": "string",
+            "maxLength": 250,
+            "description": "Customer-provided reason for the claim. Optional — no justification is required under the DD Guarantee."
+          },
+          "mandate_cancel_requested": {
+            "type": "boolean",
+            "default": false,
+            "description": "If true, the DDI will be cancelled (AUDDIS 0C submitted) as part of processing the claim."
+          }
+        }
+      },
+      "IndemnityClaimResponse": {
+        "type": "object",
+        "properties": {
+          "claim_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "System-generated indemnity claim identifier"
+          },
+          "collection_id": {"type": "string", "format": "uuid"},
+          "ddi_id": {"type": "string", "format": "uuid"},
+          "claimed_amount": {"type": "number", "format": "decimal"},
+          "credit_sla": {
+            "type": "string",
+            "description": "Regulatory commitment: account will be credited within 30 seconds.",
+            "example": "Your account will be credited within 30 seconds under the Direct Debit Guarantee."
+          },
+          "mandate_cancellation_status": {
+            "type": "string",
+            "enum": ["cancellation_initiated", "not_requested"],
+            "description": "Whether mandate cancellation was requested and initiated."
+          },
+          "filed_at": {"type": "string", "format": "date-time"}
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error_code": {"type": "string", "description": "Machine-readable error code"},
+          "message": {"type": "string", "description": "Human-readable error description"},
+          "request_id": {"type": "string", "description": "Request correlation ID for support tracing"}
+        }
+      }
+    },
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "OAuth 2.0 Bearer token. Scopes required: direct-debits:write (POST, DELETE), direct-debits:read (GET). Token must be a valid customer session token issued by SVC-100 (IAM)."
+      }
+    }
+  }
+}

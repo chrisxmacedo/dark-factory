@@ -1,131 +1,231 @@
 {
   "id": "CAP-006",
   "name": "Wealth Management",
-  "description": "Advisory and discretionary investment services, financial planning, and private banking for high-net-worth individuals",
+  "description": "Provision of investment advisory, discretionary portfolio management, private banking, and integrated financial planning services to high-net-worth and mass-affluent clients. The capability encompasses client onboarding, suitability assessment, asset allocation, portfolio construction, custody, reporting, and the ongoing client relationship that justifies a premium over commodity investment execution. It is a regulated activity under FCA COBS and an authorised investment service under MiFID II.",
+  "status": "Draft",
   "mandate_source": [
-    "FCA COBS",
-    "MiFID II",
-    "FCA PROD",
-    "Financial Services & Markets Act 2000"
+    "Financial Services and Markets Act 2000 (FSMA) — authorised activity",
+    "MiFID II / MiFIR (onshored as UK MiFID) — investment advice, portfolio management, and client classification",
+    "FCA Conduct of Business Sourcebook (COBS) — suitability, appropriateness, and inducements",
+    "FCA Consumer Duty (PS22/9, effective July 2023) — outcomes-based suitability and fair value",
+    "FCA Product Governance (PROD) — target market assessment and distribution strategy",
+    "FCA Advice Guidance Boundary Review (CP23/24) — proposed 'targeted support' regime",
+    "Senior Managers and Certification Regime (SM&CR) — accountable individuals for investment services",
+    "FCA Sustainability Disclosure Requirements (SDR) and investment labels (PS23/16)"
   ],
+  "market_context": {
+    "competitive_landscape": {
+      "table_stakes": [
+        "Discretionary and advisory portfolio management across equities, fixed income, and multi-asset",
+        "ISA, GIA, SIPP, and offshore bond wrappers",
+        "Suitability assessment and risk profiling at onboarding and periodic review",
+        "MiFID II ex-ante and ex-post costs and charges disclosure",
+        "Client reporting: valuation, performance, and transaction statements",
+        "Dedicated relationship manager for HNW clients (threshold typically £250k–£500k AUM)"
+      ],
+      "differentiators": [
+        "Integrated banking-and-wealth proposition (deposit, lending, mortgage, and investment on one balance sheet) — a structural advantage traditional wealth managers cannot replicate",
+        "Bespoke tax-efficient structuring: trusts, AIM portfolios for BPR, offshore bonds coordinated with personal tax",
+        "Intergenerational wealth transfer: estate planning, family governance, philanthropy coordination",
+        "Lending against portfolio (portfolio-secured credit) as part of the holistic relationship — not available to standalone investment managers",
+        "Proprietary alternatives access: private equity co-investment, structured products, direct lending funds",
+        "ESG portfolio integration with authentic stewardship credentials (voting policy, engagement reporting)"
+      ],
+      "disruptors": [
+        "Nutmeg (JP Morgan): largest UK robo-adviser with ~£5bn AUM; benchmark for digital onboarding, transparent pricing (0.45–0.75% all-in), and mobile-first UX — demonstrates that discretionary management can be delivered at sub-1% cost",
+        "Wealthify (Aviva): ISA and GIA from £1; normalised micro-investing and ethical portfolio options at mass-market scale",
+        "Moneyfarm: goals-based investing for mass-affluent; digital financial planning integrated with investment management",
+        "Hargreaves Lansdown: £150bn+ AUM D2C platform; Vantage ISA/SIPP; sets the benchmark for self-directed clients and is migrating upmarket with advisory services",
+        "AJ Bell and Interactive Investor: low-cost D2C platforms compressing fee expectations; ii's flat-fee model disrupts percentage-based pricing for larger portfolios",
+        "Vanguard Personal Investor: 0.15% platform fee cap; sets a permanent floor under commodity passive management costs",
+        "Saltus, Evelyn Partners, Quilter: consolidating mid-market wealth; rolling up boutiques to achieve scale in regulatory compliance and technology"
+      ],
+      "unbundling": [
+        "Investment management commoditised: passive ETF execution (iShares, Vanguard, HSBC Asset Management) separates alpha generation from portfolio construction — clients increasingly sceptical that active management justifies the fee delta",
+        "Financial planning unbundled from investment: chartered financial planners (CFPs) operating as fee-only advisers using cashflow modelling tools (Voyant, CashCalc, Timeline) without managing assets directly",
+        "Platform custody separated from advice: wealth firms increasingly white-labelling FNZ or SEI rather than building proprietary custody infrastructure",
+        "Performance reporting unbundled: third-party reporting portals (Wealth Dynamix, InvestCloud) used as client-facing layer over multiple custodians",
+        "Tax and estate planning migrating to specialist boutiques and Big Four private client practices"
+      ],
+      "rebundling": [
+        "St. James's Place, Quilter, and Evelyn Partners re-bundling advice, investment management, and financial planning under one AUM fee — resisting unbundling pressure with face-to-face relationship model",
+        "JP Morgan Private Bank re-bundling banking, lending, and investment for UHNW — same structural play as a commercial bank with a wealth arm",
+        "Revolut and Monzo extending into investments (Revolut Stocks, UK share-dealing) — bundling investment alongside payments for mass market; not yet a wealth threat but signals direction of travel"
+      ],
+      "switching_drivers": [
+        "Fee transparency: MiFID II ex-post reporting has made total costs visible; clients compare all-in charges directly against D2C platforms",
+        "Relationship manager attrition: wealth is a relationship business; RM departure triggers ~30–40% of book at risk of switching (industry data)",
+        "Performance underperformance vs benchmark: sustained underperformance against ARC or WMA indices prompts review",
+        "Digital experience gap: clients using Monzo/HL for personal banking expect real-time mobile portfolio access — legacy portals create switching pressure",
+        "Life events: divorce, inheritance, business sale trigger re-evaluation of wealth provider",
+        "HNW threshold migration: rising living costs and asset inflation pushing the effective HNW entry point toward £500k liquid assets, leaving mass-affluent clients under-served by traditional managers and over-priced for robo"
+      ]
+    },
+    "regulatory_horizon": {
+      "current": [
+        "UK MiFID (onshored MiFID II): investment advice and discretionary portfolio management are regulated investment services; MiFID II costs and charges transparency requires ex-ante and ex-post disclosure; best execution obligations apply to portfolio management",
+        "FCA Consumer Duty (PS22/9, July 2023): outcomes-based regime requires firms to demonstrate fair value in products and services, suitable client outcomes, and comprehensible communications — materially raises the bar for suitability documentation and pricing justification in wealth",
+        "FCA PROD: product governance requires target market assessment for advised and discretionary services; distribution strategies must match product to defined client segment",
+        "SDR / ESG labels (PS23/16, effective December 2024): funds must use defined sustainability labels (Sustainability Focus, Improvers, Impact, Mixed Goals); greenwashing risk now a named FCA enforcement priority",
+        "COBS 9A suitability: periodic suitability reviews required for ongoing advisory and discretionary clients; failure to conduct or document reviews is a recurring FCA enforcement focus"
+      ],
+      "incoming_2_3_years": [
+        "FCA Advice Guidance Boundary Review (CP23/24 — targeted support proposal): would create a new 'targeted support' category allowing firms to provide more prescriptive guidance to mass-market clients without triggering full regulated advice — potential to democratise the advice funnel significantly and blur boundaries between D2C platforms and advised wealth",
+        "FCA Consumer Composite Investments (CCI) regime: successor to PRIIPs/KIDs for UK retail investment products; expected 2025–2026; requires revised disclosure documents for structured products and packaged investments",
+        "Open Finance extension to investments: FCA roadmap for data sharing beyond Open Banking to include investment accounts, pensions, and insurance — would commoditise account aggregation and intensify switching",
+        "FCA Sustainability Disclosure Requirements Phase 2: extension of SDR labelling and anti-greenwashing rules to portfolio managers and model portfolio services (MPS); expected 2025",
+        "Potential MiFID review: HM Treasury consultation on UK MiFID framework may adjust suitability requirements and open new distribution channels"
+      ],
+      "enforcement_signals": [
+        "FCA Dear CEO letter (January 2023): wealth managers and stockbrokers must demonstrate Consumer Duty readiness; FCA explicitly flagged fair value assessments and suitability processes as priority review areas",
+        "FCA DB pension transfer redress scheme (PS22/20): ongoing liability for firms that gave unsuitable DB transfer advice; signals long-tail regulatory risk in historical advice books",
+        "FCA enforcement action on inducements (ongoing): host of cases against discretionary managers for undisclosed third-party payments; reinforces MiFID II inducement controls",
+        "FCA Retirement Income Review (DP23/3): focus on whether advised clients in decumulation receive suitable drawdown advice — relevant to financial planning sub-capability",
+        "FCA anti-greenwashing rule (May 2024): first standalone anti-greenwashing guidance; wealth managers promoting ESG portfolios now subject to direct enforcement risk"
+      ]
+    },
+    "build_vs_buy": {
+      "platform_options": [
+        "FNZ: end-to-end platform-as-a-service covering custody, settlement, client portal, and reporting; used by Lloyds Banking Group (Scottish Widows), Standard Life, and HSBC Global Asset Management; strong UK regulatory track record",
+        "SEI Wealth Platform: integrated investment management, custody, and reporting; targeted at private banks and wealth managers; used by RBC Brewin Dolphin and Julius Baer",
+        "SS&C Advent: portfolio management system (Geneva) and reporting; strong in institutional and family office; less commonly used for mass-affluent",
+        "InvestCloud: modular digital wealth platform; client portal, proposal tools, and performance reporting; used by several tier-2 banks as front-end overlay",
+        "Wealth Dynamix (WDX): CRM designed specifically for wealth management; workflow for onboarding, reviews, and compliance documentation",
+        "BlackRock Aladdin Wealth: risk analytics and portfolio construction engine; used for model portfolio management and risk budgeting",
+        "Bloomberg PORT: portfolio risk and performance attribution; used by investment managers for MiFID II performance reporting",
+        "Voyant / CashCalc / Timeline: financial planning and cashflow modelling tools; Voyant dominant among UK IFAs; CashCalc strong in adviser-managed plans; Timeline specialised in sustainable withdrawal rate modelling",
+        "Objectway / GBST: back-office and settlement for retail investment platforms; less prominent since FNZ consolidation"
+      ],
+      "must_build_in_house": [
+        "Client relationship model and RM tooling: the commercial bank's relationship model, segmentation logic, and RM performance framework must remain proprietary — this is the core competitive asset",
+        "Suitability and KYC orchestration: the workflow that connects client data, risk profile, product governance target market, and regulatory documentation must be owned in-house to ensure Consumer Duty compliance and auditability",
+        "Investment Committee process and model portfolio construction: asset allocation decisions, manager selection rationale, and ESG integration policy must be bank-owned for MiFID II accountability and brand differentiation",
+        "Integration with core banking balance sheet: the linkage between wealth AUM, deposits, lending, and FX is the structural moat — this integration cannot be outsourced",
+        "Regulatory reporting: MiFID II transaction reporting, EMIR derivatives reporting, and SDR label compliance attestation must be bank-controlled"
+      ],
+      "buy_candidates": [
+        "Platform custody and settlement: FNZ or SEI are strong candidates — building proprietary custody infrastructure is capital-intensive, heavily regulated, and does not create competitive advantage",
+        "Portfolio analytics and risk: BlackRock Aladdin Wealth or Bloomberg PORT for risk decomposition and performance attribution — commodity capability with high build cost",
+        "Client reporting portal: InvestCloud or SEI digital portal as white-labelled overlay — faster time to market and lower maintenance than bespoke build",
+        "Financial planning tools: Voyant or CashCalc for cashflow modelling — strong market penetration among UK advisers and embedded in client workflow",
+        "CRM for wealth: Wealth Dynamix (WDX) or Salesforce Financial Services Cloud for RM workflow, review scheduling, and compliance documentation"
+      ]
+    },
+    "revenue_model": {
+      "primary_revenue_streams": [
+        "AUM-based management fee (typical range 0.5–1.0% p.a. for discretionary; 0.25–0.75% for advisory) — primary revenue driver but under structural compression",
+        "Platform/custody fee charged on top of or embedded within the management fee",
+        "Financial planning fee: fixed annual retainer or hourly rate for cashflow modelling, retirement planning, and tax structuring — growing as fee transparency unbundles planning from investment",
+        "Private banking fees: structured product margins, FX spread on international transfers, mortgage arrangement fees, and credit facility fees",
+        "Transactional revenue: dealing commissions (diminishing under MiFID II), fixed income spread on bond execution",
+        "Referral revenue from bancassurance: life insurance, protection, and annuity products cross-sold through wealth channel"
+      ],
+      "margin_pressure": [
+        "MiFID II ex-post cost disclosure directly compares all-in charges against D2C alternatives — clients with £500k+ portfolios increasingly question the fee delta vs Hargreaves Lansdown or Vanguard",
+        "Passive ETF penetration: AUM-based fees on passive portfolios are difficult to justify; active management alpha must demonstrably offset the cost delta",
+        "Robo-advisory pricing floor: Nutmeg and Wealthify have established a ceiling of ~0.75% all-in for digital discretionary — traditional managers above this level face justification pressure",
+        "Regulatory compliance cost escalation: Consumer Duty implementation, SDR compliance, and suitability documentation increase cost-to-serve, particularly for smaller client balances",
+        "RM talent inflation: wealth management RMs command premium salaries; wage inflation compresses margin in the advisory and relationship model",
+        "Falling platform margins: FNZ and SEI custody fees being re-negotiated down as scale increases; margin shifts to the value-added layer"
+      ],
+      "cross_sell_hooks": [
+        "Private banking lending: HNW clients with liquid portfolios are prime prospects for portfolio-secured credit, commercial property mortgages, and structured lending facilities",
+        "Corporate banking cross-sell: business owners served by corporate banking are natural prospects for personal wealth management; business sale / liquidity event triggers a significant wealth conversion opportunity",
+        "Pension and retirement: SIPPs managed on the wealth platform are a gateway to drawdown advice, annuity placement, and intergenerational estate planning",
+        "FX and international banking: clients with international assets or income require FX conversion, offshore accounts, and international payment capability — natural upsell within the private banking relationship",
+        "Protection and life insurance: cashflow modelling through financial planning exposes protection gaps; referral to bancassurance or broker panel"
+      ]
+    }
+  },
   "sub_capabilities": [
     {
       "id": "CAP-006.01",
       "name": "Investment Advisory",
-      "description": "Regulated investment advice, suitability assessments, and product recommendations for wealth clients",
-      "status": "RETAIN",
+      "description": "Provision of personalised investment recommendations under FCA regulation: conducting suitability assessments, constructing advised model portfolios, and providing periodic review advice. Covers both restricted and independent advice models, and includes the documentation, rationale, and audit trail required under COBS 9A and Consumer Duty.",
       "promotion_test": {
-        "distinct_participants": {
-          "result": false,
-          "rationale": "Participants are wealth clients and relationship managers — shared across all wealth sub-capabilities"
-        },
-        "distinct_regulatory_framework": {
-          "result": false,
-          "rationale": "Governed by MiFID II suitability rules (Article 25) and FCA COBS 9A, the same framework applicable to Portfolio Management and Financial Planning"
-        },
-        "distinct_lifecycle": {
-          "result": false,
-          "rationale": "Lifecycle is tightly coupled to the advisory relationship and feeds directly into Portfolio Management; not independently bounded"
-        },
-        "independent_scalability": {
-          "result": false,
-          "rationale": "Volume scales with the overall wealth client book, not independently of other wealth sub-capabilities"
-        },
-        "promote": false
+        "distinct_participants": false,
+        "separate_regulatory_framework": false,
+        "distinct_lifecycle": false,
+        "independent_scalability": false,
+        "criteria_met": 0,
+        "decision": "RETAIN",
+        "market_evidence": "Investment Advisory shares the same regulated entity, the same FCA permissions, and the same client relationship as Portfolio Management and Private Banking. The market evidence confirms integration rather than separation: St. James's Place, Quilter, and Evelyn Partners all run advisory and discretionary services from a single regulated firm with shared RM, suitability, and compliance infrastructure. The standalone Independent Financial Adviser (IFA) market does demonstrate that advice can be unbundled from asset management — firms like Tilney or 7IM offer advice-only engagements — but in the context of a commercial bank wealth arm, the relationship manager is the advice vehicle and the same individual manages both the advisory and discretionary relationship. FCA Consumer Duty has reinforced integration by requiring a holistic view of client outcomes across all services delivered. The Advice Guidance Boundary Review (CP23/24) may, in future, create a distinct 'targeted support' tier that warrants a separate capability review, but as of 2025–2026 the regulatory framework is unified. Criteria met: 0 of 4. RETAIN."
       }
     },
     {
       "id": "CAP-006.02",
       "name": "Portfolio Management",
-      "description": "Discretionary portfolio management, asset allocation, rebalancing, and performance reporting for wealth clients",
-      "status": "RETAIN",
+      "description": "Discretionary management of client investment portfolios: asset allocation, instrument selection, rebalancing, model portfolio construction and maintenance, custody oversight, and MiFID II best execution. Includes both bespoke portfolio management for HNW clients and model portfolio service (MPS) for mass-affluent.",
       "promotion_test": {
-        "distinct_participants": {
-          "result": false,
-          "rationale": "Participants are the same wealth clients and portfolio managers that interact across all wealth sub-capabilities"
-        },
-        "distinct_regulatory_framework": {
-          "result": false,
-          "rationale": "Governed by MiFID II Articles 24–25 and FCA COBS 6/9A, the same framework shared with Investment Advisory and Financial Planning"
-        },
-        "distinct_lifecycle": {
-          "result": false,
-          "rationale": "Lifecycle is bound to the client investment mandate, which originates in Investment Advisory and is closed in Financial Planning reviews; not independently bounded"
-        },
-        "independent_scalability": {
-          "result": false,
-          "rationale": "AUM growth is correlated with the wealth client book across all sub-capabilities; no independent scaling driver"
-        },
-        "promote": false
+        "distinct_participants": false,
+        "separate_regulatory_framework": false,
+        "distinct_lifecycle": false,
+        "independent_scalability": false,
+        "criteria_met": 0,
+        "decision": "RETAIN",
+        "market_evidence": "Portfolio Management is the execution arm of the wealth proposition and is deeply integrated with advisory, private banking, and financial planning. The market shows clear commoditisation of portfolio management at the construction layer (passive ETF-based MPS is delivered by Nutmeg, Wealthify, and Vanguard at 0.15–0.75% all-in) but this does not constitute unbundling into a separate capability; it means the commodity layer can be bought via FNZ or SEI platform MPS. Rathbones and Evelyn Partners demonstrate that even at pure-play wealth managers, portfolio management operates as an integrated service line rather than a standalone business unit. The Investment Committee, model portfolio governance, and suitability linkage are inseparable from advisory. BlackRock Aladdin Wealth and Bloomberg PORT exist as specialist tools, but their use does not create a separate organisational capability — they are platform components within Portfolio Management. FCA PROD target market assessment and MiFID II suitability obligations further bind portfolio management to the client advisory process. Criteria met: 0 of 4. RETAIN."
       }
     },
     {
       "id": "CAP-006.03",
       "name": "Private Banking",
-      "description": "Dedicated relationship management, bespoke lending facilities, and concierge services for high-net-worth clients",
-      "status": "RETAIN",
+      "description": "Premium relationship banking for HNW and UHNW clients: dedicated relationship managers, personalised credit facilities (portfolio-secured lending, structured credit), FX and international banking, concierge banking services, and integration with the investment and planning relationship. Typically activated above a £500k–£1m liquid assets threshold.",
       "promotion_test": {
-        "distinct_participants": {
-          "result": false,
-          "rationale": "Private banking clients are a subset of wealth clients; relationship managers serve across private banking and advisory services"
-        },
-        "distinct_regulatory_framework": {
-          "result": false,
-          "rationale": "Lending components fall under FSMA 2000 and FCA MCOB; advisory components remain under MiFID II/FCA COBS — the blended framework is shared with other wealth sub-capabilities rather than being uniquely distinct"
-        },
-        "distinct_lifecycle": {
-          "result": false,
-          "rationale": "Client onboarding, relationship management, and offboarding are shared lifecycle stages with Investment Advisory and Portfolio Management"
-        },
-        "independent_scalability": {
-          "result": false,
-          "rationale": "Private banking capacity scales with the relationship manager headcount that is shared across the wealth management capability"
-        },
-        "promote": false
+        "distinct_participants": false,
+        "separate_regulatory_framework": false,
+        "distinct_lifecycle": false,
+        "independent_scalability": false,
+        "criteria_met": 0,
+        "decision": "RETAIN",
+        "market_evidence": "Private Banking in a commercial bank context is the banking layer of the wealth relationship rather than a standalone capability. The structural advantage of a commercial bank over pure-play wealth managers (Rathbones, Brewin Dolphin) is precisely this integration: deposit accounts, credit facilities, FX, and mortgage lending are delivered alongside investment management through a single RM. JP Morgan Private Bank, Coutts (NatWest), and C. Hoare & Co. all demonstrate the integrated model. The credit capability (portfolio-secured lending, Lombard loans) relies on the bank's balance sheet and credit risk framework — it is not a freestanding market capability. FCA regulation of private banking services (deposits under PRA/FCA, lending under Consumer Credit Act where applicable, investment under MiFID II) operates through the same permission set as the broader wealth proposition. The HNW threshold is migrating — industry data suggests effective HNW entry point moving from £250k to £500k+ liquid assets as cost pressures mount — but this is a segmentation change within Wealth Management, not a signal for capability promotion. Criteria met: 0 of 4. RETAIN."
       }
     },
     {
       "id": "CAP-006.04",
       "name": "Financial Planning",
-      "description": "Retirement planning, tax-efficient investment structuring, and estate planning for wealth clients",
-      "status": "RETAIN",
+      "description": "Structured cashflow modelling, retirement planning, tax efficiency analysis, estate planning coordination, and protection gap analysis. Delivers a forward-looking financial plan integrating the client's assets, liabilities, income, expenditure, and goals. Typically delivered by a Chartered Financial Planner alongside or separately from investment management.",
       "promotion_test": {
-        "distinct_participants": {
-          "result": false,
-          "rationale": "Financial planning clients are the same wealth client population; planners operate within the same relationship model as advisers and portfolio managers"
-        },
-        "distinct_regulatory_framework": {
-          "result": false,
-          "rationale": "Governed by MiFID II, FCA COBS 9, and FCA PROD — the same framework covering the full wealth management capability"
-        },
-        "distinct_lifecycle": {
-          "result": false,
-          "rationale": "Planning engagements are typically initiated and reviewed as part of the broader investment advisory and portfolio management lifecycle"
-        },
-        "independent_scalability": {
-          "result": false,
-          "rationale": "Demand scales with the wealth client book; no distinct volume driver that would justify independent capability scaling"
-        },
-        "promote": false
+        "distinct_participants": false,
+        "separate_regulatory_framework": false,
+        "distinct_lifecycle": false,
+        "independent_scalability": false,
+        "criteria_met": 0,
+        "decision": "RETAIN",
+        "market_evidence": "Financial Planning is being unbundled in the broader market — fee-only financial planners (e.g. Paradigm Norton, Jacksons Wealth) operate without managing assets, using Voyant or CashCalc as their primary tool — but within a commercial bank wealth arm, financial planning is the anchor that justifies the retained AUM relationship and cross-sells private banking services. Moneyfarm's goals-based digital planning shows the direction of travel for mass-affluent, but at HNW level, cashflow modelling (retirement income, Inheritance Tax planning, trust structuring) is inseparable from the investment mandate. The FCA Retirement Income Review (DP23/3) and the proposed targeted support regime (CP23/24) may create a distinct regulatory category for certain planning activities in future, but as of 2025–2026, financial planning advice is delivered under the same COBS 9A suitability framework as investment advice. The specialist tools (Voyant, CashCalc, Timeline) are buy candidates that sit within the Financial Planning sub-capability — their existence as standalone products does not constitute a capability promotion signal. Criteria met: 0 of 4. RETAIN."
       }
     }
   ],
   "design_decisions": [
     {
-      "id": "DD-CAP-006-001",
-      "title": "All wealth sub-capabilities retained within CAP-006",
-      "decision": "Investment Advisory, Portfolio Management, Private Banking, and Financial Planning are retained as sub-capabilities of CAP-006 rather than promoted to standalone capabilities.",
-      "rationale": "All four sub-capabilities fail every promotion criterion: (1) Participants — they share the same high-net-worth client population and wealth relationship manager workforce; (2) Regulatory framework — all are governed by the same MiFID II / FCA COBS / FCA PROD regime with no sub-capability facing a materially separate regulatory body or rulebook; (3) Lifecycle — onboarding, ongoing relationship management, and offboarding are shared lifecycle stages with no cleanly independent boundaries; (4) Independent scalability — capacity and demand scale uniformly with the overall wealth client book. Promotion would introduce artificial domain boundaries, duplicate governance structures, and increase coordination overhead without architectural benefit.",
-      "date": "2026-04-15",
-      "status": "ACCEPTED"
+      "id": "DD-001",
+      "decision": "Scope Wealth Management as a single integrated capability encompassing advisory, portfolio management, private banking, and financial planning rather than splitting into separate capabilities.",
+      "rationale": "The commercial bank's structural moat in wealth is the combination of investment management and banking on a single balance sheet. Splitting into separate capabilities would create integration risk at the deployment boundary — the RM, the suitability process, the client record, and the credit relationship all share state. Every major integrated bank-and-wealth provider (JP Morgan, Coutts, HSBC Private Banking) runs a unified operating model. Consumer Duty's outcomes focus on the holistic client relationship reinforces integration.",
+      "alternatives_considered": [
+        "Promote Financial Planning to a standalone capability (CAP-00X) given the market unbundling trend",
+        "Promote Portfolio Management to a standalone capability given commoditisation and buy-vs-build profile",
+        "Split Private Banking into a Banking Capability variant for HNW"
+      ],
+      "rejected_because": "Financial Planning, Portfolio Management, and Private Banking each scored 0/4 on the promotion test. The unbundling trend in the standalone IFA and robo-advisory market does not translate to a capability split inside a commercial bank where the RM is the single point of relationship and the balance sheet integration is the core differentiator. Splitting would create seams at exactly the point where the bank has competitive advantage."
     },
     {
-      "id": "DD-CAP-006-002",
-      "title": "MiFID II suitability obligation sits at capability level, not sub-capability level",
-      "decision": "MiFID II Article 25 suitability and appropriateness obligations are treated as a capability-level cross-cutting concern rather than being assigned to Investment Advisory alone.",
-      "rationale": "Suitability assessments inform product recommendations (Investment Advisory), asset allocation decisions (Portfolio Management), and planning recommendations (Financial Planning). Scoping the obligation to a single sub-capability would create compliance gaps and require duplication of assessment logic. A single capability-level suitability framework covers all sub-capabilities consistently and aligns with FCA COBS 9A expectations for integrated wealth services.",
-      "date": "2026-04-15",
-      "status": "ACCEPTED"
+      "id": "DD-002",
+      "decision": "Mark platform custody and portfolio analytics as 'buy candidates' rather than in-house build components.",
+      "rationale": "FNZ and SEI have achieved sufficient scale, regulatory track record, and UK market penetration that building proprietary custody infrastructure cannot be justified on cost, speed, or regulatory grounds. BlackRock Aladdin Wealth and Bloomberg PORT for risk analytics are similarly mature. The bank's in-house investment must focus on the client relationship model, suitability orchestration, and balance sheet integration — not commodity platform infrastructure.",
+      "alternatives_considered": [
+        "Build proprietary custody platform to control the data layer",
+        "Acquire a wealth platform business (e.g. GBST, Objectway)"
+      ],
+      "rejected_because": "Proprietary custody build would take 3–5 years, require significant PRA/FCA capital and operational resilience investment, and deliver no client-facing differentiation. Acquisition of a platform business introduces integration complexity and regulatory change-of-control obligations. FNZ's existing relationships with Lloyds and HSBC demonstrate the viability of the buy route at tier-1 bank scale."
+    },
+    {
+      "id": "DD-003",
+      "decision": "Include the FCA Advice Guidance Boundary Review (CP23/24) as a forward-looking regulatory item requiring a capability review trigger rather than acting on it now.",
+      "rationale": "If the targeted support regime is enacted, it may create a distinct regulatory channel for digital guidance that sits between execution-only and regulated advice — potentially warranting a new sub-capability or a revision to the Investment Advisory scope. However, as of April 2025 the consultation is still in progress and the final rules are not expected before 2026. Acting on a proposal that may change materially would introduce premature complexity.",
+      "alternatives_considered": [
+        "Pre-emptively create a 'Digital Guidance' sub-capability under CAP-006",
+        "Defer the entire capability definition until the regulatory position is settled"
+      ],
+      "rejected_because": "Pre-empting draft regulation risks building to a framework that changes. Deferring the entire capability blocks downstream design work. The right response is to document the horizon risk and set a review trigger tied to the FCA policy statement publication."
     }
   ]
 }

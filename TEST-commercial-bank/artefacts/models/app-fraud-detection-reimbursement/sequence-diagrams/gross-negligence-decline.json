@@ -1,0 +1,279 @@
+{
+  "diagram_id": "SEQ-005-003",
+  "diagram_name": "Gross Negligence Decline — Exception Path EX-001",
+  "journey_id": "JRN-005",
+  "description": "Customer reports APP fraud. Investigation finds strong evidence of gross negligence: explicit fraud warning overridden, CoP no_match overridden with no vulnerability factors, and contradictory statements from customer. Senior Manager (PER-059) must co-sign the decline decision. Regulated outcome letter issued within 5 business days with FOS signpost. No reimbursement credit. Case closed with evidence of decline archived.",
+  "path_reference": "Exception path EX-001 (journey-detail.json)",
+  "participants": [
+    { "id": "PER001", "label": "PER-001 Customer" },
+    { "id": "APP", "label": "SVC-017 Digital Channels" },
+    { "id": "SVC013", "label": "SVC-013 Fraud Detection" },
+    { "id": "SVC001", "label": "SVC-001 Retail Banking Core" },
+    { "id": "SVC053", "label": "SVC-053 Notification Service" },
+    { "id": "SVC111", "label": "SVC-111 WORM Store" },
+    { "id": "PER054", "label": "PER-054 Fraud Analyst" },
+    { "id": "PER059", "label": "PER-059 Senior Manager" },
+    { "id": "EVTBUS", "label": "SVC-102 Event Bus" }
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "phase": "PH-064",
+      "from": "PER001",
+      "to": "APP",
+      "type": "sync",
+      "label": "Customer reports fraud via mobile app"
+    },
+    {
+      "step": 2,
+      "phase": "PH-064",
+      "from": "APP",
+      "to": "SVC013",
+      "type": "sync",
+      "label": "POST /fraud-cases (trigger_type=customer_report, fraud_typology=impersonation_bank)"
+    },
+    {
+      "step": 3,
+      "phase": "PH-064",
+      "from": "SVC013",
+      "to": "SVC013",
+      "type": "internal",
+      "label": "Create FraudCase (status=open). Publish FraudCaseCreated (EVT-090)"
+    },
+    {
+      "step": 4,
+      "phase": "PH-064",
+      "from": "SVC013",
+      "to": "SVC053",
+      "type": "async",
+      "label": "Dispatch case confirmation to PER-001"
+    },
+    {
+      "step": 5,
+      "phase": "PH-065",
+      "from": "PER054",
+      "to": "SVC013",
+      "type": "sync",
+      "label": "GET /fraud-cases/{id} — assigned from queue"
+    },
+    {
+      "step": 6,
+      "phase": "PH-065",
+      "from": "SVC013",
+      "to": "EVTBUS",
+      "type": "async",
+      "label": "Publish FraudDataRequested (payment_intent_id) → Event Bus [cross-capability async: CAP-004→CAP-001]",
+      "note": "Cross-capability boundary: SVC-013 (CAP-004) must not call SVC-001 (CAP-001) synchronously. Async event-request/response via Event Bus (SVC-102)."
+    },
+    {
+      "step": 7,
+      "phase": "PH-065",
+      "from": "EVTBUS",
+      "to": "SVC001",
+      "type": "async",
+      "label": "SVC-001 consumes FraudDataRequested — retrieves PaymentIntent"
+    },
+    {
+      "step": "7b",
+      "phase": "PH-065",
+      "from": "SVC001",
+      "to": "EVTBUS",
+      "type": "async",
+      "label": "Publish FraudDataProvided (amount=£28,000, cop_result=no_match, cop_override_confirmed=true, cop_override_timestamp=2026-04-10T14:23:07Z, fraud_risk_level=high)",
+      "note": "cop_result=no_match AND cop_override_confirmed=true is a key gross negligence indicator"
+    },
+    {
+      "step": "7c",
+      "phase": "PH-065",
+      "from": "EVTBUS",
+      "to": "SVC013",
+      "type": "async",
+      "label": "SVC-013 consumes FraudDataProvided — PaymentIntent data available for case investigation"
+    },
+    {
+      "step": 8,
+      "phase": "PH-065",
+      "from": "PER054",
+      "to": "SVC013",
+      "type": "sync",
+      "label": "POST /fraud-cases/{id}/evidence (evidence_type=cop_result — no_match overridden, psr_relevance=supports_gross_negligence)"
+    },
+    {
+      "step": 9,
+      "phase": "PH-065",
+      "from": "PER054",
+      "to": "SVC013",
+      "type": "sync",
+      "label": "PATCH /fraud-cases/{id} (status=investigating). Publish FraudInvestigationStarted (EVT-091)"
+    },
+    {
+      "step": 10,
+      "phase": "PH-066",
+      "from": "SVC013",
+      "to": "EVTBUS",
+      "type": "async",
+      "label": "Publish FraudWarningLogRequested (payment_intent_id) → Event Bus [cross-capability async: CAP-004→CAP-001]"
+    },
+    {
+      "step": 11,
+      "phase": "PH-066",
+      "from": "EVTBUS",
+      "to": "SVC001",
+      "type": "async",
+      "label": "SVC-001 consumes FraudWarningLogRequested — retrieves payment_warning_log for the payment session"
+    },
+    {
+      "step": "11b",
+      "phase": "PH-066",
+      "from": "SVC001",
+      "to": "EVTBUS",
+      "type": "async",
+      "label": "Publish FraudWarningLogProvided: (1) CoP no_match warning displayed + acknowledged 14:23:05Z; (2) Fraud warning modal 'Continue anyway' clicked 14:23:07Z; (3) High-risk confirmation 14:23:12Z"
+    },
+    {
+      "step": "11c",
+      "phase": "PH-066",
+      "from": "EVTBUS",
+      "to": "SVC013",
+      "type": "async",
+      "label": "SVC-013 consumes FraudWarningLogProvided — warning log data available as gross negligence evidence"
+    },
+    {
+      "step": 12,
+      "phase": "PH-066",
+      "from": "PER054",
+      "to": "SVC013",
+      "type": "sync",
+      "label": "POST /fraud-cases/{id}/evidence (evidence_type=payment_warning_log — all three warnings acknowledged, psr_relevance=supports_gross_negligence)"
+    },
+    {
+      "step": 13,
+      "phase": "PH-066",
+      "from": "PER054",
+      "to": "SVC013",
+      "type": "sync",
+      "label": "PATCH /fraud-cases/{id} (vulnerability_assessment=[none_identified])"
+    },
+    {
+      "step": 14,
+      "phase": "PH-066",
+      "from": "PER054",
+      "to": "SVC013",
+      "type": "sync",
+      "label": "POST /fraud-cases/{id}/evidence (evidence_type=communication_log — customer's second statement contradicts first; original claim that cop_result=match is refuted by evidence)"
+    },
+    {
+      "step": 15,
+      "phase": "PH-066",
+      "note": "Analyst assessment: gross negligence established. Customer ignored three explicit warnings. CoP no_match overridden. No vulnerability factors. Reimbursement_amount = £28,000 > £25,000 — escalation to PER-059 required regardless.",
+      "from": "PER054",
+      "to": "SVC013",
+      "type": "sync",
+      "label": "PATCH /fraud-cases/{id} (status=decision_pending)"
+    },
+    {
+      "step": 16,
+      "phase": "PH-066",
+      "from": "PER054",
+      "to": "PER059",
+      "type": "sync",
+      "label": "Escalate to Senior Manager: case escalated for mandatory co-sign (decline AND value > £25,000). Evidence package provided."
+    },
+    {
+      "step": 17,
+      "phase": "PH-067",
+      "from": "PER059",
+      "to": "SVC013",
+      "type": "sync",
+      "label": "GET /fraud-cases/{id} — review full case and evidence"
+    },
+    {
+      "step": 18,
+      "phase": "PH-067",
+      "from": "SVC013",
+      "to": "PER059",
+      "type": "response",
+      "label": "FraudCase + FraudEvidence records returned. CoP log, warning acknowledgements, vulnerability assessment all visible."
+    },
+    {
+      "step": 19,
+      "phase": "PH-067",
+      "from": "PER059",
+      "to": "SVC013",
+      "type": "sync",
+      "label": "PATCH /fraud-cases/{id} (senior_manager_sign_off=true, senior_manager_id={manager_id})"
+    },
+    {
+      "step": 20,
+      "phase": "PH-067",
+      "from": "PER054",
+      "to": "SVC013",
+      "type": "sync",
+      "label": "POST /fraud-cases/{id}/decision (decision=decline, reimbursement_amount=0, decision_rationale='...', gross_negligence_evidence='Customer explicitly acknowledged CoP no_match warning modal at 14:23:05Z and fraud warning modal at 14:23:07Z. No vulnerability factors. PSR gross negligence standard met.', senior_manager_sign_off=true, senior_manager_id={manager_id})"
+    },
+    {
+      "step": 21,
+      "phase": "PH-067",
+      "from": "SVC013",
+      "to": "SVC013",
+      "type": "internal",
+      "label": "Validate: senior_manager_sign_off=true confirmed. Update FraudCase (status=declined, decision_outcome=declined, gross_negligence_evidence stored encrypted). Publish FraudReimbursementDeclined (EVT-093)"
+    },
+    {
+      "step": 22,
+      "phase": "PH-067",
+      "from": "SVC013",
+      "to": "SVC053",
+      "type": "async",
+      "label": "Dispatch regulated outcome letter (decline) to PER-001 — email mandatory: plain English explanation of gross negligence, FOS signpost, 6-month FOS complaint window"
+    },
+    {
+      "step": 23,
+      "phase": "PH-067",
+      "from": "SVC053",
+      "to": "PER001",
+      "type": "async",
+      "label": "Email: Outcome letter. Decision: not eligible for reimbursement. Reason: [plain language]. Right to complain to FOS within 6 months.",
+      "note": "Consumer Duty: outcome letter must not deter a legitimate FOS complaint. FOS contact details and PSR consumer guide link included."
+    },
+    {
+      "step": 24,
+      "note": "No ReimbursementCredited event. No ReimbursementClaim created. SVC-001 and SVC-009 do NOT consume FraudReimbursementDeclined for payment actions.",
+      "from": "SVC001",
+      "to": "SVC001",
+      "type": "internal",
+      "label": "SVC-001 receives EVT-093 (FraudReimbursementDeclined) — no credit action. Optional: update customer account flag for monitoring purposes only."
+    },
+    {
+      "step": 25,
+      "phase": "PH-070",
+      "from": "PER054",
+      "to": "SVC013",
+      "type": "sync",
+      "label": "PATCH /fraud-cases/{id} (status=closed)"
+    },
+    {
+      "step": 26,
+      "phase": "PH-070",
+      "from": "SVC013",
+      "to": "SVC013",
+      "type": "internal",
+      "label": "Set closed_at. Publish FraudCaseClosed (EVT-097). Publish FraudPatternDetected (EVT-098) — pattern: warning-overriding behaviour. PSR quarterly counter: declined case recorded."
+    },
+    {
+      "step": 27,
+      "phase": "PH-070",
+      "from": "SVC013",
+      "to": "SVC111",
+      "type": "async",
+      "label": "Archive full FraudCase record (including gross_negligence_evidence) to WORM store. 7-year retention. Evidence must be producible for FOS review if customer complains."
+    }
+  ],
+  "regulatory_notes": [
+    "PSR PS23/3: gross negligence is a high bar — bank bears burden of proof.",
+    "Evidence package must be sufficient to defend a FOS complaint. FOS upholds approximately 50% of APP fraud decline complaints reviewed — evidence quality is critical.",
+    "Senior Manager (PER-059) mandatory co-sign for all declines — this is an internal control, not a PSR requirement, but it reduces FOS escalation risk.",
+    "Outcome letter must be dispatched within 5 business days of original report — even for declined cases.",
+    "WORM retention ensures evidence survives the 6-month FOS complaint window and any subsequent FOS investigation."
+  ]
+}

@@ -1,0 +1,52 @@
+sequenceDiagram
+    title JRN-008 Credit Card — FCA Persistent Debt Intervention (CONC 6.7.27–6.7.40)
+
+    actor PER001 as Customer (PER-001)
+    participant SVC003 as SVC-003 Credit Card Service
+    participant EventBus as SVC-102 Event Bus
+    participant SVC053 as SVC-053 Notification Service
+    participant SVC103 as SVC-103 Audit & Logging (WORM)
+
+    Note over PER001,SVC103: Context: Customer has been making minimum payments only for 18+ months.<br/>Each month: interest + fees charged > principal repaid.<br/>After 18 months: SUM(interest + fees) > SUM(principal repaid) — CONC 6.7.27 definition met.
+
+    rect rgb(255, 235, 200)
+        Note over SVC003,SVC103: INTERVENTION 1 — 18 Months (CONC 6.7.28) — First Contact
+        Note over SVC003: Statement month 18 generated.<br/>ENT-025 StatementCycle (persistent_debt_months: 18)<br/>ENT-023.persistent_debt_months = 18<br/>ENT-023.persistent_debt_flag = true<br/>Threshold crossed → intervention_level: first_contact
+        SVC003->>EventBus: Publish EVT-047 StatementGenerated (persistent_debt_months: 18)
+        SVC003->>EventBus: Publish EVT-048 PersistentDebtAlertTriggered<br/>(intervention_level: first_contact, persistent_debt_months: 18,<br/>interest_and_fees_ytd: £342, principal_repaid_ytd: £120)
+        EventBus-)SVC053: Consume EVT-048 (first_contact)<br/>Generate FCA PS20/8 prescribed communication
+        SVC053->>PER001: Email + Secure Message [within 5 business days]:<br/>"You have been paying more in interest and charges than reducing<br/>your balance for 18 months. We recommend increasing your<br/>monthly payment. [Repayment calculator] [MoneyHelper]"
+        EventBus-)SVC103: Consume EVT-048 — WORM audit record:<br/>account_id, first_contact, triggered_at, communication_dispatched_at
+    end
+
+    Note over PER001,SVC103: 9 months pass. Customer continues minimum payments only.<br/>persistent_debt_months increments to 27.
+
+    rect rgb(255, 210, 170)
+        Note over SVC003,SVC103: INTERVENTION 2 — 27 Months (CONC 6.7.29) — Repayment Plan Offer
+        Note over SVC003: Statement month 27 generated.<br/>ENT-025 StatementCycle (persistent_debt_months: 27)<br/>Threshold 27 crossed → intervention_level: second_contact
+        SVC003->>EventBus: Publish EVT-047 StatementGenerated (persistent_debt_months: 27)
+        SVC003->>EventBus: Publish EVT-048 PersistentDebtAlertTriggered<br/>(intervention_level: second_contact, persistent_debt_months: 27)
+        EventBus-)SVC053: Consume EVT-048 (second_contact)<br/>Generate repayment plan offer communication
+        SVC053->>PER001: Email + Secure Message + Letter [within 5 business days]:<br/>"You have been in persistent debt for 27 months.<br/>We are required to offer you a repayment plan.<br/>Please contact us within 30 days. [Repayment plan link]<br/>[MoneyHelper: 0800 138 7777]"
+        EventBus-)SVC103: Consume EVT-048 — WORM audit: second_contact evidence retained
+    end
+
+    Note over PER001,SVC103: 9 more months pass. Customer does not respond to repayment plan offer.<br/>persistent_debt_months reaches 36.
+
+    rect rgb(255, 180, 140)
+        Note over SVC003,SVC103: INTERVENTION 3 — 36 Months (CONC 6.7.30) — Credit Limit Suspension
+        Note over SVC003: Statement month 36 generated.<br/>ENT-025 StatementCycle (persistent_debt_months: 36)<br/>Threshold 36 crossed → intervention_level: limit_suspension_warning
+        SVC003->>EventBus: Publish EVT-047 StatementGenerated (persistent_debt_months: 36)
+        SVC003->>EventBus: Publish EVT-048 PersistentDebtAlertTriggered<br/>(intervention_level: limit_suspension_warning, persistent_debt_months: 36)
+        EventBus-)SVC003: Consume EVT-048 (limit_suspension_warning)<br/>Start 30-day repayment arrangement window
+        EventBus-)SVC053: Consume EVT-048 (limit_suspension_warning)<br/>Generate credit limit suspension notice
+        SVC053->>PER001: Email + Secure Message + Letter [within 5 business days]:<br/>"You have been in persistent debt for 36 months.<br/>We are suspending new purchases on this card.<br/>Contact us within 30 days to arrange a repayment plan.<br/>[Contact us] [StepChange: 0800 138 1111]"
+        EventBus-)SVC103: Consume EVT-048 — WORM audit: limit_suspension_warning evidence
+    end
+
+    rect rgb(255, 150, 120)
+        Note over SVC003,SVC103: 30-Day Window Expires — No Repayment Arrangement
+        Note over SVC003: 30-day window elapsed. No repayment arrangement confirmed.<br/>Transition ENT-023 status: active → suspended<br/>New purchase authorisations blocked (JRN-011 integration)<br/>Existing balance minimum payment remains due
+        Note over SVC003: FCA CONC 6.7.30 obligations met.<br/>CCA 1974 s87 default notice path begins if arrears develop.<br/>Account referred to collections if balance unpaid after further notice.
+        SVC103->>SVC103: Record account suspension event in WORM audit.<br/>FCA supervision evidence complete:<br/>✓ 18-month first contact<br/>✓ 27-month repayment plan offer<br/>✓ 36-month suspension notice<br/>✓ Suspension executed after 30-day window
+    end

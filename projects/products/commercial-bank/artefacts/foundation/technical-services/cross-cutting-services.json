@@ -1,0 +1,432 @@
+{
+  "$schema": "../../schemas/technical-service.schema.json",
+  "document_version": "0.1.0",
+  "status": "Draft",
+  "classification_filter": "cross_cutting",
+  "description": "Cross-cutting shared services: one service per shared sub-capability identified in the shared-sub-capabilities register. Each service has a single owning capability, publishes a well-defined API contract, and is consumed by multiple domain services. Architectural principle: own the contract, not the consumer's implementation.",
+  "services": [
+    {
+      "id": "SVC-050",
+      "name": "Customer Onboarding Service",
+      "description": "The authoritative cross-capability service for admitting new customers across all product lines. Provides identity verification, KYC/CDD checks, beneficial ownership determination (corporate clients via Companies House / Encompass), PEP and adverse media screening, client risk scoring, and sanctions pre-check at onboarding. Supports both synchronous short-path (retail digital onboarding, minutes) and asynchronous long-path (corporate EDD, days) modes. Publishes a KYCClearanceGranted event that all downstream provisioning services must receive before creating an account, loan, or investment relationship. Resolves SSC-001 (shared sub-capability: Customer Onboarding) documented in shared-sub-capabilities.json.",
+      "classification": "cross_cutting",
+      "status": "Draft",
+      "capability_mappings": [
+        {
+          "capability_id": "CAP-005.01",
+          "capability_name": "KYC / AML",
+          "realisation_type": "realises_shared_sub_capability"
+        }
+      ],
+      "dependencies": [
+        {
+          "service_id": "SVC-051",
+          "service_name": "Sanctions Screening Service",
+          "dependency_type": "hard_blocking",
+          "rationale": "Onboarding includes a sanctions pre-check at the point of CDD. New customer counterparties are screened against OFSI, OFAC, EU, and UN sanctions lists before KYCClearanceGranted is issued."
+        },
+        {
+          "service_id": "SVC-054",
+          "service_name": "Document Management Service",
+          "dependency_type": "async_event",
+          "rationale": "Identity documents, UBO documentation, and EDD evidence collected during onboarding are stored via SVC-054 for regulatory audit trail."
+        },
+        {
+          "service_id": "SVC-055",
+          "service_name": "Workflow Engine",
+          "dependency_type": "soft_query",
+          "rationale": "Complex multi-step onboarding journeys (corporate EDD, multi-party ownership structures) are orchestrated via SVC-055 workflow instances."
+        },
+        {
+          "service_id": "SVC-102",
+          "service_name": "Event Bus",
+          "dependency_type": "platform",
+          "rationale": "Publishes KYCClearanceGranted, CustomerRiskScoreAssigned, and OnboardingFailed events consumed by SVC-001, SVC-005, SVC-016."
+        }
+      ],
+      "technology_constraints": {
+        "deployment_model": "cloud_native",
+        "data_residency": "UK only \u2014 MLRO accountability records, POCA-protected SAR data",
+        "latency_class": "near_real_time_sub_1s",
+        "availability_target": "99.95%",
+        "pci_dss_scope": false,
+        "regulatory_data_obligations": [
+          "MLR 2017 CDD/EDD records",
+          "POCA 2002 SAR audit trail",
+          "UK GDPR personal data",
+          "FCA Consumer Duty onboarding outcome evidence",
+          "Companies House and UBO verification records"
+        ]
+      },
+      "market_context": {
+        "build_vs_buy_assessment": "build_with_vendor_components",
+        "build_rationale": "The MLRO-owned AML risk appetite, client risk scoring methodology, and SAR escalation logic must be built in-house. Identity verification (Onfido/Jumio for retail; Encompass for corporate), PEP/adverse media data (ComplyAdvantage/Refinitiv World-Check), and liveness detection are strong buy candidates. The orchestration layer integrating these components is a bank-owned workflow.",
+        "vendor_options": [
+          {
+            "vendor_name": "Onfido",
+            "product_name": "AI Identity Verification",
+            "fit_assessment": "preferred",
+            "notes": "Document + biometric liveness verification for retail digital onboarding. UK DIATF certified. Fast integration via REST API."
+          },
+          {
+            "vendor_name": "Jumio",
+            "product_name": "Identity Verification Platform",
+            "fit_assessment": "shortlisted",
+            "notes": "Document authentication and identity verification. Growing in commercial banking SME client onboarding."
+          },
+          {
+            "vendor_name": "Encompass Corporation",
+            "product_name": "Automated Corporate KYC",
+            "fit_assessment": "preferred",
+            "notes": "Automated Companies House, official registries, court records data gathering. Reduces corporate KYC analyst time by 70-90%. SWIFT KYC Registry integration."
+          },
+          {
+            "vendor_name": "ComplyAdvantage",
+            "product_name": "AML Data & PEP/Sanctions Screening",
+            "fit_assessment": "preferred",
+            "notes": "Real-time adverse media, PEP, and sanctions data API. More current than quarterly list updates. Used as data layer under onboarding workflow."
+          }
+        ]
+      },
+      "design_decisions": [
+        {
+          "id": "SDD-004",
+          "decision": "SVC-050 exposes two API modes: synchronous (retail, sub-1s) and asynchronous (corporate EDD, multi-day).",
+          "rationale": "Retail digital onboarding requires sub-second response for mobile UX. Corporate EDD requires multi-day workflow with manual analyst review. A single service with two interaction modes avoids maintaining separate onboarding services for retail and commercial while preserving the latency contract needed for each channel.",
+          "alternatives_considered": [
+            "Separate retail onboarding service from corporate KYB service"
+          ],
+          "rejected_because": "The MLRO-owned AML policy and client risk scoring framework applies identically to both segments. Separate implementations create divergent compliance risk and doubled maintenance of regulatory logic."
+        }
+      ]
+    },
+    {
+      "id": "SVC-051",
+      "name": "Sanctions Screening Service",
+      "description": "The authoritative real-time sanctions screening service for all counterparty and transaction screening across the bank. Screens names, entities, and transaction beneficiaries against UK OFSI, US OFAC, EU Consolidated, and UN Security Council sanctions lists. Supports name-matching, fuzzy matching, and beneficial ownership chain traversal to identify direct and indirect sanctions exposure. Provides a synchronous blocking screening API used in the payment execution path (sub-200ms SLA) and an asynchronous batch rescreening capability triggered by sanctions list updates. Manages the OFSI licence application workflow and voluntary disclosure governance. Resolves SSC-002 (shared sub-capability: Sanctions Screening) documented in shared-sub-capabilities.json.",
+      "classification": "cross_cutting",
+      "status": "Draft",
+      "capability_mappings": [
+        {
+          "capability_id": "CAP-005.05",
+          "capability_name": "Sanctions Screening",
+          "realisation_type": "realises_shared_sub_capability"
+        }
+      ],
+      "dependencies": [
+        {
+          "service_id": "SVC-102",
+          "service_name": "Event Bus",
+          "dependency_type": "platform",
+          "rationale": "Publishes SanctionsListUpdated events when lists are refreshed (including emergency OFSI additions). Consuming services (SVC-009, SVC-010, SVC-050) trigger batch rescreening of affected customers and pending transactions."
+        },
+        {
+          "service_id": "SVC-103",
+          "service_name": "Audit & Logging",
+          "dependency_type": "platform",
+          "rationale": "Every screening decision (CLEAR, BLOCKED, REVIEW) must be immutably logged for OFSI audit, FCA supervisory inspection, and potential criminal prosecution evidence."
+        }
+      ],
+      "technology_constraints": {
+        "deployment_model": "cloud_native",
+        "data_residency": "UK only \u2014 OFSI-protected sanctions intelligence data",
+        "latency_class": "real_time_sub_100ms",
+        "availability_target": "99.99%",
+        "pci_dss_scope": false,
+        "regulatory_data_obligations": [
+          "OFSI sanctions compliance records",
+          "OFAC secondary sanctions screening evidence",
+          "FCA AML screening audit trail",
+          "MLRO accountability governance records"
+        ]
+      },
+      "market_context": {
+        "build_vs_buy_assessment": "build_with_vendor_components",
+        "build_rationale": "The OFSI licence application process, de-risking decision governance, and sanctions policy framework must be built in-house under MLRO accountability. The screening data (sanctions lists, PEP data, beneficial ownership chains) and the screening engine itself are strong buy candidates from ComplyAdvantage, Refinitiv World-Check, or Dow Jones Risk & Compliance. The FCA enforcement signal (Starling Bank \u00a329m fine, October 2024) confirms that screening coverage must be demonstrably complete \u2014 specialist data providers are the lowest-risk approach.",
+        "vendor_options": [
+          {
+            "vendor_name": "ComplyAdvantage",
+            "product_name": "Sanctions & Financial Crime Data",
+            "fit_assessment": "preferred",
+            "notes": "Real-time API-delivered sanctions, PEP, adverse media data. Millisecond screening. Ownership chain traversal for beneficial ownership screening. More current than quarterly batch list updates."
+          },
+          {
+            "vendor_name": "Refinitiv (LSEG)",
+            "product_name": "World-Check One",
+            "fit_assessment": "shortlisted",
+            "notes": "Incumbent PEP and sanctions database. Batch and real-time API. Universal in UK financial services. Refinitiv acquired by LSEG 2021."
+          },
+          {
+            "vendor_name": "Dow Jones",
+            "product_name": "Risk & Compliance",
+            "fit_assessment": "shortlisted",
+            "notes": "PEP, sanctions, adverse media data. Competes with Refinitiv on coverage and data freshness."
+          }
+        ]
+      },
+      "design_decisions": [
+        {
+          "id": "SDD-005",
+          "decision": "SVC-051 is a hard blocking dependency for SVC-009 (Domestic Payments), SVC-010 (International Payments), and SVC-006 (Trade Finance). There is no graceful degradation mode that permits payment processing with sanctions screening unavailable.",
+          "rationale": "OFSI regulatory obligation and the FCA enforcement signal (Starling \u00a329m) make degraded-mode operation legally impermissible. SVC-051 must be architected as active-active multi-region to meet the 99.99% availability target without requiring a degradation policy.",
+          "alternatives_considered": [
+            "Allow payments up to a defined threshold during screening unavailability with post-hoc screening"
+          ],
+          "rejected_because": "Post-hoc screening creates a window where sanctioned transactions are executed and settled \u2014 creating strict OFSI liability. The MLRO accountability structure does not permit this risk."
+        }
+      ]
+    },
+    {
+      "id": "SVC-052",
+      "name": "Credit Decision Service",
+      "description": "The authoritative cross-capability credit risk decisioning service. Provides credit decisions (Approve/Decline/Refer) and risk-adjusted pricing parameters to all lending-originating capabilities. Executes PD/LGD/EAD model scoring, credit bureau integration, credit appetite policy evaluation, and IFRS 9 staging for new originations. Supports synchronous real-time decisions (sub-second for retail pre-approved offers, personal loans) and asynchronous batch decisions (SME facilities above \u00a3250k requiring human credit review). The CRO holds personal SM&CR accountability for all model outputs. Resolves SSC-003 (shared sub-capability: Credit Risk Assessment) documented in shared-sub-capabilities.json.",
+      "classification": "cross_cutting",
+      "status": "Draft",
+      "capability_mappings": [
+        {
+          "capability_id": "CAP-004.01",
+          "capability_name": "Credit Risk",
+          "realisation_type": "realises_shared_sub_capability"
+        }
+      ],
+      "dependencies": [
+        {
+          "service_id": "SVC-102",
+          "service_name": "Event Bus",
+          "dependency_type": "platform",
+          "rationale": "Publishes CreditDecisionMade, LimitApproved, and LimitReduced events consumed by SVC-001 (retail lending), SVC-005 (commercial lending), and SVC-012 (risk engine for portfolio-level monitoring)."
+        },
+        {
+          "service_id": "SVC-104",
+          "service_name": "Data Platform",
+          "dependency_type": "soft_query",
+          "rationale": "Credit bureau data (Experian, Equifax, TransUnion) and internal behavioural data (transaction patterns from the data platform) are inputs to the credit scoring models."
+        },
+        {
+          "service_id": "SVC-103",
+          "service_name": "Audit & Logging",
+          "dependency_type": "platform",
+          "rationale": "All credit decisions including the model inputs and outputs must be immutably logged for FCA Consumer Duty fair value evidence, PRA IRB model audit, and potential FOS dispute resolution."
+        }
+      ],
+      "technology_constraints": {
+        "deployment_model": "cloud_native",
+        "data_residency": "UK only \u2014 PRA IRB model data, credit bureau data under Experian/Equifax/TransUnion RBUA agreements",
+        "latency_class": "near_real_time_sub_1s",
+        "availability_target": "99.9%",
+        "pci_dss_scope": false,
+        "regulatory_data_obligations": [
+          "PRA IRB model approval records",
+          "FCA Consumer Duty credit pricing fair value evidence",
+          "FCA CONC responsible lending records",
+          "Consumer Credit Act 1974 regulated credit agreement decisions",
+          "UK GDPR automated decision-making records (GDPR Art. 22 requirements for automated credit decisions)"
+        ]
+      },
+      "market_context": {
+        "build_vs_buy_assessment": "build_with_vendor_components",
+        "build_rationale": "CAP-004 must_build_in_house explicitly states: credit risk appetite and policy must be authored internally; IRB model development for PRA approval requires the bank to own and understand the models. Credit bureau data (Experian, Equifax, TransUnion) is always buy. Credit decisioning platform (Experian PowerCurve, FICO Platform) can be bought as the execution engine while the bank owns the strategy layer and credit policy.",
+        "vendor_options": [
+          {
+            "vendor_name": "Experian",
+            "product_name": "PowerCurve",
+            "fit_assessment": "preferred",
+            "notes": "Hosted credit decisioning and strategy management. Bank configures scorecards and credit policy within the platform. Avoids building decisioning rules engine from scratch."
+          },
+          {
+            "vendor_name": "FICO",
+            "product_name": "FICO Platform",
+            "fit_assessment": "shortlisted",
+            "notes": "Credit decisioning and scorecard management. Large global install base. Incumbent choice in many UK retail banks."
+          },
+          {
+            "vendor_name": "Zest AI",
+            "product_name": "ML Credit Underwriting",
+            "fit_assessment": "shortlisted",
+            "notes": "ML-based credit underwriting claiming 25%+ default rate reduction. Buy as a wrapper over bureau data for thin-file or SME lending. Bank must own model validation per PRA SS1/23."
+          }
+        ]
+      },
+      "design_decisions": [
+        {
+          "id": "SDD-006",
+          "decision": "SVC-052 exposes a versioned credit model API where each scoring version is independently callable and all decisions record the model version used.",
+          "rationale": "PRA IRB model approval constrains model changes \u2014 material changes require PRA notification and may require prior approval. The versioned API allows new model versions to be deployed for specific product lines or segments without disrupting existing origination flows. The Consumer Duty audit trail requires the specific model version to be captured at decision time for fair value retrospective review.",
+          "alternatives_considered": [
+            "Deploy single model version with a hard cutover on approval"
+          ],
+          "rejected_because": "Hard cutover creates a production deployment window where mixed model versions apply to in-flight applications, complicating the audit trail. Versioned API avoids this."
+        }
+      ]
+    },
+    {
+      "id": "SVC-053",
+      "name": "Notification Service",
+      "description": "The authoritative cross-capability service for orchestrating and delivering bank-initiated customer communications across all digital channels: push notifications (iOS/Android), SMS, in-app messages, email, and WhatsApp Business. Manages communication preferences and GDPR consent state, ensures regulatory communications (MCOB, CONC, BCOBS) are delivered regardless of marketing opt-out status, applies Consumer Duty communications outcome standards to notification content, and provides a delivery status and audit trail. Operates over bought delivery infrastructure (Twilio/MessageBird) with the bank owning the orchestration logic, preference management, and compliance controls.",
+      "classification": "foundation",
+      "status": "Draft",
+      "capability_mappings": [],
+      "dependencies": [
+        {
+          "service_id": "SVC-102",
+          "service_name": "Event Bus",
+          "dependency_type": "platform",
+          "rationale": "Subscribes to domain events from all capabilities that trigger customer communications: PaymentSettled (SVC-009), FraudAlertGenerated (SVC-013), LoanApproved (SVC-052), StatementReady (SVC-001), PolicyRenewal (SVC-004)."
+        },
+        {
+          "service_id": "SVC-103",
+          "service_name": "Audit & Logging",
+          "dependency_type": "platform",
+          "rationale": "All regulated communications (MCOB mortgage offers, CONC credit agreements, fraud alerts) must be immutably logged with delivery confirmation for FCA Consumer Duty evidence."
+        }
+      ],
+      "technology_constraints": {
+        "deployment_model": "cloud_native",
+        "data_residency": "UK only \u2014 customer communication preferences and consent records under UK GDPR",
+        "latency_class": "near_real_time_sub_1s",
+        "availability_target": "99.9%",
+        "pci_dss_scope": false,
+        "regulatory_data_obligations": [
+          "UK GDPR consent and communication preference records",
+          "PECR electronic marketing consent records",
+          "FCA Consumer Duty communications outcome evidence",
+          "Regulated communication delivery confirmation records (MCOB, CONC, BCOBS)"
+        ]
+      },
+      "market_context": {
+        "build_vs_buy_assessment": "build_with_vendor_components",
+        "build_rationale": "The communications orchestration logic, preference management, consent state, and regulatory communication rules must be bank-owned. The delivery layer (SMS, push, email infrastructure) is commodity and should be bought. CAP-001 and CAP-007 both identify Twilio/MessageBird as buy candidates for delivery infrastructure.",
+        "vendor_options": [
+          {
+            "vendor_name": "Twilio",
+            "product_name": "Customer Communications Cloud",
+            "fit_assessment": "preferred",
+            "notes": "SMS, push notifications, email, voice, WhatsApp delivery infrastructure. Programmable API. Dominant in developer-led communications infrastructure. Commodity delivery layer."
+          },
+          {
+            "vendor_name": "MessageBird / CM.com",
+            "product_name": "Enterprise Communications Platform",
+            "fit_assessment": "shortlisted",
+            "notes": "Stronger compliance tooling than Twilio for regulated industries. Good for high-volume transactional notifications with audit requirements."
+          }
+        ]
+      },
+      "design_decisions": [],
+      "notes": "Platform service. All capabilities publish notification events; this service delivers them. Share the mechanism, isolate the state."
+    },
+    {
+      "id": "SVC-054",
+      "name": "Document Management Service",
+      "description": "The authoritative cross-capability service for storing, retrieving, versioning, and governing bank documents across all product lines. Manages KYC/EDD identity documents, mortgage legal documents and land registry correspondence, trade finance documents (bills of lading, invoices, certificates of origin \u2014 including ETDA 2023 electronic trade documents), insurance policy documents, credit agreement regulated documents, and customer correspondence. Provides document classification, retention policy enforcement (regulatory retention periods differ by document type), and audit access controls.",
+      "classification": "cross_cutting",
+      "status": "Draft",
+      "capability_mappings": [
+        {
+          "capability_id": "CAP-002.03",
+          "capability_name": "Trade Finance (document management aspect)",
+          "realisation_type": "realises_shared_sub_capability"
+        }
+      ],
+      "dependencies": [
+        {
+          "service_id": "SVC-102",
+          "service_name": "Event Bus",
+          "dependency_type": "platform",
+          "rationale": "Publishes DocumentStored and DocumentRetrieved events for audit trail. Subscribes to DocumentRequested events from SVC-006 (Trade Finance) and SVC-014 (KYC/AML) for async document retrieval."
+        },
+        {
+          "service_id": "SVC-103",
+          "service_name": "Audit & Logging",
+          "dependency_type": "platform",
+          "rationale": "Document access, modification, and deletion events must be immutably audited for regulatory inspection and potential legal proceedings."
+        }
+      ],
+      "technology_constraints": {
+        "deployment_model": "cloud_native",
+        "data_residency": "UK only \u2014 regulated financial documents and personal data under UK GDPR",
+        "latency_class": "near_real_time_sub_1s",
+        "availability_target": "99.9%",
+        "pci_dss_scope": false,
+        "regulatory_data_obligations": [
+          "ETDA 2023 electronic trade document records",
+          "MLR 2017 CDD document retention (minimum 5 years)",
+          "Consumer Credit Act regulated agreement document retention",
+          "UK GDPR document retention and right-to-erasure conflict resolution",
+          "MCOB mortgage document retention records"
+        ]
+      },
+      "market_context": {
+        "build_vs_buy_assessment": "buy_and_configure",
+        "build_rationale": "Document storage and management is a commodity infrastructure capability. Cloud object storage with governance controls (AWS S3 with Intelligent Tiering, Azure Blob with lifecycle policies) provides the underlying infrastructure. A document management layer providing classification, retention, and access control can be bought or built thin over cloud storage.",
+        "vendor_options": [
+          {
+            "vendor_name": "AWS",
+            "product_name": "S3 + Macie (document governance)",
+            "fit_assessment": "preferred",
+            "notes": "Object storage with lifecycle policies for retention, Macie for sensitive data classification. Commodity infrastructure underpinning a thin document management layer."
+          }
+        ]
+      },
+      "design_decisions": []
+    },
+    {
+      "id": "SVC-055",
+      "name": "Workflow Engine",
+      "description": "The authoritative cross-capability orchestration service for long-running, multi-step business processes that span multiple domain services. Provides durable workflow execution, human task assignment (maker-checker, credit committee approval, MLRO review), SLA monitoring, and escalation management. Used by: customer onboarding (multi-step EDD workflows), mortgage origination (application \u2192 valuation \u2192 legal completion workflow), trade finance (LC issuance \u2192 document examination \u2192 discrepancy management), and commercial lending (credit application \u2192 committee \u2192 documentation \u2192 drawdown).",
+      "classification": "cross_cutting",
+      "status": "Draft",
+      "capability_mappings": [
+        {
+          "capability_id": "CAP-005.01",
+          "capability_name": "KYC / AML (onboarding workflow orchestration)",
+          "realisation_type": "realises_shared_sub_capability"
+        }
+      ],
+      "dependencies": [
+        {
+          "service_id": "SVC-102",
+          "service_name": "Event Bus",
+          "dependency_type": "platform",
+          "rationale": "Workflow state transitions are published as events. Domain services subscribe to workflow completion events (e.g. CreditCommitteeApproved, DocumentExaminationComplete) to proceed to the next step."
+        },
+        {
+          "service_id": "SVC-100",
+          "service_name": "Identity & Access Management",
+          "dependency_type": "hard_blocking",
+          "rationale": "Human task assignment (maker-checker, credit committee members) requires authenticated user identities from IAM for task routing and approval chain enforcement."
+        }
+      ],
+      "technology_constraints": {
+        "deployment_model": "cloud_native",
+        "data_residency": "UK only",
+        "latency_class": "batch_minutes",
+        "availability_target": "99.9%",
+        "pci_dss_scope": false,
+        "regulatory_data_obligations": [
+          "SM&CR approval chain records (who approved what and when)",
+          "FCA Consumer Duty multi-step process outcome records",
+          "MLR 2017 EDD workflow audit trail"
+        ]
+      },
+      "market_context": {
+        "build_vs_buy_assessment": "strong_buy",
+        "build_rationale": "Workflow orchestration is a commodity platform capability. Purpose-built workflow engines (Temporal, Camunda, AWS Step Functions) provide durable execution guarantees, human task management, and SLA monitoring that are expensive to build in-house. The bank owns the workflow definitions (business process logic); the engine is infrastructure.",
+        "vendor_options": [
+          {
+            "vendor_name": "Temporal Technologies",
+            "product_name": "Temporal Workflow Engine",
+            "fit_assessment": "preferred",
+            "notes": "Cloud-native durable workflow execution. Strong adoption in financial services for complex multi-step processes. Open source with managed cloud option."
+          },
+          {
+            "vendor_name": "Camunda",
+            "product_name": "Camunda Platform (BPMN-based)",
+            "fit_assessment": "shortlisted",
+            "notes": "BPMN-standard workflow modelling. Human task management. Audit trail. Used widely in European financial institutions."
+          }
+        ]
+      },
+      "design_decisions": []
+    }
+  ]
+}

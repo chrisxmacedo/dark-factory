@@ -1,0 +1,506 @@
+{
+  "journey_id": "JRN-008",
+  "journey_name": "Credit Card Application and Issuance",
+  "document_version": "1.0.0",
+  "status": "Draft",
+  "new_entities": [
+    {
+      "id": "ENT-022",
+      "name": "CreditCardApplication",
+      "description": "The credit card application record. Created by SVC-003 (Credit Card Service) at PH-023 when a customer submits an application. Tracks the application lifecycle from submission through to approval or decline. References the selected CardProduct (ENT-024) and the resulting CreditCardAccount (ENT-023) on approval. Consumed by the decisioning workflow and by EVT-040/EVT-043/EVT-044 event publishers.",
+      "owning_service": "SVC-003",
+      "reachable_from_phases": ["PH-023", "PH-024", "PH-025"],
+      "aggregate_root": false,
+      "fields": [
+        {
+          "name": "application_id",
+          "type": "UUID",
+          "validation_rule": "RFC 4122 UUID v4. System-generated. Immutable after creation. Used as the partition key for CreditCheckRequested (EVT-041) to guarantee ordered credit check events per application.",
+          "source": "PH-023",
+          "governed_by": null
+        },
+        {
+          "name": "customer_id",
+          "type": "UUID",
+          "validation_rule": "Required. FK → Customer.customer_id (ENT-001, owned by SVC-001). Must reference a Customer with status = 'active'. Immutable after creation.",
+          "source": "PH-023",
+          "governed_by": null
+        },
+        {
+          "name": "product_id",
+          "type": "UUID",
+          "validation_rule": "Required. FK → CardProduct.product_id (ENT-024). Must reference an active CardProduct at time of submission. Immutable after submission.",
+          "source": "PH-023",
+          "governed_by": null
+        },
+        {
+          "name": "requested_limit",
+          "type": "decimal",
+          "validation_rule": "Optional. Positive decimal, max 2 decimal places (GBP). If provided: minimum £250.00, maximum £50,000.00. If null: system assigns limit based on creditworthiness. Informational — actual assigned limit determined at PH-025.",
+          "source": "PH-023",
+          "governed_by": "GOV-001-R01"
+        },
+        {
+          "name": "income_declared",
+          "type": "decimal",
+          "validation_rule": "Required. Gross annual income in GBP. Positive decimal, max 2 decimal places. Minimum: £0.00 (unemployed). Used in CONC 5.3A creditworthiness assessment.",
+          "source": "PH-023",
+          "governed_by": "GOV-001-R01",
+          "transparency_note": "Collected under CCA 1974 / CONC 5.3A creditworthiness assessment obligation. Used to calculate sustainable repayment capacity. Not shared with credit bureaux — credit bureaux are queried independently."
+        },
+        {
+          "name": "employment_status",
+          "type": "enum",
+          "validation_rule": "Required. Enum: employed_full_time | employed_part_time | self_employed | retired | student | unemployed | other. Used in credit policy decisioning.",
+          "source": "PH-023",
+          "governed_by": null
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "validation_rule": "Required. Enum: submitted | assessment_complete | approved | declined | referred | withdrawn. Transitions: submitted → assessment_complete (PH-024, after EVT-042 received); assessment_complete → approved | declined | referred (PH-025); approved → (triggers PH-026 issuance); referred → approved | declined (manual review); withdrawn (customer exercises s66A right). No reverse transitions except referred → approved | declined.",
+          "source": "PH-023",
+          "governed_by": null
+        },
+        {
+          "name": "credit_assessment_reference",
+          "type": "string",
+          "validation_rule": "Conditional. Set when EVT-042 CreditCheckCompleted is consumed (PH-024). UUID reference to the risk engine assessment record. Immutable once set. Required for CONC s157 disclosure (reference to CRA consulted).",
+          "source": "PH-024",
+          "governed_by": "GOV-001-R01"
+        },
+        {
+          "name": "assigned_credit_limit",
+          "type": "decimal",
+          "validation_rule": "Conditional. Set at PH-025 on approval. Positive decimal, max 2 decimal places (GBP). Min £250.00, max £50,000.00. Lower of requested_limit (if specified) and risk-based recommended limit from SVC-012. Null until decision made.",
+          "source": "PH-025",
+          "governed_by": "GOV-001-R01"
+        },
+        {
+          "name": "decision",
+          "type": "enum",
+          "validation_rule": "Conditional. Set at PH-025. Enum: approved | declined | referred. Null before decision phase completes.",
+          "source": "PH-025",
+          "governed_by": null
+        },
+        {
+          "name": "decision_timestamp",
+          "type": "timestamp",
+          "validation_rule": "Conditional. ISO 8601 UTC. Set when decision is made (automated or manual). Required for audit trail — CONC requires timely decision.",
+          "source": "PH-025",
+          "governed_by": null
+        },
+        {
+          "name": "resulting_account_id",
+          "type": "UUID",
+          "validation_rule": "Conditional. FK → CreditCardAccount.account_id (ENT-023). Set by SVC-003 when ENT-023 is created at PH-026 on the approved path. Null for declined/withdrawn applications.",
+          "source": "PH-026",
+          "governed_by": null
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "validation_rule": "System-generated. ISO 8601 UTC. Immutable. Set at submission.",
+          "source": "PH-023",
+          "governed_by": null
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "validation_rule": "System-generated. ISO 8601 UTC. Updated on any field mutation. Maintained for audit trail continuity.",
+          "source": "PH-023",
+          "governed_by": null
+        }
+      ],
+      "relationships": [
+        {
+          "target_entity": "ENT-001",
+          "type": "many-to-one",
+          "description": "CreditCardApplication belongs to one Customer via customer_id FK. Customer is owned by SVC-001; SVC-003 holds only the customer_id reference."
+        },
+        {
+          "target_entity": "ENT-024",
+          "type": "many-to-one",
+          "description": "CreditCardApplication references one CardProduct (the product applied for) via product_id FK."
+        },
+        {
+          "target_entity": "ENT-023",
+          "type": "one-to-one",
+          "description": "On approval, one CreditCardApplication results in one CreditCardAccount. The link is held via resulting_account_id on ENT-022."
+        }
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-ENT022-01",
+          "decision": "income_declared is held on CreditCardApplication rather than fetching from an income verification service. At this stage, income is self-declared and unverified — consistent with CONC 5.3A which requires income assessment but does not mandate independent verification for standard credit card applications below a specified income-to-limit ratio.",
+          "rationale": "CONC 5.3A permits proportionate assessment. For personal credit cards (lower ticket size than mortgages), self-declared income with cross-check against credit bureau data is an FCA-accepted methodology. Adding an income verification service would create disproportionate friction."
+        },
+        {
+          "id": "DD-ENT022-02",
+          "decision": "credit_assessment_reference is a pointer to SVC-012's assessment record. SVC-003 does not store the raw credit score on ENT-022.",
+          "rationale": "UK GDPR data minimisation (Article 5(1)(c)). The raw credit score is not needed for SVC-003's decisioning after the decision is made. The reference is sufficient for CCA s157 right-to-know disclosure and CONC audit requirements."
+        }
+      ],
+      "source_journeys": ["JRN-008"]
+    },
+    {
+      "id": "ENT-023",
+      "name": "CreditCardAccount",
+      "description": "The credit card account entity. Created by SVC-003 at PH-026 upon an approved application. This is the central financial entity for the credit card account lifecycle, holding credit limit, balances, statement cycle references, and persistent debt monitoring state. card_number_token replaces the raw PAN throughout — the full PAN exists only within the PCI CDE managed by the card processing platform. Persistent debt monitoring (FCA CONC 6.7.27) is tracked via persistent_debt_flag and persistent_debt_months.",
+      "owning_service": "SVC-003",
+      "reachable_from_phases": ["PH-026", "PH-027", "PH-028"],
+      "aggregate_root": true,
+      "fields": [
+        {
+          "name": "account_id",
+          "type": "UUID",
+          "validation_rule": "RFC 4122 UUID v4. System-generated. Immutable. Internal identifier — distinct from card_number_token.",
+          "source": "PH-026",
+          "governed_by": null
+        },
+        {
+          "name": "customer_id",
+          "type": "UUID",
+          "validation_rule": "Required. FK → Customer.customer_id (ENT-001). Must reference an active Customer. Immutable after creation.",
+          "source": "PH-026",
+          "governed_by": null
+        },
+        {
+          "name": "card_number_token",
+          "type": "string",
+          "validation_rule": "Required. Format-preserving token issued by the PCI-compliant tokenisation vault. Never the raw PAN. Token is a reference into the card processing platform (Marqeta/Thredd) vault. Used in all API responses, event payloads, and application-layer storage. Immutable (token persists for card lifetime; a new token is generated on card replacement).",
+          "source": "PH-026",
+          "governed_by": null,
+          "pci_note": "PCI DSS v4.0 Req 3.5 — PAN must be protected. card_number_token is the only form stored and transmitted outside the PCI CDE. Raw PAN is retained within the vault for card network authorisation processing only."
+        },
+        {
+          "name": "credit_limit",
+          "type": "decimal",
+          "validation_rule": "Required. Positive decimal, max 2 decimal places (GBP). Min £250.00, max £50,000.00. Set from ENT-022.assigned_credit_limit at account creation. Modifiable via a separate credit limit change journey (increase requires new creditworthiness assessment; decrease permitted without assessment).",
+          "source": "PH-026",
+          "governed_by": "GOV-001-R01"
+        },
+        {
+          "name": "available_balance",
+          "type": "decimal",
+          "validation_rule": "Required. credit_limit minus current outstanding balance. Max 2 decimal places (GBP). Must never go negative (would require authorisation system to decline transactions above limit). Updated in real-time on each authorised transaction and each payment received. Derived — authoritative source is the transaction ledger.",
+          "source": "PH-027",
+          "governed_by": null,
+          "design_note": "Available balance is a cached derived field for performance (avoid full ledger aggregation on every authorisation check). Must be updated atomically with transaction ledger to avoid race conditions."
+        },
+        {
+          "name": "statement_balance",
+          "type": "decimal",
+          "validation_rule": "Required. Closing balance as at the last statement date. Max 2 decimal places (GBP). Set when ENT-025 StatementCycle is created at statement generation. Null before first statement.",
+          "source": "PH-028",
+          "governed_by": null
+        },
+        {
+          "name": "minimum_payment",
+          "type": "decimal",
+          "validation_rule": "Conditional. The minimum payment due as calculated on the last statement. Must cover all accrued interest + fees + minimum principal (CONC 7.7). Max 2 decimal places (GBP). Null before first statement. Updated at each statement cycle.",
+          "source": "PH-028",
+          "governed_by": "GOV-001-R01"
+        },
+        {
+          "name": "apr",
+          "type": "decimal",
+          "validation_rule": "Required. Annual Percentage Rate as a percentage (e.g. 24.9 for 24.9% APR). Derived from CardProduct.base_apr ± risk adjustment applied at decision. Immutable unless a product rate change event is applied (separate journey). Must be expressed as a true APR per CCA 1974 Schedule 5.",
+          "source": "PH-026",
+          "governed_by": "GOV-001-R01"
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "validation_rule": "Required. Enum: issued | active | suspended | closed. Transitions: issued (PH-026, card generated) → active (PH-027, card activated); active → suspended (credit limit suspension at persistent debt 36 months, or fraud/compliance action); active | suspended → closed (balance cleared + customer request, or write-off). No re-activation after 'closed'.",
+          "source": "PH-026",
+          "governed_by": null
+        },
+        {
+          "name": "persistent_debt_flag",
+          "type": "boolean",
+          "validation_rule": "Required. Default: false. Set to true when persistent_debt_months reaches 18 (FCA CONC 6.7.27 first trigger threshold). Cleared to false when persistent_debt_months resets to 0 (customer repays sufficiently). Drives EVT-048 PersistentDebtAlertTriggered and consumer communication obligations.",
+          "source": "PH-028",
+          "governed_by": "GOV-001-R01",
+          "transparency_note": "FCA CONC 6.7.27 obligation. Customer is informed when this flag is set via the FCA-mandated persistent debt communication. Not surfaced directly as 'flag' in customer-facing interfaces — expressed as 'your account is in a persistent debt situation'."
+        },
+        {
+          "name": "persistent_debt_months",
+          "type": "integer",
+          "validation_rule": "Required. Non-negative integer. Rolling count of consecutive months in which the customer has paid more in interest and charges than principal (FCA CONC 6.7.27 definition). Resets to 0 when principal repayment exceeds interest/charges in a month. Updated monthly at statement generation. Intervention at 18, 27, and 36 months.",
+          "source": "PH-028",
+          "governed_by": "GOV-001-R01"
+        },
+        {
+          "name": "opened_date",
+          "type": "date",
+          "validation_rule": "Required. ISO 8601 (YYYY-MM-DD). Date the CreditCardAccount was created (PH-026). Immutable. Used as the reference date for the regulated credit agreement.",
+          "source": "PH-026",
+          "governed_by": null
+        },
+        {
+          "name": "statement_date_day",
+          "type": "integer",
+          "validation_rule": "Required. Day of month (1–28) on which the monthly statement cycle closes. Set at account creation; not the 29th, 30th, or 31st to avoid month-end ambiguity. Immutable without a product change request.",
+          "source": "PH-026",
+          "governed_by": null
+        }
+      ],
+      "relationships": [
+        {
+          "target_entity": "ENT-001",
+          "type": "many-to-one",
+          "description": "CreditCardAccount belongs to one Customer via customer_id FK. SVC-003 holds only customer_id — full Customer data is resolved via SVC-001 GET /customers/{id}."
+        },
+        {
+          "target_entity": "ENT-022",
+          "type": "one-to-one",
+          "description": "CreditCardAccount was created as a result of one CreditCardApplication (the originating approved application)."
+        },
+        {
+          "target_entity": "ENT-025",
+          "type": "one-to-many",
+          "description": "CreditCardAccount generates one StatementCycle record per monthly billing period over its lifetime."
+        }
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-ENT023-01",
+          "decision": "card_number_token is the only card identifier stored on CreditCardAccount. The raw PAN is not stored in any SVC-003 database, event payload, or API response.",
+          "rationale": "PCI DSS v4.0 Requirement 3.5: PAN must be rendered unreadable anywhere it is stored. Tokenisation via the card processing platform (PCI-compliant vault) means SVC-003 is minimally scoped for PCI CDE. This materially reduces the bank's PCI compliance surface area and associated certification cost."
+        },
+        {
+          "id": "DD-ENT023-02",
+          "decision": "persistent_debt_months is a rolling counter maintained on CreditCardAccount rather than derived from the transaction ledger at query time.",
+          "rationale": "FCA CONC 6.7.27 requires the bank to proactively identify and contact customers in persistent debt. A stored counter enables event-driven alerting (EVT-048) at precise 18/27/36 month thresholds without a full ledger scan on every monthly run. The counter is updated atomically at statement generation."
+        },
+        {
+          "id": "DD-ENT023-03",
+          "decision": "available_balance is a cached field on CreditCardAccount, not derived solely from the ledger at query time.",
+          "rationale": "Card transaction authorisation (JRN-011) operates at sub-second latency. Computing available balance from the full transaction ledger on every authorisation check would not meet the Visa/Mastercard sub-second SLA. The cached available_balance is updated atomically with each transaction post; the authorisation system reads this cache."
+        }
+      ],
+      "source_journeys": ["JRN-008"]
+    },
+    {
+      "id": "ENT-024",
+      "name": "CardProduct",
+      "description": "A credit card product offered by the bank. Defines the commercial terms of a credit card offering: APR, rewards type, annual fee, and eligibility criteria. Owned by SVC-003. Multiple products may be active simultaneously (e.g. standard, rewards, balance-transfer). CardProduct is a reference/catalogue entity — it does not change frequently and is not customer-specific.",
+      "owning_service": "SVC-003",
+      "reachable_from_phases": ["PH-023"],
+      "aggregate_root": false,
+      "fields": [
+        {
+          "name": "product_id",
+          "type": "UUID",
+          "validation_rule": "RFC 4122 UUID v4. System-generated. Immutable after creation.",
+          "source": "PH-023",
+          "governed_by": null
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "validation_rule": "Required. Max 100 characters. Human-readable product name (e.g. 'Classic Visa', 'Rewards Mastercard'). Must be unique across active products.",
+          "source": "PH-023",
+          "governed_by": "GOV-001-R01"
+        },
+        {
+          "name": "base_apr",
+          "type": "decimal",
+          "validation_rule": "Required. Annual Percentage Rate as a percentage (e.g. 24.9). Calculated per CCA 1974 Schedule 5. Must be the representative APR advertised under FCA CONC 3.5.3 (at least 51% of customers receive this rate or better). Max 2 decimal places.",
+          "source": "PH-023",
+          "governed_by": "GOV-001-R01",
+          "transparency_note": "Representative APR must be disclosed prominently in all marketing and at application stage (CONC 3.5.3). The actual APR assigned to a customer account may differ from base_apr based on risk adjustment."
+        },
+        {
+          "name": "rewards_type",
+          "type": "enum",
+          "validation_rule": "Required. Enum: none | cashback | points | airmiles | none. Describes the rewards programme associated with the card product. Governs post-issuance rewards accrual.",
+          "source": "PH-023",
+          "governed_by": null
+        },
+        {
+          "name": "annual_fee",
+          "type": "decimal",
+          "validation_rule": "Required. Annual fee in GBP. 0.00 for no-fee products. Max 2 decimal places. Must be disclosed at application stage (CONC 3.5.3 and Consumer Duty).",
+          "source": "PH-023",
+          "governed_by": "GOV-001-R01"
+        },
+        {
+          "name": "eligibility_criteria",
+          "type": "object",
+          "validation_rule": "Required. JSON object containing: min_age (integer, default 18), min_income_gbp (decimal), uk_resident_required (boolean, default true), existing_customer_required (boolean), max_existing_cards (integer or null). Used for pre-eligibility checks at PH-023.",
+          "source": "PH-023",
+          "governed_by": null
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "validation_rule": "Required. Enum: active | withdrawn. 'withdrawn' products can no longer be applied for but existing accounts referencing this product remain valid. No deletion — products are soft-withdrawn only.",
+          "source": "PH-023",
+          "governed_by": null
+        }
+      ],
+      "relationships": [
+        {
+          "target_entity": "ENT-022",
+          "type": "one-to-many",
+          "description": "One CardProduct may be referenced by many CreditCardApplications."
+        }
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-ENT024-01",
+          "decision": "CardProduct eligibility_criteria is stored as a JSON object on the entity rather than modelled as a separate EligibilityCriteria entity.",
+          "rationale": "Eligibility criteria are product-specific and consulted in bulk at PH-023. Storing them as a JSON column on CardProduct avoids a join at the high-frequency pre-eligibility check path. The criteria schema is stable and does not require independent lifecycle management."
+        }
+      ],
+      "source_journeys": ["JRN-008"]
+    },
+    {
+      "id": "ENT-025",
+      "name": "StatementCycle",
+      "description": "A monthly billing cycle record for a CreditCardAccount. Created by SVC-003 at the close of each billing period (statement_date). Records the financial summary of the cycle: opening and closing balances, interest charged, minimum payment due, and payment due date. Also records the persistent debt counter for FCA CONC 6.7.27 compliance monitoring. One StatementCycle is created per account per month for the life of the account.",
+      "owning_service": "SVC-003",
+      "reachable_from_phases": ["PH-028"],
+      "aggregate_root": false,
+      "fields": [
+        {
+          "name": "cycle_id",
+          "type": "UUID",
+          "validation_rule": "RFC 4122 UUID v4. System-generated. Immutable.",
+          "source": "PH-028",
+          "governed_by": null
+        },
+        {
+          "name": "account_id",
+          "type": "UUID",
+          "validation_rule": "Required. FK → CreditCardAccount.account_id (ENT-023). Immutable.",
+          "source": "PH-028",
+          "governed_by": null
+        },
+        {
+          "name": "statement_date",
+          "type": "date",
+          "validation_rule": "Required. ISO 8601 (YYYY-MM-DD). The date on which this billing cycle closed and the statement was generated. Matches CreditCardAccount.statement_date_day for the relevant month. Immutable.",
+          "source": "PH-028",
+          "governed_by": null
+        },
+        {
+          "name": "opening_balance",
+          "type": "decimal",
+          "validation_rule": "Required. Balance at the start of the billing cycle (equals previous cycle's closing_balance). Max 2 decimal places (GBP). Non-negative.",
+          "source": "PH-028",
+          "governed_by": null
+        },
+        {
+          "name": "closing_balance",
+          "type": "decimal",
+          "validation_rule": "Required. Balance at the end of the billing cycle (after all transactions and payments applied). Max 2 decimal places (GBP). Non-negative.",
+          "source": "PH-028",
+          "governed_by": null
+        },
+        {
+          "name": "interest_charged",
+          "type": "decimal",
+          "validation_rule": "Required. Interest accrued during this billing cycle. Max 2 decimal places (GBP). Non-negative. 0.00 if full balance was paid in prior cycle (interest-free period).",
+          "source": "PH-028",
+          "governed_by": null
+        },
+        {
+          "name": "fees_charged",
+          "type": "decimal",
+          "validation_rule": "Required. Total fees charged during this cycle (annual fee (pro-rated), late payment fee if applicable). Max 2 decimal places (GBP). Non-negative.",
+          "source": "PH-028",
+          "governed_by": "GOV-001-R01"
+        },
+        {
+          "name": "payments_received",
+          "type": "decimal",
+          "validation_rule": "Required. Total payments received during this billing cycle (Bacs DD, manual payments). Max 2 decimal places (GBP). Non-negative.",
+          "source": "PH-028",
+          "governed_by": null
+        },
+        {
+          "name": "minimum_payment_due",
+          "type": "decimal",
+          "validation_rule": "Required. Minimum payment the customer must make by payment_due_date. Must cover all interest + fees + minimum principal repayment (CONC 7.7 — minimum repayment rules). Max 2 decimal places (GBP). Cannot be set so low that balance would increase absent a freeze on interest (CONC 7.7.7).",
+          "source": "PH-028",
+          "governed_by": "GOV-001-R01"
+        },
+        {
+          "name": "payment_due_date",
+          "type": "date",
+          "validation_rule": "Required. ISO 8601 (YYYY-MM-DD). Minimum 25 days after statement_date (FCA CONC minimum notice period). Must not be a UK bank holiday — shifted to next business day if so.",
+          "source": "PH-028",
+          "governed_by": "GOV-001-R01"
+        },
+        {
+          "name": "persistent_debt_months",
+          "type": "integer",
+          "validation_rule": "Required. Snapshot of CreditCardAccount.persistent_debt_months as at this statement date. Non-negative integer. Provides an immutable historical record of the persistent debt counter at each statement point for FCA audit purposes.",
+          "source": "PH-028",
+          "governed_by": "GOV-001-R01",
+          "transparency_note": "FCA CONC 6.7.27 audit evidence. Retained for the duration of the account plus 6 years for regulatory inspection."
+        }
+      ],
+      "relationships": [
+        {
+          "target_entity": "ENT-023",
+          "type": "many-to-one",
+          "description": "StatementCycle belongs to one CreditCardAccount via account_id FK."
+        }
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-ENT025-01",
+          "decision": "StatementCycle is an immutable append-only record. Once created it is never updated.",
+          "rationale": "Regulatory audit trail requirement. FCA CONC and CCA 1974 require the bank to retain complete billing history. Immutable records also support idempotent statement generation — if EVT-047 is replayed, the duplicate publication is detected by checking whether a StatementCycle already exists for the account_id + statement_date combination."
+        },
+        {
+          "id": "DD-ENT025-02",
+          "decision": "persistent_debt_months is snapshotted onto StatementCycle at creation rather than only held on CreditCardAccount.",
+          "rationale": "Provides a complete, auditable history of the persistent debt counter across the account lifecycle. Supports FCA supervision: if the bank is required to demonstrate it identified and communicated with persistent debt customers at the correct thresholds, the StatementCycle history provides point-in-time evidence."
+        }
+      ],
+      "source_journeys": ["JRN-008"]
+    }
+  ],
+  "referenced_existing_entities": [
+    {
+      "entity_id": "ENT-001",
+      "name": "Customer",
+      "owning_service": "SVC-001",
+      "access_pattern": "SVC-003 calls SVC-001 GET /customers/{customer_id} synchronously (same-capability direct call, CAP-001) to retrieve customer identity data for credit check submission and card issuance. SVC-003 does not hold a local copy of Customer fields."
+    },
+    {
+      "entity_id": "ENT-004",
+      "name": "Account",
+      "owning_service": "SVC-001",
+      "access_pattern": "Referenced to confirm the customer is an existing bank customer with an active current account (eligibility check at PH-023). SVC-003 resolves via SVC-001 GET /accounts?customer_id={id}. Direct debit for minimum payment may be linked to ENT-004 in a subsequent direct debit setup journey."
+    }
+  ],
+  "entity_extensions": [
+    {
+      "entity_id": "ENT-001",
+      "entity_name": "Customer",
+      "owning_service": "SVC-001",
+      "extension_type": "new_relationship",
+      "added_by_journey": "JRN-008",
+      "description": "Customer.relationships gains a new entry: one-to-many to ENT-023 (CreditCardAccount). A Customer may hold multiple CreditCardAccounts over their lifetime. The relationship is navigable from SVC-001 via customer_id FK on ENT-023.",
+      "new_relationship": {
+        "target_entity": "ENT-023",
+        "type": "one-to-many",
+        "description": "Customer may hold one or more CreditCardAccount records. CreditCardAccount is owned by SVC-003; the relationship is navigated via customer_id FK on ENT-023."
+      }
+    },
+    {
+      "entity_id": "ENT-004",
+      "entity_name": "Account",
+      "owning_service": "SVC-001",
+      "extension_type": "design_note",
+      "added_by_journey": "JRN-008",
+      "description": "Account (ENT-004) is distinct from CreditCardAccount (ENT-023). ENT-004 is the current account (sort code / account number, Faster Payments, Bacs). ENT-023 is the credit card account (card number token, credit limit, revolving balance). They are related only by sharing the same customer_id. The credit card direct debit for minimum payment will use ENT-004 as the source account via a separate direct debit setup journey."
+    }
+  ]
+}

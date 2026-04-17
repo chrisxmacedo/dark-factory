@@ -1,0 +1,232 @@
+{
+  "diagram_id": "SEQ-JRN002-002",
+  "name": "Fraud Block — Faster Payment Initiation (Exception Path EX-002)",
+  "journey_id": "JRN-002",
+  "scenario": "fraud-block",
+  "description": "PER-001 initiates a Faster Payment. CoP returns a no_match (customer overrides with explicit confirmation). Sanctions screen is clear. Fraud score exceeds the block threshold (e.g. new payee + no-match CoP + unusual amount). SVC-001 publishes PaymentFraudBlocked. Customer sees a generic decline. Fraud Analyst (PER-054) receives a case for investigation.",
+  "participants": [
+    {"id": "Customer", "label": "PER-001 (Customer)", "type": "actor"},
+    {"id": "FraudAnalyst", "label": "PER-054 (Fraud Analyst)", "type": "actor"},
+    {"id": "Channel", "label": "SVC-017 (Digital Channels)", "type": "service"},
+    {"id": "IAM", "label": "SVC-100 (IAM)", "type": "service"},
+    {"id": "DomesticPayments", "label": "SVC-009 (Domestic Payments)", "type": "service"},
+    {"id": "RetailBanking", "label": "SVC-001 (Retail Banking Core)", "type": "service"},
+    {"id": "EventBus", "label": "SVC-102 (Event Bus)", "type": "infrastructure"},
+    {"id": "Sanctions", "label": "SVC-051 (Sanctions Screening)", "type": "service"},
+    {"id": "Fraud", "label": "SVC-013 (Fraud Detection)", "type": "service"},
+    {"id": "FraudPlatform", "label": "Fraud Operations Platform (INTL-003)", "type": "system"},
+    {"id": "AuditLog", "label": "SVC-103 (Audit & Logging)", "type": "service"}
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "from": "Customer",
+      "to": "Channel",
+      "type": "sync",
+      "action": "Enter payee details (new payee, amount £2,500 — unusually large for this account history)",
+      "phase": "PY-001"
+    },
+    {
+      "step": 2,
+      "from": "Channel",
+      "to": "DomesticPayments",
+      "type": "sync",
+      "action": "POST /cop/verify { payee_sort_code, payee_account_number, payee_name }",
+      "phase": "PY-001"
+    },
+    {
+      "step": 3,
+      "from": "DomesticPayments",
+      "to": "Channel",
+      "type": "sync-return",
+      "action": "200 OK { cop_result: 'no_match', risk_warning_required: true }",
+      "phase": "PY-001"
+    },
+    {
+      "step": 4,
+      "from": "Channel",
+      "to": "Customer",
+      "type": "ui",
+      "action": "Display PSR SD17 risk warning: 'Name does not match the account at the receiving bank. This could be a sign of fraud.' Show Confirm / Cancel buttons.",
+      "phase": "PY-001"
+    },
+    {
+      "step": 5,
+      "from": "Customer",
+      "to": "Channel",
+      "type": "sync",
+      "action": "Customer clicks 'I understand the risk and want to proceed' (explicit override confirmation)",
+      "phase": "PY-001",
+      "note": "Override timestamp and confirmation are recorded"
+    },
+    {
+      "step": 6,
+      "from": "Customer",
+      "to": "Channel",
+      "type": "sync",
+      "action": "Complete SCA (biometric)",
+      "phase": "PY-001"
+    },
+    {
+      "step": 7,
+      "from": "Channel",
+      "to": "IAM",
+      "type": "sync",
+      "action": "POST /sca/validate { assertion, payee_sort_code, payee_account_number, amount }",
+      "phase": "PY-001"
+    },
+    {
+      "step": 8,
+      "from": "IAM",
+      "to": "Channel",
+      "type": "sync-return",
+      "action": "200 OK { sca_assertion_ref, valid: true }",
+      "phase": "PY-001"
+    },
+    {
+      "step": 9,
+      "from": "Channel",
+      "to": "RetailBanking",
+      "type": "sync",
+      "action": "POST /payments { account_id, amount: 2500.00, payee details, cop_result: no_match, cop_override_confirmed: true, cop_override_timestamp, sca_assertion_ref }",
+      "phase": "PY-001"
+    },
+    {
+      "step": 10,
+      "from": "RetailBanking",
+      "to": "Channel",
+      "type": "sync-return",
+      "action": "202 Accepted { payment_intent_id, status: pending_screening }",
+      "phase": "PY-001"
+    },
+    {
+      "step": 11,
+      "from": "RetailBanking",
+      "to": "EventBus",
+      "type": "async-publish",
+      "action": "Publish PaymentIntentCreated (EVT-P01) — includes cop_result: no_match, cop_override_confirmed: true",
+      "event_id": "EVT-P01",
+      "phase": "PY-001"
+    },
+    {
+      "step": 12,
+      "from": "Channel",
+      "to": "Customer",
+      "type": "ui",
+      "action": "Show 'Processing your payment...' screen",
+      "phase": "PY-002"
+    },
+    {
+      "step": 13,
+      "from": "EventBus",
+      "to": "Sanctions",
+      "type": "async-consume",
+      "action": "Run sanctions screen → outcome: clear",
+      "phase": "PY-002",
+      "note": "Concurrent with step 14"
+    },
+    {
+      "step": 14,
+      "from": "EventBus",
+      "to": "Fraud",
+      "type": "async-consume",
+      "action": "Run fraud scoring — features: new payee + no_match CoP override + large amount vs account history",
+      "phase": "PY-002",
+      "note": "Concurrent with step 13. High fraud score generated."
+    },
+    {
+      "step": 15,
+      "from": "Sanctions",
+      "to": "EventBus",
+      "type": "async-publish",
+      "action": "Publish SanctionsScreeningCompleted (EVT-P02) { outcome: clear }",
+      "event_id": "EVT-P02",
+      "phase": "PY-002"
+    },
+    {
+      "step": 16,
+      "from": "Fraud",
+      "to": "EventBus",
+      "type": "async-publish",
+      "action": "Publish FraudScoreCompleted (EVT-P03) { risk_level: block, fraud_score: 0.94, top_risk_features: [cop_no_match_override, unusual_amount_vs_history, new_payee] }",
+      "event_id": "EVT-P03",
+      "phase": "PY-002"
+    },
+    {
+      "step": 17,
+      "from": "EventBus",
+      "to": "RetailBanking",
+      "type": "async-consume",
+      "action": "Consume EVT-P02 (clear) and EVT-P03 (BLOCK). Decision: fraud block.",
+      "phase": "PY-003"
+    },
+    {
+      "step": 18,
+      "from": "RetailBanking",
+      "to": "EventBus",
+      "type": "async-publish",
+      "action": "Publish PaymentFraudBlocked (EVT-P08) — update PaymentIntent.status = fraud_blocked",
+      "event_id": "EVT-P08",
+      "phase": "PY-003"
+    },
+    {
+      "step": 19,
+      "from": "EventBus",
+      "to": "AuditLog",
+      "type": "async-consume",
+      "action": "Write EVT-P08 to WORM audit log (risk_level, top_risk_features recorded; raw fraud_score not in SVC-103 log)",
+      "phase": "PY-003"
+    },
+    {
+      "step": 20,
+      "from": "EventBus",
+      "to": "FraudPlatform",
+      "type": "async-consume",
+      "action": "Consume PaymentFraudBlocked → create fraud investigation case. Assign to PER-054 (Fraud Analyst).",
+      "phase": "PY-003"
+    },
+    {
+      "step": 21,
+      "from": "FraudPlatform",
+      "to": "FraudAnalyst",
+      "type": "notification",
+      "action": "Alert: New fraud block case — £2,500 payment to [payee]. risk_level: block. Top features: CoP no_match override, unusual amount.",
+      "phase": "PY-003"
+    },
+    {
+      "step": 22,
+      "from": "Channel",
+      "to": "RetailBanking",
+      "type": "sync",
+      "action": "GET /payments/{payment_intent_id} (polling)",
+      "phase": "PY-003"
+    },
+    {
+      "step": 23,
+      "from": "RetailBanking",
+      "to": "Channel",
+      "type": "sync-return",
+      "action": "200 OK { status: fraud_blocked, failure_reason: generic_decline }",
+      "phase": "PY-003",
+      "note": "fraud_blocked status returned; failure_reason is generic_decline (fraud detail not disclosed to channel/customer)"
+    },
+    {
+      "step": 24,
+      "from": "Channel",
+      "to": "Customer",
+      "type": "ui",
+      "action": "Display: 'We've blocked this payment for your security. If you authorised this payment, please call [fraud line]. No money has left your account.'",
+      "phase": "PY-003"
+    },
+    {
+      "step": 25,
+      "from": "FraudAnalyst",
+      "to": "FraudPlatform",
+      "type": "sync",
+      "action": "(Out of band) Review case: full fraud score, model features, account history, device metadata. Determine true positive vs false positive.",
+      "phase": "PY-003 (exception handling)"
+    }
+  ],
+  "outcome": "Payment blocked. Customer notified with generic message. Fraud Analyst investigates. If false positive, analyst may release — triggering PaymentCleared re-emission. If true positive, block confirmed and case closed.",
+  "app_fraud_note": "The cop_override_confirmed: true on PaymentIntent is evidence for gross negligence assessment if customer later claims APP fraud reimbursement. Override alone is not automatic disqualification — PSR PS23/3 gross negligence standard applies."
+}

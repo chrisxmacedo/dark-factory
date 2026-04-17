@@ -1,0 +1,163 @@
+{
+  "journey_id": "JRN-014",
+  "document_version": "1.0.0",
+  "status": "Draft",
+  "per_phase_nfrs": [
+    {
+      "phase_id": "PH-059",
+      "phase_name": "Trade Enquiry",
+      "nfrs": [
+        {
+          "attribute": "Latency",
+          "requirement": "Indicative rate returned to dealer/portal within 500ms (p99). Bloomberg FXGO rate fetch must complete within 250ms staleness threshold.",
+          "measurement": "End-to-end SVC-007 API response time: POST /treasury/fx-trades/enquiry. Measured at SVC-101 API gateway.",
+          "rationale": "FX markets move in milliseconds. A 500ms window is the maximum acceptable for indicative pricing — stale rates beyond 250ms trigger the fallback manual pricing workflow."
+        },
+        {
+          "attribute": "Availability",
+          "requirement": "SVC-007 trade enquiry endpoint: 99.9% availability during London trading hours (07:00–18:00 UK business days). Bloomberg FXGO feed: 99.5% (managed separately via EXT-BLOOMBERG-FXGO SLA).",
+          "measurement": "Uptime monitoring on SVC-007 via APM (Datadog / Dynatrace). Bloomberg FXGO availability from vendor SLA dashboard.",
+          "rationale": "FX trading is time-critical. Downtime during London core hours directly causes customer revenue loss and potential MiFIR best-execution obligation breach."
+        }
+      ]
+    },
+    {
+      "phase_id": "PH-060",
+      "phase_name": "Price Quotation",
+      "nfrs": [
+        {
+          "attribute": "Latency",
+          "requirement": "Firm quote generated and returned to portal within 300ms (p99) of dealer request.",
+          "measurement": "POST /treasury/fx-trades/{id}/quote response time at SVC-101.",
+          "rationale": "Firm quote generation must be fast enough for the 30-second window to be commercially meaningful. Delayed quote delivery reduces effective acceptance time."
+        },
+        {
+          "attribute": "Precision",
+          "requirement": "firm_rate and spread must be calculated to 6 decimal places. No rounding in intermediate calculations. Final values stored and transmitted at 6dp.",
+          "measurement": "Unit test suite validates rate calculation precision. Database column precision: DECIMAL(18,6).",
+          "rationale": "FX rates require 6 decimal place precision. Rounding errors compound across large notional amounts and would cause MiFIR reporting discrepancies and P&L misstatement."
+        },
+        {
+          "attribute": "Clock Accuracy",
+          "requirement": "SVC-007 system clock synchronised via NTP to < 1ms precision. valid_until calculation must be server-side using authoritative UTC time.",
+          "measurement": "NTP monitoring alert if drift exceeds 500µs. valid_until acceptance validation uses server timestamp not client-submitted time.",
+          "rationale": "The 30-second validity window is a regulatory and commercial commitment. Clock skew would allow rates to be accepted after expiry (market risk) or reject valid acceptances (client impact)."
+        }
+      ]
+    },
+    {
+      "phase_id": "PH-061",
+      "phase_name": "Trade Execution",
+      "nfrs": [
+        {
+          "attribute": "Latency",
+          "requirement": "Trade acceptance to booking confirmation: < 1,000ms end-to-end (p99). Synchronous SVC-005 balance check must complete within 500ms.",
+          "measurement": "POST /treasury/fx-trades/{id}/accept response time. SVC-005 GET /business-accounts/{id} call measured as a dependent span in distributed tracing.",
+          "rationale": "The 30-second validity window starts at firm quote delivery. Slow processing could mean the booking confirmation arrives while the window has expired from the client's perspective, creating a dispute risk."
+        },
+        {
+          "attribute": "Idempotency",
+          "requirement": "Trade acceptance is idempotent on quote_id. Duplicate acceptance requests for the same quote_id must be rejected with 409 Conflict. Protects against double-booking on network retry.",
+          "measurement": "Integration test: submit same quote_id acceptance twice; second must return 409. Idempotency key: quote_id + trade_id.",
+          "rationale": "Network timeouts may cause clients to retry acceptance. Without idempotency, a retry after a successful booking would create a duplicate trade — a critical treasury risk."
+        },
+        {
+          "attribute": "Data Integrity",
+          "requirement": "FXTrade write and EVT-085 publish must be transactionally atomic (outbox pattern). A trade record must never exist without a corresponding EVT-085 in the audit log.",
+          "measurement": "Outbox pattern verified via reconciliation job comparing FXTrade records with EVT-085 events in WORM audit pipeline. Discrepancy alert within 60 seconds.",
+          "rationale": "MiFIR requires a complete audit trail from booking through to reporting. A trade booked without EVT-085 would create an invisible trade in the regulatory record."
+        }
+      ]
+    },
+    {
+      "phase_id": "PH-062",
+      "phase_name": "Confirmation",
+      "nfrs": [
+        {
+          "attribute": "Timeliness",
+          "requirement": "SWIFT MT300 confirmation dispatched by end of execution day T (hard regulatory deadline: FCA COBS 16.3 requires confirmation no later than first business day after execution). MiFIR trade report submitted to FCA trade repository by 23:59 on day T.",
+          "measurement": "Monitoring alert if EVT-086 not published within 5 minutes of EVT-085. FCA trade repository submission success logged with timestamp. SLA breach escalated to Head of Treasury.",
+          "rationale": "COBS 16.3 is a binding FCA obligation. MiFIR transaction reporting deadline is T+1 end of day. Both are hard regulatory deadlines with enforcement consequences."
+        },
+        {
+          "attribute": "Availability",
+          "requirement": "SWIFT MT300 dispatch is dependent on SVC-010 (CAP-003) availability. SVC-007 must retry EVT-086 delivery to SVC-102 for at least 4 hours before raising a regulatory SLA breach alert.",
+          "measurement": "Dead letter queue monitoring on topic: commercial.treasury for EVT-086. Alert after 60 minutes; SLA breach alert after 4 hours.",
+          "rationale": "SVC-010 may experience SWIFT network outages. A 4-hour retry window balances operational tolerance with the COBS 16.3 same-day obligation."
+        }
+      ]
+    },
+    {
+      "phase_id": "PH-063",
+      "phase_name": "Settlement",
+      "nfrs": [
+        {
+          "attribute": "Settlement Timeliness",
+          "requirement": "FX spot settlement must complete on value_date (T+2). GBP leg via CHAPS must be instructed before 16:00 CHAPS cut-off. USD/EUR legs via SWIFT must be instructed before correspondent bank cut-off time for value_date.",
+          "measurement": "EVT-087 published before cut-off time for the sell_currency payment rail. Monitoring alert if cut-off threshold (CHAPS 15:30 safety margin) not met.",
+          "rationale": "Failed T+2 settlement is a regulatory breach under MiFIR. Late settlement incurs counterparty damages and potential FCA reporting obligation."
+        },
+        {
+          "attribute": "Atomicity",
+          "requirement": "Account debit (sell leg) and account credit (buy leg) via SVC-005 must be atomic. If credit fails after successful debit, SVC-007 must initiate a compensating credit within 60 seconds and alert Treasury Operations.",
+          "measurement": "Compensating credit job monitored via SVC-007 alerting. Maximum 60-second resolution window before escalation.",
+          "rationale": "A debit without a corresponding credit leaves the client short-changed and creates a treasury reconciliation break. Atomicity of settlement legs is a hard operational requirement."
+        },
+        {
+          "attribute": "Sanctions Hold Response",
+          "requirement": "If SVC-051 returns a sanctions hit (EXC-001), FXSettlement.settlement_status must transition to sanctions_hold within 30 seconds of receiving the hit notification. MLRO must be alerted within 60 seconds.",
+          "measurement": "Event processing SLA monitored: EVT-089 hit notification to settlement_hold status update < 30s. MLRO notification delivery confirmation < 60s.",
+          "rationale": "OFSI regulations require that sanctioned entities cannot receive value. Delay in applying a hold creates regulatory exposure. The 30-second / 60-second SLAs are set to be well within any regulatory expectation."
+        }
+      ]
+    }
+  ],
+  "cross_cutting_nfrs": [
+    {
+      "attribute": "Security",
+      "requirement": "All SVC-007 API endpoints require Bearer JWT issued by SVC-100 (IAM) with scope commercial.treasury. PER-053 requires MFA authentication before accessing dealing endpoints. PER-003 corporate portal access requires SCA per PSR 2017.",
+      "rationale": "FX trade endpoints are high-risk: a compromised dealer credential could result in fraudulent trades. MFA for privileged internal users (PER-053) is a baseline security control."
+    },
+    {
+      "attribute": "Auditability",
+      "requirement": "All FXTrade, FXQuote, and FXSettlement state transitions must be recorded in the WORM audit pipeline. All Bloomberg FXGO rate reads used for quote generation must be logged with the rate, timestamp, and quote_id. Audit log must be accessible for 7 years.",
+      "rationale": "MiFIR record-keeping obligations require a complete audit trail of all investment transactions. The Bloomberg rate log is the best-execution evidence required by MiFIR Article 27."
+    },
+    {
+      "attribute": "Resilience",
+      "requirement": "Bloomberg FXGO rate feed outage: SVC-007 returns 503 within 3 seconds with a well-formed error (EXC-003). Manual pricing fallback available within 5 minutes. SVC-005 account check failure: SVC-007 returns 503 and does not book the trade. SVC-007 must implement circuit breaker for SVC-005 calls (5-failure threshold, 30-second open window).",
+      "rationale": "Rate feed and core banking outages must not result in trades being booked at stale or unknown rates. Fail-safe design: no booking without a confirmed live rate and account balance check."
+    },
+    {
+      "attribute": "Data Residency",
+      "requirement": "All FXTrade, FXQuote, and FXSettlement entity data must be stored in UK data centres. Bloomberg FXGO rate data in transit only — not stored beyond audit log. MiFIR trade reports submitted to FCA trade repository must transit via UK networks.",
+      "rationale": "UK GDPR and PRA operational resilience requirements mandate that commercially sensitive trading data and regulated records remain within UK jurisdiction."
+    }
+  ],
+  "regulatory_slas": [
+    {
+      "regulation": "UK MiFIR — FCA Transaction Reporting",
+      "obligation": "Trade report submitted to FCA trade repository by end of business day T",
+      "sla": "23:59 UTC on trade execution date",
+      "breach_consequence": "FCA enforcement action; SMF accountable individual liability under SM&CR"
+    },
+    {
+      "regulation": "FCA COBS 16.3 — Trade Confirmation",
+      "obligation": "Written trade confirmation dispatched to client no later than first business day after execution",
+      "sla": "SWIFT MT300 dispatched by end of execution day T",
+      "breach_consequence": "FCA enforcement; client dispute risk; COBS 16.3 breach reportable under SUP 15"
+    },
+    {
+      "regulation": "OFSI Financial Sanctions — GOV-005-R02",
+      "obligation": "Settlement blocked immediately on sanctions hit detection",
+      "sla": "FXSettlement.settlement_status = sanctions_hold within 30 seconds of hit notification; MLRO notified within 60 seconds",
+      "breach_consequence": "Criminal liability under OFSI sanctions regulations; potential prosecution of FCA-certified individuals"
+    },
+    {
+      "regulation": "FX Spot Settlement — Market Convention",
+      "obligation": "T+2 spot settlement completion on value_date",
+      "sla": "EVT-087 (FXSettlementInitiated) published before sell-currency payment rail cut-off on value_date",
+      "breach_consequence": "Counterparty damages; potential MiFIR breach; reputational and financial risk"
+    }
+  ]
+}

@@ -1,0 +1,99 @@
+{
+  "id": "ENT-038",
+  "name": "TradeDocument",
+  "description": "Represents the complete set of documents presented under an LC. A single TradeDocument record aggregates all documents in one presentation event. Multiple presentation events against the same LC (e.g. partial shipments) create separate TradeDocument records. Owned by SVC-006.",
+  "owning_service": "SVC-006",
+  "fields": [
+    {
+      "name": "presentation_id",
+      "type": "UUID v4",
+      "description": "Unique presentation identifier.",
+      "required": true
+    },
+    {
+      "name": "lc_id",
+      "type": "UUID v4 (FK \u2192 ENT-036)",
+      "description": "Reference to parent LetterOfCredit.",
+      "required": true
+    },
+    {
+      "name": "presentation_date",
+      "type": "ISO 8601 date",
+      "description": "Date on which documents were received by the issuing bank (or advising/presenting bank for deferred forwarding). This is the date from which the 5-banking-day UCP 600 examination period runs.",
+      "required": true
+    },
+    {
+      "name": "presentation_deadline",
+      "type": "ISO 8601 date",
+      "description": "Last date documents could have been presented: lesser of (latest_shipment_date + presentation_period_days) and lc expiry_date.",
+      "required": true
+    },
+    {
+      "name": "presented_on_time",
+      "type": "boolean",
+      "description": "True if presentation_date <= presentation_deadline.",
+      "required": true
+    },
+    {
+      "name": "bill_of_lading_date",
+      "type": "ISO 8601 date",
+      "description": "On-board notation date from the bill of lading \u2014 establishes the shipment date for presentation period calculation.",
+      "required": true
+    },
+    {
+      "name": "drawing_amount",
+      "type": "decimal (18,2)",
+      "description": "Amount being drawn under this presentation. May be less than lc_amount for partial drawings.",
+      "required": true
+    },
+    {
+      "name": "currency_iso3",
+      "type": "string (ISO 4217)",
+      "description": "Currency of the drawing amount.",
+      "required": true
+    },
+    {
+      "name": "documents",
+      "type": "array of object { document_type: string, copies_received: integer, originals_received: integer, document_reference: string, document_date: date, issuer: string, storage_reference: string (SVC-054 document store ref) }",
+      "description": "Individual documents in the presentation set. Storage_reference points to the actual document in SVC-054 (Document Management).",
+      "required": true
+    },
+    {
+      "name": "presentation_channel",
+      "type": "enum (physical_courier | swift_mt750_forwarded | etda_electronic)",
+      "description": "How documents were presented to the issuing bank.",
+      "required": true
+    },
+    {
+      "name": "status",
+      "type": "enum (received | under_examination | compliant | discrepant | waiver_obtained | refused | paid)",
+      "description": "Presentation status.",
+      "required": true
+    },
+    {
+      "name": "created_at",
+      "type": "ISO 8601 UTC timestamp",
+      "description": "Record creation timestamp.",
+      "required": true
+    }
+  ],
+  "relationships": [
+    {
+      "type": "belongs_to",
+      "target": "ENT-036 (LetterOfCredit)",
+      "description": "Presentation belongs to one LC."
+    },
+    {
+      "type": "has_one",
+      "target": "ENT-039 (DocumentExamination)",
+      "description": "Each presentation has exactly one examination record."
+    }
+  ],
+  "design_decisions": [
+    "document storage references point to SVC-054 (Document Management) \u2014 the actual document images/PDFs are stored in SVC-054, not in SVC-006's PostgreSQL database. ENT-038 holds the metadata and checklist, SVC-054 holds the binary content.",
+    "presentation_deadline is computed and stored at presentation receipt time, not at LC issuance, because it depends on the actual bill of lading date which is only known at presentation."
+  ],
+  "source_journeys": [
+    "JRN-013"
+  ]
+}

@@ -1,0 +1,1167 @@
+{
+  "$schema": "../../schemas/technical-service.schema.json",
+  "document_version": "0.1.0",
+  "status": "Draft",
+  "classification_filter": "domain_specific",
+  "description": "Domain services: one deployable unit per retained capability parent (with promoted sub-caps removed) and one deployable unit per promoted sub-capability. Each service owns a bounded data domain and publishes well-defined event contracts.",
+  "services": [
+    {
+      "id": "SVC-001",
+      "name": "Retail Banking Core",
+      "description": "Realises the retained sub-capabilities of CAP-001: current accounts (CAP-001.01), savings and deposits (CAP-001.02), and personal lending (CAP-001.03). Owns the retail customer ledger — the authoritative record of current account balances, savings balances, and personal credit facilities including overdrafts. The primary relationship anchor for mass-market and mass-affluent personal customers. Manages FSCS eligibility determination, Consumer Duty evidence trail, and CASS participation for account switching.",
+      "classification": "domain_specific",
+      "status": "Draft",
+      "capability_mappings": [
+        {
+          "capability_id": "CAP-001",
+          "capability_name": "Retail Banking",
+          "realisation_type": "realises_retained_sub_capabilities",
+          "sub_capabilities_in_scope": ["CAP-001.01", "CAP-001.02", "CAP-001.03"]
+        }
+      ],
+      "dependencies": [
+        {
+          "service_id": "SVC-050",
+          "service_name": "Customer Onboarding Service",
+          "dependency_type": "hard_blocking",
+          "rationale": "Retail account creation requires a KYC clearance event from SVC-050 before the customer ledger record is provisioned. Onboarding cannot be bypassed."
+        },
+        {
+          "service_id": "SVC-052",
+          "service_name": "Credit Decision Service",
+          "dependency_type": "hard_blocking",
+          "rationale": "Personal loan origination and overdraft limit setting require a credit decision from SVC-052 (owned by Risk Management). The lending capability cannot set credit parameters independently."
+        },
+        {
+          "service_id": "SVC-009",
+          "service_name": "Domestic Payments Service",
+          "dependency_type": "async_event",
+          "rationale": "Subscribes to PaymentSettled events to update current account balances in real time. The payment rail is operated by SVC-009; SVC-001 owns the ledger posting."
+        },
+        {
+          "service_id": "SVC-014",
+          "service_name": "KYC/AML Service",
+          "dependency_type": "async_event",
+          "rationale": "Subscribes to CustomerRiskScoreUpdated events to adjust retail account monitoring thresholds in response to ongoing KYC refresh cycles."
+        },
+        {
+          "service_id": "SVC-100",
+          "service_name": "Identity & Access Management",
+          "dependency_type": "platform",
+          "rationale": "Customer authentication and session management for online and mobile banking."
+        },
+        {
+          "service_id": "SVC-102",
+          "service_name": "Event Bus",
+          "dependency_type": "platform",
+          "rationale": "Publishes AccountOpened, BalanceUpdated, LoanOriginated domain events consumed by downstream services."
+        }
+      ],
+      "technology_constraints": {
+        "deployment_model": "cloud_native",
+        "data_residency": "UK only — FSCS eligibility data, retail customer PII, credit records",
+        "latency_class": "near_real_time_sub_1s",
+        "availability_target": "99.95%",
+        "pci_dss_scope": false,
+        "regulatory_data_obligations": ["FSCS eligibility data", "UK GDPR personal data", "PRA BCOBS records", "FCA Consumer Duty outcomes evidence", "CASS switching records"]
+      },
+      "market_context": {
+        "build_vs_buy_assessment": "buy_and_configure",
+        "build_rationale": "Core banking platform (Thought Machine Vault, Mambu, or 10x) provides the ledger and product factory. The bank must own the data model, regulatory reporting derivations, Consumer Duty evidence trail, and overdraft credit decisioning logic layered over the bought core. CAP-001 capability file DD-006 explicitly recommends core banking platform evaluation over proprietary ledger build.",
+        "vendor_options": [
+          {
+            "vendor_name": "Thought Machine",
+            "product_name": "Vault",
+            "fit_assessment": "preferred",
+            "notes": "UK references: Lloyds Banking Group, Atom Bank, Monzo US. Cloud-native, API-first, smart contract product configuration. Highest implementation cost but strongest architecture alignment for a bank targeting API-first architecture."
+          },
+          {
+            "vendor_name": "Mambu",
+            "product_name": "Mambu SaaS Core",
+            "fit_assessment": "shortlisted",
+            "notes": "UK references: Santander UK (some products), OakNorth. Strong composable architecture. Faster time-to-deploy; weaker on current account real-time notification patterns."
+          },
+          {
+            "vendor_name": "10x Banking",
+            "product_name": "SuperCore",
+            "fit_assessment": "shortlisted",
+            "notes": "UK-built. JP Morgan Chase UK reference. Designed for incumbent transformation; strongest if the bank is migrating from a legacy core."
+          }
+        ]
+      },
+      "design_decisions": [
+        {
+          "id": "SDD-001",
+          "decision": "Overdraft balance is owned within SVC-001 on the same ledger as the current account — it is not delegated to SVC-052 (Credit Decision Service).",
+          "rationale": "CAP-001 DD-001 establishes that overdraft is mechanically inseparable from the current account — the balance is on the same ledger. SVC-052 provides the credit decision (limit and pricing); SVC-001 enforces and records the balance. This avoids eventual consistency risk on financial balances.",
+          "alternatives_considered": ["Delegate overdraft balance management to SVC-052"],
+          "rejected_because": "Cross-service eventual consistency on financial balances is a regulatory and customer harm risk. The overdraft limit is a credit decision; the balance is a ledger fact — these are appropriately separated."
+        }
+      ]
+    },
+    {
+      "id": "SVC-002",
+      "name": "Mortgage Service",
+      "description": "Realises the promoted Mortgage sub-capability (CAP-001.04). Manages the end-to-end residential mortgage lifecycle: application and agreement in principle (AIP), full mortgage application processing, broker channel integration, affordability and MCOB-compliant underwriting, surveyor/valuation coordination, HM Land Registry interaction, legal completion, and post-completion account management including rate reviews, product transfers, arrears, and redemption. The bank acts as the regulated mortgage lender under MCOB.",
+      "classification": "domain_specific",
+      "status": "Draft",
+      "capability_mappings": [
+        {
+          "capability_id": "CAP-001.04",
+          "capability_name": "Mortgages",
+          "realisation_type": "realises_promoted_sub_capability"
+        }
+      ],
+      "dependencies": [
+        {
+          "service_id": "SVC-052",
+          "service_name": "Credit Decision Service",
+          "dependency_type": "hard_blocking",
+          "rationale": "Mortgage affordability assessment and AIP generation require a credit risk decision from SVC-052. MCOB responsible lending rules mandate creditworthiness assessment at origination."
+        },
+        {
+          "service_id": "SVC-050",
+          "service_name": "Customer Onboarding Service",
+          "dependency_type": "hard_blocking",
+          "rationale": "New mortgage customers who are not existing retail customers require KYC clearance before mortgage offer can be issued."
+        },
+        {
+          "service_id": "SVC-001",
+          "service_name": "Retail Banking Core",
+          "dependency_type": "soft_query",
+          "rationale": "For existing customers, queries SVC-001 for salary credit history and current account transactional data to inform affordability assessment."
+        },
+        {
+          "service_id": "SVC-009",
+          "service_name": "Domestic Payments Service",
+          "dependency_type": "async_event",
+          "rationale": "Mortgage completion disbursement (solicitor drawdown) is a CHAPS payment executed via SVC-009. SVC-002 publishes a MortgageDrawdownRequested event; SVC-009 executes the CHAPS payment."
+        },
+        {
+          "service_id": "SVC-053",
+          "service_name": "Notification Service",
+          "dependency_type": "async_event",
+          "rationale": "Sends regulated MCOB communications: initial disclosure, mortgage offer, rate change notices, arrears correspondence."
+        }
+      ],
+      "technology_constraints": {
+        "deployment_model": "cloud_native",
+        "data_residency": "UK only — HM Land Registry data, personal mortgage records",
+        "latency_class": "interactive_sub_5s",
+        "availability_target": "99.9%",
+        "pci_dss_scope": false,
+        "regulatory_data_obligations": ["MCOB regulated mortgage documentation", "FCA MCOB suitability records", "UK GDPR personal data", "HM Land Registry submission records"]
+      },
+      "market_context": {
+        "build_vs_buy_assessment": "build_with_vendor_components",
+        "build_rationale": "The mortgage origination workflow (MCOB compliance, broker channel, valuations coordination, Land Registry) is sufficiently bank-specific to require in-house build. However, certain components are strong buy candidates: credit decisioning (SVC-052), lending origination workflow tooling (LendInvest, Nivo mortgage origination), and document management (SVC-054). CAP-001 build_vs_buy identifies Lending-as-a-Service options as modular API inputs.",
+        "vendor_options": [
+          {
+            "vendor_name": "LendInvest",
+            "product_name": "Mortgage Technology Platform",
+            "fit_assessment": "shortlisted",
+            "notes": "Mortgage origination workflow and processing. UK-focused. Modular API integration model."
+          },
+          {
+            "vendor_name": "Nivo",
+            "product_name": "Mortgage Origination",
+            "fit_assessment": "reference_only",
+            "notes": "Digital mortgage origination and document collection."
+          }
+        ]
+      },
+      "design_decisions": []
+    },
+    {
+      "id": "SVC-003",
+      "name": "Credit Card Service",
+      "description": "Realises the promoted Credit Card sub-capability (CAP-001.05). Manages the personal credit card lifecycle: application, credit assessment, card issuance (physical and virtual), BIN management, real-time transaction authorisation, clearing and settlement with Visa/Mastercard, statement cycle management, interest-free period and minimum payment mechanics, balance transfers, Section 75 liability, rewards/cashback programme management, dispute and chargeback handling under scheme rules, and card controls (freeze, limits, block). Operates as a PCI DSS CDE-scoped service.",
+      "classification": "domain_specific",
+      "status": "Draft",
+      "capability_mappings": [
+        {
+          "capability_id": "CAP-001.05",
+          "capability_name": "Credit Cards",
+          "realisation_type": "realises_promoted_sub_capability"
+        }
+      ],
+      "dependencies": [
+        {
+          "service_id": "SVC-052",
+          "service_name": "Credit Decision Service",
+          "dependency_type": "hard_blocking",
+          "rationale": "Credit card application assessment, credit limit setting, and limit review require a credit decision from the Risk-owned SVC-052."
+        },
+        {
+          "service_id": "SVC-051",
+          "service_name": "Sanctions Screening Service",
+          "dependency_type": "hard_blocking",
+          "rationale": "Card transactions above defined thresholds require real-time sanctions screening for beneficiary and counterparty."
+        },
+        {
+          "service_id": "SVC-050",
+          "service_name": "Customer Onboarding Service",
+          "dependency_type": "hard_blocking",
+          "rationale": "New credit card customers require KYC clearance from SVC-050."
+        },
+        {
+          "service_id": "SVC-013",
+          "service_name": "Fraud Detection Service",
+          "dependency_type": "hard_blocking",
+          "rationale": "Real-time card transaction authorisation calls SVC-013 for fraud scoring. CNP fraud detection is a blocking step in the authorisation path."
+        },
+        {
+          "service_id": "SVC-011",
+          "service_name": "Card Processing Service",
+          "dependency_type": "hard_blocking",
+          "rationale": "SVC-003 depends on SVC-011 for BIN management, scheme connectivity (Visa/Mastercard authorisation network), and clearing file processing."
+        }
+      ],
+      "technology_constraints": {
+        "deployment_model": "cloud_native",
+        "data_residency": "UK only — PCI DSS CDE cardholder data with UK residency requirement",
+        "latency_class": "real_time_sub_100ms",
+        "availability_target": "99.99%",
+        "pci_dss_scope": true,
+        "regulatory_data_obligations": ["PCI DSS CDE cardholder data", "Consumer Credit Act 1974 regulated agreement records", "FCA CONC credit card statements", "UK GDPR personal data", "Section 75 liability records"]
+      },
+      "market_context": {
+        "build_vs_buy_assessment": "build_with_vendor_components",
+        "build_rationale": "Card issuance processing (BIN management, scheme connectivity) is a strong buy via SVC-011 (GPS/Marqeta). The credit card product logic (interest-free period, minimum payment waterfall, balance transfer mechanics, rewards engine, chargeback management workflow) is bank-specific and must be built in-house. PCI DSS CDE segregation is itself an argument for a distinct service boundary.",
+        "vendor_options": [
+          {
+            "vendor_name": "Marqeta",
+            "product_name": "Card Issuing Platform",
+            "fit_assessment": "preferred",
+            "notes": "Modern open API card issuing with real-time spend controls, just-in-time funding, virtual card issuance. Used by Revolut and Starling. Strong for commercial card and credit card programmes."
+          },
+          {
+            "vendor_name": "Thredd (formerly GPS)",
+            "product_name": "Card Processing Service",
+            "fit_assessment": "shortlisted",
+            "notes": "180+ clients including UK challenger banks. BIN sponsorship and real-time transaction processing for Visa/Mastercard programmes."
+          }
+        ]
+      },
+      "design_decisions": []
+    },
+    {
+      "id": "SVC-004",
+      "name": "Insurance Distribution Service",
+      "description": "Realises the promoted Insurance Distribution sub-capability (CAP-001.06). Manages the bank's role as an FCA-authorised insurance intermediary (not underwriter) for retail insurance products: home (buildings and contents), travel, life (term and whole-of-life), and packaged account insurance bundles. Operates the underwriter relationship management, product panel management, quote and bind workflows, policy administration integration, claims referral, and annual renewal engine. Governed by ICOBS and the Insurance Distribution Directive.",
+      "classification": "domain_specific",
+      "status": "Draft",
+      "capability_mappings": [
+        {
+          "capability_id": "CAP-001.06",
+          "capability_name": "Insurance Distribution",
+          "realisation_type": "realises_promoted_sub_capability"
+        }
+      ],
+      "dependencies": [
+        {
+          "service_id": "SVC-001",
+          "service_name": "Retail Banking Core",
+          "dependency_type": "soft_query",
+          "rationale": "Queries retail customer profile data (address, product holdings) for pre-population of insurance quotes and trigger-based cross-sell (mortgage completion → home insurance prompt)."
+        },
+        {
+          "service_id": "SVC-053",
+          "service_name": "Notification Service",
+          "dependency_type": "async_event",
+          "rationale": "Sends ICOBS-regulated insurance communications: policy documents, renewal notices, mid-term adjustment confirmations."
+        },
+        {
+          "service_id": "SVC-054",
+          "service_name": "Document Management Service",
+          "dependency_type": "async_event",
+          "rationale": "Policy documents, IPID (Insurance Product Information Document), and claims correspondence stored and retrieved via SVC-054."
+        }
+      ],
+      "technology_constraints": {
+        "deployment_model": "cloud_native",
+        "data_residency": "UK only",
+        "latency_class": "interactive_sub_5s",
+        "availability_target": "99.5%",
+        "pci_dss_scope": false,
+        "regulatory_data_obligations": ["ICOBS regulated policy records", "Insurance Distribution Directive disclosure records", "UK GDPR personal data", "FCA PROD target market assessment records"]
+      },
+      "market_context": {
+        "build_vs_buy_assessment": "build_with_vendor_components",
+        "build_rationale": "Insurance distribution platform (quote/bind/administer) can be sourced from specialist vendors. The bank's competitive asset is the distribution relationship and the cross-sell trigger logic (e.g. mortgage completion → home insurance), which must be bank-owned. CAP-001 build_vs_buy identifies white-label insurance distribution platforms and open insurance as buy candidates.",
+        "vendor_options": [
+          {
+            "vendor_name": "Open Insurance platforms",
+            "product_name": "White-labelled insurance product distribution",
+            "fit_assessment": "preferred",
+            "notes": "Bank adds distribution value not underwriting risk. Several UK open insurance providers offer white-labelled bancassurance products."
+          }
+        ]
+      },
+      "design_decisions": []
+    },
+    {
+      "id": "SVC-005",
+      "name": "Commercial Banking Core",
+      "description": "Realises the retained sub-capabilities of CAP-002: business current accounts (CAP-002.01) and business lending (CAP-002.02). Owns the commercial customer ledger — the authoritative record of business account balances, overdraft facilities, revolving credit facilities, and term loan positions. Serves sole traders through to large corporates. Manages the RM workflow, client lifecycle, KYB data model (Companies House, beneficial ownership), and covenant monitoring for the SME and mid-market lending book.",
+      "classification": "domain_specific",
+      "status": "Draft",
+      "capability_mappings": [
+        {
+          "capability_id": "CAP-002",
+          "capability_name": "Commercial Banking",
+          "realisation_type": "realises_retained_sub_capabilities",
+          "sub_capabilities_in_scope": ["CAP-002.01", "CAP-002.02"]
+        }
+      ],
+      "dependencies": [
+        {
+          "service_id": "SVC-050",
+          "service_name": "Customer Onboarding Service",
+          "dependency_type": "hard_blocking",
+          "rationale": "Business account opening requires KYB clearance (KYC for legal entities including UBO determination) from SVC-050 before the commercial ledger record is created."
+        },
+        {
+          "service_id": "SVC-052",
+          "service_name": "Credit Decision Service",
+          "dependency_type": "hard_blocking",
+          "rationale": "Business lending origination requires credit assessment from SVC-052. Commercial credit uses different scoring inputs (Companies House, Open Banking cashflow, sector benchmarks) but the same governed model framework."
+        },
+        {
+          "service_id": "SVC-009",
+          "service_name": "Domestic Payments Service",
+          "dependency_type": "async_event",
+          "rationale": "Subscribes to PaymentSettled events to update business account balances. Bulk BACS payment files (payroll, supplier runs) are submitted via SVC-009."
+        },
+        {
+          "service_id": "SVC-051",
+          "service_name": "Sanctions Screening Service",
+          "dependency_type": "hard_blocking",
+          "rationale": "All business payment instructions require real-time sanctions screening. Commercial customers with complex ownership structures require beneficial ownership chain screening at onboarding and on list updates."
+        }
+      ],
+      "technology_constraints": {
+        "deployment_model": "cloud_native",
+        "data_residency": "UK only — commercial lending records, SMCR accountability data",
+        "latency_class": "near_real_time_sub_1s",
+        "availability_target": "99.95%",
+        "pci_dss_scope": false,
+        "regulatory_data_obligations": ["PRA Basel 3.1 credit risk records", "FCA SME lending records", "COREP regulatory reporting inputs", "UK GDPR business and personal data", "SMCR accountability records"]
+      },
+      "market_context": {
+        "build_vs_buy_assessment": "build_with_vendor_components",
+        "build_rationale": "Commercial lending origination workflow is a strong buy candidate (nCino on Salesforce is the dominant choice in UK commercial banks). The RM workflow, client profiling, and credit decisioning logic are proprietary and must be built in-house per CAP-002 must_build_in_house list. The ledger itself can be provided by a core banking platform (Thought Machine, Mambu) shared with SVC-001 or as a separate instance.",
+        "vendor_options": [
+          {
+            "vendor_name": "nCino",
+            "product_name": "Commercial Lending Origination",
+            "fit_assessment": "preferred",
+            "notes": "Salesforce-native commercial lending origination system. UK references: Lloyds, NatWest, Santander UK. Dominant choice for UK commercial banks."
+          },
+          {
+            "vendor_name": "Codat",
+            "product_name": "Financial Data Aggregation API",
+            "fit_assessment": "shortlisted",
+            "notes": "Accounting software API aggregation (Xero, QuickBooks) for SME cash flow data inputs to credit decisioning."
+          },
+          {
+            "vendor_name": "OakNorth",
+            "product_name": "ACORN Credit Platform",
+            "fit_assessment": "shortlisted",
+            "notes": "Data-driven credit decisioning for growth SMEs. Licensed to other banks. Strong for sub-£1m SME lending."
+          }
+        ]
+      },
+      "design_decisions": [
+        {
+          "id": "SDD-002",
+          "decision": "Business Lending (CAP-002.02) is retained within SVC-005 rather than promoted to a separate service, consistent with the capability file decision.",
+          "rationale": "CAP-002 DD-001 retains Business Lending citing lifecycle coupling at drawdown (loan proceeds credited to business current account) and repayment (direct debit from same account). A shared data model for customer, account, and facility within SVC-005 avoids cross-service financial balance consistency problems. The capability file flags this for review at Gate 1.",
+          "alternatives_considered": ["Promote Business Lending to SVC-005b with event-based integration"],
+          "rejected_because": "The RM reviews combined account and lending position as a single workflow — splitting into two services creates integration complexity for the most common commercial banking journey."
+        }
+      ]
+    },
+    {
+      "id": "SVC-006",
+      "name": "Trade Finance Service",
+      "description": "Realises the promoted Trade Finance sub-capability (CAP-002.03). Manages the end-to-end trade finance product lifecycle: letters of credit (import and export), documentary collections, standby LCs, trade guarantees, supply chain finance, invoice discounting, and pre-export finance. Handles SWIFT MT700-series messaging, UCP 600/URDG 758 document examination workflows, discrepancy management, and the emerging electronic trade documents ecosystem under the Electronic Trade Documents Act 2023. Integrates with correspondent banks, freight forwarders, and trade credit insurers.",
+      "classification": "domain_specific",
+      "status": "Draft",
+      "capability_mappings": [
+        {
+          "capability_id": "CAP-002.03",
+          "capability_name": "Trade Finance",
+          "realisation_type": "realises_promoted_sub_capability"
+        }
+      ],
+      "dependencies": [
+        {
+          "service_id": "SVC-051",
+          "service_name": "Sanctions Screening Service",
+          "dependency_type": "hard_blocking",
+          "rationale": "All trade finance counterparties (beneficiary banks, applicants, goods descriptions) must be screened for sanctions, dual-use goods, and proliferation financing risk before LC issuance or document examination."
+        },
+        {
+          "service_id": "SVC-005",
+          "service_name": "Commercial Banking Core",
+          "dependency_type": "soft_query",
+          "rationale": "Queries customer credit facility utilisation and customer identity data from SVC-005 to validate LC applicant credit headroom."
+        },
+        {
+          "service_id": "SVC-010",
+          "service_name": "International Payments Service",
+          "dependency_type": "async_event",
+          "rationale": "LC reimbursement and trade payment settlements are routed through SVC-010 (SWIFT correspondent network) for cross-currency settlement."
+        },
+        {
+          "service_id": "SVC-054",
+          "service_name": "Document Management Service",
+          "dependency_type": "async_event",
+          "rationale": "Trade documents (bills of lading, invoices, certificates of origin) are stored and retrieved via SVC-054. ETDA 2023 electronic trade documents are managed here."
+        }
+      ],
+      "technology_constraints": {
+        "deployment_model": "cloud_native",
+        "data_residency": "UK only — trade finance credit exposure records",
+        "latency_class": "interactive_sub_5s",
+        "availability_target": "99.5%",
+        "pci_dss_scope": false,
+        "regulatory_data_obligations": ["Electronic Trade Documents Act 2023 records", "Export control and sanctions compliance records", "UCP 600/URDG 758 document examination audit trail", "SMCR accountability records"]
+      },
+      "market_context": {
+        "build_vs_buy_assessment": "buy_and_configure",
+        "build_rationale": "CAP-002 DD-002 and DD-005 explicitly recommend buying the trade finance platform (Finastra Trade Innovation or Surecomp RIVO) for SWIFT messaging, document examination workflow, and ICC rule compliance. The bank differentiates on relationship and credit not document processing. The ETDA 2023 is driving vendor platform updates — a buy candidate maintains regulatory parity better than an in-house build.",
+        "vendor_options": [
+          {
+            "vendor_name": "Finastra",
+            "product_name": "Trade Innovation",
+            "fit_assessment": "preferred",
+            "notes": "40%+ global market share in trade finance platforms. SWIFT MT700-series messaging, LC/collection/guarantee workflows, UCP 600 compliance, ETDA 2023 electronic document support roadmap."
+          },
+          {
+            "vendor_name": "Surecomp",
+            "product_name": "RIVO / CLOZ",
+            "fit_assessment": "shortlisted",
+            "notes": "Cloud-native trade finance platform. RIVO for front-to-back LC processing; CLOZ for compliance and screening integration."
+          }
+        ]
+      },
+      "design_decisions": []
+    },
+    {
+      "id": "SVC-007",
+      "name": "Treasury Service",
+      "description": "Realises the promoted Treasury Services sub-capability (CAP-002.04). Provides cash management, liquidity management, and financial risk management products to corporate and institutional clients: notional pooling, physical sweeping, multi-currency account structures, interest rate swaps and hedging products, FX risk management, structured deposits, and the corporate treasury portal. Manages ISDA master agreements, CSA (Credit Support Annex) documentation, EMIR margin obligations, and MiFID II appropriateness assessments for derivative clients.",
+      "classification": "domain_specific",
+      "status": "Draft",
+      "capability_mappings": [
+        {
+          "capability_id": "CAP-002.04",
+          "capability_name": "Treasury Services",
+          "realisation_type": "realises_promoted_sub_capability"
+        }
+      ],
+      "dependencies": [
+        {
+          "service_id": "SVC-005",
+          "service_name": "Commercial Banking Core",
+          "dependency_type": "soft_query",
+          "rationale": "Queries business account balances and cash positions from SVC-005 to support notional pooling and sweep structures."
+        },
+        {
+          "service_id": "SVC-010",
+          "service_name": "International Payments Service",
+          "dependency_type": "async_event",
+          "rationale": "FX spot and forward settlements are executed via SVC-010's SWIFT correspondent network."
+        },
+        {
+          "service_id": "SVC-012",
+          "service_name": "Risk Engine Service",
+          "dependency_type": "soft_query",
+          "rationale": "Market risk exposures (FX, interest rate) from treasury derivatives are reported to SVC-012 for FRTB/IRRBB calculations."
+        }
+      ],
+      "technology_constraints": {
+        "deployment_model": "cloud_native",
+        "data_residency": "UK only — derivative trade records, EMIR reporting data",
+        "latency_class": "near_real_time_sub_1s",
+        "availability_target": "99.9%",
+        "pci_dss_scope": false,
+        "regulatory_data_obligations": ["EMIR UK derivative trade reporting", "MiFID II transaction reporting", "ISDA/CSA contractual records", "UK GDPR personal data for authorised corporate signatories"]
+      },
+      "market_context": {
+        "build_vs_buy_assessment": "build_with_vendor_components",
+        "build_rationale": "CAP-002 DD-003 recommends building the treasury capability in-house given ISDA/EMIR obligations and MiFID II suitability/best-execution requirements that cannot be delegated to a white-label TMS. However, the corporate-facing treasury portal is a partnership/buy candidate (Kyriba or equivalent) where the bank's products integrate via API. CAP-002 build_vs_buy recommends a partnership model where bank liquidity products integrate into Kyriba via API rather than competing with Kyriba's feature roadmap.",
+        "vendor_options": [
+          {
+            "vendor_name": "Kyriba",
+            "product_name": "Treasury Management System",
+            "fit_assessment": "preferred",
+            "notes": "Cloud-native, 2,500+ corporate clients globally, API-first. Partnership model: bank integrates its notional pooling and FX products into Kyriba via API rather than competing with Kyriba's TMS portal. Avoids building a competing TMS."
+          },
+          {
+            "vendor_name": "FIS",
+            "product_name": "Quantum / Integrity",
+            "fit_assessment": "shortlisted",
+            "notes": "Large corporate treasury management. Strong for complex derivatives book. Higher implementation complexity."
+          }
+        ]
+      },
+      "design_decisions": []
+    },
+    {
+      "id": "SVC-008",
+      "name": "Merchant Acquiring Service",
+      "description": "Realises the promoted Merchant Services sub-capability (CAP-002.05). Provides card acquiring infrastructure to business customers: Visa, Mastercard, and Amex acceptance, point-of-sale terminal management, online payment gateway, virtual terminal, chargeback and dispute management (as acquiring bank), merchant settlement (T+1 to T+3), and PCI DSS-compliant merchant data environment. The bank acts as the acquirer of record. Card scheme connectivity and transaction processing is outsourced to a bureau processor while the bank retains the acquiring licence, merchant relationship, and underwriting.",
+      "classification": "domain_specific",
+      "status": "Draft",
+      "capability_mappings": [
+        {
+          "capability_id": "CAP-002.05",
+          "capability_name": "Merchant Services",
+          "realisation_type": "realises_promoted_sub_capability"
+        }
+      ],
+      "dependencies": [
+        {
+          "service_id": "SVC-013",
+          "service_name": "Fraud Detection Service",
+          "dependency_type": "hard_blocking",
+          "rationale": "Card-not-present (CNP) transaction authorisation requires real-time fraud scoring from SVC-013. CNP fraud is the primary fraud typology for merchants; SVC-013 provides the ML-based decision."
+        },
+        {
+          "service_id": "SVC-052",
+          "service_name": "Credit Decision Service",
+          "dependency_type": "hard_blocking",
+          "rationale": "Merchant underwriting (assessing chargeback risk and credit exposure at merchant onboarding) calls SVC-052 for a credit risk assessment of the merchant entity."
+        },
+        {
+          "service_id": "SVC-005",
+          "service_name": "Commercial Banking Core",
+          "dependency_type": "async_event",
+          "rationale": "Merchant settlement funds are credited to the merchant's business current account in SVC-005. Publishes MerchantSettlementCompleted event."
+        }
+      ],
+      "technology_constraints": {
+        "deployment_model": "hybrid",
+        "data_residency": "UK only — PCI DSS CDE merchant transaction data",
+        "latency_class": "real_time_sub_100ms",
+        "availability_target": "99.99%",
+        "pci_dss_scope": true,
+        "regulatory_data_obligations": ["PCI DSS CDE merchant cardholder data", "PSR MR22/1.7 scheme fee transparency records", "FCA payment institution authorisation records", "UK GDPR personal data for merchant principals"]
+      },
+      "market_context": {
+        "build_vs_buy_assessment": "build_with_vendor_components",
+        "build_rationale": "CAP-002 DD-004 and DD-005 recommend retaining the acquiring licence and merchant relationship in-house but outsourcing card scheme connectivity and processing to a bureau processor. Worldpay/Fiserv bureau model avoids the Visa/Mastercard scheme processing infrastructure capital requirement. The merchant relationship, merchant data, and credit cross-sell (merchant cashflow data → SME lending signal) must be bank-owned.",
+        "vendor_options": [
+          {
+            "vendor_name": "Worldpay (FIS)",
+            "product_name": "Acquiring Bureau Service",
+            "fit_assessment": "preferred",
+            "notes": "Tier-1 acquirer processor bureau model. Bank retains acquiring licence; Worldpay provides scheme connectivity and settlement processing. Strong UK presence."
+          },
+          {
+            "vendor_name": "Fiserv",
+            "product_name": "First Data Acquiring Bureau",
+            "fit_assessment": "shortlisted",
+            "notes": "Alternative bureau model to Worldpay. Strong in SME merchant services."
+          }
+        ]
+      },
+      "design_decisions": []
+    },
+    {
+      "id": "SVC-009",
+      "name": "Domestic Payments Service",
+      "description": "Realises the retained domestic payment sub-capabilities of CAP-003: Faster Payments (CAP-003.01), BACS Processing (CAP-003.02), CHAPS (CAP-003.03), and Open Banking Payments execution (CAP-003.06 retained within payment operations). The authoritative service for originating, routing, clearing, and settling domestic sterling payments across FPS, BACS, and CHAPS rails. Manages direct scheme participation in FPS and BACS (via Vocalink / Pay.UK) and CHAPS (Bank of England RT2). Includes intraday settlement position monitoring, Confirmation of Payee (CoP) integration, and payment policy engine for customer-defined controls.",
+      "classification": "domain_specific",
+      "status": "Draft",
+      "capability_mappings": [
+        {
+          "capability_id": "CAP-003",
+          "capability_name": "Payment Operations",
+          "realisation_type": "realises_retained_sub_capabilities",
+          "sub_capabilities_in_scope": ["CAP-003.01", "CAP-003.02", "CAP-003.03", "CAP-003.06"]
+        }
+      ],
+      "dependencies": [
+        {
+          "service_id": "SVC-051",
+          "service_name": "Sanctions Screening Service",
+          "dependency_type": "hard_blocking",
+          "rationale": "Every outgoing FPS, BACS, and CHAPS payment must receive real-time sanctions clearance from SVC-051 before scheme submission. This is a regulatory hard dependency."
+        },
+        {
+          "service_id": "SVC-013",
+          "service_name": "Fraud Detection Service",
+          "dependency_type": "hard_blocking",
+          "rationale": "FPS payment instructions are scored for APP fraud in real time by SVC-013 before submission. PSR mandatory APP fraud reimbursement creates a board-level financial liability for payments where fraud screening was not applied."
+        },
+        {
+          "service_id": "SVC-017",
+          "service_name": "Digital Channels Service",
+          "dependency_type": "async_event",
+          "rationale": "Subscribes to PaymentInitiationRequested events from SVC-017 for PISP-initiated Open Banking payments. Publishes PaymentSettled events consumed by SVC-001 and SVC-005 for balance updates."
+        }
+      ],
+      "technology_constraints": {
+        "deployment_model": "cloud_native",
+        "data_residency": "UK only — FPS/BACS/CHAPS scheme data under Pay.UK and Bank of England participant rules",
+        "latency_class": "real_time_sub_100ms",
+        "availability_target": "99.99%",
+        "pci_dss_scope": false,
+        "regulatory_data_obligations": ["Pay.UK FPS/BACS participation records", "CHAPS Rules settlement records", "RTGS settlement position data", "FCA Consumer Duty payment outcome monitoring", "CoP scheme records", "CHAPS ISO 20022 enhanced data (LEIs, structured addresses from Nov 2026)"]
+      },
+      "market_context": {
+        "build_vs_buy_assessment": "buy_and_configure",
+        "build_rationale": "CAP-003 build_vs_buy explicitly recommends Form3 or Bottomline PTX as managed service options for central infrastructure connectivity. Building and maintaining direct Vocalink connectivity in-house carries disproportionate infrastructure cost for a mid-tier commercial bank. The payment policy engine (sanctions integration, CoP, customer controls) must be bank-owned.",
+        "vendor_options": [
+          {
+            "vendor_name": "Form3",
+            "product_name": "Cloud-native Payment Processing Platform",
+            "fit_assessment": "preferred",
+            "notes": "Cloud-native, connects FPS/CHAPS/BACS. Direct FPS participant onboarding in ~8 weeks. Used by UK challenger banks and fintechs. API-first, ISO 20022 native. Strong for CHAPS ISO 20022 enhanced data compliance."
+          },
+          {
+            "vendor_name": "Bottomline",
+            "product_name": "PTX Payment Automation",
+            "fit_assessment": "shortlisted",
+            "notes": "Widely deployed in UK corporate banks and building societies. Strong BACS bureau and direct submission. Established FPS connectivity."
+          }
+        ]
+      },
+      "design_decisions": []
+    },
+    {
+      "id": "SVC-010",
+      "name": "International Payments Service",
+      "description": "Realises the promoted International Payments sub-capability (CAP-003.04). Manages the origination and settlement of cross-border payments via the SWIFT correspondent network (CBPR+ ISO 20022 mandatory from November 2025): correspondent bank selection and nostro account management, currency conversion and FX execution, beneficiary bank BIC validation, FATF travel rule data requirements, SWIFT gpi in-flight status tracking, and AML/sanctions screening for cross-border flows. Covers both retail remittance and corporate treasury cross-border flows.",
+      "classification": "domain_specific",
+      "status": "Draft",
+      "capability_mappings": [
+        {
+          "capability_id": "CAP-003.04",
+          "capability_name": "International Payments",
+          "realisation_type": "realises_promoted_sub_capability"
+        }
+      ],
+      "dependencies": [
+        {
+          "service_id": "SVC-051",
+          "service_name": "Sanctions Screening Service",
+          "dependency_type": "hard_blocking",
+          "rationale": "All international payment beneficiaries and correspondent banks must be screened against OFAC, OFSI, EU, and UN sanctions lists. SWIFT CBPR+ ISO 20022 mandates structured beneficiary data enabling ownership chain screening."
+        },
+        {
+          "service_id": "SVC-013",
+          "service_name": "Fraud Detection Service",
+          "dependency_type": "hard_blocking",
+          "rationale": "Cross-border payment fraud (social engineering, account takeover) is screened by SVC-013 at origination."
+        }
+      ],
+      "technology_constraints": {
+        "deployment_model": "cloud_native",
+        "data_residency": "UK primary with SWIFT network integration",
+        "latency_class": "near_real_time_sub_1s",
+        "availability_target": "99.9%",
+        "pci_dss_scope": false,
+        "regulatory_data_obligations": ["FATF travel rule / UK Funds Transfer Regulations data", "SWIFT CBPR+ ISO 20022 MX message records", "OFAC/OFSI sanctions screening records", "FCA PSR 2017 execution time records"]
+      },
+      "market_context": {
+        "build_vs_buy_assessment": "buy_and_configure",
+        "build_rationale": "CAP-003 recommends SWIFT Alliance Access or SAA Cloud for SWIFT connectivity (bureau or cloud model). Most mid-tier banks use service bureau rather than owning full SWIFT infrastructure. ISO 20022 translation (MT-to-MX migration) is a strong buy via Volante or Pelican during the migration period. Nostro management and correspondent bank selection logic is bank-specific.",
+        "vendor_options": [
+          {
+            "vendor_name": "SWIFT",
+            "product_name": "Alliance Access / SAA Cloud",
+            "fit_assessment": "preferred",
+            "notes": "SWIFT messaging infrastructure for CBPR+ ISO 20022. Cloud variant (SAA Cloud) reduces on-premises hardware obligation. Mandatory for direct SWIFT participant."
+          },
+          {
+            "vendor_name": "Volante Technologies",
+            "product_name": "VolPay Foundation",
+            "fit_assessment": "shortlisted",
+            "notes": "ISO 20022 translation, enrichment, and multi-rail payment hub. Strong for MT-to-MX migration and structured data enrichment."
+          }
+        ]
+      },
+      "design_decisions": []
+    },
+    {
+      "id": "SVC-011",
+      "name": "Card Processing Service",
+      "description": "Realises the promoted Card Processing sub-capability (CAP-003.05). Operates as the bank's card issuing processor for debit cards and commercial cards: BIN management and configuration, real-time transaction authorisation (sub-second) via Visa/Mastercard authorisation networks, clearing and settlement with card schemes, dispute and chargeback management under scheme rules (up to 120-day lifecycle), card controls (freeze, limits, merchant blocking), card issuance and personalisation, and scheme compliance (PCI DSS, Visa/Mastercard Operating Regulations). Distinct from card acquiring (SVC-008) which is the merchant-facing capability.",
+      "classification": "domain_specific",
+      "status": "Draft",
+      "capability_mappings": [
+        {
+          "capability_id": "CAP-003.05",
+          "capability_name": "Card Processing",
+          "realisation_type": "realises_promoted_sub_capability"
+        }
+      ],
+      "dependencies": [
+        {
+          "service_id": "SVC-013",
+          "service_name": "Fraud Detection Service",
+          "dependency_type": "hard_blocking",
+          "rationale": "Card transaction authorisation calls SVC-013 for real-time fraud scoring. Sub-100ms latency is required for the authorisation path. SVC-013 returns an approve/decline/challenge decision embedded in the authorisation response."
+        },
+        {
+          "service_id": "SVC-001",
+          "service_name": "Retail Banking Core",
+          "dependency_type": "soft_query",
+          "rationale": "Debit card authorisation queries available balance from SVC-001. Real-time balance check before authorisation approval."
+        }
+      ],
+      "technology_constraints": {
+        "deployment_model": "cloud_native",
+        "data_residency": "UK only — PCI DSS CDE cardholder data",
+        "latency_class": "real_time_sub_100ms",
+        "availability_target": "99.99%",
+        "pci_dss_scope": true,
+        "regulatory_data_obligations": ["PCI DSS CDE cardholder data", "Visa/Mastercard scheme compliance records", "PSR interchange cap records", "UK GDPR personal data"]
+      },
+      "market_context": {
+        "build_vs_buy_assessment": "strong_buy",
+        "build_rationale": "CAP-003 and CAP-001 both explicitly recommend GPS/Marqeta for card issuing processing. Building and maintaining direct Visa/Mastercard scheme processing membership is not justified for a mid-tier bank. The scheme rules compliance, fraud tooling, and certification burden are better handled by specialist processors who do this at scale.",
+        "vendor_options": [
+          {
+            "vendor_name": "Marqeta",
+            "product_name": "Modern Card Issuing Platform",
+            "fit_assessment": "preferred",
+            "notes": "Open API, real-time spend controls, just-in-time funding. Used by Revolut, Klarna, Affirm. Strong for commercial card and advanced card controls. API-first architecture aligns with bank's digital-first strategy."
+          },
+          {
+            "vendor_name": "Thredd (formerly GPS)",
+            "product_name": "Card Programme Management",
+            "fit_assessment": "shortlisted",
+            "notes": "180+ clients, UK market leader for challenger banks. BIN sponsorship and real-time transaction processing. Used by Starling, Revolut early-stage."
+          }
+        ]
+      },
+      "design_decisions": []
+    },
+    {
+      "id": "SVC-012",
+      "name": "Risk Engine Service",
+      "description": "Realises the retained sub-capabilities of CAP-004: credit risk (CAP-004.01), market risk (CAP-004.02), operational risk (CAP-004.03), and model risk (CAP-004.05). The authoritative quantitative risk platform: owns IRB PD/LGD/EAD models and IFRS 9 ECL provisioning, FRTB Sensitivity-Based Approach market risk calculations, operational risk capital under Basel Standardised Approach, PRA ICAAP and Pillar 2 assessments, model inventory and SS1/23 governance, and enterprise-wide regulatory capital (COREP) calculation.",
+      "classification": "domain_specific",
+      "status": "Draft",
+      "capability_mappings": [
+        {
+          "capability_id": "CAP-004",
+          "capability_name": "Risk Management",
+          "realisation_type": "realises_retained_sub_capabilities",
+          "sub_capabilities_in_scope": ["CAP-004.01", "CAP-004.02", "CAP-004.03", "CAP-004.05"]
+        }
+      ],
+      "dependencies": [
+        {
+          "service_id": "SVC-001",
+          "service_name": "Retail Banking Core",
+          "dependency_type": "async_event",
+          "rationale": "Subscribes to LoanOriginated and LoanRepaid events to update retail credit risk portfolio metrics and IFRS 9 staging."
+        },
+        {
+          "service_id": "SVC-005",
+          "service_name": "Commercial Banking Core",
+          "dependency_type": "async_event",
+          "rationale": "Subscribes to FacilityApproved and DrawdownCompleted events for commercial credit portfolio monitoring and Basel 3.1 RWA calculation."
+        },
+        {
+          "service_id": "SVC-104",
+          "service_name": "Data Platform",
+          "dependency_type": "platform",
+          "rationale": "Risk calculations require access to the enterprise data platform for batch model scoring, stress testing scenario analysis, and COREP data extraction."
+        }
+      ],
+      "technology_constraints": {
+        "deployment_model": "cloud_native",
+        "data_residency": "UK only — PRA confidential supervisory data",
+        "latency_class": "batch_daily",
+        "availability_target": "99.5%",
+        "pci_dss_scope": false,
+        "regulatory_data_obligations": ["PRA IRB model approval records", "COREP/FINREP regulatory reporting inputs", "IFRS 9 ECL provisioning records", "PRA SS1/23 model risk governance records", "ICAAP documentation"]
+      },
+      "market_context": {
+        "build_vs_buy_assessment": "build_with_vendor_components",
+        "build_rationale": "CAP-004 must_build_in_house list explicitly requires the bank to own credit risk appetite, IRB model development, ICAAP narrative, and model risk governance. Vendor platforms (SAS, Moody's) are buy candidates for the calculation engine and IFRS 9 modelling tooling. PRA requires the bank to own, understand, and be accountable for IRB models — vendor-supplied models must be fully validated and owned by the bank's model risk function.",
+        "vendor_options": [
+          {
+            "vendor_name": "SAS",
+            "product_name": "Risk Intelligence Suite",
+            "fit_assessment": "preferred",
+            "notes": "Dominant in UK Tier 1/2 banks. Credit risk, market risk, ALM, regulatory capital, stress testing. Heavy licence cost; deep PRA familiarity."
+          },
+          {
+            "vendor_name": "Moody's Analytics",
+            "product_name": "RiskFoundation",
+            "fit_assessment": "shortlisted",
+            "notes": "IRB modelling, ECL/IFRS 9, stress testing, regulatory capital. Strong in mid-market UK banks."
+          },
+          {
+            "vendor_name": "MSCI",
+            "product_name": "RiskManager",
+            "fit_assessment": "shortlisted",
+            "notes": "FRTB Standardised Approach calculation engine. Strong for banks with trading books."
+          }
+        ]
+      },
+      "design_decisions": []
+    },
+    {
+      "id": "SVC-013",
+      "name": "Fraud Detection Service",
+      "description": "Realises the promoted Fraud Detection sub-capability (CAP-004.04). Real-time detection, prevention, and investigation of fraudulent activity across all channels and product lines: authorised push payment (APP) fraud screening on FPS/CHAPS, card fraud (CNP and card-present), identity fraud at onboarding, internal fraud, and cyber-enabled fraud. Operates in real-time against transaction flows using behavioural analytics, network graph analysis, and ML-based anomaly detection. Manages fraud alert investigation workflows, fraud reporting to Cifas and Action Fraud, and PSR mandatory reimbursement case management.",
+      "classification": "domain_specific",
+      "status": "Draft",
+      "capability_mappings": [
+        {
+          "capability_id": "CAP-004.04",
+          "capability_name": "Fraud Detection",
+          "realisation_type": "realises_promoted_sub_capability"
+        }
+      ],
+      "dependencies": [
+        {
+          "service_id": "SVC-102",
+          "service_name": "Event Bus",
+          "dependency_type": "platform",
+          "rationale": "Subscribes to payment initiation events, card authorisation events, and onboarding events across all channels for real-time fraud signal aggregation."
+        },
+        {
+          "service_id": "SVC-104",
+          "service_name": "Data Platform",
+          "dependency_type": "platform",
+          "rationale": "Historical transaction data and behavioural baselines required for ML model training and feature store population."
+        }
+      ],
+      "technology_constraints": {
+        "deployment_model": "cloud_native",
+        "data_residency": "UK only",
+        "latency_class": "real_time_sub_100ms",
+        "availability_target": "99.99%",
+        "pci_dss_scope": false,
+        "regulatory_data_obligations": ["PSR APP fraud reimbursement records", "Cifas FNIF reporting data", "FCA PSR PS23/3 liability records", "UK GDPR transaction data processing records"]
+      },
+      "market_context": {
+        "build_vs_buy_assessment": "strong_buy",
+        "build_rationale": "CAP-004 build_vs_buy explicitly recommends buying Featurespace, NetGuardians, or Quantexa as the fraud detection engine. The bank must own the fraud strategy (rules, thresholds, investigation governance) but specialist vendors outcompete in-house ML investment for the detection models. CAP-004 DD-001 confirms this: the buy decision avoids competing with specialist AI investment.",
+        "vendor_options": [
+          {
+            "vendor_name": "Featurespace",
+            "product_name": "ARIC Platform",
+            "fit_assessment": "preferred",
+            "notes": "Unsupervised and adaptive ML for fraud detection. Deployed at HSBC, NatWest, Worldpay. Strong UK regulatory track record. Real-time sub-100ms scoring. Models individual customer behaviour without labelled data."
+          },
+          {
+            "vendor_name": "Quantexa",
+            "product_name": "Contextual Intelligence Platform",
+            "fit_assessment": "shortlisted",
+            "notes": "Network graph analytics for fraud and financial crime. Strong for complex commercial fraud and APP fraud network detection."
+          },
+          {
+            "vendor_name": "NetGuardians",
+            "product_name": "AI Fraud Prevention",
+            "fit_assessment": "shortlisted",
+            "notes": "Internal fraud focus alongside payment fraud. Commercial banking fraud typologies."
+          }
+        ]
+      },
+      "design_decisions": []
+    },
+    {
+      "id": "SVC-014",
+      "name": "KYC/AML Service",
+      "description": "Realises the promoted KYC/AML sub-capability (CAP-005.01). The authoritative service for customer due diligence (CDD) and enhanced due diligence (EDD) across all customer segments: individual identity verification, beneficial ownership determination for legal entities, PEP and adverse media screening, client risk scoring, SAR reporting to the NCA UKFIU, and ongoing AML transaction monitoring. Operates the perpetual KYC programme — event-triggered client review replacing periodic refresh cycles. The MLRO holds personal criminal accountability (POCA 2002) for this service's outputs.",
+      "classification": "domain_specific",
+      "status": "Draft",
+      "capability_mappings": [
+        {
+          "capability_id": "CAP-005.01",
+          "capability_name": "KYC / AML",
+          "realisation_type": "realises_promoted_sub_capability"
+        }
+      ],
+      "dependencies": [
+        {
+          "service_id": "SVC-102",
+          "service_name": "Event Bus",
+          "dependency_type": "platform",
+          "rationale": "Subscribes to CustomerOnboardingInitiated, PaymentReceived, and CustomerRiskTrigger events for perpetual KYC monitoring. Publishes KYCClearanceGranted and CustomerRiskScoreUpdated events consumed by SVC-001, SVC-005."
+        },
+        {
+          "service_id": "SVC-054",
+          "service_name": "Document Management Service",
+          "dependency_type": "async_event",
+          "rationale": "Identity documents, beneficial ownership documentation, and EDD evidence are stored and retrieved via SVC-054 for audit trail and regulatory inspection."
+        },
+        {
+          "service_id": "SVC-104",
+          "service_name": "Data Platform",
+          "dependency_type": "platform",
+          "rationale": "Transaction monitoring ML models require access to historical transaction data for model training and ongoing alert scoring."
+        }
+      ],
+      "technology_constraints": {
+        "deployment_model": "cloud_native",
+        "data_residency": "UK only — NCA SAR data, MLRO accountability records",
+        "latency_class": "near_real_time_sub_1s",
+        "availability_target": "99.9%",
+        "pci_dss_scope": false,
+        "regulatory_data_obligations": ["MLR 2017 CDD/EDD records", "POCA 2002 SAR audit trail", "NCA UKFIU submission records", "UK GDPR personal data", "FCA AML compliance records"]
+      },
+      "market_context": {
+        "build_vs_buy_assessment": "build_with_vendor_components",
+        "build_rationale": "CAP-005 DD-001 promotes KYC/AML to standalone capability. The MLRO-owned AML policy, SAR escalation standards, and client risk scoring methodology must be built in-house. The data components — identity verification (Onfido/Jumio), PEP/sanctions data (ComplyAdvantage/Refinitiv), corporate KYC data (Encompass), and transaction monitoring engine (Napier/Quantexa) — are all strong buy candidates.",
+        "vendor_options": [
+          {
+            "vendor_name": "Encompass Corporation",
+            "product_name": "Automated Corporate KYC",
+            "fit_assessment": "preferred",
+            "notes": "Automated Companies House / official registry data gathering. Reduces analyst time for corporate onboarding by 70-90%. SWIFT KYC Registry integration."
+          },
+          {
+            "vendor_name": "Onfido",
+            "product_name": "AI Identity Verification",
+            "fit_assessment": "preferred",
+            "notes": "Digital identity verification (document + biometric liveness). Buy for digital channel KYC. UK DIATF certified."
+          },
+          {
+            "vendor_name": "ComplyAdvantage",
+            "product_name": "AML Data & Transaction Screening",
+            "fit_assessment": "preferred",
+            "notes": "Real-time AML data, adverse media, PEP and sanctions screening. API-first. Used as data layer under existing TMS."
+          },
+          {
+            "vendor_name": "Napier AI",
+            "product_name": "Intelligent Transaction Monitoring",
+            "fit_assessment": "shortlisted",
+            "notes": "ML-based AML transaction monitoring to replace legacy rule-based systems. Bank owns model validation and typology configuration."
+          }
+        ]
+      },
+      "design_decisions": []
+    },
+    {
+      "id": "SVC-015",
+      "name": "Compliance Core Service",
+      "description": "Realises the retained sub-capabilities of CAP-005 after KYC/AML promotion: regulatory reporting (CAP-005.02), conduct monitoring (CAP-005.03), data protection (CAP-005.04), and sanctions screening policy governance (CAP-005.05 policy layer — the SVC-051 shared service is the runtime execution layer). Produces COREP, FINREP, PRA 110, and FCA regulatory returns. Operates the Consumer Duty outcomes monitoring programme, SM&CR accountability map, communications surveillance, and the bank's GDPR/UK GDPR compliance programme including ROPA, DPIAs, and Subject Access Request handling.",
+      "classification": "domain_specific",
+      "status": "Draft",
+      "capability_mappings": [
+        {
+          "capability_id": "CAP-005",
+          "capability_name": "Compliance & Regulatory",
+          "realisation_type": "realises_retained_sub_capabilities",
+          "sub_capabilities_in_scope": ["CAP-005.02", "CAP-005.03", "CAP-005.04", "CAP-005.05"]
+        }
+      ],
+      "dependencies": [
+        {
+          "service_id": "SVC-012",
+          "service_name": "Risk Engine Service",
+          "dependency_type": "async_event",
+          "rationale": "COREP capital and FINREP financial reporting requires RWA and capital data from SVC-012. SVC-012 publishes RegulatoryCapitalCalculated events consumed by SVC-015 for return preparation."
+        },
+        {
+          "service_id": "SVC-104",
+          "service_name": "Data Platform",
+          "dependency_type": "platform",
+          "rationale": "Regulatory reporting requires cross-system data aggregation from the enterprise data platform (customer data, loan data, payment data, risk data). SVC-015 does not query source systems directly."
+        },
+        {
+          "service_id": "SVC-103",
+          "service_name": "Audit & Logging",
+          "dependency_type": "platform",
+          "rationale": "Consumer Duty outcomes monitoring and SM&CR conduct investigation require immutable audit logs from all customer-facing services."
+        }
+      ],
+      "technology_constraints": {
+        "deployment_model": "cloud_native",
+        "data_residency": "UK only — PRA/FCA confidential supervisory data",
+        "latency_class": "batch_daily",
+        "availability_target": "99.5%",
+        "pci_dss_scope": false,
+        "regulatory_data_obligations": ["COREP/FINREP PRA regulatory returns", "FCA Consumer Duty outcomes evidence", "SM&CR accountability map and conduct records", "UK GDPR ROPA and DPIA records", "ICO breach notification records"]
+      },
+      "market_context": {
+        "build_vs_buy_assessment": "build_with_vendor_components",
+        "build_rationale": "The regulatory reporting sign-off governance, Consumer Duty outcomes methodology, SM&CR accountability map, and sanctions policy framework must be built in-house per CAP-005 must_build_in_house. Regulatory reporting automation (AxiomSL, Wolters Kluwer), GDPR tooling (OneTrust), and communications surveillance (Behavox) are strong buy candidates.",
+        "vendor_options": [
+          {
+            "vendor_name": "AxiomSL (Adenza, Nasdaq)",
+            "product_name": "Regulatory Reporting Platform",
+            "fit_assessment": "preferred",
+            "notes": "COREP, FINREP, PRA 110, DORA reporting automation. Reduces manual restatement risk. FCA DRR compatibility."
+          },
+          {
+            "vendor_name": "OneTrust",
+            "product_name": "GDPR Compliance Management",
+            "fit_assessment": "preferred",
+            "notes": "ROPA, DPIA workflows, consent management, SAR handling. Avoids building specialist privacy tooling."
+          },
+          {
+            "vendor_name": "Behavox",
+            "product_name": "Conduct Surveillance",
+            "fit_assessment": "shortlisted",
+            "notes": "AI conduct surveillance and communications monitoring. SM&CR conduct rule compliance."
+          }
+        ]
+      },
+      "design_decisions": []
+    },
+    {
+      "id": "SVC-016",
+      "name": "Wealth Platform Service",
+      "description": "Realises all retained sub-capabilities of CAP-006: investment advisory (CAP-006.01), portfolio management (CAP-006.02), private banking (CAP-006.03), and financial planning (CAP-006.04). Provides the integrated banking-and-wealth proposition for HNW and mass-affluent clients: discretionary and advisory portfolio management, suitability assessment and periodic review, private banking relationship management (personalised credit, FX, bespoke services), financial planning and cashflow modelling, custody oversight, and MiFID II-compliant reporting. The structural moat is integration with the commercial bank's balance sheet — deposit, lending, mortgage, and investment on one relationship.",
+      "classification": "domain_specific",
+      "status": "Draft",
+      "capability_mappings": [
+        {
+          "capability_id": "CAP-006",
+          "capability_name": "Wealth Management",
+          "realisation_type": "realises_retained_sub_capabilities",
+          "sub_capabilities_in_scope": ["CAP-006.01", "CAP-006.02", "CAP-006.03", "CAP-006.04"]
+        }
+      ],
+      "dependencies": [
+        {
+          "service_id": "SVC-050",
+          "service_name": "Customer Onboarding Service",
+          "dependency_type": "hard_blocking",
+          "rationale": "Wealth client onboarding requires KYC clearance — HNW clients typically require EDD — from SVC-050 before investment accounts are opened."
+        },
+        {
+          "service_id": "SVC-001",
+          "service_name": "Retail Banking Core",
+          "dependency_type": "soft_query",
+          "rationale": "Private banking clients have personal current accounts managed by SVC-001. SVC-016 queries account and balance data for holistic client wealth view."
+        },
+        {
+          "service_id": "SVC-010",
+          "service_name": "International Payments Service",
+          "dependency_type": "async_event",
+          "rationale": "HNW clients with international assets require FX conversion and international payment capability routed via SVC-010."
+        }
+      ],
+      "technology_constraints": {
+        "deployment_model": "cloud_native",
+        "data_residency": "UK only — MiFID II suitability records, investment account data",
+        "latency_class": "interactive_sub_5s",
+        "availability_target": "99.5%",
+        "pci_dss_scope": false,
+        "regulatory_data_obligations": ["MiFID II transaction reporting", "COBS 9A suitability records", "SDR ESG label compliance records", "FCA Consumer Duty wealth outcomes evidence", "EMIR derivatives reporting"]
+      },
+      "market_context": {
+        "build_vs_buy_assessment": "build_with_vendor_components",
+        "build_rationale": "CAP-006 must_build_in_house identifies client relationship model, suitability orchestration, Investment Committee process, and core banking balance sheet integration as bank-owned. Platform custody (FNZ or SEI), portfolio analytics (BlackRock Aladdin Wealth), client reporting portal (InvestCloud), financial planning tools (Voyant), and wealth CRM (Wealth Dynamix) are all strong buy candidates.",
+        "vendor_options": [
+          {
+            "vendor_name": "FNZ",
+            "product_name": "Wealth Platform-as-a-Service",
+            "fit_assessment": "preferred",
+            "notes": "End-to-end platform custody, settlement, client portal, reporting. Used by Lloyds (Scottish Widows), Standard Life, HSBC GAM. Strong UK regulatory track record."
+          },
+          {
+            "vendor_name": "SEI",
+            "product_name": "SEI Wealth Platform",
+            "fit_assessment": "shortlisted",
+            "notes": "Integrated investment management, custody, and reporting for private banks. Used by RBC Brewin Dolphin."
+          },
+          {
+            "vendor_name": "Wealth Dynamix",
+            "product_name": "WDX CRM",
+            "fit_assessment": "preferred",
+            "notes": "CRM designed specifically for wealth management. RM workflow, review scheduling, compliance documentation."
+          }
+        ]
+      },
+      "design_decisions": []
+    },
+    {
+      "id": "SVC-017",
+      "name": "Digital Channels Service",
+      "description": "Realises all retained sub-capabilities of CAP-007: online banking (CAP-007.01), mobile banking (CAP-007.02), Open Banking APIs (CAP-007.03 retained pending 2026 promotion review), and customer communications (CAP-007.04). The primary brand touchpoint and customer interaction surface for retail and SME customers. Owns the authenticated customer experience (iOS, Android, web), the OBIE-compliant Open Banking API programme (AISP/PISP, VRP, cVRP), TPP onboarding and consent lifecycle, and customer communications orchestration across push notifications, SMS, email, and in-app messaging.",
+      "classification": "domain_specific",
+      "status": "Draft",
+      "capability_mappings": [
+        {
+          "capability_id": "CAP-007",
+          "capability_name": "Digital Channels",
+          "realisation_type": "realises_retained_sub_capabilities",
+          "sub_capabilities_in_scope": ["CAP-007.01", "CAP-007.02", "CAP-007.03", "CAP-007.04"]
+        }
+      ],
+      "dependencies": [
+        {
+          "service_id": "SVC-009",
+          "service_name": "Domestic Payments Service",
+          "dependency_type": "async_event",
+          "rationale": "Open Banking PISP-initiated payments publish a PaymentInitiationRequested event consumed by SVC-009. Real-time payment confirmation (PaymentSettled) is published back by SVC-009 and consumed by SVC-017 for push notification."
+        },
+        {
+          "service_id": "SVC-100",
+          "service_name": "Identity & Access Management",
+          "dependency_type": "hard_blocking",
+          "rationale": "Customer authentication (biometric, SCA-compliant) is a blocking dependency for all authenticated digital channel interactions."
+        },
+        {
+          "service_id": "SVC-101",
+          "service_name": "API Gateway",
+          "dependency_type": "platform",
+          "rationale": "All Open Banking API calls from TPPs are routed through SVC-101 (API Gateway) for rate limiting, TPP certificate validation, and monitoring."
+        },
+        {
+          "service_id": "SVC-013",
+          "service_name": "Fraud Detection Service",
+          "dependency_type": "hard_blocking",
+          "rationale": "Payment journeys in the digital channel call SVC-013 for APP fraud warning and Confirmation of Payee validation before payment authorisation. PSR PS21/3 operational resilience requirements."
+        }
+      ],
+      "technology_constraints": {
+        "deployment_model": "cloud_native",
+        "data_residency": "UK only — customer interaction data, consent records",
+        "latency_class": "near_real_time_sub_1s",
+        "availability_target": "99.95%",
+        "pci_dss_scope": false,
+        "regulatory_data_obligations": ["CMA Order Open Banking API records", "OBIE performance and incident reporting", "FCA Consumer Duty Understanding outcome evidence", "WCAG 2.1 AA accessibility compliance records", "UK GDPR consent and communication preference records"]
+      },
+      "market_context": {
+        "build_vs_buy_assessment": "build_with_vendor_components",
+        "build_rationale": "CAP-007 must_build_in_house identifies the authenticated product experience and Open Banking API programme ownership as bank-owned. Buy candidates: Open Banking connectivity middleware (TrueLayer/Yapily), customer communications delivery (Twilio/MessageBird), transaction categorisation (Bud), digital identity verification (Onfido), and API management gateway (Apigee/AWS).",
+        "vendor_options": [
+          {
+            "vendor_name": "Backbase",
+            "product_name": "Digital Banking Platform",
+            "fit_assessment": "shortlisted",
+            "notes": "Engagement banking layer over core systems. UK references: NatWest. Modular adoption model."
+          },
+          {
+            "vendor_name": "TrueLayer",
+            "product_name": "Open Banking Platform",
+            "fit_assessment": "preferred",
+            "notes": "Open Banking middleware and payment initiation. Covers 98% of UK bank accounts. Strong UK regulatory track record. Used by 200+ fintechs and banks."
+          },
+          {
+            "vendor_name": "Twilio",
+            "product_name": "Customer Communications Cloud",
+            "fit_assessment": "preferred",
+            "notes": "SMS, push notifications, email, voice delivery infrastructure. Commodity delivery layer — bank owns orchestration logic on top."
+          }
+        ]
+      },
+      "design_decisions": [
+        {
+          "id": "SDD-003",
+          "decision": "Open Banking APIs (CAP-007.03) is retained within SVC-017 pending a promotion review scheduled for 2026 when commercial VRP launches and the API gateway boundary is clean.",
+          "rationale": "CAP-007.03 meets 4/4 promotion criteria but is retained because: (a) API surface is currently coupled to the same core banking integration layer as Online/Mobile Banking; (b) the commercial VRP product model is nascent; (c) CMA Order accountability currently spans the full Open Banking programme. The 2026 review point will assess whether to promote to SVC-017b (Open Banking & Embedded Finance).",
+          "alternatives_considered": ["Promote immediately to standalone Open Banking Service"],
+          "rejected_because": "Premature promotion before API gateway boundary and commercial VRP product validation risks creating an under-scoped standalone service with no independent revenue model."
+        }
+      ]
+    }
+  ]
+}

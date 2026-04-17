@@ -1,56 +1,190 @@
 {
+  "$schema": "../schemas/shared-sub-capability.schema.json",
+  "document_version": "0.1.0",
+  "status": "Draft",
+  "architectural_principle": "Share contracts not implementations — cross-capability concerns are resolved through owned services with published API contracts, not through shared codebases or shared databases.",
   "shared_sub_capabilities": [
     {
+      "id": "SSC-001",
       "name": "Customer Onboarding",
-      "appears_in": ["CAP-001 Retail Banking", "CAP-002 Commercial Banking"],
+      "description": "The end-to-end process of admitting a new customer — identity verification, KYC/CDD checks, beneficial ownership determination, risk scoring, account creation, and initial product provisioning. Both Retail Banking and Commercial Banking require onboarding but with materially different participant sets and data requirements (individual identity vs corporate structure / Companies House / UBOs).",
+      "appears_in": [
+        {
+          "capability_id": "CAP-001",
+          "capability_name": "Retail Banking",
+          "context": "Consumer onboarding: individual identity verification, Onfido/Jumio eKYC, PEP screening, and retail current account creation. Lifecycle measured in minutes for digital onboarding."
+        },
+        {
+          "capability_id": "CAP-002",
+          "capability_name": "Commercial Banking",
+          "context": "Corporate/SME onboarding: Companies House lookup, beneficial ownership chain traversal, enhanced due diligence, Encompass automated registry data, and business account setup. Lifecycle measured in days to weeks."
+        },
+        {
+          "capability_id": "CAP-005",
+          "capability_name": "Compliance & Regulatory",
+          "context": "KYC/AML (CAP-005.01, promoted) owns the CDD framework, risk scoring methodology, SAR obligations, and MLRO accountability. Onboarding in any capability triggers KYC/AML checks via synchronous API call before account provisioning is permitted."
+        }
+      ],
       "resolution": "shared_service",
-      "resolution_rationale": "Single onboarding service with configurable KYC tiers — retail (individual ID verification) and commercial (beneficial ownership, Companies House checks). Shared CDD data store with capability-specific extensions.",
+      "resolution_rationale": "Customer Onboarding is resolved as a shared service (SVC-050) owned by the KYC/AML capability domain (CAP-005.01 promoted). All onboarding entry points — retail, commercial, wealth — call the same onboarding service API to complete CDD checks and receive a KYC clearance event. The architectural principle (share contracts not implementations) is satisfied: CAP-001 and CAP-002 each own their product-specific account creation logic but both depend on the SVC-050 contract for identity verification and risk scoring. SVC-050 publishes a single KYC clearance event consumed by downstream provisioning steps. This avoids three separate KYC implementations with divergent watchlist coverage and different MLRO governance chains.",
+      "owning_capability": "CAP-005 (Compliance & Regulatory / KYC/AML)",
+      "consuming_capabilities": ["CAP-001", "CAP-002", "CAP-006"],
+      "integration_pattern": "Synchronous API call (REST/gRPC) during onboarding journey; KYC clearance event published to event bus on completion. Blocking: account creation cannot proceed without clearance.",
       "downstream_implications": [
-        "Single customer identity across retail and commercial",
-        "KYC/AML capability (CAP-005.01) consumes onboarding events for ongoing monitoring",
-        "Digital Channels (CAP-007) provides the customer-facing onboarding UI"
+        "SVC-050 becomes a critical availability dependency for both Retail Banking Core (SVC-001) and Commercial Banking Core (SVC-005) — SVC-050 must meet the most demanding availability SLA across all consumers.",
+        "Retail onboarding (minutes) and commercial onboarding (days) impose very different timeout and async patterns on the shared contract — the API must support both synchronous short-path (consumer digital) and asynchronous long-path (corporate EDD) response modes.",
+        "MLRO accountability is unified — one MLRO-owned policy applies to all channels; no capability can define its own KYC thresholds independently.",
+        "The shared service must be provisioned to handle peak digital retail onboarding throughput (Black Friday account opening surges) without impacting the ongoing corporate CDD refresh workload.",
+        "Consumer Duty outcomes monitoring for the onboarding journey must be aggregated from SVC-050 telemetry into the Compliance & Regulatory reporting pipeline."
       ]
     },
     {
+      "id": "SSC-002",
       "name": "Sanctions Screening",
-      "appears_in": ["CAP-005 Compliance & Regulatory", "CAP-003 Payment Operations"],
+      "description": "Real-time screening of counterparties and transaction beneficiaries against UK (OFSI), US (OFAC), EU, and UN sanctions lists. Applies at both the point of customer onboarding (counterparty screening) and at the point of payment execution (transaction screening). The dual context — KYC-adjacent at onboarding, payment-adjacent at execution — creates the cross-capability overlap.",
+      "appears_in": [
+        {
+          "capability_id": "CAP-005",
+          "capability_name": "Compliance & Regulatory",
+          "sub_capability_id": "CAP-005.05",
+          "sub_capability_name": "Sanctions Screening",
+          "context": "Owns the sanctions policy, sanctions list management (OFSI, OFAC, UN, EU lists), OFSI licence applications, voluntary disclosure governance, and the MLRO-accountable escalation framework. The capability file explicitly documents shared_with Payment Operations."
+        },
+        {
+          "capability_id": "CAP-003",
+          "capability_name": "Payment Operations",
+          "context": "Every outgoing Faster Payment, BACS, CHAPS, and international SWIFT payment must receive a real-time sanctions clearance before scheme submission. Payment cannot proceed without a clear result. The payment execution path (SVC-009, SVC-010, SVC-011) makes a synchronous blocking call to the sanctions screening service."
+        },
+        {
+          "capability_id": "CAP-001",
+          "capability_name": "Retail Banking",
+          "context": "Sanctions screening at retail customer onboarding (part of KYC/CDD) and at payment initiation (via Payment Operations dependency)."
+        }
+      ],
       "resolution": "shared_service",
-      "resolution_rationale": "Compliance owns the sanctions policy, list management, and screening rules. Payment Operations consumes screening via a synchronous API (sub-200ms p99 SLA). Policy ownership stays in Compliance; runtime execution is contracted.",
+      "resolution_rationale": "Sanctions Screening is resolved as a shared service (SVC-051) owned by Compliance & Regulatory (OFSI/MLRO accountability) and consumed by Payment Operations as a hard runtime dependency. The capability files explicitly document this resolution: CAP-005.05 is retained within Compliance & Regulatory with a shared_with Payment Operations annotation. The service contract is the ownership mechanism — SVC-051 publishes a synchronous screening API used by payment execution. SVC-051 also publishes an asynchronous list-update event when sanctions lists are refreshed, consumed by any capability that performs batch screening. Regulatory accountability (OFSI) and policy ownership (MLRO) remain solely in Compliance & Regulatory; Payment Operations does not define any sanctions logic.",
+      "owning_capability": "CAP-005 (Compliance & Regulatory)",
+      "consuming_capabilities": ["CAP-003", "CAP-001", "CAP-002"],
+      "integration_pattern": "Synchronous blocking API call from payment execution path — payment is held pending a CLEAR or BLOCKED result. Sub-200ms SLA required for FPS/CHAPS payment throughput. Async batch screening for customer portfolio rescreening on list updates.",
       "downstream_implications": [
-        "International Payments (CAP-003.04) requires real-time screening on outbound transfers",
-        "Trade Finance (CAP-002.03) requires screening on parties and goods",
-        "Card Processing (CAP-003.05) requires screening on merchant onboarding"
+        "SVC-051 is in the critical path for all outgoing payments — its availability and latency directly determine payment SLA. Requires multi-region active-active deployment with graceful degradation policy approved by MLRO.",
+        "FCA enforcement signal (Starling Bank £29m fine, October 2024) for incomplete sanctions screening coverage creates a board-level risk if SVC-051 consumer integration is incomplete or bypassed in any payment rail.",
+        "OFSI list refresh frequency is event-driven (can occur at any time for emergency sanctions); SVC-051 must support zero-downtime list updates without interrupting the payment screening path.",
+        "The Sanctions Screening service contract must version independently from the Payment Operations release cycle — list schema changes (new sanctions programme structures) must not require coordinated Payment Operations deployments.",
+        "Consumer Duty implications: customers stopped by false-positive sanctions hits on legitimate payments require a clear remedy process; SVC-051 must expose a case management interface for operations teams to review and override with MLRO approval."
       ]
     },
     {
-      "name": "Open Banking Payment Initiation",
-      "appears_in": ["CAP-007 Digital Channels", "CAP-003 Payment Operations"],
-      "resolution": "integration_dependency",
-      "resolution_rationale": "Open Banking APIs (CAP-007.03) handles the consent and API layer for third-party providers. Payment initiation requests are forwarded to Payment Operations (CAP-003) for execution via Faster Payments or BACS. Clear boundary: consent/auth in Digital Channels, execution in Payments.",
-      "downstream_implications": [
-        "API contracts between Open Banking and Payment Operations define the integration boundary",
-        "Consent lifecycle is owned by Digital Channels, payment lifecycle by Payment Operations"
-      ]
-    },
-    {
+      "id": "SSC-003",
       "name": "Credit Risk Assessment",
-      "appears_in": ["CAP-002 Commercial Banking", "CAP-004 Risk Management"],
+      "description": "The evaluation of a borrower's probability of default, loss given default, and expected credit loss — providing a credit decision (approve/decline/refer) and a risk-adjusted price. Appears both within Risk Management (as the modelling and governance capability) and within all lending capabilities (Retail Banking personal loans, Commercial Banking business lending, Mortgage Service) as a runtime decisioning dependency.",
+      "appears_in": [
+        {
+          "capability_id": "CAP-004",
+          "capability_name": "Risk Management",
+          "sub_capability_id": "CAP-004.01",
+          "sub_capability_name": "Credit Risk",
+          "context": "Owns the credit risk models (PD/LGD/EAD), IRB framework, credit appetite policy, IFRS 9 ECL provisioning, and portfolio concentration limits. The modelling and governance home for credit risk."
+        },
+        {
+          "capability_id": "CAP-001",
+          "capability_name": "Retail Banking",
+          "sub_capability_id": "CAP-001.03",
+          "sub_capability_name": "Personal Lending",
+          "context": "Personal loan and overdraft origination requires a real-time credit decision. The Retail Banking Core service calls the Credit Decision Service to determine approve/decline and pricing before presenting an offer to the customer."
+        },
+        {
+          "capability_id": "CAP-002",
+          "capability_name": "Commercial Banking",
+          "sub_capability_id": "CAP-002.02",
+          "sub_capability_name": "Business Lending",
+          "context": "SME and corporate credit facility origination depends on the credit risk models owned by Risk Management, augmented by commercial-specific scorecard inputs (Companies House data, Open Banking cashflow, sector benchmarks)."
+        }
+      ],
       "resolution": "shared_service",
-      "resolution_rationale": "Risk Management owns the credit risk models, scoring engines, and exposure calculations. Commercial Banking (and Retail Banking lending) consumes credit decisions via API. Business Lending originates the application; Risk Management provides the decision.",
+      "resolution_rationale": "Credit Risk Assessment is resolved as a shared service (SVC-052, Credit Decision Service) owned by Risk Management (CAP-004) and consumed by all lending-originating capabilities. Risk Management owns the model development, validation (PRA SS1/23), IRB framework, and credit appetite policy — this ownership cannot be fragmented across lending capabilities without violating PRA individual accountability requirements (the CRO holds personal SM&CR responsibility for credit models). Lending capabilities consume the decisioning service via API, passing application data and receiving a structured decision response (Approve/Decline/Refer + pricing parameters). The contract boundary ensures that Retail Banking and Commercial Banking cannot independently modify credit model logic; all model changes flow through Risk Management's model governance process.",
+      "owning_capability": "CAP-004 (Risk Management)",
+      "consuming_capabilities": ["CAP-001", "CAP-002", "SVC-002 (Mortgage)"],
+      "integration_pattern": "Synchronous API call at origination for real-time decisions (personal loans, overdraft pre-approval). Async batch mode for portfolio-level re-scoring and IFRS 9 staging reviews. Credit decision events published to event bus for audit trail and Consumer Duty outcomes monitoring.",
       "downstream_implications": [
-        "Personal Lending (CAP-001.03) also consumes credit risk scoring",
-        "Mortgages (CAP-001.04) requires mortgage-specific affordability models",
-        "Regulatory Reporting (CAP-005.02) consumes credit risk exposure data"
+        "SVC-052 must support two distinct latency profiles: sub-second real-time retail decisioning (pre-approved loan offers in the mobile app) and asynchronous commercial credit assessment (days-long underwriting pipeline for SME facilities above £250k).",
+        "PRA IRB model approval binds the bank to the credit model methodology — changes to SVC-052's scoring logic require PRA notification and, for material changes, prior approval. Release velocity of the service is constrained by model governance timelines.",
+        "Consumer Duty fair value obligation requires that credit pricing output from SVC-052 can be demonstrated to represent fair value for the customer segment — the decision audit trail must include the risk parameters used at origination.",
+        "Basel 3.1 output floor rising to 72.5% by 2030 may shift some exposures from IRB to Standardised Approach — SVC-052 must support SA-based capital calculation alongside IRB for floor-constrained exposures.",
+        "Zest AI and Scienaptic (ML credit underwriting buy candidates) would integrate as model components within SVC-052 — the service boundary insulates lending capabilities from underlying model technology choices."
       ]
     },
     {
-      "name": "Card Settlement",
-      "appears_in": ["CAP-001 Retail Banking", "CAP-002 Commercial Banking", "CAP-003 Payment Operations"],
+      "id": "SSC-004",
+      "name": "Open Banking Payment Initiation",
+      "description": "The consent management and payment initiation layer for PSD2/PSR 2017-regulated third-party payment initiation service providers (PISPs), including Variable Recurring Payments (VRP) and the emerging commercial VRP (cVRP). Appears in both Digital Channels (as the API surface and consent experience) and Payment Operations (as the FPS execution and settlement path).",
+      "appears_in": [
+        {
+          "capability_id": "CAP-007",
+          "capability_name": "Digital Channels",
+          "sub_capability_id": "CAP-007.03",
+          "sub_capability_name": "Open Banking APIs",
+          "context": "Owns the OBIE/Open Banking Ltd-compliant API programme, TPP onboarding and consent management, the customer-facing consent journey (SCA), the VRP and cVRP product roadmap, and CMA Order compliance. The capability file explicitly flags shared ownership with Payment Operations and notes that the API promotion review is scheduled for 2026."
+        },
+        {
+          "capability_id": "CAP-003",
+          "capability_name": "Payment Operations",
+          "sub_capability_id": "CAP-003.06",
+          "sub_capability_name": "Open Banking Payments",
+          "context": "The FPS execution path for PISP-initiated payments. Once consent is granted and the payment is initiated via the OBIE API, the instruction is routed through the same Faster Payments rail as a standard FPS payment — screening, settlement, and scheme participation obligations apply identically."
+        }
+      ],
       "resolution": "integration_dependency",
-      "resolution_rationale": "Card Processing (CAP-003.05) handles authorisation, clearing, and settlement at the scheme level. Credit Cards (CAP-001.05) and Merchant Services (CAP-002.05) own their respective cardholder/merchant relationships. Settlement positions flow to Treasury for liquidity management.",
+      "resolution_rationale": "Open Banking Payment Initiation is not consolidated into a single shared service because the two capability segments serve distinct concerns with a clear handoff contract. Digital Channels (SVC-017) owns the consent lifecycle, OBIE API surface, TPP registry, and customer SCA journey — this is a product and regulatory API management function. Payment Operations (SVC-009) owns the FPS execution path — this is a scheme participation and settlement function. The integration pattern is: Digital Channels publishes a PaymentInitiated event containing a consent token and payment parameters; Payment Operations consumes this event and routes it to the FPS execution pipeline. The architectural principle (share contracts not implementations) is satisfied by the event contract, not by merging the two domains. Neither capability operates the other's infrastructure. The payment operations capability file (CAP-003.06, DD-003) explicitly documents this resolution as a retained shared sub-capability with Payment Operations as the FPS execution owner.",
+      "owning_capability": "CAP-007 owns consent and API layer; CAP-003 owns FPS execution",
+      "consuming_capabilities": ["CAP-007 consumes CAP-003 FPS execution via event contract"],
+      "integration_pattern": "Event-driven: Digital Channels publishes PaymentInitiationRequested event to event bus; Payment Operations subscribes and executes via FPS. The consent grant and payment authorisation occur synchronously in the digital channel; the FPS submission and settlement confirmation are returned asynchronously via a PaymentSettled event.",
       "downstream_implications": [
-        "Card Processing settlement files feed into Treasury Services reconciliation",
-        "Fraud Detection (CAP-004.04) monitors card transactions in real-time"
+        "PSR APP fraud reimbursement (mandatory from October 2024) applies to PISP-initiated FPS payments — the bank as ASPSP shares reimbursement liability 50/50 with the sending PSP. Both Digital Channels and Payment Operations must have fraud warning controls (Confirmation of Payee, friction triggers) at the right points in the split lifecycle.",
+        "Commercial VRP (cVRP, first live Q1 2026) will route through the same split architecture — Digital Channels owns the VRP mandate lifecycle; Payment Operations owns the recurring FPS execution. The API contract between them must support variable amounts and mandate constraints.",
+        "JROC Phase 2 timeline (2026) for premium Open Banking APIs may result in CAP-007.03 (Open Banking APIs) being promoted to a standalone capability — at that point, the integration dependency becomes a formal SVC-to-SVC contract with independent versioning.",
+        "CMA Order compliance reporting covers API performance, availability, and incident management — metrics must be collected from both the Digital Channels consent layer and the Payment Operations FPS execution layer and aggregated for FCA reporting.",
+        "TrueLayer, Yapily, and Token.io buy candidates (open banking aggregation middleware) sit in SVC-017 and call SVC-009 for payment execution — the split ownership is visible to third-party providers in the form of separate consent and payment confirmation endpoints."
+      ]
+    },
+    {
+      "id": "SSC-005",
+      "name": "Card Settlement",
+      "description": "The clearing and settlement of card transactions involving the bank in multiple roles — as card issuer (debit cards, commercial cards, credit cards), as acquirer of record for merchant customers, and as the underlying payment infrastructure for card processing. Appears across three promoted capabilities: Credit Card Service (CAP-001.05), Card Processing Service (CAP-003.05), and Merchant Acquiring Service (CAP-002.05).",
+      "appears_in": [
+        {
+          "capability_id": "CAP-001",
+          "capability_name": "Retail Banking",
+          "sub_capability_id": "CAP-001.05",
+          "sub_capability_name": "Credit Cards (promoted)",
+          "context": "As card issuer for personal credit cards: receives clearing files from Visa/Mastercard networks, posts transactions to cardholder statements, manages interchange income, and processes chargebacks under scheme dispute rules. Settlement flow: scheme → issuer card processing → cardholder account."
+        },
+        {
+          "capability_id": "CAP-003",
+          "capability_name": "Payment Operations",
+          "sub_capability_id": "CAP-003.05",
+          "sub_capability_name": "Card Processing (promoted)",
+          "context": "As card issuing processor for debit cards and commercial cards: real-time authorisation, BIN management, transaction routing, clearing with Visa/Mastercard, and settlement to funding accounts. The technical scheme membership and processing infrastructure role."
+        },
+        {
+          "capability_id": "CAP-002",
+          "capability_name": "Commercial Banking",
+          "sub_capability_id": "CAP-002.05",
+          "sub_capability_name": "Merchant Services (promoted)",
+          "context": "As acquiring bank: authorises card transactions on behalf of merchants, funds merchant settlement accounts (T+1 to T+3), manages chargeback disputes as acquirer, and holds the PCI DSS-regulated merchant data environment."
+        }
+      ],
+      "resolution": "contract_only",
+      "resolution_rationale": "Card Settlement is resolved as contract_only — there is no single shared service because each capability segment plays a distinct role in the four-party card scheme, and the scheme itself (Visa/Mastercard) is the infrastructure that connects them. The bank is simultaneously an issuer (CAP-001.05, CAP-003.05) and an acquirer (CAP-002.05), each governed by separate Visa/Mastercard Operating Regulations contractual schedules. The integration is mediated by the card scheme settlement infrastructure, not by a bank-owned shared service. The contracts are: (a) the Visa/Mastercard clearing file contract between card issuer processing and card scheme networks; (b) the interchange settlement contract between issuer and acquirer (routed via scheme); (c) the merchant settlement contract between acquirer and merchant bank account. Each promoted service (SVC-003, SVC-008, SVC-011) publishes and consumes well-defined card transaction events; there is no shared database or shared deployment unit across the three.",
+      "owning_capability": "No single owner — each role has a separate owner: CAP-001.05 for issuing (personal credit cards), CAP-003.05 for card processing infrastructure, CAP-002.05 for merchant acquiring",
+      "consuming_capabilities": ["Inter-service via Visa/Mastercard scheme settlement"],
+      "integration_pattern": "Scheme-mediated settlement: card transaction authorisation → scheme clearing → net settlement via RTGS (CHAPS). Each service maintains its own internal ledger position and reconciles against scheme settlement files. Dispute and chargeback flows are bilateral between issuer and acquirer via scheme rules, not via a shared bank service.",
+      "downstream_implications": [
+        "PCI DSS compliance (v4.0) applies independently to each of the three services — each cardholder data environment (CDE) is separately scoped, separately assessed, and separately attested. The three CDEs must not share infrastructure that would extend scope to the combined data.",
+        "The PSR MR22/1.7 remedies require scheme fee transparency — the bank must be able to report scheme fees separately for issuing and acquiring, confirming the architectural separation of SVC-003 and SVC-008.",
+        "Interchange flows (issuer earns interchange, acquirer pays interchange) create an internal transfer pricing question where the same bank is both issuer and acquirer for some commercial card transactions — the contract_only resolution means this is handled at the Finance function level via scheme settlement netting, not by a shared application.",
+        "Open banking A2A substitution (200M transactions in 2024, cVRP from Q1 2026) reduces card transaction volumes over time — each of the three services must monitor card volume independently to support investment decisions about card programme scale.",
+        "GPS (Global Processing Services) or Marqeta as buy candidates for SVC-011 (Card Processing) would sit inside that service boundary and would not have a dependency on SVC-003 or SVC-008 — the buy decision for each service is independent."
       ]
     }
   ]

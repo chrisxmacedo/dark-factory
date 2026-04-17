@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bank.internal/schemas/environment-spec.schema.json",
+  "title": "EnvironmentSpec",
+  "description": "Schema for environment specifications: CI, RC, and prod-parity. Covers services list, database provisioning, external system stubs, secrets configuration, OTel pipeline, and network zones.",
+  "type": "object",
+  "required": [
+    "$schema",
+    "document_version",
+    "status",
+    "environments"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string", "format": "uri" },
+    "document_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "status": { "type": "string", "enum": ["Draft", "Review", "Approved", "Superseded"] },
+    "environments": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "env_id",
+          "name",
+          "purpose",
+          "services",
+          "database_provisioning",
+          "external_system_stubs",
+          "secrets",
+          "otel_config",
+          "network_zones"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "env_id": { "type": "string" },
+          "name": { "type": "string" },
+          "purpose": { "type": "string" },
+          "services": {
+            "type": "object",
+            "required": ["all_services", "tier_notes"],
+            "additionalProperties": false,
+            "properties": {
+              "all_services": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "tier_notes": { "type": "string" }
+            }
+          },
+          "database_provisioning": {
+            "type": "object",
+            "required": ["mode", "persistence", "seeding", "per_service_db"],
+            "additionalProperties": false,
+            "properties": {
+              "mode": { "type": "string", "enum": ["ephemeral", "persistent", "prod-parity"] },
+              "persistence": { "type": "string" },
+              "seeding": { "type": "string" },
+              "per_service_db": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["service_id", "engine", "provisioning_method"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "service_id": { "type": "string" },
+                    "engine": { "type": "string" },
+                    "provisioning_method": { "type": "string" },
+                    "seed_data": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "external_system_stubs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["system_name", "stub_type", "technology"],
+              "additionalProperties": false,
+              "properties": {
+                "system_name": { "type": "string" },
+                "stub_type": { "type": "string", "enum": ["wiremock_stub", "contract_stub", "sandbox_api", "none_not_required"] },
+                "technology": { "type": "string" },
+                "notes": { "type": "string" }
+              }
+            }
+          },
+          "secrets": {
+            "type": "object",
+            "required": ["source", "rotation_policy", "pci_dss_keys"],
+            "additionalProperties": false,
+            "properties": {
+              "source": { "type": "string" },
+              "rotation_policy": { "type": "string" },
+              "pci_dss_keys": { "type": "string" },
+              "notes": { "type": "string" }
+            }
+          },
+          "otel_config": {
+            "type": "object",
+            "required": ["collector_deployment", "exporters", "sampling_strategy", "audit_store"],
+            "additionalProperties": false,
+            "properties": {
+              "collector_deployment": { "type": "string" },
+              "exporters": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["store", "enabled"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "store": { "type": "string" },
+                    "enabled": { "type": "boolean" },
+                    "retention": { "type": "string" },
+                    "notes": { "type": "string" }
+                  }
+                }
+              },
+              "sampling_strategy": { "type": "string" },
+              "audit_store": { "type": "string" }
+            }
+          },
+          "network_zones": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["zone_name", "enforced", "implementation"],
+              "additionalProperties": false,
+              "properties": {
+                "zone_name": { "type": "string" },
+                "enforced": { "type": "boolean" },
+                "implementation": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

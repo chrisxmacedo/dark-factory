@@ -1,0 +1,761 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Credit Card Service API",
+    "description": "SVC-003 Credit Card Service — API for the credit card application and issuance journey (JRN-008). Covers the credit card application lifecycle from submission through to account activation and ongoing statement retrieval. All cross-capability integrations (credit scoring via SVC-012, CAP-004) are mediated exclusively via async events through SVC-102 and are not exposed as synchronous API endpoints. PCI DSS v4.0 compliance: no raw PAN (Primary Account Number) is returned in any API response. card_number_token is used exclusively.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Credit Cards Engineering Team",
+      "email": "credit-cards-engineering@bank.internal"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://api.bank.internal/v1",
+      "description": "Internal API Gateway — Production"
+    },
+    {
+      "url": "https://api.staging.bank.internal/v1",
+      "description": "Internal API Gateway — Staging"
+    }
+  ],
+  "security": [
+    {
+      "BearerAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "credit-card-applications",
+      "description": "Credit card application lifecycle — from submission through to decision"
+    },
+    {
+      "name": "credit-card-accounts",
+      "description": "Credit card account management — activation, statement retrieval"
+    }
+  ],
+  "paths": {
+    "/credit-card-applications": {
+      "post": {
+        "operationId": "createCreditCardApplication",
+        "tags": ["credit-card-applications"],
+        "summary": "Submit a credit card application",
+        "description": "Submits a new credit card application at PH-023. Creates an ENT-022 CreditCardApplication record with status = 'submitted'. Runs automated eligibility pre-checks (active customer, UK resident, product eligibility). Publishes EVT-040 CreditCardApplicationSubmitted. Returns 202 Accepted — the credit decision is asynchronous (credit check dispatched via EVT-041 to SVC-012). Customer should poll GET /credit-card-applications/{id} or receive push notification when decision is ready.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCreditCardApplicationRequest"
+              },
+              "example": {
+                "customer_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                "product_id": "9b2e1c3a-4d5f-6789-abcd-ef0123456789",
+                "income_declared": 32000.00,
+                "employment_status": "employed_full_time",
+                "requested_limit": null,
+                "hard_credit_check_consent": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Application accepted. Credit check in progress. Decision will be communicated via push notification and email. Use GET /credit-card-applications/{id} to poll status.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreditCardApplicationAcceptedResponse"
+                },
+                "example": {
+                  "application_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                  "status": "submitted",
+                  "product_id": "9b2e1c3a-4d5f-6789-abcd-ef0123456789",
+                  "product_name": "Classic Visa",
+                  "submitted_at": "2026-04-15T10:23:45Z",
+                  "message": "Your application is being processed. A credit check is in progress. You will be notified of the decision shortly."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request — missing required fields, invalid employment_status enum value, hard_credit_check_consent must be true.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict — customer_id already has an open credit card application in progress (status: submitted or assessment_complete). Only one in-flight application permitted per customer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Eligibility pre-check failed — customer does not meet product eligibility criteria (e.g. not UK resident, below minimum age, product withdrawn). Hard credit check NOT performed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EligibilityFailedResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/credit-card-applications/{id}": {
+      "get": {
+        "operationId": "getCreditCardApplication",
+        "tags": ["credit-card-applications"],
+        "summary": "Retrieve a credit card application by ID",
+        "description": "Retrieves the current state of a credit card application. Used to poll for the decision after submitting at POST /credit-card-applications. Returns the full application status including decision fields (assigned_credit_limit, apr) once the decision phase (PH-025) is complete. The customer may only retrieve their own application (customer_id in JWT must match application.customer_id).",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The application_id (UUID v4) returned at application submission.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Application retrieved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreditCardApplicationResponse"
+                },
+                "example": {
+                  "application_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                  "customer_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                  "product_id": "9b2e1c3a-4d5f-6789-abcd-ef0123456789",
+                  "product_name": "Classic Visa",
+                  "status": "approved",
+                  "decision": "approved",
+                  "assigned_credit_limit": 4500.00,
+                  "apr": 24.9,
+                  "submitted_at": "2026-04-15T10:23:45Z",
+                  "decision_timestamp": "2026-04-15T10:24:12Z",
+                  "resulting_account_id": "b2c3d4e5-f6a7-8901-bcde-f12345678901"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Application not found for the given id.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden — the authenticated customer does not own this application.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          }
+        }
+      }
+    },
+    "/credit-card-accounts/{id}/activate": {
+      "post": {
+        "operationId": "activateCreditCard",
+        "tags": ["credit-card-accounts"],
+        "summary": "Activate a credit card",
+        "description": "Activates a credit card at PH-027. Transitions ENT-023 CreditCardAccount status from 'issued' to 'active'. Requires a valid SCA session token (PSR 2017 Reg. 100 — SCA mandatory for remote card activation). Publishes EVT-046 CreditCardActivated. Idempotent — if the card is already active, returns 200 with the current account status. PCI DSS: no raw PAN in request or response — card_number_token used.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The account_id (UUID v4) of the CreditCardAccount (ENT-023).",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivateCreditCardRequest"
+              },
+              "example": {
+                "card_number_token": "tok_4929_xxxx_xxxx_1234",
+                "activation_method": "explicit_app",
+                "sca_session_token": "sca_9f8e7d6c5b4a3210"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Card activated successfully (or already active — idempotent response).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreditCardActivationResponse"
+                },
+                "example": {
+                  "account_id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+                  "card_number_token": "tok_4929_xxxx_xxxx_1234",
+                  "status": "active",
+                  "credit_limit": 4500.00,
+                  "available_balance": 4500.00,
+                  "apr": 24.9,
+                  "first_statement_date": "2026-05-15",
+                  "activated_at": "2026-04-19T14:32:01Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request — missing or invalid sca_session_token, invalid card_number_token format.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "description": "Forbidden — SCA session token invalid or expired (PSR 2017 Reg. 100). Customer must re-authenticate.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account not found for the given id.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Account is not in 'issued' status — cannot activate. Account may already be active, suspended, or closed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/credit-card-accounts/{id}/statements": {
+      "get": {
+        "operationId": "getCreditCardStatements",
+        "tags": ["credit-card-accounts"],
+        "summary": "Retrieve credit card statements",
+        "description": "Retrieves a paginated list of StatementCycle records (ENT-025) for a credit card account. Covers PH-028 ongoing management. The default lookback is 13 months (sufficient for annual statement review). Maximum supported: 84 months (7 years — CCA retention). Statements do not contain full PAN — card_number_token or masked last 4 digits only (PCI DSS compliant).",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The account_id (UUID v4) of the CreditCardAccount (ENT-023).",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "months",
+            "in": "query",
+            "required": false,
+            "description": "Number of months of statement history to retrieve (most recent first). Default: 13. Maximum: 84.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 84,
+              "default": 13
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "Page number for pagination. Default: 1.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "description": "Number of statements per page. Default: 12. Maximum: 24.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 24,
+              "default": 12
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Statements retrieved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatementsResponse"
+                },
+                "example": {
+                  "account_id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+                  "total_statements": 1,
+                  "page": 1,
+                  "page_size": 12,
+                  "statements": [
+                    {
+                      "cycle_id": "c3d4e5f6-a7b8-9012-cdef-012345678901",
+                      "statement_date": "2026-05-15",
+                      "opening_balance": 0.00,
+                      "closing_balance": 487.23,
+                      "interest_charged": 0.00,
+                      "fees_charged": 0.00,
+                      "payments_received": 0.00,
+                      "minimum_payment_due": 25.00,
+                      "payment_due_date": "2026-06-09",
+                      "persistent_debt_months": 0
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query parameters.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "description": "Forbidden — the authenticated customer does not own this account.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT issued by the bank's Identity Provider. Claims must include customer_id (sub) and scope credit-cards:read credit-cards:write as appropriate."
+      }
+    },
+    "responses": {
+      "Unauthorised": {
+        "description": "Unauthorised — missing or invalid Bearer token.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "InternalServerError": {
+        "description": "Internal server error. Retry with exponential backoff. If persistent, contact credit-cards-engineering@bank.internal.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "CreateCreditCardApplicationRequest": {
+        "type": "object",
+        "required": ["customer_id", "product_id", "income_declared", "employment_status", "hard_credit_check_consent"],
+        "properties": {
+          "customer_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The customer's UUID (ENT-001.customer_id). Must match the customer_id in the JWT Bearer token."
+          },
+          "product_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The selected CardProduct UUID (ENT-024.product_id). Must reference an active CardProduct."
+          },
+          "income_declared": {
+            "type": "number",
+            "format": "decimal",
+            "minimum": 0,
+            "description": "Gross annual income in GBP (self-declared). Used for CONC 5.3A creditworthiness assessment. Not shared with credit bureaux."
+          },
+          "employment_status": {
+            "type": "string",
+            "enum": ["employed_full_time", "employed_part_time", "self_employed", "retired", "student", "unemployed", "other"],
+            "description": "Customer's employment status."
+          },
+          "requested_limit": {
+            "type": "number",
+            "format": "decimal",
+            "minimum": 250,
+            "maximum": 50000,
+            "nullable": true,
+            "description": "Optional preferred credit limit in GBP. If null, the system assigns based on creditworthiness. Actual assigned limit may be lower than requested."
+          },
+          "hard_credit_check_consent": {
+            "type": "boolean",
+            "description": "Must be true. Customer consents to a hard credit check (bureau footprint). Cannot be false — a hard check is mandatory for a credit card application."
+          }
+        }
+      },
+      "CreditCardApplicationAcceptedResponse": {
+        "type": "object",
+        "properties": {
+          "application_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The newly created application ID. Store this to poll for the decision."
+          },
+          "status": {
+            "type": "string",
+            "enum": ["submitted"],
+            "description": "Initial status — always 'submitted' on 202 acceptance."
+          },
+          "product_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "product_name": {
+            "type": "string",
+            "description": "Human-readable product name for UI display."
+          },
+          "submitted_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 UTC timestamp of application submission."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable status message for display in the customer-facing UI."
+          }
+        }
+      },
+      "CreditCardApplicationResponse": {
+        "type": "object",
+        "properties": {
+          "application_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "customer_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "product_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "product_name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["submitted", "assessment_complete", "approved", "declined", "referred", "withdrawn"]
+          },
+          "decision": {
+            "type": "string",
+            "enum": ["approved", "declined", "referred"],
+            "nullable": true,
+            "description": "Decision field. Null before PH-025 completes."
+          },
+          "assigned_credit_limit": {
+            "type": "number",
+            "format": "decimal",
+            "nullable": true,
+            "description": "Assigned credit limit in GBP. Null unless decision = 'approved'."
+          },
+          "apr": {
+            "type": "number",
+            "format": "decimal",
+            "nullable": true,
+            "description": "Assigned APR as percentage (e.g. 24.9). Null unless decision = 'approved'."
+          },
+          "decline_reason_summary": {
+            "type": "string",
+            "nullable": true,
+            "description": "High-level decline reason for customer display (CONC 7.3 — proportionate reason; not the full score). Present only when decision = 'declined'."
+          },
+          "cra_used": {
+            "type": "string",
+            "nullable": true,
+            "description": "Name of the credit reference agency consulted (CCA 1974 s157 right-to-know). Present only when decision = 'declined'."
+          },
+          "submitted_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "decision_timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "resulting_account_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "The ENT-023 CreditCardAccount ID created on approval. Null for declined or in-progress applications."
+          }
+        }
+      },
+      "ActivateCreditCardRequest": {
+        "type": "object",
+        "required": ["card_number_token", "activation_method", "sca_session_token"],
+        "properties": {
+          "card_number_token": {
+            "type": "string",
+            "description": "The card_number_token from ENT-023 (PCI DSS: token only — no raw PAN accepted or returned)."
+          },
+          "activation_method": {
+            "type": "string",
+            "enum": ["explicit_app"],
+            "description": "Activation method. Only 'explicit_app' is valid for this endpoint. 'first_transaction' activation is handled automatically by the card authorisation path (JRN-011)."
+          },
+          "sca_session_token": {
+            "type": "string",
+            "description": "A valid SCA session token proving the customer has completed two-factor authentication (PSR 2017 Reg. 100). Issued by the bank's Identity Provider after successful SCA challenge."
+          }
+        }
+      },
+      "CreditCardActivationResponse": {
+        "type": "object",
+        "properties": {
+          "account_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "card_number_token": {
+            "type": "string",
+            "description": "PCI-safe token. No raw PAN returned."
+          },
+          "status": {
+            "type": "string",
+            "enum": ["active"],
+            "description": "Account status after activation."
+          },
+          "credit_limit": {
+            "type": "number",
+            "format": "decimal",
+            "description": "Assigned credit limit in GBP."
+          },
+          "available_balance": {
+            "type": "number",
+            "format": "decimal",
+            "description": "Available balance in GBP (credit_limit minus any outstanding balance)."
+          },
+          "apr": {
+            "type": "number",
+            "format": "decimal",
+            "description": "Assigned APR as percentage."
+          },
+          "first_statement_date": {
+            "type": "string",
+            "format": "date",
+            "description": "ISO 8601 date of the first scheduled statement (statement_date_day of the following month)."
+          },
+          "activated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 UTC timestamp of activation."
+          }
+        }
+      },
+      "StatementCycleItem": {
+        "type": "object",
+        "properties": {
+          "cycle_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ENT-025 StatementCycle identifier."
+          },
+          "statement_date": {
+            "type": "string",
+            "format": "date",
+            "description": "The date on which this billing cycle closed."
+          },
+          "opening_balance": {
+            "type": "number",
+            "format": "decimal",
+            "description": "Balance at the start of the billing cycle (GBP)."
+          },
+          "closing_balance": {
+            "type": "number",
+            "format": "decimal",
+            "description": "Balance at the end of the billing cycle (GBP)."
+          },
+          "interest_charged": {
+            "type": "number",
+            "format": "decimal",
+            "description": "Interest charged during this cycle (GBP)."
+          },
+          "fees_charged": {
+            "type": "number",
+            "format": "decimal",
+            "description": "Fees charged during this cycle (GBP)."
+          },
+          "payments_received": {
+            "type": "number",
+            "format": "decimal",
+            "description": "Total payments received during this cycle (GBP)."
+          },
+          "minimum_payment_due": {
+            "type": "number",
+            "format": "decimal",
+            "description": "Minimum payment due by payment_due_date (GBP). Covers interest + fees + minimum principal (CONC 7.7)."
+          },
+          "payment_due_date": {
+            "type": "string",
+            "format": "date",
+            "description": "Payment due date — at least 25 days after statement_date (FCA CONC minimum)."
+          },
+          "persistent_debt_months": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Snapshot of persistent_debt_months counter at this statement date. For FCA CONC 6.7.27 monitoring."
+          }
+        }
+      },
+      "StatementsResponse": {
+        "type": "object",
+        "properties": {
+          "account_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "total_statements": {
+            "type": "integer",
+            "description": "Total number of statements in the requested lookback window."
+          },
+          "page": {
+            "type": "integer"
+          },
+          "page_size": {
+            "type": "integer"
+          },
+          "statements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StatementCycleItem"
+            },
+            "description": "Statements ordered by statement_date descending (most recent first)."
+          }
+        }
+      },
+      "EligibilityFailedResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "eligibility_failed"
+          },
+          "reason": {
+            "type": "string",
+            "description": "Human-readable eligibility failure reason. Possible values: 'not_uk_resident', 'below_minimum_age', 'product_withdrawn', 'existing_card_limit_reached'.",
+            "example": "not_uk_resident"
+          },
+          "message": {
+            "type": "string",
+            "description": "Customer-facing message. Must be clear, fair, and not misleading (Consumer Duty PS22/9).",
+            "example": "We are unable to process this application as the selected product requires UK residency."
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Machine-readable error code."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable error message."
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Request correlation ID for support and tracing."
+          }
+        }
+      }
+    }
+  }
+}

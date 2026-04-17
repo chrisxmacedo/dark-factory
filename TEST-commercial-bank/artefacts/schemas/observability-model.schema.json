@@ -1,10 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "observability-model.schema.json",
-  "title": "Observability Model",
-  "description": "Schema for the bank's observability architecture: telemetry pipeline, per-service instrumentation standards, log schemas, data freshness contracts, and design decisions.",
+  "$id": "https://bank.internal/schemas/observability-model.schema.json",
+  "title": "ObservabilityModel",
+  "description": "Schema for the bank's observability model: log routing, instrumentation standards, logging schema taxonomy, data freshness contracts, and architecture design decisions.",
   "type": "object",
   "required": [
+    "$schema",
+    "document_version",
+    "status",
     "log_routing_architecture",
     "per_service_instrumentation_checklist",
     "logging_schema_by_category",
@@ -13,80 +16,49 @@
   ],
   "additionalProperties": false,
   "properties": {
+    "$schema": { "type": "string", "format": "uri" },
+    "document_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "status": { "type": "string", "enum": ["Draft", "Review", "Approved", "Superseded"] },
     "log_routing_architecture": {
       "type": "object",
-      "description": "Defines the telemetry pipeline from emission through collection to fan-out, plus the four separate stores.",
-      "required": ["description", "pipeline", "stores"],
+      "required": ["ingestion_layer", "pii_scrubbing", "fan_out_stores"],
       "additionalProperties": false,
       "properties": {
-        "description": {
-          "type": "string",
-          "description": "High-level narrative of the log routing architecture and its key principles."
+        "ingestion_layer": {
+          "type": "object",
+          "required": ["component", "protocol", "rationale"],
+          "additionalProperties": false,
+          "properties": {
+            "component": { "type": "string" },
+            "protocol": { "type": "string" },
+            "rationale": { "type": "string" }
+          }
         },
-        "pipeline": {
+        "pii_scrubbing": {
+          "type": "object",
+          "required": ["stage", "mechanism", "fields_scrubbed", "enforcement"],
+          "additionalProperties": false,
+          "properties": {
+            "stage": { "type": "string" },
+            "mechanism": { "type": "string" },
+            "fields_scrubbed": { "type": "array", "items": { "type": "string" } },
+            "enforcement": { "type": "string" }
+          }
+        },
+        "fan_out_stores": {
           "type": "array",
-          "description": "Ordered stages of the telemetry pipeline from service emission to backend fan-out.",
           "minItems": 1,
           "items": {
             "type": "object",
-            "required": ["stage", "description"],
+            "required": ["name", "purpose", "retention", "access_control"],
             "additionalProperties": false,
             "properties": {
-              "stage": {
-                "type": "string",
-                "description": "Identifier for this pipeline stage."
-              },
-              "description": {
-                "type": "string",
-                "description": "What happens at this stage."
-              },
-              "component": {
-                "type": "string",
-                "description": "Named component responsible for this stage, if applicable."
-              },
-              "transforms": {
-                "type": "array",
-                "description": "Transformations applied at this stage (e.g. PII scrubbing).",
-                "items": { "type": "string" }
-              },
-              "destinations": {
-                "type": "array",
-                "description": "Named destinations that receive data at this stage.",
-                "items": { "type": "string" }
-              }
-            }
-          }
-        },
-        "stores": {
-          "type": "array",
-          "description": "The four telemetry stores, each with distinct retention, access, and purpose.",
-          "minItems": 4,
-          "items": {
-            "type": "object",
-            "required": ["name", "technology", "retention", "access", "purpose"],
-            "additionalProperties": false,
-            "properties": {
-              "name": {
-                "type": "string",
-                "description": "Logical name of the store."
-              },
-              "technology": {
-                "type": "string",
-                "description": "Technology stack or product used for this store."
-              },
-              "retention": {
-                "type": "string",
-                "description": "Data retention period or policy for this store."
-              },
-              "access": {
-                "type": "string",
-                "description": "Who is permitted to query this store.",
-                "enum": ["engineering", "auditor_only", "operations", "compliance"]
-              },
-              "purpose": {
-                "type": "string",
-                "description": "What data this store holds and why."
-              }
+              "name": { "type": "string" },
+              "purpose": { "type": "string" },
+              "retention": { "type": "string" },
+              "access_control": { "type": "string" },
+              "worm": { "type": "boolean" },
+              "technology_options": { "type": "array", "items": { "type": "string" } }
             }
           }
         }
@@ -94,125 +66,95 @@
     },
     "per_service_instrumentation_checklist": {
       "type": "array",
-      "description": "Mandatory and recommended instrumentation items every service must implement.",
       "minItems": 1,
       "items": {
         "type": "object",
-        "required": ["id", "name", "description"],
+        "required": ["id", "name", "description", "mandatory"],
         "additionalProperties": false,
         "properties": {
-          "id": {
-            "type": "string",
-            "pattern": "^OBS-[0-9]{3}$",
-            "description": "Unique checklist item identifier in the format OBS-XXX."
-          },
-          "name": {
-            "type": "string",
-            "description": "Short name of the instrumentation requirement."
-          },
-          "description": {
-            "type": "string",
-            "description": "Full specification of what must be implemented and any hard constraints."
-          },
-          "mandatory": {
-            "type": "boolean",
-            "description": "When true, absence of this instrumentation causes service startup failure.",
-            "default": false
-          }
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "mandatory": { "type": "boolean" },
+          "standards_reference": { "type": "string" }
         }
       }
     },
     "logging_schema_by_category": {
       "type": "array",
-      "description": "Per-category log field extensions beyond the base schema, with critical rules for each service class.",
       "minItems": 1,
       "items": {
         "type": "object",
-        "required": ["category", "services", "extension_fields", "critical_rules"],
+        "required": ["category_id", "category_name", "applies_to_services", "required_fields", "extension_fields", "critical_rules"],
         "additionalProperties": false,
         "properties": {
-          "category": {
-            "type": "string",
-            "description": "Name of the service category this schema extension applies to."
-          },
-          "services": {
+          "category_id": { "type": "string" },
+          "category_name": { "type": "string" },
+          "applies_to_services": { "type": "array", "items": { "type": "string" } },
+          "required_fields": {
             "type": "array",
-            "description": "List of services that belong to this category.",
-            "minItems": 1,
-            "items": { "type": "string" }
+            "items": {
+              "type": "object",
+              "required": ["field", "type", "description"],
+              "additionalProperties": false,
+              "properties": {
+                "field": { "type": "string" },
+                "type": { "type": "string" },
+                "description": { "type": "string" },
+                "example": {}
+              }
+            }
           },
           "extension_fields": {
             "type": "array",
-            "description": "Fields added to the base log schema for this category. Array notation (e.g. downstream_calls[]) indicates a repeated field.",
-            "minItems": 1,
-            "items": { "type": "string" }
+            "items": {
+              "type": "object",
+              "required": ["field", "type", "description"],
+              "additionalProperties": false,
+              "properties": {
+                "field": { "type": "string" },
+                "type": { "type": "string" },
+                "description": { "type": "string" },
+                "example": {}
+              }
+            }
           },
           "critical_rules": {
-            "type": "string",
-            "description": "Non-negotiable rules for this category, including PII prohibitions, compliance requirements, and security-critical behaviours."
+            "type": "array",
+            "items": { "type": "string" }
           }
         }
       }
     },
     "data_freshness": {
       "type": "array",
-      "description": "Freshness contracts for each data type surfaced by the Observability Aggregator, with banking relevance rationale.",
       "minItems": 1,
       "items": {
         "type": "object",
-        "required": ["data_type", "freshness", "model", "banking_relevance"],
+        "required": ["contract_id", "signal_name", "source", "max_staleness", "alert_threshold", "rationale"],
         "additionalProperties": false,
         "properties": {
-          "data_type": {
-            "type": "string",
-            "description": "The category of data subject to this freshness contract."
-          },
-          "freshness": {
-            "type": "string",
-            "description": "Maximum acceptable staleness of this data type when surfaced to consumers."
-          },
-          "model": {
-            "type": "string",
-            "description": "Mechanism by which the aggregator receives updates: push (webhook) or pull (poll)."
-          },
-          "banking_relevance": {
-            "type": "string",
-            "description": "Why this freshness contract matters in the context of banking regulation, SLAs, or operational risk."
-          }
+          "contract_id": { "type": "string" },
+          "signal_name": { "type": "string" },
+          "source": { "type": "string" },
+          "max_staleness": { "type": "string" },
+          "alert_threshold": { "type": "string" },
+          "rationale": { "type": "string" }
         }
       }
     },
     "design_decisions": {
       "type": "array",
-      "description": "Architectural decisions that shaped the observability model, with rationale for future maintainers.",
-      "minItems": 1,
       "items": {
         "type": "object",
-        "required": ["id", "decision", "rationale"],
+        "required": ["id", "decision", "rationale", "alternatives_considered", "rejected_because"],
         "additionalProperties": false,
         "properties": {
-          "id": {
-            "type": "string",
-            "pattern": "^DD-OBS-[0-9]{3}$",
-            "description": "Unique decision identifier in the format DD-OBS-XXX."
-          },
-          "decision": {
-            "type": "string",
-            "description": "The decision taken, stated as a present-tense directive."
-          },
-          "rationale": {
-            "type": "string",
-            "description": "Why this decision was made — the forces and trade-offs considered."
-          },
-          "alternatives_considered": {
-            "type": "array",
-            "description": "Alternative approaches that were evaluated and not chosen.",
-            "items": { "type": "string" }
-          },
-          "rejected_because": {
-            "type": "string",
-            "description": "Consolidated reason why the alternatives were rejected."
-          }
+          "id": { "type": "string" },
+          "decision": { "type": "string" },
+          "rationale": { "type": "string" },
+          "alternatives_considered": { "type": "array", "items": { "type": "string" } },
+          "rejected_because": { "type": "string" }
         }
       }
     }

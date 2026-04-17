@@ -1,0 +1,224 @@
+{
+  "diagram_id": "SEQ-008-002",
+  "journey_id": "JRN-008",
+  "name": "Credit Card Application — FCA Persistent Debt Intervention",
+  "description": "Illustrates the FCA CONC 6.7.27–6.7.40 persistent debt monitoring and intervention flow at PH-028. A customer who consistently makes only minimum payments may spend more on interest and charges than they repay in principal. SVC-003 tracks this via persistent_debt_months on ENT-023 and publishes EVT-048 PersistentDebtAlertTriggered at the FCA-mandated 18, 27, and 36-month intervention thresholds. The diagram shows all three intervention levels: first contact (18 months), second contact with repayment plan (27 months), and credit limit suspension (36 months).",
+  "regulatory_basis": [
+    "FCA CONC 6.7.27 (PS20/8) — definition of persistent debt: more paid in interest/charges than principal over 18 months",
+    "FCA CONC 6.7.28 — first intervention: bank must contact customer at 18 months encouraging higher repayments",
+    "FCA CONC 6.7.29 — second intervention: bank must contact customer at 27 months, offer repayment plan",
+    "FCA CONC 6.7.30 — third intervention at 36 months: bank must suspend credit limit increases; may suspend credit facility if no repayment arrangement",
+    "FCA PS20/8 — communication content prescribed by FCA; bank must retain evidence of communications"
+  ],
+  "participants": [
+    {"id": "PER001", "label": "Customer (PER-001)", "type": "actor"},
+    {"id": "SVC003", "label": "SVC-003 Credit Card Service", "type": "service"},
+    {"id": "EventBus", "label": "SVC-102 Event Bus", "type": "infrastructure"},
+    {"id": "SVC053", "label": "SVC-053 Notification Service", "type": "service"},
+    {"id": "SVC103", "label": "SVC-103 Audit & Logging (WORM)", "type": "service"}
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "phase": "PH-028",
+      "type": "note",
+      "label": "Context: Customer has been active for 18+ months. Each month, they pay only the minimum payment. Their payment covers the interest and fees charged but repays very little principal. After 18 consecutive months in this pattern, persistent_debt_months = 18."
+    },
+    {
+      "step": 2,
+      "phase": "PH-028",
+      "type": "note",
+      "label": "Persistent debt definition (CONC 6.7.27): over the last 18 months, SUM(interest_charged + fees_charged) > SUM(principal_repaid). This customer has paid £342 in interest/fees vs £120 in principal reduction — persistent debt confirmed."
+    },
+    {
+      "step": 3,
+      "phase": "PH-028",
+      "type": "internal",
+      "actor": "SVC003",
+      "label": "Monthly statement generation job runs. Statement month 18 processed. Create ENT-025 StatementCycle (persistent_debt_months: 18). Update ENT-023.persistent_debt_months = 18. Set ENT-023.persistent_debt_flag = true."
+    },
+    {
+      "step": 4,
+      "phase": "PH-028",
+      "type": "async_publish",
+      "from": "SVC003",
+      "to": "EventBus",
+      "label": "Publish EVT-047 StatementGenerated (persistent_debt_months: 18)"
+    },
+    {
+      "step": 5,
+      "phase": "PH-028",
+      "type": "internal",
+      "actor": "SVC003",
+      "label": "Post-statement persistent debt check: persistent_debt_months = 18 → threshold crossed. intervention_level: first_contact. Deduplication check: no prior EVT-048 published at this level for this account_id. Publish EVT-048."
+    },
+    {
+      "step": 6,
+      "phase": "PH-028",
+      "type": "async_publish",
+      "from": "SVC003",
+      "to": "EventBus",
+      "label": "Publish EVT-048 PersistentDebtAlertTriggered (intervention_level: first_contact, persistent_debt_months: 18, closing_balance, interest_and_fees_ytd, principal_repaid_ytd)",
+      "note": "FCA CONC 6.7.28 first intervention trigger."
+    },
+    {
+      "step": 7,
+      "phase": "PH-028",
+      "type": "async_consume",
+      "from": "EventBus",
+      "to": "SVC053",
+      "label": "Consume EVT-048 (intervention_level: first_contact). Generate FCA-prescribed communication."
+    },
+    {
+      "step": 8,
+      "phase": "PH-028",
+      "type": "notification",
+      "from": "SVC053",
+      "to": "PER001",
+      "label": "Email + Secure Message (FCA PS20/8 prescribed content — first contact): 'You have been paying more in interest and charges than reducing your balance for 18 months. We recommend increasing your monthly payment to reduce your debt more quickly. [Repayment calculator link]. [MoneyHelper link].' Sent within 5 business days of trigger."
+    },
+    {
+      "step": 9,
+      "phase": "PH-028",
+      "type": "async_consume",
+      "from": "EventBus",
+      "to": "SVC103",
+      "label": "Consume EVT-048. Write immutable WORM audit record: account_id, intervention_level: first_contact, triggered_at, communication_dispatched_at. FCA evidence retained 6 years."
+    },
+    {
+      "step": 10,
+      "phase": "PH-028",
+      "type": "note",
+      "label": "9 more months pass. Customer continues making only minimum payments. persistent_debt_months increments to 27 at month 27 statement."
+    },
+    {
+      "step": 11,
+      "phase": "PH-028",
+      "type": "internal",
+      "actor": "SVC003",
+      "label": "Statement month 27 generated. persistent_debt_months = 27. ENT-025 StatementCycle created. Persistent debt check: threshold 27 crossed. intervention_level: second_contact. Deduplication: no prior EVT-048 at second_contact level."
+    },
+    {
+      "step": 12,
+      "phase": "PH-028",
+      "type": "async_publish",
+      "from": "SVC003",
+      "to": "EventBus",
+      "label": "Publish EVT-047 StatementGenerated (persistent_debt_months: 27)"
+    },
+    {
+      "step": 13,
+      "phase": "PH-028",
+      "type": "async_publish",
+      "from": "SVC003",
+      "to": "EventBus",
+      "label": "Publish EVT-048 PersistentDebtAlertTriggered (intervention_level: second_contact, persistent_debt_months: 27)",
+      "note": "FCA CONC 6.7.29 second intervention trigger."
+    },
+    {
+      "step": 14,
+      "phase": "PH-028",
+      "type": "async_consume",
+      "from": "EventBus",
+      "to": "SVC053",
+      "label": "Consume EVT-048 (intervention_level: second_contact). Generate FCA-prescribed communication with repayment plan offer."
+    },
+    {
+      "step": 15,
+      "phase": "PH-028",
+      "type": "notification",
+      "from": "SVC053",
+      "to": "PER001",
+      "label": "Email + Secure Message + Letter (FCA PS20/8 second contact — durable medium required): 'You have been in persistent debt for 27 months. We are required to offer you a repayment plan to help clear your balance. Please contact us within 30 days to discuss options. If we do not hear from you, we may need to take further action. [Repayment plan link]. [MoneyHelper: 0800 138 7777].' Sent within 5 business days."
+    },
+    {
+      "step": 16,
+      "phase": "PH-028",
+      "type": "async_consume",
+      "from": "EventBus",
+      "to": "SVC103",
+      "label": "Consume EVT-048 (second_contact). Write WORM audit record."
+    },
+    {
+      "step": 17,
+      "phase": "PH-028",
+      "type": "note",
+      "label": "9 more months pass. Customer does not contact the bank to arrange a repayment plan. Continues making minimum payments only. persistent_debt_months reaches 36."
+    },
+    {
+      "step": 18,
+      "phase": "PH-028",
+      "type": "internal",
+      "actor": "SVC003",
+      "label": "Statement month 36 generated. persistent_debt_months = 36. ENT-025 StatementCycle created. Persistent debt check: threshold 36 crossed. intervention_level: limit_suspension_warning."
+    },
+    {
+      "step": 19,
+      "phase": "PH-028",
+      "type": "async_publish",
+      "from": "SVC003",
+      "to": "EventBus",
+      "label": "Publish EVT-047 StatementGenerated (persistent_debt_months: 36)"
+    },
+    {
+      "step": 20,
+      "phase": "PH-028",
+      "type": "async_publish",
+      "from": "SVC003",
+      "to": "EventBus",
+      "label": "Publish EVT-048 PersistentDebtAlertTriggered (intervention_level: limit_suspension_warning, persistent_debt_months: 36)",
+      "note": "FCA CONC 6.7.30 third intervention: credit limit suspension required."
+    },
+    {
+      "step": 21,
+      "phase": "PH-028",
+      "type": "async_consume",
+      "from": "EventBus",
+      "to": "SVC003",
+      "label": "Consume EVT-048 (intervention_level: limit_suspension_warning). Trigger 30-day window: if no repayment arrangement confirmed within 30 days, suspend ENT-023 credit facility."
+    },
+    {
+      "step": 22,
+      "phase": "PH-028",
+      "type": "async_consume",
+      "from": "EventBus",
+      "to": "SVC053",
+      "label": "Consume EVT-048 (intervention_level: limit_suspension_warning). Generate FCA-prescribed credit limit suspension notice."
+    },
+    {
+      "step": 23,
+      "phase": "PH-028",
+      "type": "notification",
+      "from": "SVC053",
+      "to": "PER001",
+      "label": "Email + Secure Message + Letter (FCA PS20/8 third contact — durable medium): 'You have been in persistent debt for 36 months. We are suspending your ability to make new purchases on this card. Your existing balance and minimum payment remain unchanged. You must contact us within 30 days to arrange a repayment plan or we may need to take further action. [Contact us link]. [StepChange Debt Charity: 0800 138 1111].' Sent within 5 business days."
+    },
+    {
+      "step": 24,
+      "phase": "PH-028",
+      "type": "note",
+      "label": "30-day window: Customer does not respond. SVC-003 account management workflow runs."
+    },
+    {
+      "step": 25,
+      "phase": "PH-028",
+      "type": "internal",
+      "actor": "SVC003",
+      "label": "30-day window elapsed. No repayment arrangement confirmed. Transition ENT-023 status: active → suspended. Credit limit new purchases blocked. Card authorisation requests (JRN-011) for new purchases will be declined by SVC-003. Minimum payment on existing balance still due."
+    },
+    {
+      "step": 26,
+      "phase": "PH-028",
+      "type": "async_consume",
+      "from": "EventBus",
+      "to": "SVC103",
+      "label": "Consume EVT-048 (limit_suspension_warning). Write WORM audit record. Record account suspension event. FCA supervision evidence retained."
+    },
+    {
+      "step": 27,
+      "phase": "PH-028",
+      "type": "note",
+      "label": "CCA 1974 s87 default notice will be issued if arrears develop. Account referred to collections team if balance remains unpaid after further notice period. Debt written off after 6-year limitation period (Limitation Act 1980) if unrecoverable."
+    }
+  ]
+}

@@ -1,0 +1,414 @@
+{
+  "journey_id": "JRN-008",
+  "journey_name": "Credit Card Application and Issuance",
+  "version": "1.0.0",
+  "status": "Draft",
+  "events": [
+    {
+      "event_id": "EVT-040",
+      "name": "CreditCardApplicationSubmitted",
+      "source_service": "SVC-003",
+      "source_service_name": "Credit Card Service",
+      "source_entity": "ENT-022",
+      "source_entity_name": "CreditCardApplication",
+      "trigger": "Customer submits a credit card application at PH-023. SVC-003 creates ENT-022 CreditCardApplication with status = 'submitted' and publishes this event. Automated eligibility pre-check passes before publication.",
+      "journey_phase": "PH-023",
+      "journey_phase_name": "Application",
+      "capability_scope": "intra-capability",
+      "capability_scope_rationale": "Published by CAP-001 (SVC-003). Consumed by SVC-053 (Notification Service, intra-capability) and SVC-103 (Audit). This event does not cross a capability boundary.",
+      "payload_schema": {
+        "application_id": "string (UUID v4) — ENT-022 identifier",
+        "customer_id": "string (UUID v4) — FK to ENT-001",
+        "product_id": "string (UUID v4) — FK to ENT-024 CardProduct",
+        "employment_status": "string enum (employed_full_time | employed_part_time | self_employed | retired | student | unemployed | other)",
+        "requested_limit": "number | null — requested credit limit in GBP (null if not specified)",
+        "submitted_at": "string (ISO 8601 UTC timestamp)"
+      },
+      "payload_pii_note": "income_declared is NOT included in the payload (PII minimisation). It is held on ENT-022 in SVC-003 persistence only.",
+      "consumers": [
+        {
+          "service": "SVC-053",
+          "service_name": "Notification Service",
+          "action": "Sends application received confirmation to customer. Includes application reference number and expected decision timeline. CCA 1974 s56 adequate explanation has already been provided at application form stage."
+        },
+        {
+          "service": "SVC-103",
+          "service_name": "Audit & Logging",
+          "action": "Creates immutable audit log entry for credit card application submission. Application_id and timestamp are the primary audit keys."
+        }
+      ],
+      "ordering_guarantees": "Per-customer strict ordering via customer_id partition key on topic retail.credit-cards.",
+      "topic": "retail.credit-cards",
+      "data_classification": "pii",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "Contains customer_id (PII). CCA 1974 and CONC require credit application records to be retained. Retained for 6 years post account closure.",
+      "retention": "6 years post account closure (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.retail.credit-card.application.submitted",
+      "governance_references": ["GOV-001-R01"],
+      "source_journeys": ["JRN-008"]
+    },
+    {
+      "event_id": "EVT-041",
+      "name": "CreditCheckRequested",
+      "source_service": "SVC-003",
+      "source_service_name": "Credit Card Service",
+      "source_entity": "ENT-022",
+      "source_entity_name": "CreditCardApplication",
+      "trigger": "SVC-003 has completed automated eligibility checks at PH-024 and is ready to request a hard credit check from SVC-012 (Risk Engine, CAP-004). Customer identity data has been retrieved from SVC-001 (same-capability direct call). This event crosses the CAP-001 → CAP-004 boundary and must be async.",
+      "journey_phase": "PH-024",
+      "journey_phase_name": "Eligibility and Credit Check",
+      "capability_scope": "cross-capability",
+      "capability_scope_rationale": "Published by CAP-001 (SVC-003). Consumed by CAP-004 (SVC-012 Risk Engine). Crosses the CAP-001 / CAP-004 capability boundary — async events only; no synchronous cross-capability calls.",
+      "payload_schema": {
+        "application_id": "string (UUID v4) — ENT-022 identifier (partition key for SVC-012)",
+        "customer_id": "string (UUID v4) — used by SVC-012 to retrieve full Customer data for bureau submission",
+        "check_type": "string enum: hard — credit card application always uses a hard search (visible footprint on credit file)",
+        "income_declared": "number — gross annual income GBP (needed by SVC-012 for affordability cross-check against bureau data)",
+        "employment_status": "string enum",
+        "requested_at": "string (ISO 8601 UTC timestamp)"
+      },
+      "consumers": [
+        {
+          "service": "SVC-012",
+          "service_name": "Risk Engine",
+          "action": "Receives CreditCheckRequested. Retrieves Customer identity data from SVC-001 (SVC-012 may call SVC-001 directly — both within cross-capability read access). Submits hard search to credit bureau (Experian/Equifax/TransUnion). Runs internal credit scoring model. Derives recommended credit limit based on income, score, and credit policy. Publishes EVT-042 CreditCheckCompleted with outcome."
+        },
+        {
+          "service": "SVC-103",
+          "service_name": "Audit & Logging",
+          "action": "Records credit check request in WORM audit trail. ICO/CRA audit evidence — hard search request is an auditable event."
+        }
+      ],
+      "ordering_guarantees": "Per-application strict ordering via application_id partition key. Guaranteed exactly-once delivery to SVC-012 — deduplication key is application_id + check_type.",
+      "topic": "retail.credit-risk",
+      "data_classification": "confidential",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "Hard credit search request. ICO and CRA code of practice require records of bureau queries. CCA s157 requires the bank to be able to disclose which CRA was queried.",
+      "retention": "6 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.retail.credit-card.credit-check.requested",
+      "governance_references": ["GOV-001-R01"],
+      "source_journeys": ["JRN-008"]
+    },
+    {
+      "event_id": "EVT-042",
+      "name": "CreditCheckCompleted",
+      "source_service": "SVC-012",
+      "source_service_name": "Risk Engine",
+      "source_entity": null,
+      "trigger": "SVC-012 has received the credit bureau response and completed its internal scoring model run. Publishes the credit decision, risk band, and recommended credit limit back to SVC-003 via the event bus. This event crosses the CAP-004 → CAP-001 boundary.",
+      "journey_phase": "PH-024",
+      "journey_phase_name": "Eligibility and Credit Check",
+      "capability_scope": "cross-capability",
+      "capability_scope_rationale": "Published by CAP-004 (SVC-012 Risk Engine). Consumed by CAP-001 (SVC-003 Credit Card Service). Crosses the CAP-004 / CAP-001 boundary — async only.",
+      "payload_schema": {
+        "application_id": "string (UUID v4) — correlates to EVT-041 CreditCheckRequested (idempotency key)",
+        "customer_id": "string (UUID v4)",
+        "check_type": "string: hard",
+        "outcome": "string enum: pass | decline | refer",
+        "credit_risk_band": "string enum: A | B | C | D | E — bank's internal risk banding",
+        "recommended_credit_limit": "number | null — recommended credit limit in GBP; null if outcome = decline",
+        "credit_assessment_reference": "string (UUID) — SVC-012 internal assessment record ID (for CCA s157 right-to-know)",
+        "cra_used": "string enum: experian | equifax | transunion — which CRA was queried (for CCA s157 disclosure)",
+        "completed_at": "string (ISO 8601 UTC timestamp)"
+      },
+      "raw_score_note": "Raw credit score is NOT included in the event payload. Credit score is held within SVC-012 and accessible only via credit_assessment_reference. This prevents score leakage into downstream systems not cleared for score data.",
+      "consumers": [
+        {
+          "service": "SVC-003",
+          "service_name": "Credit Card Service",
+          "action": "Consumes EVT-042. Transitions ENT-022 status from 'submitted' to 'assessment_complete'. Stores credit_assessment_reference and credit_risk_band on ENT-022. Triggers the decisioning workflow (PH-025). Idempotent on application_id + check_type."
+        },
+        {
+          "service": "SVC-103",
+          "service_name": "Audit & Logging",
+          "action": "Records credit check completion in WORM audit trail."
+        }
+      ],
+      "ordering_guarantees": "Per-application strict ordering via application_id partition key. Guaranteed exactly-once delivery to SVC-003.",
+      "topic": "retail.credit-risk",
+      "data_classification": "confidential",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "Credit check outcome is a legally significant event under CCA 1974. Retained for regulatory inspection and SAR requests.",
+      "retention": "6 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.retail.credit-card.credit-check.completed",
+      "governance_references": ["GOV-001-R01"],
+      "source_journeys": ["JRN-008"]
+    },
+    {
+      "event_id": "EVT-043",
+      "name": "CreditCardApproved",
+      "source_service": "SVC-003",
+      "source_service_name": "Credit Card Service",
+      "source_entity": "ENT-022",
+      "source_entity_name": "CreditCardApplication",
+      "trigger": "SVC-003 credit policy decisioning logic runs at PH-025 and determines the application is approved. EVT-042 outcome = 'pass', credit policy rules satisfied, credit limit assigned. ENT-022 status transitions to 'approved'.",
+      "journey_phase": "PH-025",
+      "journey_phase_name": "Decision",
+      "capability_scope": "intra-capability",
+      "capability_scope_rationale": "Published by CAP-001 (SVC-003). Consumed by SVC-003 internal issuance workflow, SVC-053 (notification), and SVC-103 (audit). Does not cross a capability boundary.",
+      "payload_schema": {
+        "application_id": "string (UUID v4)",
+        "customer_id": "string (UUID v4)",
+        "product_id": "string (UUID v4)",
+        "assigned_credit_limit": "number — approved credit limit in GBP",
+        "apr": "number — assigned APR as percentage (e.g. 24.9)",
+        "decision_timestamp": "string (ISO 8601 UTC timestamp)"
+      },
+      "consumers": [
+        {
+          "service": "SVC-003",
+          "service_name": "Credit Card Service (issuance workflow)",
+          "action": "Internal consumption: triggers PH-026 card issuance workflow. Creates ENT-023 CreditCardAccount. Initiates PAN generation via card processing platform."
+        },
+        {
+          "service": "SVC-053",
+          "service_name": "Notification Service",
+          "action": "Sends credit card approval notification to customer: approved credit limit, assigned APR, next steps for card receipt and activation. Pre-contractual credit information (SECCI) dispatched."
+        },
+        {
+          "service": "SVC-103",
+          "service_name": "Audit & Logging",
+          "action": "Records approval decision in WORM audit trail with assigned_credit_limit and apr."
+        }
+      ],
+      "ordering_guarantees": "Per-customer strict ordering via customer_id partition key.",
+      "topic": "retail.credit-cards",
+      "data_classification": "pii",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "Approval decision is the point at which the regulated credit agreement is entered into under CCA 1974. Immutable record required.",
+      "retention": "6 years post account closure (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.retail.credit-card.application.approved",
+      "governance_references": ["GOV-001-R01"],
+      "source_journeys": ["JRN-008"]
+    },
+    {
+      "event_id": "EVT-044",
+      "name": "CreditCardDeclined",
+      "source_service": "SVC-003",
+      "source_service_name": "Credit Card Service",
+      "source_entity": "ENT-022",
+      "source_entity_name": "CreditCardApplication",
+      "trigger": "SVC-003 credit policy decisioning logic runs at PH-025 and determines the application is declined. EVT-042 outcome = 'decline', or credit policy rules not satisfied (e.g. income below threshold, employment status policy). ENT-022 status transitions to 'declined'.",
+      "journey_phase": "PH-025",
+      "journey_phase_name": "Decision",
+      "capability_scope": "intra-capability",
+      "capability_scope_rationale": "Published by CAP-001 (SVC-003). Consumed by SVC-053 (notification) and SVC-103 (audit).",
+      "payload_schema": {
+        "application_id": "string (UUID v4)",
+        "customer_id": "string (UUID v4)",
+        "product_id": "string (UUID v4)",
+        "decline_reason_code": "string enum: credit_score_below_threshold | income_insufficient | policy_exception | existing_indebtedness | automated_decline",
+        "cra_used": "string | null — name of CRA queried (for CCA s157 right-to-know disclosure in decline notice)",
+        "credit_assessment_reference": "string | null — reference to SVC-012 assessment (for CCA s157)",
+        "decision_timestamp": "string (ISO 8601 UTC timestamp)"
+      },
+      "consumers": [
+        {
+          "service": "SVC-053",
+          "service_name": "Notification Service",
+          "action": "Sends decline notification to customer. Must include: reason summary (not full score — CONC 7.3 proportionality), name of CRA used (CCA s157), right to request human review (UK GDPR Art. 22 if automated), signpost to FOS and MoneyHelper (Consumer Duty), reference to Subject Access Right."
+        },
+        {
+          "service": "SVC-103",
+          "service_name": "Audit & Logging",
+          "action": "Records decline decision in WORM audit trail. Regulatory audit: FCA CONC supervision may require evidence of decisioning rationale."
+        }
+      ],
+      "ordering_guarantees": "Per-customer strict ordering via customer_id partition key.",
+      "topic": "retail.credit-cards",
+      "data_classification": "pii",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "Decline decision is a regulated act under CCA 1974 and CONC. Retained for regulatory inspection.",
+      "retention": "6 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.retail.credit-card.application.declined",
+      "governance_references": ["GOV-001-R01"],
+      "source_journeys": ["JRN-008"]
+    },
+    {
+      "event_id": "EVT-045",
+      "name": "CreditCardIssued",
+      "source_service": "SVC-003",
+      "source_service_name": "Credit Card Service",
+      "source_entity": "ENT-023",
+      "source_entity_name": "CreditCardAccount",
+      "trigger": "SVC-003 has completed card issuance at PH-026: ENT-023 CreditCardAccount created, PAN generated and tokenised within the PCI CDE, virtual card available in-app, physical card dispatch ordered. The event payload contains card_number_token ONLY — no raw PAN, no CVV, no expiry outside the secure in-app viewer.",
+      "journey_phase": "PH-026",
+      "journey_phase_name": "Card Issuance",
+      "capability_scope": "intra-capability",
+      "capability_scope_rationale": "Published by CAP-001 (SVC-003). Consumed by SVC-053 (notification of card dispatch) and SVC-103 (audit). Intra-capability.",
+      "payload_schema": {
+        "account_id": "string (UUID v4) — ENT-023 identifier",
+        "customer_id": "string (UUID v4)",
+        "application_id": "string (UUID v4) — originating ENT-022",
+        "card_number_token": "string — PCI-compliant token from tokenisation vault. NO raw PAN in this field or anywhere in this payload.",
+        "virtual_card_available": "boolean — true; virtual card immediately usable via secure in-app viewer",
+        "physical_card_dispatch_date": "string (ISO 8601 date) — date physical card dispatched to registered address",
+        "issued_at": "string (ISO 8601 UTC timestamp)"
+      },
+      "pci_compliance_note": "PCI DSS v4.0 Req 3.3.1 and 3.5: This event payload MUST NOT contain the raw PAN (Primary Account Number), full expiry date in combination with PAN, or CVV/CVC. card_number_token is the only card identifier permitted outside the PCI CDE. Any consumer of this event that attempts to resolve the token to a PAN must itself be within the PCI CDE.",
+      "consumers": [
+        {
+          "service": "SVC-053",
+          "service_name": "Notification Service",
+          "action": "Sends card issuance confirmation to customer: virtual card is available in the app now; physical card expected in 3–5 business days. Includes activation instructions."
+        },
+        {
+          "service": "SVC-001",
+          "service_name": "Retail Banking Core",
+          "action": "Updates customer product holdings record to reflect new credit card account (ENT-023.account_id). Enables cross-sell and SCV completeness."
+        },
+        {
+          "service": "SVC-103",
+          "service_name": "Audit & Logging",
+          "action": "Records card issuance in WORM audit trail. PCI DSS Req 10.2 — card issuance events must be logged."
+        }
+      ],
+      "ordering_guarantees": "Per-account strict ordering via account_id partition key.",
+      "topic": "retail.credit-cards",
+      "data_classification": "pci-restricted",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "PCI DSS Req 10.2 requires logging of all access to cardholder data and card issuance events. Retained per PCI DSS Req 10.7 (12 months immediately available, 12 months archived).",
+      "retention": "12 months immediately available; 12 months archived (PCI DSS Req 10.7). Also retained 6 years for CCA/CONC compliance (WORM audit pipeline — SVC-111).",
+      "cloudevents_type": "uk.bank.retail.credit-card.card.issued",
+      "governance_references": ["GOV-001-R01"],
+      "source_journeys": ["JRN-008"]
+    },
+    {
+      "event_id": "EVT-046",
+      "name": "CreditCardActivated",
+      "source_service": "SVC-003",
+      "source_service_name": "Credit Card Service",
+      "source_entity": "ENT-023",
+      "source_entity_name": "CreditCardAccount",
+      "trigger": "Customer activates their physical credit card at PH-027 via the banking app (explicit SCA-authenticated activation) or via first card transaction (implicit activation triggered by authorisation event from JRN-011). ENT-023 status transitions from 'issued' to 'active'.",
+      "journey_phase": "PH-027",
+      "journey_phase_name": "Card Activation",
+      "capability_scope": "intra-capability",
+      "capability_scope_rationale": "Published by CAP-001 (SVC-003). Consumed by SVC-053 and SVC-103. Intra-capability.",
+      "payload_schema": {
+        "account_id": "string (UUID v4)",
+        "customer_id": "string (UUID v4)",
+        "card_number_token": "string — PCI-compliant token; no raw PAN",
+        "activation_method": "string enum: explicit_app | first_transaction",
+        "activated_at": "string (ISO 8601 UTC timestamp)"
+      },
+      "consumers": [
+        {
+          "service": "SVC-053",
+          "service_name": "Notification Service",
+          "action": "Sends card activation confirmation: card is now active, credit limit confirmed, first statement date communicated, link to manage card settings."
+        },
+        {
+          "service": "SVC-103",
+          "service_name": "Audit & Logging",
+          "action": "Records activation event in WORM audit trail."
+        }
+      ],
+      "ordering_guarantees": "Per-account strict ordering via account_id partition key.",
+      "topic": "retail.credit-cards",
+      "data_classification": "pci-restricted",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "Card activation is a security-relevant event per PCI DSS Req 10.2.",
+      "retention": "6 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.retail.credit-card.card.activated",
+      "governance_references": ["GOV-001-R01", "GOV-001-R04"],
+      "source_journeys": ["JRN-008"]
+    },
+    {
+      "event_id": "EVT-047",
+      "name": "StatementGenerated",
+      "source_service": "SVC-003",
+      "source_service_name": "Credit Card Service",
+      "source_entity": "ENT-025",
+      "source_entity_name": "StatementCycle",
+      "trigger": "SVC-003 generates a monthly statement at PH-028 on the account's statement_date. ENT-025 StatementCycle record is created. The event is published after successful creation of the StatementCycle record.",
+      "journey_phase": "PH-028",
+      "journey_phase_name": "Ongoing Management",
+      "capability_scope": "intra-capability",
+      "capability_scope_rationale": "Published by CAP-001 (SVC-003). Consumed by SVC-053 (statement notification) and SVC-103 (audit). Intra-capability.",
+      "payload_schema": {
+        "cycle_id": "string (UUID v4) — ENT-025 identifier",
+        "account_id": "string (UUID v4) — FK to ENT-023",
+        "customer_id": "string (UUID v4)",
+        "statement_date": "string (ISO 8601 date)",
+        "closing_balance": "number — closing balance in GBP",
+        "minimum_payment_due": "number — minimum payment due in GBP",
+        "payment_due_date": "string (ISO 8601 date) — at least 25 days after statement_date",
+        "persistent_debt_months": "integer — snapshot value for this cycle",
+        "generated_at": "string (ISO 8601 UTC timestamp)"
+      },
+      "consumers": [
+        {
+          "service": "SVC-053",
+          "service_name": "Notification Service",
+          "action": "Sends statement available notification to customer: statement date, closing balance, minimum payment due, payment due date, link to view statement in app/portal. If paper statement selected: triggers physical statement generation."
+        },
+        {
+          "service": "SVC-103",
+          "service_name": "Audit & Logging",
+          "action": "Records statement generation in WORM audit trail."
+        }
+      ],
+      "ordering_guarantees": "Per-account strict ordering via account_id partition key. Monthly cadence — at most one StatementGenerated per account_id per statement_date.",
+      "topic": "retail.credit-cards",
+      "data_classification": "pii",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "Statement records are required for regulatory inspection (CONC, CCA 1974). Retained for the account lifetime plus 6 years.",
+      "retention": "Account lifetime + 6 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.retail.credit-card.statement.generated",
+      "governance_references": ["GOV-001-R01"],
+      "source_journeys": ["JRN-008"]
+    },
+    {
+      "event_id": "EVT-048",
+      "name": "PersistentDebtAlertTriggered",
+      "source_service": "SVC-003",
+      "source_service_name": "Credit Card Service",
+      "source_entity": "ENT-023",
+      "source_entity_name": "CreditCardAccount",
+      "trigger": "SVC-003 detects at statement generation (PH-028) that ENT-023.persistent_debt_months has crossed an FCA CONC 6.7.27 intervention threshold (18, 27, or 36 months). Published after EVT-047 StatementGenerated is published for the same cycle.",
+      "journey_phase": "PH-028",
+      "journey_phase_name": "Ongoing Management",
+      "capability_scope": "intra-capability",
+      "capability_scope_rationale": "Published by CAP-001 (SVC-003). Consumed by SVC-053 (regulatory communication), SVC-103 (audit), and compliance monitoring. Intra-capability. Note: if a cross-capability risk review is required (e.g. CAP-004 SVC-012 for updated credit scoring at 27-month intervention), SVC-003 would publish a separate CreditCheckRequested event.",
+      "payload_schema": {
+        "account_id": "string (UUID v4) — ENT-023 identifier",
+        "customer_id": "string (UUID v4)",
+        "persistent_debt_months": "integer — current value (18, 27, or 36 at trigger points)",
+        "intervention_level": "string enum: first_contact (18) | second_contact (27) | limit_suspension_warning (36)",
+        "closing_balance": "number — current outstanding balance in GBP",
+        "minimum_payment_due": "number — from current statement cycle",
+        "interest_and_fees_ytd": "number — total interest and fees charged in the persistent debt window",
+        "principal_repaid_ytd": "number — total principal repaid in the persistent debt window",
+        "triggered_at": "string (ISO 8601 UTC timestamp)"
+      },
+      "regulatory_note": "FCA CONC 6.7.27–6.7.40 (PS20/8): At 18 months (first_contact), bank must contact customer explaining they are in persistent debt and encourage higher repayments. At 27 months (second_contact), bank must offer a repayment plan. At 36 months (limit_suspension_warning), bank must suspend credit limit increases and may suspend the credit facility if no resolution. The communication content is FCA-prescribed — handled by SVC-053 using pre-approved communication templates.",
+      "consumers": [
+        {
+          "service": "SVC-053",
+          "service_name": "Notification Service",
+          "action": "Dispatches FCA-mandated persistent debt communication to customer. Communication content is prescribed by FCA CONC 6.7.27–6.7.40 PS20/8. Content varies by intervention_level: first_contact (encouragement to repay more), second_contact (repayment plan offer), limit_suspension_warning (credit limit suspension notice). Must be sent via durable medium (email + secure message; letter if paper preference). SLA: within 5 business days of trigger."
+        },
+        {
+          "service": "SVC-103",
+          "service_name": "Audit & Logging",
+          "action": "Records persistent debt alert in WORM audit trail. FCA supervision: bank must evidence that persistent debt communications were sent on time at the correct thresholds."
+        },
+        {
+          "service": "SVC-003",
+          "service_name": "Credit Card Service (account management workflow)",
+          "action": "At intervention_level = limit_suspension_warning (36 months): triggers automatic credit limit suspension on ENT-023 (status change to 'suspended' if no repayment arrangement confirmed within 30 days). Idempotent on account_id + intervention_level."
+        }
+      ],
+      "ordering_guarantees": "Per-account strict ordering via account_id partition key. At most one PersistentDebtAlertTriggered per account per intervention_level (deduplication key: account_id + intervention_level).",
+      "topic": "retail.credit-cards",
+      "data_classification": "pii",
+      "worm_audit_pipeline": true,
+      "worm_rationale": "FCA CONC 6.7 compliance evidence. FCA may require evidence that the bank identified persistent debt customers and sent communications at the prescribed thresholds. Retained for account lifetime plus 6 years.",
+      "retention": "Account lifetime + 6 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.retail.credit-card.persistent-debt.alert-triggered",
+      "governance_references": ["GOV-001-R01", "GOV-001-R03"],
+      "source_journeys": ["JRN-008"]
+    }
+  ]
+}

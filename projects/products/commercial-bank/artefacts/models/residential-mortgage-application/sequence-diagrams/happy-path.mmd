@@ -1,0 +1,108 @@
+sequenceDiagram
+    title JRN-006 Residential Mortgage Application — Happy Path
+
+    actor PER001 as Customer (PER-001)
+    participant Portal as Customer Portal / App
+    participant SVC002 as SVC-002 Mortgage Service
+    participant SVC001 as SVC-001 Retail Banking Core
+    participant EventBus as SVC-102 Event Bus
+    participant SVC012 as SVC-012 Risk Engine (CAP-004)
+    participant SVC014 as SVC-014 KYC/AML (CAP-005)
+    participant SVC053 as SVC-053 Notification Service
+    participant Surveyor as External Surveyor
+    participant Solicitor as Solicitor / Conveyancer
+    participant CHAPS as CHAPS Network
+
+    rect rgb(230, 245, 255)
+        Note over PER001,SVC002: PH-009 — Mortgage Enquiry
+        PER001->>Portal: Enter property details, deposit, income, product
+        Portal->>SVC002: POST /mortgage-applications
+        SVC002->>SVC001: GET /customers/{id} [same-capability sync]
+        SVC001-->>SVC002: 200 Customer data
+        Note over SVC002: Create ENT-012 MortgageApplication (status: enquiry)<br/>Run affordability pre-check
+        SVC002->>EventBus: Publish EVT-020 MortgageEnquiryStarted
+        SVC002-->>Portal: 201 Created (application_id, pre-check result)
+        Portal-->>PER001: Display affordability result
+        EventBus-)SVC014: Consume EVT-020 MortgageEnquiryStarted
+        Note over SVC014: Customer KYC current — no new CDD needed
+        SVC014->>EventBus: Publish EVT-004 KYCClearanceGranted
+    end
+
+    rect rgb(230, 255, 230)
+        Note over PER001,SVC002: PH-010 — Decision in Principle (DIP) [Target: < 15 min]
+        PER001->>Portal: Submit income/employment. Consent to soft credit check.
+        Portal->>SVC002: POST /mortgage-applications/{id}/dip
+        Note over SVC002: Create ENT-013 AffordabilityAssessment (dip stage)<br/>Compute stress test (rate: 7%)<br/>Transition status: dip_pending
+        SVC002->>EventBus: Publish EVT-022 CreditCheckRequested (type: soft)
+        SVC002-->>Portal: 202 Accepted (polling_url)
+        Portal-->>PER001: DIP in progress — check back shortly
+        EventBus-)SVC012: Consume EVT-022 CreditCheckRequested (soft)
+        Note over SVC012: Soft credit check — no bureau footprint<br/>Score: 720 — PASS
+        SVC012->>EventBus: Publish EVT-023 CreditCheckCompleted (soft, pass)
+        EventBus-)SVC002: Consume EVT-023 CreditCheckCompleted
+        Note over SVC002: Affordability: PASS. Credit: PASS.<br/>Transition status: dip_issued<br/>Set dip_date, dip_expiry (+90 days)
+        SVC002->>EventBus: Publish EVT-021 DIPIssued
+        EventBus-)SVC053: Consume EVT-021 DIPIssued
+        SVC053->>PER001: Email: DIP certificate + ESIS document (valid 90 days)
+    end
+
+    rect rgb(255, 248, 220)
+        Note over PER001,SVC002: PH-011 — Full Application
+        PER001->>Portal: Submit full application. Upload payslips, P60, bank statements.<br/>Consent to hard credit check.
+        Portal->>SVC002: POST /mortgage-applications/{id}/full-application
+        Note over SVC002: Create ENT-013 AffordabilityAssessment (full_application stage)<br/>Transition status: full_application_submitted<br/>Set full_application_date
+        SVC002->>EventBus: Publish EVT-022 CreditCheckRequested (type: hard)
+        SVC002-->>Portal: 202 Accepted (status: full_application_submitted)
+        EventBus-)SVC012: Consume EVT-022 CreditCheckRequested (hard)
+        Note over SVC012: Hard credit check — bureau footprint recorded<br/>Full credit report. Score: 715 — PASS
+        SVC012->>EventBus: Publish EVT-023 CreditCheckCompleted (hard, pass)
+        EventBus-)SVC002: Consume EVT-023 CreditCheckCompleted
+        Note over SVC002: Transition status: documents_complete
+    end
+
+    rect rgb(255, 235, 220)
+        Note over SVC002,Surveyor: PH-012 — Valuation (desktop AVM — LTV 75%)
+        Note over SVC002: Determine valuation type: desktop AVM<br/>Create ENT-014 PropertyValuation (status: instructed)<br/>Transition status: valuation_pending
+        SVC002->>EventBus: Publish EVT-024 ValuationInstructed (type: desktop)
+        SVC002->>Surveyor: Instruct AVM valuation (automated)
+        Surveyor-->>SVC002: Valuation report: £385,000 (purchase price £390,000)
+        Note over SVC002: Update ENT-014 (status: completed, amount: £385,000)<br/>down_valuation_flag: false<br/>Recalculate LTV: 292,500/385,000 = 75.97%<br/>Transition status: valuation_complete
+        SVC002->>EventBus: Publish EVT-025 ValuationCompleted (amount: £385,000, down_val: false)
+    end
+
+    rect rgb(240, 220, 255)
+        Note over SVC002,SVC053: PH-013 — Underwriting (PER-055)
+        Note over SVC002: Assign to PER-055 underwriter queue<br/>Transition status: underwriting
+        Note over SVC002: PER-055 reviews full pack:<br/>Credit: 715 PASS | LTI: 3.8x (< 4.5x cap) PASS<br/>Affordability at 7% stress: PASS | LTV: 75.97% PASS<br/>Decision: APPROVE
+        SVC002->>EventBus: Publish EVT-026 MortgageUnderwritingCompleted (decision: approved)
+    end
+
+    rect rgb(255, 220, 220)
+        Note over PER001,SVC002: PH-014 — Mortgage Offer
+        Note over SVC002: Create ENT-015 MortgageOffer<br/>(£292,500 @ 4.89%, 25 years, expires +6 months)<br/>Transition status: offer_issued
+        SVC002->>EventBus: Publish EVT-027 MortgageOfferIssued
+        EventBus-)SVC053: Consume EVT-027 MortgageOfferIssued
+        SVC053->>PER001: Email + Post: Mortgage Offer (7-day reflection period starts)
+        SVC053->>Solicitor: Email: Mortgage Offer copy
+        Note over PER001,Solicitor: 7-day reflection period elapses (MCOB 6.7)<br/>Customer reviews offer with solicitor
+        PER001->>Portal: Accept mortgage offer
+        Portal->>SVC002: POST /mortgage-applications/{id}/offer (acceptance_confirmed: true)
+        Note over SVC002: Validate: accepted_date >= offer_date + 7 days ✓<br/>Update ENT-015 (customer_accepted: true)<br/>Transition status: offer_accepted
+        SVC002->>EventBus: Publish EVT-028 MortgageOfferAccepted
+        SVC002-->>Portal: 200 OK (status: offer_accepted)
+        Portal-->>PER001: Offer accepted confirmation
+    end
+
+    rect rgb(220, 255, 240)
+        Note over Solicitor,CHAPS: PH-015 — Completion
+        Note over Solicitor: Completes conveyancing, Land Registry searches,<br/>exchange of contracts
+        Solicitor->>SVC002: Requisition for funds (completion_date, CHAPS details)
+        SVC002->>CHAPS: CHAPS payment instruction (£292,500 to solicitor)
+        CHAPS-->>SVC002: Settlement confirmed — chaps_payment_reference
+        Note over SVC002: Create ENT-016 MortgageAccount<br/>(balance: £292,500, payment: £1,683.42/month,<br/>rate: 4.89%, term: 300 months, status: active)<br/>Set up Bacs DD mandate<br/>Transition application status: completed
+        SVC002->>EventBus: Publish EVT-029 MortgageCompleted
+        SVC002->>EventBus: Publish EVT-030 MortgageAccountOpened
+        EventBus-)SVC001: Consume EVT-030 — update Customer product holdings
+        EventBus-)SVC053: Consume EVT-030 — dispatch welcome pack
+        SVC053->>PER001: Email + Post: Mortgage account open.<br/>Account details, payment schedule, first payment date.
+    end

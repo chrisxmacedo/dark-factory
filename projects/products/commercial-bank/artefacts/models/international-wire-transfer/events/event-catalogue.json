@@ -1,0 +1,364 @@
+{
+  "journey_id": "JRN-009",
+  "document_version": "1.0.0",
+  "status": "Draft",
+  "events": [
+    {
+      "event_id": "EVT-049",
+      "name": "InternationalTransferInitiated",
+      "source_service": "SVC-010",
+      "source_entity": "ENT-026",
+      "trigger": "PER-002 submits a valid international transfer instruction in PH-029. SCA is completed. SVC-010 creates ENT-026 (InternationalTransfer, status = pending_compliance) and immediately publishes this event. The event carries all beneficiary details, amount, currency, purpose code, and charges type required for concurrent compliance checks.",
+      "journey_phase": "PH-029",
+      "payload_schema": {
+        "transfer_id": "string (UUID v4) — InternationalTransfer entity identifier",
+        "business_customer_id": "string (UUID v4) — originating BusinessCustomer",
+        "business_account_id": "string (UUID v4) — originating BusinessAccount",
+        "beneficiary_name": "string — beneficiary legal name (FATF travel rule originator obligation)",
+        "beneficiary_iban": "string (ISO 13616 IBAN)",
+        "beneficiary_bic": "string (ISO 9362 BIC — 8 or 11 characters)",
+        "amount": "number (decimal, 2 dp) — transfer amount in transfer currency",
+        "currency": "string (ISO 4217 3-letter code)",
+        "purpose_code": "string (ISO 20022 ExternalPurpose1Code, 4 characters)",
+        "charges_type": "string enum (OUR | SHA | BEN)",
+        "initiated_at": "string (ISO 8601 UTC timestamp)"
+      },
+      "consumers": [
+        {
+          "service": "SVC-051",
+          "service_name": "Sanctions Screening Service",
+          "action": "Triggers concurrent sanctions screening of beneficiary (name, IBAN, BIC) and correspondent chain BICs. Publishes TransferSanctionsScreened (EVT-051)."
+        },
+        {
+          "service": "SVC-013",
+          "service_name": "Fraud Detection",
+          "action": "Triggers corporate wire fraud scoring using ML model. Publishes TransferFraudScored (EVT-052)."
+        },
+        {
+          "service": "SVC-103",
+          "service_name": "Audit & Logging",
+          "action": "Creates immutable audit log entry for transfer initiation. FATF travel rule originator data logged at initiation."
+        }
+      ],
+      "ordering_guarantees": "Per-transfer strict ordering via transfer_id partition key on topic payments.international. Strictly ordered within a transfer's event sequence.",
+      "topic": "payments.international",
+      "data_classification": "financial",
+      "worm_audit_pipeline": true,
+      "retention": "7 years (WORM audit pipeline — SVC-111; FATF travel rule and MLR 2017 Regulation 40)",
+      "cloudevents_type": "uk.bank.payments.international-transfer.initiated"
+    },
+    {
+      "event_id": "EVT-050",
+      "name": "FXQuoteProvided",
+      "source_service": "SVC-010",
+      "source_entity": "ENT-027",
+      "trigger": "SVC-010 obtains an FX rate from the internal FX pricing engine in PH-030 for a cross-currency international transfer. Published when a new FXQuotation (ENT-027) is created, including on quote refresh after lapse. Not published for GBP-denominated transfers (PH-030 skipped).",
+      "journey_phase": "PH-030",
+      "payload_schema": {
+        "quote_id": "string (UUID v4) — FXQuotation entity identifier",
+        "transfer_id": "string (UUID v4) — InternationalTransfer entity identifier",
+        "sell_currency": "string (ISO 4217) — always GBP for UK corporate transfers",
+        "buy_currency": "string (ISO 4217) — transfer destination currency",
+        "rate": "number (decimal, 6 dp) — all-in FX rate",
+        "quoted_gbp_equivalent": "number (decimal, 2 dp) — GBP cost at this rate",
+        "validity_seconds": "integer — seconds until quote expires",
+        "quoted_at": "string (ISO 8601 UTC timestamp)"
+      },
+      "consumers": [
+        {
+          "service": "SVC-017",
+          "service_name": "Digital Channels",
+          "action": "Renders the FX rate, GBP equivalent, and acceptance countdown timer on the corporate portal. Notifies PER-002 to accept or decline."
+        },
+        {
+          "service": "SVC-103",
+          "service_name": "Audit & Logging",
+          "action": "Logs FX quote details for regulatory audit trail (FX transparency and Consumer Duty evidence)."
+        }
+      ],
+      "ordering_guarantees": "Per-transfer strict ordering via transfer_id partition key on topic payments.international.",
+      "topic": "payments.international",
+      "data_classification": "financial",
+      "worm_audit_pipeline": true,
+      "retention": "7 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.payments.international-transfer.fx-quote.provided"
+    },
+    {
+      "event_id": "EVT-051",
+      "name": "TransferSanctionsScreened",
+      "source_service": "SVC-051",
+      "source_entity": null,
+      "trigger": "SVC-051 completes concurrent sanctions screening of all entities in the international transfer (beneficiary name/IBAN/BIC and each correspondent BIC) after consuming InternationalTransferInitiated (EVT-049). Published with a consolidated outcome after all entity screens complete. Cross-capability event: published by CAP-005, consumed by CAP-003.",
+      "journey_phase": "PH-031",
+      "payload_schema": {
+        "screening_result_id": "string (UUID v4) — SVC-103 audit log entry reference",
+        "transfer_id": "string (UUID v4)",
+        "outcome": "string enum (clear | hit | error) — consolidated across all screened entities",
+        "entities_screened": "integer — count of entities screened (1 beneficiary + N correspondents)",
+        "hit_entity_count": "integer — number of entities with a sanctions match (0 if outcome = clear)",
+        "lists_screened": "array<string> — e.g. [OFSI, UN, EU, OFAC]",
+        "screened_at": "string (ISO 8601 UTC timestamp)"
+      },
+      "payload_omissions": "Hit entity names and IBAN/BIC details are not included in the event payload — tipping-off prohibition (POCA 2002 s333A). Details available only via SVC-103 audit log with MLRO access.",
+      "consumers": [
+        {
+          "service": "SVC-010",
+          "service_name": "International Payments",
+          "action": "Evaluates outcome. If hit: sets InternationalTransfer.status = sanctions_blocked; publishes TransferFailed (EVT-057); alerts MLRO. If clear: records screening_result_id; waits for EVT-052 (correlation map on transfer_id)."
+        },
+        {
+          "service": "SVC-103",
+          "service_name": "Audit & Logging",
+          "action": "Creates immutable OFSI-compliant sanctions screening decision record. Required for OFSI audit programme and GOV-005-R02."
+        },
+        {
+          "service": "SVC-111",
+          "service_name": "WORM Compliance Store",
+          "action": "Archives sanctions screening outcome. OFSI requires screening records retained for minimum 5 years."
+        }
+      ],
+      "ordering_guarantees": "Per-transfer strict ordering via transfer_id partition key on topic compliance.sanctions.",
+      "topic": "compliance.sanctions",
+      "data_classification": "financial",
+      "worm_audit_pipeline": true,
+      "retention": "5 years minimum (OFSI obligation); 7 years where hit detected",
+      "cloudevents_type": "uk.bank.compliance.international-transfer.sanctions.screened"
+    },
+    {
+      "event_id": "EVT-052",
+      "name": "TransferFraudScored",
+      "source_service": "SVC-013",
+      "source_entity": null,
+      "trigger": "SVC-013 completes corporate wire fraud scoring after consuming InternationalTransferInitiated (EVT-049). Published with risk_score, risk_level, and model metadata. Cross-capability event: published by CAP-004, consumed by CAP-003.",
+      "journey_phase": "PH-031",
+      "payload_schema": {
+        "fraud_score_id": "string (UUID v4) — internal SVC-013 score record identifier",
+        "transfer_id": "string (UUID v4)",
+        "risk_score": "number (0.0–1.0, 4 dp) — ML model output probability of fraud",
+        "risk_level": "string enum (low | medium | high | block)",
+        "model_version": "string — ML model version identifier for audit and reproducibility",
+        "top_risk_features": "array<string> — top 3 contributing feature names (not values — privacy-preserving)",
+        "scored_at": "string (ISO 8601 UTC timestamp)"
+      },
+      "consumers": [
+        {
+          "service": "SVC-010",
+          "service_name": "International Payments",
+          "action": "Evaluates risk_level. If block: sets InternationalTransfer.status = fraud_blocked; publishes TransferFailed (EVT-057). If non-block: records fraud_score_id; waits for EVT-051 (correlation map on transfer_id)."
+        },
+        {
+          "service": "SVC-103",
+          "service_name": "Audit & Logging",
+          "action": "Logs fraud score and risk level. Required for Consumer Duty AI/ML decision audit trail and Failure to Prevent Fraud evidence (GOV-005-R03)."
+        }
+      ],
+      "ordering_guarantees": "Per-transfer strict ordering via transfer_id partition key on topic fraud.scores.",
+      "topic": "fraud.scores",
+      "data_classification": "financial",
+      "worm_audit_pipeline": true,
+      "retention": "7 years (FCA Consumer Duty; Failure to Prevent Fraud corporate liability evidence)",
+      "cloudevents_type": "uk.bank.fraud.international-transfer.scored"
+    },
+    {
+      "event_id": "EVT-053",
+      "name": "TransferCleared",
+      "source_service": "SVC-010",
+      "source_entity": "ENT-026",
+      "trigger": "SVC-010 has received both TransferSanctionsScreened (EVT-051, outcome = clear) and TransferFraudScored (EVT-052, risk_level != block), and has assembled the SWIFT pacs.008 message in PH-032. Published to signal that the transfer is cleared for SWIFT submission. Analogous to PaymentCleared (EVT-P04) in JRN-002.",
+      "journey_phase": "PH-032",
+      "payload_schema": {
+        "transfer_id": "string (UUID v4)",
+        "business_account_id": "string (UUID v4)",
+        "gbp_equivalent": "number (decimal, 2 dp) — final GBP debit amount",
+        "gpi_uetr": "string (UUID v4) — SWIFT gpi Unique End-to-End Transaction Reference",
+        "swift_reference": "string — SWIFT EndToEndId (max 35 characters)",
+        "message_id": "string (UUID v4) — SWIFTMessage entity identifier",
+        "cleared_at": "string (ISO 8601 UTC timestamp)"
+      },
+      "consumers": [
+        {
+          "service": "SVC-010",
+          "service_name": "International Payments (internal consumption)",
+          "action": "Triggers PH-033 SWIFT submission. SVC-010 consumes its own event as the trigger to proceed (event-driven internal state machine)."
+        },
+        {
+          "service": "SVC-103",
+          "service_name": "Audit & Logging",
+          "action": "Records transfer clearance with gpi_uetr for end-to-end SWIFT gpi audit trail."
+        }
+      ],
+      "ordering_guarantees": "Per-transfer strict ordering via transfer_id partition key on topic payments.international.",
+      "topic": "payments.international",
+      "data_classification": "financial",
+      "worm_audit_pipeline": true,
+      "retention": "7 years (WORM audit pipeline — SVC-111)",
+      "cloudevents_type": "uk.bank.payments.international-transfer.cleared"
+    },
+    {
+      "event_id": "EVT-054",
+      "name": "SWIFTMessageSent",
+      "source_service": "SVC-010",
+      "source_entity": "ENT-029",
+      "trigger": "SVC-010 successfully submits the pacs.008 message to the SWIFT network via SAA Cloud in PH-033. SWIFTMessage.sent_timestamp is set. This event signals that the transfer has left the bank's systems and is in transit in the SWIFT network. It also triggers the BusinessAccount debit at SVC-005 (CAP-002) via async consumption.",
+      "journey_phase": "PH-033",
+      "payload_schema": {
+        "message_id": "string (UUID v4) — SWIFTMessage entity identifier",
+        "transfer_id": "string (UUID v4)",
+        "gpi_uetr": "string (UUID v4) — SWIFT gpi UETR",
+        "business_account_id": "string (UUID v4) — for SVC-005 debit instruction",
+        "gbp_equivalent": "number (decimal, 2 dp) — debit amount",
+        "first_correspondent_bic": "string (ISO 9362 BIC) — first hop in correspondent chain",
+        "sent_at": "string (ISO 8601 UTC timestamp)"
+      },
+      "consumers": [
+        {
+          "service": "SVC-005",
+          "service_name": "Commercial Banking Core",
+          "action": "Debits BusinessAccount.balance by gbp_equivalent. Cross-capability async consumption. Idempotent on transfer_id — duplicate events do not result in duplicate debits. Publishes intra-CAP-002 BusinessAccountDebited event."
+        },
+        {
+          "service": "SVC-103",
+          "service_name": "Audit & Logging",
+          "action": "Records SWIFT submission timestamp for SWIFT gpi SLA tracking and regulatory audit."
+        },
+        {
+          "service": "SVC-111",
+          "service_name": "WORM Compliance Store",
+          "action": "Archives SWIFT message sent event. FATF travel rule and MLR 2017 audit obligation."
+        }
+      ],
+      "ordering_guarantees": "Per-transfer strict ordering via transfer_id partition key on topic payments.international.",
+      "topic": "payments.international",
+      "data_classification": "financial",
+      "worm_audit_pipeline": true,
+      "retention": "7 years (WORM audit pipeline — SVC-111; FATF travel rule)",
+      "cloudevents_type": "uk.bank.payments.international-transfer.swift-message.sent"
+    },
+    {
+      "event_id": "EVT-055",
+      "name": "CorrespondentAcknowledged",
+      "source_service": "SVC-010",
+      "source_entity": "ENT-029",
+      "trigger": "SVC-010 receives a SWIFT gpi ACSP (AcceptedSettlementInProcess) acknowledgement from the first correspondent bank in the chain in PH-033. SWIFTMessage.ack_timestamp is set. Signals that the correspondent has accepted and is processing the pacs.008.",
+      "journey_phase": "PH-033",
+      "payload_schema": {
+        "message_id": "string (UUID v4) — SWIFTMessage entity identifier",
+        "transfer_id": "string (UUID v4)",
+        "gpi_uetr": "string (UUID v4)",
+        "accepting_correspondent_bic": "string (ISO 9362 BIC) — BIC of the acknowledging correspondent",
+        "ack_timestamp": "string (ISO 8601 UTC timestamp)",
+        "gpi_status": "string — SWIFT gpi status code at acknowledgement (ACSP)"
+      },
+      "consumers": [
+        {
+          "service": "SVC-017",
+          "service_name": "Digital Channels",
+          "action": "Updates transfer tracker in corporate portal to 'Processing at correspondent bank'. Notifies customer via portal status update."
+        },
+        {
+          "service": "SVC-103",
+          "service_name": "Audit & Logging",
+          "action": "Records correspondent acknowledgement timestamp for SWIFT gpi SLA monitoring."
+        }
+      ],
+      "ordering_guarantees": "Per-transfer strict ordering via transfer_id partition key on topic payments.international.",
+      "topic": "payments.international",
+      "data_classification": "financial",
+      "worm_audit_pipeline": false,
+      "retention": "7 years (standard payment record retention)",
+      "cloudevents_type": "uk.bank.payments.international-transfer.correspondent.acknowledged"
+    },
+    {
+      "event_id": "EVT-056",
+      "name": "TransferCompleted",
+      "source_service": "SVC-010",
+      "source_entity": "ENT-026",
+      "trigger": "SVC-010 receives the SWIFT gpi ACCC (AcceptedCreditSettlementCompleted) status for the transfer's UETR — confirming that the beneficiary bank has credited the beneficiary's account. InternationalTransfer.status is set to completed in PH-034.",
+      "journey_phase": "PH-034",
+      "payload_schema": {
+        "transfer_id": "string (UUID v4)",
+        "business_customer_id": "string (UUID v4)",
+        "gpi_uetr": "string (UUID v4)",
+        "swift_reference": "string — SWIFT EndToEndId",
+        "amount": "number (decimal, 2 dp)",
+        "currency": "string (ISO 4217)",
+        "gbp_equivalent": "number (decimal, 2 dp)",
+        "beneficiary_name": "string",
+        "completed_at": "string (ISO 8601 UTC timestamp)"
+      },
+      "consumers": [
+        {
+          "service": "SVC-053",
+          "service_name": "Notification Service",
+          "action": "Dispatches push notification and email confirmation to PER-002 confirming transfer completion. Includes UETR and SWIFT reference for customer records."
+        },
+        {
+          "service": "SVC-103",
+          "service_name": "Audit & Logging",
+          "action": "Creates immutable completion record. FATF travel rule end-to-end completion evidence."
+        },
+        {
+          "service": "SVC-111",
+          "service_name": "WORM Compliance Store",
+          "action": "Archives completed transfer event. MLR 2017 Regulation 40 five-year retention; FATF travel rule retention."
+        },
+        {
+          "service": "SVC-014",
+          "service_name": "KYC/AML Service",
+          "action": "Consumes TransferCompleted for ongoing transaction monitoring (GOV-005-R01). Updates the BusinessCustomer's transaction monitoring profile with the completed international transfer value and destination jurisdiction."
+        }
+      ],
+      "ordering_guarantees": "Per-transfer strict ordering via transfer_id partition key on topic payments.international. Terminal event for the transfer — no further events published for this transfer_id after TransferCompleted.",
+      "topic": "payments.international",
+      "data_classification": "financial",
+      "worm_audit_pipeline": true,
+      "retention": "7 years (WORM audit pipeline — SVC-111; FATF travel rule; MLR 2017)",
+      "cloudevents_type": "uk.bank.payments.international-transfer.completed"
+    },
+    {
+      "event_id": "EVT-057",
+      "name": "TransferFailed",
+      "source_service": "SVC-010",
+      "source_entity": "ENT-026",
+      "trigger": "Published by SVC-010 when the international transfer fails at any stage. Failure reasons include: sanctions block (EVT-051 outcome = hit); fraud block (EVT-052 risk_level = block); compliance check timeout; correspondent rejection (SWIFT pacs.002 RJCT); account debit failure. This is the terminal failure event — InternationalTransfer.status is set to a terminal failed state.",
+      "journey_phase": "PH-031 or PH-033 (depending on failure reason)",
+      "payload_schema": {
+        "transfer_id": "string (UUID v4)",
+        "business_customer_id": "string (UUID v4)",
+        "failure_reason": "string enum (sanctions_block | fraud_block | compliance_timeout | correspondent_rejection | insufficient_funds | account_debit_failure | internal_error)",
+        "failure_reason_code": "string — ISO 20022 reason code for correspondent rejections (e.g. AC01, NARR); null for internal failures",
+        "gpi_uetr": "string (UUID v4) — set if failure occurs after UETR assignment; null otherwise",
+        "failed_at": "string (ISO 8601 UTC timestamp)"
+      },
+      "payload_omissions": "For sanctions_block failures: the specific matched entity name/IBAN/BIC is NOT included in the payload (tipping-off prohibition, POCA 2002 s333A). Only the screening_result_id is included as a reference to the SVC-103 audit log entry accessible to MLRO only.",
+      "consumers": [
+        {
+          "service": "SVC-053",
+          "service_name": "Notification Service",
+          "action": "Dispatches customer decline notification. For sanctions_block and fraud_block: generic text only — 'We are unable to process this transfer.' No specific reason disclosed to customer. For correspondent_rejection: standardised reason text derived from ISO 20022 reason code."
+        },
+        {
+          "service": "SVC-014",
+          "service_name": "KYC/AML Service",
+          "action": "For failure_reason = sanctions_block: triggers MLRO alert workflow. SVC-014 creates an investigation record. OFSI notification assessed within 14 days."
+        },
+        {
+          "service": "SVC-103",
+          "service_name": "Audit & Logging",
+          "action": "Creates immutable failure audit record with full failure context. Required for PSR dispute resolution and regulatory audit."
+        },
+        {
+          "service": "SVC-111",
+          "service_name": "WORM Compliance Store",
+          "action": "Archives failure event for compliance retention. Sanctions blocks retained 5–7 years per GOV-005-R02."
+        }
+      ],
+      "ordering_guarantees": "Per-transfer strict ordering via transfer_id partition key on topic payments.international. Terminal event — no further events expected for this transfer_id after TransferFailed.",
+      "topic": "payments.international",
+      "data_classification": "financial",
+      "worm_audit_pipeline": true,
+      "retention": "7 years for all failure types; 5 years minimum for sanctions_block (OFSI) extendable to 7 years",
+      "cloudevents_type": "uk.bank.payments.international-transfer.failed"
+    }
+  ]
+}

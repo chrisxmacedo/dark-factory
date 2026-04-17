@@ -1,0 +1,495 @@
+{
+  "journey_id": "JRN-005",
+  "journey_name": "APP Fraud Detection and Reimbursement",
+  "document_version": "0.1.0",
+  "status": "Draft",
+  "new_entities": [
+    {
+      "entity_id": "ENT-043",
+      "name": "FraudCase",
+      "description": "The aggregate root for an APP fraud investigation. Created by SVC-013 (Fraud Detection) on either a real-time payment block (trigger_type = realtime_block) or a customer report (trigger_type = customer_report). Tracks the full investigation lifecycle from creation through to case closure. Acts as the parent record for all FraudEvidence and the source for the ReimbursementClaim. Retained in WORM storage for 7 years from case closure.",
+      "owning_service": "SVC-013",
+      "capability_domain": "CAP-004 (Fraud Detection)",
+      "aggregate_root": true,
+      "fields": [
+        {
+          "name": "case_id",
+          "type": "UUID",
+          "validation_rule": "RFC 4122 UUID v4. System-generated. Immutable after creation. Human-readable alias generated for customer communications: format APP-YYYYMMDD-XXXXXX (date + 6-digit sequence). Internal case_id is the authoritative identifier.",
+          "source": "PH-064",
+          "governed_by": "GOV-003-R01"
+        },
+        {
+          "name": "customer_id",
+          "type": "UUID",
+          "validation_rule": "Required. FK → Customer.customer_id (ENT-001, owned by SVC-001). Must reference an active Customer. Denormalised on FraudCase for audit query efficiency. Immutable after creation.",
+          "source": "PH-064",
+          "governed_by": "GOV-003-R01"
+        },
+        {
+          "name": "account_id",
+          "type": "UUID",
+          "validation_rule": "Required. FK → Account.account_id (ENT-004, owned by SVC-001). The account from which the fraudulent payment was made. Immutable after creation.",
+          "source": "PH-064",
+          "governed_by": null
+        },
+        {
+          "name": "payment_intent_id",
+          "type": "UUID",
+          "validation_rule": "Conditional. FK → PaymentIntent.payment_intent_id (ENT-008, owned by SVC-001). Required for all cases where a payment was made (trigger_type = customer_report or realtime_block with an associated payment). Null only if case is created via a standalone fraud report with no identified payment reference.",
+          "source": "PH-064",
+          "governed_by": null,
+          "cross_service_note": "SVC-013 does not own PaymentIntent. The payment_intent_id is stored as a reference for read access to SVC-001 APIs. SVC-013 must not duplicate PaymentIntent fields — it reads them via SVC-001 GET /payments/{id}."
+        },
+        {
+          "name": "trigger_type",
+          "type": "enum",
+          "validation_rule": "Required. Enum: realtime_block | customer_report. Immutable after creation. realtime_block: sourced from PaymentFraudBlocked (EVT-P08) consumption. customer_report: sourced from customer-initiated fraud report via CH-002 or CH-004.",
+          "source": "PH-064",
+          "governed_by": null
+        },
+        {
+          "name": "fraud_typology",
+          "type": "enum",
+          "validation_rule": "Required for customer_report trigger. Enum: impersonation_bank | impersonation_police | impersonation_hmrc | investment_fraud | romance_fraud | purchase_fraud | invoice_fraud | advance_fee_fraud | other. Set from customer declaration at report time. Used for PSR regulatory reporting and ML pattern feedback.",
+          "source": "PH-064",
+          "governed_by": "GOV-003-R01"
+        },
+        {
+          "name": "reported_date",
+          "type": "timestamp",
+          "validation_rule": "Required. ISO 8601 UTC. Timestamp of FraudCaseCreated event. This is the start of the 5-business-day PSR SLA clock (NFR-005-REG-001). Immutable after creation.",
+          "source": "PH-064",
+          "governed_by": "GOV-003-R01"
+        },
+        {
+          "name": "assigned_analyst",
+          "type": "UUID",
+          "validation_rule": "Conditional. FK → staff user identifier for PER-054 (Fraud Analyst). Required once case is assigned. Set at PH-065. Must be set within 4 hours of reported_date (NFR-005-REG-002).",
+          "source": "PH-065",
+          "governed_by": null
+        },
+        {
+          "name": "assigned_at",
+          "type": "timestamp",
+          "validation_rule": "Conditional. ISO 8601 UTC. Timestamp when assigned_analyst was first set. SLA metric: assigned_at minus reported_date must be <= 4 hours for P99 compliance (NFR-005-REG-002).",
+          "source": "PH-065",
+          "governed_by": null
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "validation_rule": "Required. Enum: open | investigating | decision_pending | reimbursed | partially_reimbursed | declined | closed. Transitions: open → investigating (analyst assigned) → decision_pending (investigation complete) → reimbursed / partially_reimbursed / declined (decision recorded) → closed (case formally closed after recovery attempt). Terminal state: closed.",
+          "source": "PH-064",
+          "governed_by": null
+        },
+        {
+          "name": "total_loss_amount",
+          "type": "decimal",
+          "validation_rule": "Required. Positive decimal or 0.00. 0.00 for realtime_block cases (no loss). GBP. Max 2 decimal places. Cannot exceed PaymentIntent.amount for single-payment cases. For multi-payment fraud: sum of all fraudulent payments. Max £250,000 (FPS per-transaction limit; multi-payment cases can exceed this).",
+          "source": "PH-064",
+          "governed_by": "GOV-003-R01"
+        },
+        {
+          "name": "reimbursement_amount",
+          "type": "decimal",
+          "validation_rule": "Conditional. Positive decimal. Set at PH-067 when decision = approve or partial. Min: 0.01. Max: min(total_loss_amount, 85000.00). PSR PS23/3 maximum reimbursement cap is £85,000. Null for declined cases.",
+          "source": "PH-067",
+          "governed_by": "GOV-003-R01"
+        },
+        {
+          "name": "reimbursement_date",
+          "type": "timestamp",
+          "validation_rule": "Conditional. ISO 8601 UTC. Timestamp of ReimbursementCredited event. Set by SVC-001 when account credit is applied. SLA metric: reimbursement_date minus reported_date must be <= 5 business days for P100 compliance (NFR-005-REG-001). Null for declined cases.",
+          "source": "PH-068",
+          "governed_by": "GOV-003-R01"
+        },
+        {
+          "name": "decision_outcome",
+          "type": "enum",
+          "validation_rule": "Conditional. Set at PH-067 when status transitions to reimbursed / partially_reimbursed / declined. Enum: approved | partial | declined. Immutable after setting.",
+          "source": "PH-067",
+          "governed_by": "GOV-003-R01"
+        },
+        {
+          "name": "decision_rationale",
+          "type": "string",
+          "validation_rule": "Required at PH-067. Free text. Min 50 characters. Must reference specific evidence items (by evidence_id) supporting the decision. Max 5,000 characters. Stored encrypted at rest — access restricted to PER-054, PER-059, PER-052.",
+          "source": "PH-067",
+          "governed_by": "GOV-003-R01"
+        },
+        {
+          "name": "gross_negligence_evidence",
+          "type": "string",
+          "validation_rule": "Conditional. Required when decision_outcome = declined. Structured text documenting the specific gross negligence finding with evidence references. Must meet PSR PS23/3 evidential standard. Min 100 characters. Stored encrypted at rest. Access: PER-054, PER-059 only (not PER-052 unless SAR referral made).",
+          "source": "PH-067",
+          "governed_by": "GOV-003-R01"
+        },
+        {
+          "name": "contributory_negligence_percentage",
+          "type": "integer",
+          "validation_rule": "Conditional. Required when decision_outcome = partial. Integer 1–99. Represents the percentage of the loss attributed to customer contributory negligence. reimbursement_amount = total_loss_amount * (1 - contributory_negligence_percentage / 100), capped at £85,000.",
+          "source": "PH-067",
+          "governed_by": "GOV-003-R01"
+        },
+        {
+          "name": "vulnerability_assessment",
+          "type": "string",
+          "validation_rule": "Required. Populated at PH-066. Values: none_identified | financial_difficulty | bereavement | mental_health | elderly | under_duress | other. Multiple flags stored as JSON array. PSR PS23/3 requires vulnerability consideration on every case. If vulnerability identified: gross negligence threshold elevated; additional consumer support offered.",
+          "source": "PH-066",
+          "governed_by": "GOV-003-R01"
+        },
+        {
+          "name": "vulnerability_detail",
+          "type": "string",
+          "validation_rule": "Conditional. Free text, max 1,000 characters. Required if vulnerability_assessment != none_identified. Documents the specific vulnerability factors observed. Stored encrypted. UK GDPR: special category data (health) requires explicit lawful basis — Article 9(2)(f) (legal claim establishment/defence) for these records.",
+          "source": "PH-066",
+          "governed_by": null
+        },
+        {
+          "name": "senior_manager_sign_off",
+          "type": "boolean",
+          "validation_rule": "Conditional. Required true when reimbursement_amount > 25000 OR decision_outcome = declined. Set to true when PER-059 records co-sign approval via PATCH /fraud-cases/{id}.",
+          "source": "PH-067",
+          "governed_by": null
+        },
+        {
+          "name": "senior_manager_id",
+          "type": "UUID",
+          "validation_rule": "Conditional. Required when senior_manager_sign_off = true. FK → staff user identifier for PER-059 (Senior Manager). Immutable after setting.",
+          "source": "PH-067",
+          "governed_by": null
+        },
+        {
+          "name": "sar_referred",
+          "type": "boolean",
+          "validation_rule": "Required. Default false. Set to true if a SAR referral was made to PER-052 (MLRO) during PH-066 investigation. Does not contain SAR content — POCA 2002 s333A tipping-off boundary enforced.",
+          "source": "PH-066",
+          "governed_by": null
+        },
+        {
+          "name": "stop_clock_active",
+          "type": "boolean",
+          "validation_rule": "Required. Default false. Set to true if Senior Manager (PER-059) has authorised a stop-the-clock under PSR PS23/3 EX-005 exception path. When true, the 5-day SLA clock is paused.",
+          "source": "PH-066",
+          "governed_by": "GOV-003-R01"
+        },
+        {
+          "name": "stop_clock_authorised_at",
+          "type": "timestamp",
+          "validation_rule": "Conditional. ISO 8601 UTC. Required when stop_clock_active = true. Timestamp of PER-059 authorisation.",
+          "source": "PH-066",
+          "governed_by": "GOV-003-R01"
+        },
+        {
+          "name": "closed_at",
+          "type": "timestamp",
+          "validation_rule": "Conditional. ISO 8601 UTC. Set when FraudCase.status transitions to closed. The WORM 7-year retention clock starts from this timestamp (NFR-005-DATA-001).",
+          "source": "PH-070",
+          "governed_by": null
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "validation_rule": "System-generated. ISO 8601 UTC. Immutable.",
+          "source": "PH-064",
+          "governed_by": null
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "validation_rule": "System-generated. ISO 8601 UTC. Updated on every status transition.",
+          "source": "PH-064",
+          "governed_by": null
+        }
+      ],
+      "relationships": [
+        {
+          "target_entity": "ENT-001",
+          "target_name": "Customer",
+          "type": "many-to-one",
+          "description": "FraudCase belongs to one Customer via customer_id FK. SVC-013 reads Customer data from SVC-001 API — no shared database."
+        },
+        {
+          "target_entity": "ENT-004",
+          "target_name": "Account",
+          "type": "many-to-one",
+          "description": "FraudCase belongs to one Account via account_id FK. The account from which the fraudulent payment was made."
+        },
+        {
+          "target_entity": "ENT-008",
+          "target_name": "PaymentIntent",
+          "type": "many-to-one",
+          "description": "FraudCase references one PaymentIntent via payment_intent_id FK. SVC-013 reads PaymentIntent from SVC-001 API. One PaymentIntent may only have one active FraudCase."
+        },
+        {
+          "target_entity": "ENT-044",
+          "target_name": "FraudEvidence",
+          "type": "one-to-many",
+          "description": "FraudCase has zero or more FraudEvidence records. FraudEvidence is created during PH-065 and PH-066."
+        },
+        {
+          "target_entity": "ENT-045",
+          "target_name": "ReimbursementClaim",
+          "type": "one-to-one",
+          "description": "A FraudCase has at most one ReimbursementClaim. Created by SVC-009 on receipt of FraudReimbursementApproved event."
+        }
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-ENT-043-01",
+          "decision": "FraudCase is owned by SVC-013 (Fraud Detection), not SVC-001 (Retail Banking Core).",
+          "rationale": "Fraud case management is a distinct operational domain from core account management. SVC-013 is the Fraud Detection service and must own the investigation lifecycle. This maintains service boundary integrity and allows SVC-013 to scale independently of the core banking platform. The fraud score and risk level from JRN-002 remain on PaymentIntent (ENT-008) in SVC-001 — FraudCase references the payment but does not duplicate its data."
+        },
+        {
+          "id": "DD-ENT-043-02",
+          "decision": "payment_intent_id stored as a cross-service FK reference on FraudCase, not as duplicated payment data.",
+          "rationale": "Cross-service data duplication violates service boundary principles. SVC-013 must call SVC-001 GET /payments/{id} to retrieve payment details. The payment_intent_id on FraudCase provides the join key for that API call. This avoids stale data duplication and keeps SVC-001 as the authoritative source for payment data."
+        }
+      ]
+    },
+    {
+      "entity_id": "ENT-044",
+      "name": "FraudEvidence",
+      "description": "Represents a single piece of evidence collected during the fraud investigation. Each FraudEvidence record belongs to one FraudCase. Evidence is created by the Fraud Analyst (PER-054) during PH-065 (Case Creation) and PH-066 (Investigation). Evidence records are append-only — existing records cannot be modified or deleted (immutable audit trail requirement). All evidence archived to WORM store on case closure.",
+      "owning_service": "SVC-013",
+      "capability_domain": "CAP-004 (Fraud Detection)",
+      "aggregate_root": false,
+      "fields": [
+        {
+          "name": "evidence_id",
+          "type": "UUID",
+          "validation_rule": "RFC 4122 UUID v4. System-generated. Immutable.",
+          "source": "PH-065",
+          "governed_by": null
+        },
+        {
+          "name": "case_id",
+          "type": "UUID",
+          "validation_rule": "Required. FK → FraudCase.case_id. Immutable after creation.",
+          "source": "PH-065",
+          "governed_by": null
+        },
+        {
+          "name": "evidence_type",
+          "type": "enum",
+          "validation_rule": "Required. Enum: transaction_data | device_data | communication_log | third_party_report | payment_warning_log | cop_result | customer_statement | vulnerability_assessment_record. Immutable after creation.",
+          "source": "PH-065",
+          "governed_by": null
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "validation_rule": "Required. Min 10 characters. Max 2,000 characters. Analyst narrative describing what the evidence shows and its relevance to the PSR eligibility assessment. Stored encrypted at rest.",
+          "source": "PH-065",
+          "governed_by": null
+        },
+        {
+          "name": "source_reference",
+          "type": "string",
+          "validation_rule": "Conditional. External reference identifier linking to the source system record. Examples: PaymentIntent.payment_intent_id for transaction_data; SVC-017 session_id for device_data; fps_reference for payment record. Max 256 characters.",
+          "source": "PH-065",
+          "governed_by": null
+        },
+        {
+          "name": "document_storage_reference",
+          "type": "string",
+          "validation_rule": "Conditional. Required for evidence items with uploaded documents (e.g. screenshots, PDFs). URI to the encrypted document in SVC-013's document store. Max 512 characters. Never a public URL — access via SVC-013 internal document retrieval only.",
+          "source": "PH-065",
+          "governed_by": null
+        },
+        {
+          "name": "collected_date",
+          "type": "timestamp",
+          "validation_rule": "Required. ISO 8601 UTC. Timestamp when the evidence record was created. Immutable.",
+          "source": "PH-065",
+          "governed_by": null
+        },
+        {
+          "name": "collected_by",
+          "type": "UUID",
+          "validation_rule": "Required. FK → staff user identifier for the analyst (PER-054) or system that created the evidence record. For system-generated evidence (e.g. automatic device data pull): value is the service identifier (SVC-013). Immutable.",
+          "source": "PH-065",
+          "governed_by": null
+        },
+        {
+          "name": "psr_relevance",
+          "type": "enum",
+          "validation_rule": "Required. Enum: supports_eligibility | supports_gross_negligence | supports_vulnerability | neutral | disputed. Analyst classification of how this evidence is weighted in the PSR eligibility assessment.",
+          "source": "PH-066",
+          "governed_by": "GOV-003-R01"
+        }
+      ],
+      "relationships": [
+        {
+          "target_entity": "ENT-043",
+          "target_name": "FraudCase",
+          "type": "many-to-one",
+          "description": "FraudEvidence belongs to one FraudCase via case_id FK."
+        }
+      ]
+    },
+    {
+      "entity_id": "ENT-045",
+      "name": "ReimbursementClaim",
+      "description": "Tracks the 50/50 cost split between the sending bank and the receiving PSP under PSR PS23/3. Created by SVC-009 (Domestic Payments) on receipt of the FraudReimbursementApproved event. SVC-009 owns this entity because it is the service responsible for FPS scheme interactions — including the Pay.UK reimbursement mechanism used to submit recovery claims to the receiving PSP. One ReimbursementClaim per FraudCase. Receiving PSP recovery status is tracked from submission through to completion or failure.",
+      "owning_service": "SVC-009",
+      "capability_domain": "CAP-003 (Payment Operations)",
+      "aggregate_root": false,
+      "fields": [
+        {
+          "name": "claim_id",
+          "type": "UUID",
+          "validation_rule": "RFC 4122 UUID v4. System-generated by SVC-009. Immutable.",
+          "source": "PH-068",
+          "governed_by": "GOV-003-R01"
+        },
+        {
+          "name": "case_id",
+          "type": "UUID",
+          "validation_rule": "Required. FK → FraudCase.case_id (owned by SVC-013). Immutable after creation. Cross-service reference — SVC-009 does not duplicate FraudCase data.",
+          "source": "PH-068",
+          "governed_by": null
+        },
+        {
+          "name": "total_reimbursed_amount",
+          "type": "decimal",
+          "validation_rule": "Required. Positive decimal. Max 2 decimal places. GBP. Equal to FraudCase.reimbursement_amount. Sourced from FraudReimbursementApproved event payload. Immutable after creation.",
+          "source": "PH-068",
+          "governed_by": "GOV-003-R01"
+        },
+        {
+          "name": "sending_bank_share",
+          "type": "decimal",
+          "validation_rule": "Required. total_reimbursed_amount * 0.5. GBP. Represents this bank's net cost after recovery. Updated to reflect actual recovery amount once recovery is resolved.",
+          "source": "PH-068",
+          "governed_by": "GOV-003-R01"
+        },
+        {
+          "name": "receiving_bank_share",
+          "type": "decimal",
+          "validation_rule": "Required. total_reimbursed_amount * 0.5. GBP. The amount the receiving PSP is liable to reimburse this bank under the PSR 50/50 split. This is the claim amount submitted to the receiving PSP.",
+          "source": "PH-068",
+          "governed_by": "GOV-003-R01"
+        },
+        {
+          "name": "receiving_bank_sort_code",
+          "type": "string",
+          "validation_rule": "Required. 6-digit UK sort code of the receiving PSP. Sourced from PaymentExecution.receiving_sort_code (ENT-009) via SVC-009 read. Used to identify the receiving PSP for claim submission via Pay.UK reimbursement mechanism.",
+          "source": "PH-068",
+          "governed_by": null
+        },
+        {
+          "name": "receiving_bank_fps_participant_id",
+          "type": "string",
+          "validation_rule": "Conditional. The FPS scheme participant identifier of the receiving PSP. Resolved from the Vocalink EISCD via the receiving_bank_sort_code. Required for Pay.UK reimbursement claim submission.",
+          "source": "PH-068",
+          "governed_by": null
+        },
+        {
+          "name": "pay_uk_claim_reference",
+          "type": "string",
+          "validation_rule": "Conditional. The Pay.UK reimbursement mechanism claim reference assigned on submission. Max 35 characters. Set after successful submission to Pay.UK. Null until submitted.",
+          "source": "PH-069",
+          "governed_by": null
+        },
+        {
+          "name": "recovery_status",
+          "type": "enum",
+          "validation_rule": "Required. Enum: pending | partial | full | failed | disputed. Transitions: pending (on creation) → partial (receiving PSP partially returns funds) | full (receiving PSP returns full 50% share) | failed (receiving PSP in default, mule account empty, or recovery impossible) | disputed (receiving PSP contests liability — escalated to Pay.UK dispute resolution). Terminal states: full | failed.",
+          "source": "PH-069",
+          "governed_by": "GOV-003-R01"
+        },
+        {
+          "name": "recovery_amount",
+          "type": "decimal",
+          "validation_rule": "Conditional. GBP. Actual amount recovered from receiving PSP. 0.00 on creation; updated as funds are received. Cannot exceed receiving_bank_share.",
+          "source": "PH-069",
+          "governed_by": null
+        },
+        {
+          "name": "claim_submitted_at",
+          "type": "timestamp",
+          "validation_rule": "Conditional. ISO 8601 UTC. Timestamp of Pay.UK reimbursement claim submission. Null until submitted.",
+          "source": "PH-068",
+          "governed_by": null
+        },
+        {
+          "name": "recovery_resolved_at",
+          "type": "timestamp",
+          "validation_rule": "Conditional. ISO 8601 UTC. Timestamp when recovery_status transitions to a terminal state (full, failed). Null while recovery is pending.",
+          "source": "PH-069",
+          "governed_by": null
+        },
+        {
+          "name": "dispute_escalated",
+          "type": "boolean",
+          "validation_rule": "Required. Default false. Set to true when recovery_status = disputed and the claim has been escalated to Pay.UK dispute resolution (EX-002 exception path). Requires Senior Manager (PER-059) authorisation.",
+          "source": "PH-069",
+          "governed_by": null
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "validation_rule": "System-generated. ISO 8601 UTC. Immutable.",
+          "source": "PH-068",
+          "governed_by": null
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "validation_rule": "System-generated. ISO 8601 UTC. Updated on each recovery_status change.",
+          "source": "PH-068",
+          "governed_by": null
+        }
+      ],
+      "relationships": [
+        {
+          "target_entity": "ENT-043",
+          "target_name": "FraudCase",
+          "type": "one-to-one",
+          "description": "ReimbursementClaim belongs to one FraudCase via case_id FK. Cross-service reference: SVC-009 stores the case_id as a reference; FraudCase data is read via SVC-013 API."
+        },
+        {
+          "target_entity": "ENT-009",
+          "target_name": "PaymentExecution",
+          "type": "many-to-one",
+          "description": "ReimbursementClaim is associated with the PaymentExecution of the fraudulent payment (via the FraudCase.payment_intent_id chain). SVC-009 owns both PaymentExecution and ReimbursementClaim — can join internally."
+        }
+      ],
+      "design_decisions": [
+        {
+          "id": "DD-ENT-045-01",
+          "decision": "ReimbursementClaim is owned by SVC-009 (Domestic Payments), not SVC-013 (Fraud Detection).",
+          "rationale": "The ReimbursementClaim is a payment scheme artefact — it is a claim submitted via Pay.UK's FPS reimbursement mechanism. SVC-009 is the FPS scheme participant and owns all interactions with Pay.UK and Vocalink. SVC-013 owns the fraud investigation; SVC-009 owns the payment scheme recovery. This preserves capability boundary integrity: Fraud Detection handles investigation and decision; Domestic Payments handles the financial recovery mechanism."
+        }
+      ]
+    }
+  ],
+  "referenced_existing_entities": [
+    {
+      "entity_id": "ENT-001",
+      "name": "Customer",
+      "owning_service": "SVC-001",
+      "usage_in_journey": "FraudCase.customer_id references Customer.customer_id. SVC-013 reads customer data (name, vulnerability indicators, KYC risk category) via SVC-001 GET /customers/{id} API."
+    },
+    {
+      "entity_id": "ENT-004",
+      "name": "Account",
+      "owning_service": "SVC-001",
+      "usage_in_journey": "FraudCase.account_id references Account.account_id. SVC-001 applies the reimbursement credit to this account on FraudReimbursementApproved."
+    },
+    {
+      "entity_id": "ENT-008",
+      "name": "PaymentIntent",
+      "owning_service": "SVC-001",
+      "usage_in_journey": "FraudCase.payment_intent_id references PaymentIntent. Key fraud evidence fields: cop_result, cop_override_confirmed, fraud_score, fraud_risk_level. Read by SVC-013 via SVC-001 GET /payments/{id}."
+    },
+    {
+      "entity_id": "ENT-009",
+      "name": "PaymentExecution",
+      "owning_service": "SVC-009",
+      "usage_in_journey": "ReimbursementClaim.receiving_bank_sort_code sourced from PaymentExecution.receiving_sort_code. fps_reference used as evidence reference. SVC-009 reads internally."
+    }
+  ]
+}

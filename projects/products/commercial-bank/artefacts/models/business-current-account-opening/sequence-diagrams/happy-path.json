@@ -1,0 +1,398 @@
+{
+  "id": "SEQ-JRN004-HP",
+  "name": "Happy Path — Business Current Account Opening",
+  "journey_id": "JRN-004",
+  "journey_phase": "BPH-001 through BPH-008 (full happy path)",
+  "description": "Full happy path sequence for JRN-004. A limited company director applies via web portal, Companies House lookup confirms active company with 2 directors and 2 PSC UBOs (both >25%), all 3 required individuals (the applicant + 1 other director + 1 non-director UBO) complete identity verification, automated CDD screening returns CLEAR on all individuals and the company, automated decision approves, business account is provisioned with dual-authorisation configuration, and the business portal is activated. Total elapsed time: 3–4 business days (typical — gated by director/UBO verification completion).",
+  "participants": [
+    { "id": "PER-002", "name": "Business Customer", "type": "actor" },
+    { "id": "SVC-017", "name": "Digital Channels", "type": "service" },
+    { "id": "SVC-005", "name": "Commercial Banking Core", "type": "service" },
+    { "id": "CH_API", "name": "Companies House API", "type": "external" },
+    { "id": "SVC-050", "name": "Customer Onboarding Service", "type": "service" },
+    { "id": "SVC-051", "name": "Sanctions Screening Service", "type": "service" },
+    { "id": "SVC-014", "name": "KYC/AML Service", "type": "service" },
+    { "id": "SVC-100", "name": "Identity & Access Management", "type": "service" },
+    { "id": "SVC-102", "name": "Event Bus", "type": "infrastructure" },
+    { "id": "SVC-053", "name": "Notifications Service", "type": "service" }
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "phase": "BPH-001",
+      "from": "PER-002",
+      "to": "SVC-017",
+      "action": "Submit business account application form",
+      "description": "Director submits company details: entity_type = limited_company, company_number = 12345678, account_type = business_current, applicant name/email/phone, role = director.",
+      "data": {
+        "entity_type": "limited_company",
+        "company_number": "12345678",
+        "channel": "web_portal",
+        "applicant": "{ first_name, last_name, email, phone, role: director }"
+      },
+      "async": false,
+      "http_method": "POST",
+      "endpoint": "/business-applications (SVC-005 via SVC-017)"
+    },
+    {
+      "step": 2,
+      "phase": "BPH-001",
+      "from": "SVC-017",
+      "to": "SVC-005",
+      "action": "POST /business-applications",
+      "description": "SVC-017 calls SVC-005 to create BusinessCustomer (prospect) and BusinessApplicationRecord. Entity type and deduplication checks pass.",
+      "data": { "CreateBusinessApplicationRequest": "full body per commercial-banking-core.openapi.json" },
+      "async": false,
+      "http_method": "POST",
+      "endpoint": "commercial-core/v1/business-applications"
+    },
+    {
+      "step": 3,
+      "phase": "BPH-001",
+      "from": "SVC-005",
+      "to": "SVC-102",
+      "action": "Publish BusinessApplicationStarted",
+      "description": "BusinessCustomer (prospect) and BusinessApplicationRecord created. SVC-005 publishes BusinessApplicationStarted.",
+      "data": {
+        "event": "BusinessApplicationStarted",
+        "payload": "{ application_id, business_customer_id, company_number, entity_type, channel, started_at }"
+      },
+      "async": true,
+      "event_consumers": ["SVC-017", "SVC-050", "SVC-103", "SVC-111"]
+    },
+    {
+      "step": 4,
+      "phase": "BPH-001",
+      "from": "SVC-005",
+      "to": "SVC-017",
+      "action": "201 Created",
+      "description": "SVC-005 returns application_id, application_ref, status: in_progress.",
+      "data": { "application_id": "UUID", "application_ref": "BCA-2025-00421", "status": "in_progress", "current_phase": "BPH-002" },
+      "async": false,
+      "http_method": "POST response"
+    },
+    {
+      "step": 5,
+      "phase": "BPH-001",
+      "from": "SVC-017",
+      "to": "PER-002",
+      "action": "Display application reference",
+      "description": "SVC-017 renders confirmation screen with application reference BCA-2025-00421. 'Verifying company details...' loading state.",
+      "async": false
+    },
+    {
+      "step": 6,
+      "phase": "BPH-002",
+      "from": "SVC-005",
+      "to": "CH_API",
+      "action": "GET /company/12345678 + /officers + /persons-with-significant-control",
+      "description": "SVC-005 calls Companies House API to retrieve company profile, officer list, and PSC list. Response: company status = active, legal_name = Example Tech Solutions Ltd, 2 directors (Sarah Thornton, James Chen), 2 PSCs (Sarah Thornton 50%, Priya Kapoor 30%).",
+      "data": {
+        "company_number": "12345678"
+      },
+      "async": false,
+      "latency_note": "CH API p50: 500ms, p95: 3,000ms"
+    },
+    {
+      "step": 7,
+      "phase": "BPH-002",
+      "from": "SVC-005",
+      "to": "SVC-102",
+      "action": "Publish CompaniesHouseVerified",
+      "description": "Companies House data reconciled with applicant-provided data. DirectorRecord entities created for Sarah Thornton and James Chen. UBO staging created for Sarah Thornton (50%) and Priya Kapoor (30%). CompaniesHouseVerified published.",
+      "data": {
+        "event": "CompaniesHouseVerified",
+        "payload": "{ application_id, business_customer_id, company_number, legal_name, company_status: active, sic_codes: [62012], director_count: 2, ubo_count_from_psc: 2 }"
+      },
+      "async": true,
+      "event_consumers": ["SVC-014", "SVC-017", "SVC-103"]
+    },
+    {
+      "step": 8,
+      "phase": "BPH-002",
+      "from": "SVC-017",
+      "to": "PER-002",
+      "action": "Display Companies House verification confirmation",
+      "description": "SVC-017 renders the company verification confirmation screen: verified legal name, CH number, registered address, incorporation date. Applicant confirms and proceeds.",
+      "async": false
+    },
+    {
+      "step": 9,
+      "phase": "BPH-003",
+      "from": "PER-002",
+      "to": "SVC-017",
+      "action": "Confirm UBO list and provide contact details",
+      "description": "Applicant (Sarah Thornton) confirms the 2 UBOs from PSC register. Confirms James Chen is a director but not a UBO (no PSC entry). Provides Priya Kapoor's email for identity verification invitation. Sarah Thornton is both a director and UBO — her verification is done directly in-app.",
+      "async": false
+    },
+    {
+      "step": 10,
+      "phase": "BPH-003",
+      "from": "SVC-005",
+      "to": "SVC-102",
+      "action": "Publish UBOIdentified (x2)",
+      "description": "UltimateBeneficialOwner entities created for Sarah Thornton (50%, shares) and Priya Kapoor (30%, shares). Two UBOIdentified events published.",
+      "data": {
+        "event": "UBOIdentified",
+        "payload": "{ ubo_id, business_customer_id, ubo_first_name, ubo_last_name, ownership_percentage, control_type: shares, verification_invitation_sent }"
+      },
+      "async": true,
+      "event_consumers": ["SVC-050", "SVC-014", "SVC-103"],
+      "note": "Two UBOIdentified events published — one per UBO"
+    },
+    {
+      "step": 11,
+      "phase": "BPH-003",
+      "from": "SVC-050",
+      "to": "SVC-053",
+      "action": "Dispatch verification invitations",
+      "description": "SVC-050 receives UBOIdentified events. Creates identity verification sessions for all 3 required individuals (Sarah Thornton — in-app; James Chen — email invitation; Priya Kapoor — email invitation). SVC-053 dispatches invitation emails to James Chen and Priya Kapoor.",
+      "async": true
+    },
+    {
+      "step": 12,
+      "phase": "BPH-004",
+      "from": "PER-002",
+      "to": "SVC-050",
+      "action": "Sarah Thornton completes identity verification (in-app, Day 1)",
+      "description": "Sarah Thornton completes Onfido document capture (passport) and biometric liveness check directly in the application session. Biometric match score: 0.94. Address verification: confirmed.",
+      "async": false,
+      "note": "Applicant completes their own verification immediately. Other individuals complete async."
+    },
+    {
+      "step": 13,
+      "phase": "BPH-004",
+      "from": "SVC-050",
+      "to": "SVC-102",
+      "action": "Publish DirectorVerified (Sarah Thornton)",
+      "description": "SVC-050 persists IdentityVerification for Sarah Thornton (outcome: pass). Publishes DirectorVerified with individual_type = ubo (she is primarily a UBO; she is also a director — a DirectorVerified event for her director record is also published).",
+      "data": {
+        "event": "DirectorVerified",
+        "payload": "{ verification_id, business_customer_id, individual_type: ubo, ubo_id, outcome: pass, verified_name, verified_dob, verified_nationality: [GB] }"
+      },
+      "async": true,
+      "event_consumers": ["SVC-005", "SVC-014", "SVC-103"]
+    },
+    {
+      "step": 14,
+      "phase": "BPH-004",
+      "from": "SVC-050",
+      "to": "SVC-102",
+      "action": "Publish DirectorVerified (James Chen, Day 2)",
+      "description": "James Chen completes identity verification via email invitation link (passport, biometric liveness: 0.91, address confirmed). DirectorVerified published with individual_type = director.",
+      "data": {
+        "event": "DirectorVerified",
+        "payload": "{ verification_id, business_customer_id, individual_type: director, director_id, outcome: pass, verified_name, verified_dob, verified_nationality: [GB] }"
+      },
+      "async": true,
+      "event_consumers": ["SVC-005", "SVC-014", "SVC-103"]
+    },
+    {
+      "step": 15,
+      "phase": "BPH-004",
+      "from": "SVC-050",
+      "to": "SVC-102",
+      "action": "Publish DirectorVerified (Priya Kapoor, Day 2)",
+      "description": "Priya Kapoor completes identity verification via email invitation (passport, biometric liveness: 0.93, address confirmed). DirectorVerified published with individual_type = ubo.",
+      "data": {
+        "event": "DirectorVerified",
+        "payload": "{ verification_id, business_customer_id, individual_type: ubo, ubo_id, outcome: pass, verified_name, verified_dob, verified_nationality: [GB, IN] }"
+      },
+      "async": true,
+      "event_consumers": ["SVC-005", "SVC-014", "SVC-103"]
+    },
+    {
+      "step": 16,
+      "phase": "BPH-005",
+      "from": "SVC-014",
+      "to": "SVC-051",
+      "action": "Company sanctions screening (parallel fan-out begins)",
+      "description": "SVC-014 receives all DirectorVerified events. All verifications now complete. BPH-005 begins. SVC-014 initiates parallel sanctions screening: company name, Sarah Thornton, James Chen, Priya Kapoor — 4 parallel calls to SVC-051.",
+      "data": {
+        "calls": [
+          "POST /screen { entity: 'Example Tech Solutions Ltd', type: company }",
+          "POST /screen { first_name: Sarah, last_name: Thornton, dob, nationality: [GB] }",
+          "POST /screen { first_name: James, last_name: Chen, dob, nationality: [GB] }",
+          "POST /screen { first_name: Priya, last_name: Kapoor, dob, nationality: [GB, IN] }"
+        ]
+      },
+      "async": false,
+      "latency_note": "Hard limit: 3,000ms per call. All 4 calls run in parallel."
+    },
+    {
+      "step": 17,
+      "phase": "BPH-005",
+      "from": "SVC-051",
+      "to": "SVC-014",
+      "action": "Sanctions screening results: all CLEAR",
+      "description": "All 4 screening calls return status = CLEAR within 3,000ms hard limit. Lists checked: OFSI, OFAC, UN, EU.",
+      "data": {
+        "company": "{ status: CLEAR, lists_checked: [OFSI, OFAC, UN, EU], processing_time_ms: 248 }",
+        "individuals": "{ status: CLEAR x3 }"
+      },
+      "async": false
+    },
+    {
+      "step": 18,
+      "phase": "BPH-005",
+      "from": "SVC-014",
+      "to": "SVC-014",
+      "action": "PEP + adverse media screening + risk scoring",
+      "description": "SVC-014 runs PEP screening (ComplyAdvantage) for all 3 individuals: all CLEAR. Adverse media screening on company name: CLEAR. Sector risk assessment: SIC 62012 (IT consultancy) = low risk. Jurisdictional risk: GB incorporation = low. Risk score: 18/100 → risk_category = standard. EDD not triggered.",
+      "async": false,
+      "note": "Internal SVC-014 processing — no external API call shown"
+    },
+    {
+      "step": 19,
+      "phase": "BPH-005",
+      "from": "SVC-014",
+      "to": "SVC-102",
+      "action": "Publish BusinessKYCCleared",
+      "description": "BusinessKycAssessment created (assessment_id, risk_category: standard, edd_required: false, next_review_date: +3 years). BusinessKYCCleared published.",
+      "data": {
+        "event": "BusinessKYCCleared",
+        "payload": "{ assessment_id, business_customer_id, risk_category: standard, edd_required: false, next_review_date: 2028-06-18, cleared_at }"
+      },
+      "async": true,
+      "event_consumers": ["SVC-005", "SVC-017", "SVC-103", "SVC-111"]
+    },
+    {
+      "step": 20,
+      "phase": "BPH-006",
+      "from": "SVC-005",
+      "to": "SVC-005",
+      "action": "Automated decision engine runs",
+      "description": "SVC-005 receives BusinessKYCCleared. Decision engine evaluates: CH verified (active), all verifications passed, risk_category = standard, no sanctions hits, no EDD → APPROVED.",
+      "async": false
+    },
+    {
+      "step": 21,
+      "phase": "BPH-006",
+      "from": "SVC-005",
+      "to": "SVC-102",
+      "action": "Publish BusinessApplicationDecisionMade (APPROVED)",
+      "description": "SVC-005 publishes BusinessApplicationDecisionMade with outcome = approved.",
+      "data": {
+        "event": "BusinessApplicationDecisionMade",
+        "payload": "{ application_id, business_customer_id, decision_outcome: approved, decided_at }"
+      },
+      "async": true,
+      "event_consumers": ["SVC-017", "SVC-050", "SVC-103", "SVC-111"]
+    },
+    {
+      "step": 22,
+      "phase": "BPH-006",
+      "from": "SVC-053",
+      "to": "PER-002",
+      "action": "Email + In-app: Application approved",
+      "description": "SVC-053 dispatches approval notification: 'Your business account application has been approved. We are now setting up your account.'",
+      "async": true
+    },
+    {
+      "step": 23,
+      "phase": "BPH-007",
+      "from": "SVC-005",
+      "to": "SVC-005",
+      "action": "POST /business-accounts (internal provisioning)",
+      "description": "SVC-005 provisions BusinessAccount: allocates account_number = 62345678 from commercial range, sort_code = 60-83-21, computes IBAN/BIC. Writes dual-authorisation config: payment_approval_threshold = £5,000, 2 dual_authoriser roles (Sarah Thornton + James Chen). Updates BusinessCustomer.status → active.",
+      "data": {
+        "business_account_id": "UUID",
+        "account_number": "62345678",
+        "sort_code": "60-83-21",
+        "payment_approval_threshold": 5000.00,
+        "authorised_users": "[ Sarah Thornton (dual_authoriser), James Chen (dual_authoriser) ]"
+      },
+      "async": false
+    },
+    {
+      "step": 24,
+      "phase": "BPH-007",
+      "from": "SVC-005",
+      "to": "SVC-102",
+      "action": "Publish BusinessAccountOpened + BusinessAccountProvisioned",
+      "description": "Two events published: BusinessAccountOpened (account details) and BusinessAccountProvisioned (configuration, status = active).",
+      "data": {
+        "events": [
+          "BusinessAccountOpened: { business_account_id, business_customer_id, account_number, sort_code, iban, bic, opened_date, fscs_eligible: false }",
+          "BusinessAccountProvisioned: { business_account_id, business_customer_id, status: active, payment_approval_threshold: 5000, authorised_users_count: 2, payment_rails_enabled: [bacs, fps, chaps], provisioned_at }"
+        ]
+      },
+      "async": true,
+      "event_consumers": ["SVC-017", "SVC-014", "SVC-103", "SVC-111"]
+    },
+    {
+      "step": 25,
+      "phase": "BPH-007",
+      "from": "SVC-017",
+      "to": "PER-002",
+      "action": "Display account details confirmation screen",
+      "description": "SVC-017 receives BusinessAccountProvisioned. Renders: 'Your account is ready. Sort code: 60-83-21. Account number: 62345678. IBAN: GB29BANK60832162345678.' Business portal setup prompt displayed.",
+      "async": false
+    },
+    {
+      "step": 26,
+      "phase": "BPH-008",
+      "from": "PER-002",
+      "to": "SVC-017",
+      "action": "Set up business portal credentials",
+      "description": "Sarah Thornton creates username + password for business portal. Proceeds to biometric SCA setup (FIDO2/WebAuthn).",
+      "async": false
+    },
+    {
+      "step": 27,
+      "phase": "BPH-008",
+      "from": "SVC-017",
+      "to": "SVC-100",
+      "action": "Create credentials + register FIDO2 device",
+      "description": "SVC-017 calls SVC-100 to create business portal credentials for Sarah Thornton (primary user). FIDO2/WebAuthn device registered. Biometric assertion stays on device.",
+      "data": {
+        "business_customer_id": "UUID",
+        "user_email": "sarah.thornton@example-tech.co.uk",
+        "fido2_credential_id": "UUID",
+        "device_id": "UUID"
+      },
+      "async": false
+    },
+    {
+      "step": 28,
+      "phase": "BPH-008",
+      "from": "PER-002",
+      "to": "SVC-017",
+      "action": "First login — biometric SCA (Face ID)",
+      "description": "Sarah Thornton authenticates with Face ID. SVC-017 calls SVC-100 to verify FIDO2 assertion. SCA confirmed.",
+      "async": false
+    },
+    {
+      "step": 29,
+      "phase": "BPH-008",
+      "from": "SVC-017",
+      "to": "SVC-102",
+      "action": "Publish BusinessDigitalChannelActivated",
+      "description": "Business portal activated. SVC-017 publishes BusinessDigitalChannelActivated.",
+      "data": {
+        "event": "BusinessDigitalChannelActivated",
+        "payload": "{ business_customer_id, business_account_id, primary_user_id, sca_enrolled: true, activated_at }"
+      },
+      "async": true,
+      "event_consumers": ["SVC-005", "SVC-103"]
+    },
+    {
+      "step": 30,
+      "phase": "BPH-008",
+      "from": "SVC-053",
+      "to": "PER-002",
+      "action": "Welcome email + in-app message",
+      "description": "SVC-053 dispatches welcome communications: account details, sort code, IBAN, RM contact details, account opening confirmation PDF, terms and conditions. In-app: onboarding checklist (set up payees, invite James Chen as second authoriser to portal).",
+      "async": true
+    },
+    {
+      "step": 31,
+      "phase": "BPH-008",
+      "from": "SVC-017",
+      "to": "PER-002",
+      "action": "Business portal welcome dashboard",
+      "description": "Journey complete. Business portal displays: account details, payment approval workflow (dual-authorisation > £5,000), payment rails (BACS/FPS/CHAPS), and onboarding checklist. Total journey: Day 1 (application + CH verification + Sarah's verification) + Day 2 (James + Priya verification + CDD + provisioning) = ~2 business days for this simple structure.",
+      "async": false
+    }
+  ]
+}

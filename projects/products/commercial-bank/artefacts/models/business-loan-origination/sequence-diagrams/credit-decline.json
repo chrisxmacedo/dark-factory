@@ -1,0 +1,221 @@
+{
+  "diagram_id": "SEQ-JRN007-02",
+  "journey_id": "JRN-007",
+  "path": "credit_decline",
+  "title": "JRN-007 Exception Path: Credit Decline — Risk Rating Too High",
+  "description": "Exception path where the automated credit scoring returns a high risk rating (risk_rating = 8) mandating credit committee referral. The credit committee reviews the credit paper and declines based on insufficient DSCR and unsecured exposure above appetite. EVT-035 (LoanDeclined) is published. No FacilityAgreement or LoanAccount is created. Journey terminates at PH-019.",
+  "document_version": "1.0.0",
+  "decline_trigger": "risk_rating = 8 (above acceptable threshold for this exposure class and amount). DSCR = 0.98 (below minimum 1.25). Facility unsecured with no acceptable collateral. Combined with sector risk (construction sector, SIC 41202) above concentration limit.",
+  "participants": [
+    { "id": "PER002", "label": "PER-002\nBusiness Owner" },
+    { "id": "PER050", "label": "PER-050\nRelationship Manager" },
+    { "id": "PER056", "label": "PER-056\nCredit Analyst" },
+    { "id": "COMMITTEE", "label": "Credit Committee" },
+    { "id": "SVC005", "label": "SVC-005\nCommercial Banking Core\n(CAP-002)" },
+    { "id": "SVC102", "label": "SVC-102\nEvent Bus" },
+    { "id": "SVC012", "label": "SVC-012\nRisk Engine\n(CAP-004)" },
+    { "id": "SVC053", "label": "SVC-053\nNotification Service" }
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "phase": "PH-017",
+      "type": "note",
+      "description": "PH-016/PH-017: Loan Enquiry and Application — same as happy path"
+    },
+    {
+      "step": 2,
+      "phase": "PH-017",
+      "from": "PER002",
+      "to": "PER050",
+      "type": "sync",
+      "label": "Submits formal application\n(£750,000 unsecured, construction sector)"
+    },
+    {
+      "step": 3,
+      "phase": "PH-017",
+      "from": "PER050",
+      "to": "SVC005",
+      "type": "sync",
+      "label": "POST /loan-applications\n{requested_amount: 750000,\nsecurity_type: unsecured}"
+    },
+    {
+      "step": 4,
+      "phase": "PH-017",
+      "from": "SVC005",
+      "to": "SVC005",
+      "type": "internal",
+      "label": "Creates ENT-017 (LoanApplication)\nstatus = submitted"
+    },
+    {
+      "step": 5,
+      "phase": "PH-017",
+      "from": "SVC005",
+      "to": "SVC102",
+      "type": "async",
+      "label": "EVT-031: LoanApplicationSubmitted"
+    },
+    {
+      "step": 6,
+      "phase": "PH-017",
+      "from": "SVC005",
+      "to": "SVC102",
+      "type": "async",
+      "label": "EVT-032: CreditAssessmentRequested\n[CROSS-CAPABILITY: CAP-002 → CAP-004]"
+    },
+    {
+      "step": 7,
+      "phase": "PH-018",
+      "type": "note",
+      "description": "PH-018: Credit Assessment — automated scoring returns HIGH risk rating"
+    },
+    {
+      "step": 8,
+      "phase": "PH-018",
+      "from": "SVC102",
+      "to": "SVC012",
+      "type": "async",
+      "label": "Delivers EVT-032 to SVC-012\n[◀ CROSS-CAPABILITY]"
+    },
+    {
+      "step": 9,
+      "phase": "PH-018",
+      "from": "SVC012",
+      "to": "SVC012",
+      "type": "internal",
+      "label": "Runs IRB models on £750k unsecured\nconstruction sector exposure:\nrisk_rating=8 (HIGH — triggers mandatory committee)\npd_score=0.0780 (7.8% PD)\nlgd_estimate=0.45 (unsecured floor)\nead=750000\necl_provision=26325.00\nifrs9_stage=stage_1 (at origination)"
+    },
+    {
+      "step": 10,
+      "phase": "PH-018",
+      "from": "SVC012",
+      "to": "SVC102",
+      "type": "async",
+      "label": "EVT-033: CreditAssessmentCompleted\n{risk_rating: 8, pd_score: 0.0780,\nlgd: 0.45, ecl: 26325.00}\n[CROSS-CAPABILITY: CAP-004 → CAP-002]"
+    },
+    {
+      "step": 11,
+      "phase": "PH-018",
+      "from": "SVC102",
+      "to": "SVC005",
+      "type": "async",
+      "label": "Delivers EVT-033 to SVC-005"
+    },
+    {
+      "step": 12,
+      "phase": "PH-018",
+      "from": "SVC005",
+      "to": "SVC005",
+      "type": "internal",
+      "label": "Stores assessment_id\nrisk_rating=8 → MANDATORY credit\ncommittee referral flag set\nRoutes to Credit Analyst"
+    },
+    {
+      "step": 13,
+      "phase": "PH-018",
+      "from": "SVC005",
+      "to": "PER056",
+      "type": "sync",
+      "label": "Assigns to Credit Analyst\nFlagged: mandatory committee referral\n(risk_rating >= 8)"
+    },
+    {
+      "step": 14,
+      "phase": "PH-018",
+      "from": "PER056",
+      "to": "SVC012",
+      "type": "sync",
+      "label": "Reads ENT-018 automated scores"
+    },
+    {
+      "step": 15,
+      "phase": "PH-018",
+      "from": "PER056",
+      "to": "PER056",
+      "type": "internal",
+      "label": "Prepares credit paper:\nDSCR = 0.98 (FAILS minimum 1.25)\nNet Leverage = 4.2x (above 3.0x appetite)\nConstruction sector: above concentration limit\nRecommendation: DECLINE"
+    },
+    {
+      "step": 16,
+      "phase": "PH-018",
+      "from": "PER056",
+      "to": "COMMITTEE",
+      "type": "sync",
+      "label": "Presents credit paper to\ncredit committee"
+    },
+    {
+      "step": 17,
+      "phase": "PH-019",
+      "type": "note",
+      "description": "PH-019: Underwriting — Credit Committee Review and Decline"
+    },
+    {
+      "step": 18,
+      "phase": "PH-019",
+      "from": "COMMITTEE",
+      "to": "COMMITTEE",
+      "type": "internal",
+      "label": "Deliberates on credit paper:\n1. DSCR 0.98 < 1.25 minimum (FAIL)\n2. Unsecured £750k above RM appetite\n3. Construction sector concentration exceeded\n4. pd_score 7.8% above sector policy limit\nDecision: DECLINE"
+    },
+    {
+      "step": 19,
+      "phase": "PH-019",
+      "from": "COMMITTEE",
+      "to": "PER056",
+      "type": "sync",
+      "label": "Committee records DECLINE\ndecline_reasons: [insufficient_dscr,\nunsecured_above_appetite,\nsector_concentration_limit]"
+    },
+    {
+      "step": 20,
+      "phase": "PH-019",
+      "from": "PER056",
+      "to": "SVC005",
+      "type": "sync",
+      "label": "Records committee decision:\ncommittee_decision = declined\ndecline_reasons array populated"
+    },
+    {
+      "step": 21,
+      "phase": "PH-019",
+      "from": "SVC005",
+      "to": "SVC005",
+      "type": "internal",
+      "label": "Updates LoanApplication.status = declined\nCreditAssessment.committee_decision = declined\n(via SVC-012 API)\nNo FacilityAgreement created\nNo LoanAccount created"
+    },
+    {
+      "step": 22,
+      "phase": "PH-019",
+      "from": "SVC005",
+      "to": "SVC102",
+      "type": "async",
+      "label": "EVT-035: LoanDeclined\n{application_id, assessment_id,\ndecision: declined,\ndecline_reasons: [insufficient_dscr,\nunsecured_above_appetite,\nsector_concentration_limit],\nrisk_rating: 8}"
+    },
+    {
+      "step": 23,
+      "phase": "PH-019",
+      "from": "SVC102",
+      "to": "SVC053",
+      "type": "async",
+      "label": "Delivers EVT-035\n→ SVC-053 sends formal decline letter\nto PER-002 with:\n- Decline reasons\n- Right of appeal\n- BBRS signposting (GOV-002-R03)\n- FCA SME disclosure (GOV-002-R05)"
+    },
+    {
+      "step": 24,
+      "phase": "PH-019",
+      "from": "SVC053",
+      "to": "PER002",
+      "type": "sync",
+      "label": "Formal decline letter delivered:\n'We are unable to approve your application\nfor the following reasons: [decline_reasons].\nYou have the right to appeal this decision.\nFor SME dispute resolution, please contact BBRS\n(Business Banking Resolution Service) if your\nannual turnover is below £10m.'"
+    },
+    {
+      "step": 25,
+      "phase": "PH-019",
+      "from": "SVC102",
+      "to": "SVC005",
+      "type": "async",
+      "label": "NOTE: Journey terminates here.\nNo PH-020 (FacilityAgreement)\nNo PH-021 (Drawdown)\nNo PH-022 (Monitoring)"
+    },
+    {
+      "step": 26,
+      "phase": "PH-019",
+      "type": "note",
+      "description": "Optional: RM may discuss alternative structures with PER-002 — smaller amount, additional security, or different product. If alternative proceeds, a NEW LoanApplication (ENT-017) is created. This is a separate JRN-007 instance, not a continuation of the declined application."
+    }
+  ]
+}

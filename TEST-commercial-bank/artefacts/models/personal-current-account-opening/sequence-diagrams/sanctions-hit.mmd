@@ -1,0 +1,62 @@
+---
+title: "JRN-001 EX-002 — Sanctions Hit: Account Freeze and MLRO Escalation"
+---
+sequenceDiagram
+    autonumber
+
+    actor PER001 as PER-001<br/>Personal Customer
+    actor PER052 as PER-052<br/>MLRO
+    participant SVC017 as SVC-017<br/>Digital Channels
+    participant SVC001 as SVC-001<br/>Retail Banking Core
+    participant SVC050 as SVC-050<br/>Customer Onboarding
+    participant SVC051 as SVC-051<br/>Sanctions Screening
+    participant SVC014 as SVC-014<br/>KYC/AML Service
+    participant EB as SVC-102<br/>Event Bus
+    participant WORM as SVC-111<br/>Audit Log (WORM)
+    participant SVC053 as SVC-053<br/>Notifications
+
+    Note over PER001,SVC050: PH-001 + PH-002 completed as per happy path<br/>ApplicationStarted + IdentityVerificationCompleted (PASS) published
+
+    rect rgb(255, 230, 230)
+        Note over SVC014,SVC051: PH-003 — Sanctions Screening (EX-002 trigger)
+        SVC014->>SVC051: POST /sanctions/screen<br/>{ name: Nikolai Petrov, DOB: 1975-03-22,<br/>nationality: [GB, RU], lists: [OFSI, OFAC, UN, EU] }
+        Note over SVC051: Hard SLA: <3,000ms (GOV-005-R02)
+        SVC051-->>SVC014: 200 OK — BLOCKED<br/>{ status: blocked, list: OFSI, ref: OFSI-GBP-0001234,<br/>confidence: 94%, match: Nikolai Petrov, DOB: 1975-03-22,<br/>designation: UK Russia Sanctions Regs 2019 }
+    end
+
+    rect rgb(255, 200, 200)
+        Note over SVC014,WORM: EX-002 — Immediate Block and Escalation
+        Note over SVC014: Persist KycAssessment (ENT-003)<br/>sanctions_screening_result.status = blocked<br/>KycAssessment.status = blocked<br/>NO KYCClearanceGranted will be published
+        SVC014->>WORM: WORM audit entry — SanctionsHitDetected<br/>{ customer_id, assessment_id, list: OFSI, confidence: 94%,<br/>designated_person_ref: OFSI-GBP-0001234, detected_at }
+        Note over WORM: WRITE-ONCE — immutable<br/>Retention: 5yr (MLR 2017 Reg 40)<br/>Access: MLRO + FCA/NCA production only
+        SVC014->>EB: publish SanctionsHitDetected<br/>{ assessment_id, customer_id, list_name: OFSI,<br/>match_confidence: 94, detected_at }<br/>⚠ NO match_detail in payload — tipping-off prohibition (POCA 2002 s333A)
+    end
+
+    rect rgb(255, 215, 200)
+        Note over SVC001,WORM: SVC-001 blocks provisioning
+        SVC001->>SVC001: ApplicationRecord.status = declined<br/>decline_reason = sanctions_hit<br/>No Account (ENT-004) created
+        SVC001->>WORM: WORM audit entry — ApplicationBlockedSanctions<br/>{ application_id, customer_id, blocked_at,<br/>account_created: false, funds_received: £0.00 }
+    end
+
+    rect rgb(255, 240, 200)
+        Note over SVC053,PER001: Sanitised customer decline (tipping-off prohibition)
+        SVC053-->>PER001: Email + In-app: "We are unable to open an account<br/>for you at this time."<br/>+ FOS signpost (Consumer Duty PS22/9)
+        Note over PER001: ⚠ NO mention of sanctions, OFSI, or designated person<br/>Tipping-off prohibition (POCA 2002 s333A) — absolute
+    end
+
+    rect rgb(200, 220, 255)
+        Note over SVC014,PER052: MLRO Immediate Alert
+        SVC014-->>PER052: MLRO alert — SANCTIONS HIT CONFIRMED<br/>{ designated_person_ref: OFSI-GBP-0001234,<br/>list: OFSI, confidence: 94%,<br/>OFSI notification deadline: detected_at + 14 days }
+        Note over PER052: Full match detail — restricted to MLRO only
+        PER052->>WORM: WORM audit entry — MLROReviewInitiated<br/>{ case_ref, customer_id, assessment_id,<br/>ofsi_notification_deadline, reviewed_by: PER-052 }
+    end
+
+    rect rgb(200, 240, 200)
+        Note over PER052,WORM: MLRO Confirms + OFSI Notification (within 14 days)
+        Note over PER052: Review: confirms customer is designated person<br/>under UK Russia Sanctions Regs 2019<br/>Decision: OFSI notification required
+        PER052->>WORM: WORM audit entry — OFSINotificationSubmitted<br/>{ ofsi_notification_ref, submitted_by: PER-052,<br/>submitted_at, within_14_day_sla: true }
+        Note over WORM: SLA: OFSI notification within 14 days<br/>of confirmed designated person identification<br/>⚠ Failure to notify is a criminal offence
+        SVC001->>WORM: WORM audit entry — FundsFreezeConfirmed<br/>{ account_created: false, funds_received: £0.00,<br/>freeze_not_required: true }
+    end
+
+    Note over PER001,WORM: Journey terminated at EX-002<br/>No account opened • No funds accepted<br/>Full WORM audit trail created for OFSI/FCA evidence

@@ -1,0 +1,1502 @@
+{
+  "name": "Central Service Map",
+  "description": "Aggregated service boundaries across all modelled journeys. Each entry captures the service's owned entities, published events, consumed events, synchronous API endpoints, and the journeys that contributed data. As additional journeys are modelled, new owned_entities and events are merged into each service entry and the source_journeys array is extended. Architectural principle: a service owns its entities exclusively — no shared databases between services.",
+  "document_version": "0.7.0",
+  "status": "Draft",
+  "services": [
+    {
+      "service_id": "SVC-002",
+      "name": "Mortgage Service",
+      "capability_domain": "CAP-001 (Retail Banking — Mortgages sub-capability, promoted)",
+      "tier": "T2",
+      "description": "Owns the end-to-end residential mortgage application lifecycle (JRN-006). Promoted sub-capability of CAP-001. Same-capability peer to SVC-001 — may call SVC-001 directly. Communicates with SVC-012 (Risk Engine, CAP-004) and SVC-014 (KYC/AML, CAP-005) exclusively via async events through SVC-102.",
+      "owned_entities": ["ENT-012", "ENT-013", "ENT-014", "ENT-015", "ENT-016"],
+      "published_events": ["EVT-020", "EVT-021", "EVT-022", "EVT-024", "EVT-025", "EVT-026", "EVT-027", "EVT-028", "EVT-029", "EVT-030"],
+      "consumed_events": [
+        {
+          "event_id": "EVT-023",
+          "name": "CreditCheckCompleted",
+          "provider_service_id": "SVC-012",
+          "purpose": "JRN-006: Receives credit check result (soft at DIP, hard at full application) from SVC-012. If DIP soft check passes: issues DIP (EVT-021). If full application hard check passes: stores result for underwriter review."
+        },
+        {
+          "event_id": "EVT-004",
+          "name": "KYCClearanceGranted",
+          "provider_service_id": "SVC-014",
+          "purpose": "JRN-006: Confirms existing customer KYC is current. Allows mortgage application to proceed without new CDD. Reuses existing KYC result from JRN-001 pattern."
+        },
+        {
+          "event_id": "EVT-005",
+          "name": "KYCReferralRaised",
+          "provider_service_id": "SVC-014",
+          "purpose": "JRN-006: New customer KYC referred for EDD. Mortgage application suspended pending KYC resolution."
+        },
+        {
+          "event_id": "EVT-006",
+          "name": "SanctionsHitDetected",
+          "provider_service_id": "SVC-014",
+          "purpose": "JRN-006: Sanctions match detected on customer or property AML check. Application immediately blocked."
+        }
+      ],
+      "consumed_apis": [
+        {
+          "provider_service_id": "SVC-001",
+          "provider_service_name": "Retail Banking Core",
+          "call_pattern": "Synchronous (direct API — same-capability permitted)",
+          "dependency_criticality": "hard",
+          "purpose": "GET /customers/{id} to fetch Customer identity data for ESIS and offer document generation. No local copy of Customer fields in SVC-002."
+        },
+        {
+          "provider_service_id": "SVC-053",
+          "provider_service_name": "Notification Service",
+          "call_pattern": "Asynchronous (fire-and-forget with delivery confirmation)",
+          "dependency_criticality": "soft",
+          "purpose": "Dispatch all customer notifications: DIP issued, application received, valuation updates, underwriting decision, mortgage offer, completion confirmation, welcome pack."
+        },
+        {
+          "provider_service_id": "EXT-SURVEYOR-PANEL",
+          "provider_service_name": "External Surveyor Panel",
+          "call_pattern": "Synchronous API / portal instruction",
+          "dependency_criticality": "hard",
+          "purpose": "Instructs property valuations directly via surveyor panel management system."
+        },
+        {
+          "provider_service_id": "CHAPS",
+          "provider_service_name": "CHAPS (Bank of England RTGS)",
+          "call_pattern": "Synchronous — CHAPS payment instruction on completion day",
+          "dependency_criticality": "hard",
+          "purpose": "Releases mortgage funds to solicitor on completion day. Irrevocable same-day RTGS settlement."
+        }
+      ],
+      "api_endpoints": [
+        "POST /mortgage-applications",
+        "GET /mortgage-applications/{id}",
+        "POST /mortgage-applications/{id}/dip",
+        "POST /mortgage-applications/{id}/full-application",
+        "POST /mortgage-applications/{id}/offer",
+        "POST /mortgage-accounts",
+        "GET /mortgage-accounts/{id}"
+      ],
+      "source_journeys": ["JRN-006"]
+    },
+    {
+      "service_id": "SVC-005",
+      "name": "Commercial Banking Core",
+      "capability_domain": "CAP-002 (Commercial Banking)",
+      "tier": "T2",
+      "owned_entities": ["ENT-B001", "ENT-B002", "ENT-B003", "ENT-B004"],
+      "published_events": ["EVT-B001", "EVT-B002", "EVT-B003", "EVT-B005_gate", "EVT-B006", "EVT-B007"],
+      "published_events_detail": [
+        { "event_id": "EVT-B001", "name": "BusinessApplicationStarted" },
+        { "event_id": "EVT-B002", "name": "CompaniesHouseVerified" },
+        { "event_id": "EVT-B003", "name": "UBOIdentified" },
+        { "event_id": "EVT-B006", "name": "BusinessApplicationDecisionMade" },
+        { "event_id": "EVT-B007", "name": "BusinessAccountOpened" },
+        { "event_id": "EVT-B008", "name": "BusinessAccountProvisioned" }
+      ],
+      "consumed_events": [
+        {
+          "event_id": "EVT-B004",
+          "name": "DirectorVerified",
+          "provider_service_id": "SVC-050",
+          "purpose": "SVC-005 updates DirectorRecord.verification_status and UltimateBeneficialOwner.verification_status. Tracks completeness of all required individual verifications before BPH-005 CDD assessment can proceed."
+        },
+        {
+          "event_id": "EVT-B005",
+          "name": "BusinessKYCCleared",
+          "provider_service_id": "SVC-014",
+          "purpose": "Gates BPH-006 account decision. SVC-005 will not run the decision engine without BusinessKYCCleared (MLR 2017 Regulation 28 compliance gate)."
+        },
+        {
+          "event_id": "EVT-B005R",
+          "name": "BusinessKYCReferralRaised",
+          "provider_service_id": "SVC-014",
+          "purpose": "Transitions BusinessApplicationRecord.status to 'referred'. Suspends account decisioning pending MLRO/EDD resolution."
+        },
+        {
+          "event_id": "EVT-B005S",
+          "name": "BusinessSanctionsHitDetected",
+          "provider_service_id": "SVC-014",
+          "purpose": "Immediately blocks the application. Transitions status to 'blocked'. No further processing until MLRO resolution."
+        }
+      ],
+      "consumed_apis": [
+        {
+          "provider_service_id": "Companies House API",
+          "provider_service_name": "Companies House API (External)",
+          "call_pattern": "Synchronous (blocking at BPH-002); async retry on timeout",
+          "dependency_criticality": "hard",
+          "purpose": "SVC-005 calls the CH API to verify company identity (MLR 2017 Regulation 28(11)), retrieve officer list (directors), and PSC list (UBO starting point). Sole caller — CH data is distributed to other services via domain events."
+        },
+        {
+          "provider_service_id": "SVC-100",
+          "provider_service_name": "Identity & Access Management",
+          "call_pattern": "Synchronous (blocking for authenticated session establishment)",
+          "dependency_criticality": "hard",
+          "purpose": "Business portal authentication from BPH-008 onwards. PSR 2017 SCA compliance."
+        }
+      ],
+      "api_endpoints": [
+        "POST /business-applications",
+        "GET /business-applications/{id}",
+        "POST /business-customers",
+        "GET /business-customers/{id}",
+        "POST /business-accounts",
+        "GET /business-accounts/{id}",
+        "GET /business-accounts/{id}/authorised-users",
+        "POST /ubos",
+        "GET /ubos/{id}",
+        "POST /directors",
+        "GET /directors/{id}"
+      ],
+      "source_journeys": ["JRN-004", "JRN-007", "JRN-013"],
+      "jrn013_additions": {
+        "note": "JRN-013 adds SVC-006 (Trade Finance Service) as a promoted sub-capability peer within CAP-002. SVC-005 is called synchronously by SVC-006 for facility headroom checks (GET /business-accounts/{id}) and settlement account debits (POST /business-accounts/{id}/debit). SVC-005 also consumes EVT-075 (LCApplicationSubmitted) and EVT-082 (LCExpired) from SVC-006 to maintain BusinessCustomer.active_lc_count and release facility headroom respectively.",
+        "new_consumed_events": [
+          { "event_id": "EVT-075", "name": "LCApplicationSubmitted", "provider_service_id": "SVC-006", "purpose": "JRN-013 PH-052: SVC-005 updates BusinessCustomer.active_lc_count on new LC application. Triggers preliminary facility pre-check." },
+          { "event_id": "EVT-082", "name": "LCExpired", "provider_service_id": "SVC-006", "purpose": "JRN-013 EXC-002: SVC-005 releases the lc_amount from blocked facility headroom and decrements BusinessCustomer.active_lc_count when an LC expires without a drawing." }
+        ],
+        "new_api_endpoints": [
+          "POST /business-accounts/{id}/debit — called by SVC-006 (same-capability) for LC settlement account debit in PH-058"
+        ]
+      },
+      "jrn007_additions": {
+        "new_owned_entities": [
+          "ENT-017 (LoanApplication) — aggregate root for the SME term loan origination workflow",
+          "ENT-019 (FacilityAgreement) — executed facility agreement with covenants and conditions precedent",
+          "ENT-020 (LoanAccount) — active loan ledger account tracking outstanding balance and repayment schedule",
+          "ENT-021 (CovenantMonitoring) — immutable per-test covenant compliance records"
+        ],
+        "new_published_events": [
+          { "event_id": "EVT-031", "name": "LoanApplicationSubmitted" },
+          { "event_id": "EVT-032", "name": "CreditAssessmentRequested" },
+          { "event_id": "EVT-034", "name": "LoanApproved" },
+          { "event_id": "EVT-035", "name": "LoanDeclined" },
+          { "event_id": "EVT-036", "name": "FacilityAgreed" },
+          { "event_id": "EVT-037", "name": "LoanDrawnDown" },
+          { "event_id": "EVT-038", "name": "LoanAccountOpened" },
+          { "event_id": "EVT-039", "name": "CovenantBreachDetected" }
+        ],
+        "new_consumed_events": [
+          { "event_id": "EVT-033", "name": "CreditAssessmentCompleted", "provider_service_id": "SVC-012", "purpose": "JRN-007 PH-018: Receives automated IRB scoring (PD, LGD, EAD, ECL, risk_rating) from SVC-012. Stores assessment_id reference on LoanApplication. Routes to Credit Analyst queue. Triggers mandatory committee referral if risk_rating >= 8." }
+        ],
+        "new_api_endpoints": [
+          "POST /loan-applications",
+          "GET /loan-applications/{id}",
+          "POST /loan-applications/{id}/drawdown",
+          "GET /loan-accounts/{id}",
+          "GET /loan-accounts/{id}/covenants"
+        ],
+        "note": "Business Lending (CAP-002.02) is a RETAINED sub-capability within SVC-005 — no separate business lending microservice. SVC-005 instructs SVC-009 (Domestic Payments, CAP-003) synchronously for CHAPS drawdown disbursement. SVC-005 communicates with SVC-012 (Risk Engine, CAP-004) exclusively via async events (EVT-032/EVT-033) — no synchronous calls cross the CAP-002/CAP-004 boundary."
+      }
+    },
+    {
+      "service_id": "SVC-003",
+      "name": "Credit Card Service",
+      "capability_domain": "CAP-001 (Retail Banking — Credit Cards sub-capability, promoted)",
+      "tier": "T2",
+      "description": "Owns the end-to-end credit card application and account lifecycle (JRN-008). Promoted sub-capability of CAP-001. Same-capability peer to SVC-001 — may call SVC-001 directly. Communicates with SVC-012 (Risk Engine, CAP-004) exclusively via async events through SVC-102. PCI DSS v4.0 scoped: card_number_token used exclusively; raw PAN handled only via card processing platform PCI CDE.",
+      "owned_entities": ["ENT-022", "ENT-023", "ENT-024", "ENT-025"],
+      "published_events": ["EVT-040", "EVT-041", "EVT-043", "EVT-044", "EVT-045", "EVT-046", "EVT-047", "EVT-048"],
+      "consumed_events": [
+        {
+          "event_id": "EVT-042",
+          "name": "CreditCheckCompleted",
+          "provider_service_id": "SVC-012",
+          "purpose": "JRN-008 PH-024: Receives hard credit check result (outcome, credit_risk_band, recommended_credit_limit, credit_assessment_reference) from SVC-012. Transitions ENT-022 status to 'assessment_complete'. Triggers PH-025 decisioning workflow. Idempotent on application_id + check_type."
+        }
+      ],
+      "consumed_apis": [
+        {
+          "provider_service_id": "SVC-001",
+          "provider_service_name": "Retail Banking Core",
+          "call_pattern": "Synchronous (direct API — same-capability permitted)",
+          "dependency_criticality": "hard",
+          "purpose": "GET /customers/{id} to fetch Customer identity data for credit bureau submission and card issuance. No local copy of Customer fields in SVC-003."
+        }
+      ],
+      "api_endpoints": [
+        "POST /credit-card-applications",
+        "GET /credit-card-applications/{id}",
+        "POST /credit-card-accounts/{id}/activate",
+        "GET /credit-card-accounts/{id}/statements"
+      ],
+      "source_journeys": ["JRN-008"]
+    },
+    {
+      "service_id": "SVC-001",
+      "name": "Retail Banking Core",
+      "capability_domain": "CAP-001 (Retail Banking)",
+      "tier": "T2",
+      "owned_entities": ["ENT-001", "ENT-004", "ENT-005", "ENT-007", "ENT-030", "ENT-031"],
+      "published_events": ["EVT-001", "EVT-007", "EVT-008", "EVT-009", "EVT-010", "EVT-019", "EVT-P01", "EVT-P04", "EVT-P06", "EVT-P07", "EVT-P08", "EVT-094", "EVT-058", "EVT-059", "EVT-060", "EVT-061", "EVT-062", "EVT-063"],
+      "jrn005_additions": {
+        "new_published_event": "EVT-094 (ReimbursementCredited) — published after SVC-001 credits the reimbursement amount to the customer Account on consumption of FraudReimbursementApproved (EVT-092). Contains credited_amount, transaction_id, and sla_business_days_elapsed (PSR SLA compliance evidence).",
+        "new_consumed_event": "EVT-092 (FraudReimbursementApproved from SVC-013) — triggers reimbursement credit execution. SVC-001 credits FraudCase.reimbursement_amount to the customer Account. Idempotent on case_id."
+      },
+      "consumed_events": [
+        {
+          "event_id": "EVT-004",
+          "name": "KYCClearanceGranted",
+          "provider_service_id": "SVC-014",
+          "purpose": "Gates account provisioning. SVC-001 will not create an Account record without receiving this event. Triggers transition of ApplicationRecord.current_phase to PH-005."
+        },
+        {
+          "event_id": "EVT-005",
+          "name": "KYCReferralRaised",
+          "provider_service_id": "SVC-014",
+          "purpose": "Transitions ApplicationRecord.status to 'referred' and current_phase to AP-001. Account provisioning is suspended pending manual EDD completion."
+        },
+        {
+          "event_id": "EVT-006",
+          "name": "SanctionsHitDetected",
+          "provider_service_id": "SVC-014",
+          "purpose": "Immediately blocks account provisioning; transitions ApplicationRecord.status to blocked."
+        },
+        {
+          "event_id": "EVT-011",
+          "name": "DigitalChannelActivated",
+          "provider_service_id": "SVC-017",
+          "purpose": "Confirms the account is operationally accessible to the customer; updates any account-level digital access flag."
+        },
+        {
+          "event_id": "EVT-012",
+          "name": "CustomerRiskScoreUpdated",
+          "provider_service_id": "SVC-014",
+          "purpose": "Adjusts account-level monitoring thresholds in SVC-001 to reflect an updated KYC risk tier. Non-blocking post-onboarding event."
+        },
+        {
+          "event_id": "EVT-016",
+          "name": "SARFiled",
+          "provider_service_id": "SVC-014",
+          "purpose": "SVC-001 reads the restriction_required flag. If true, applies enhanced_monitoring_flag to all accounts belonging to customer_id. SVC-001 receives ONLY the minimal payload (sar_id, customer_id, restriction_required, filed_at) — no NCA reference, no SAR narrative. Tipping-off prohibition (POCA 2002 s333A) strictly enforced: account restriction notices to customer use pre-approved generic language only."
+        },
+        {
+          "event_id": "EVT-017",
+          "name": "SARConsentRequested",
+          "provider_service_id": "SVC-014",
+          "purpose": "SVC-001 places the specific transaction (consent_transaction_ref) on hold pending NCA consent. Fail-closed design: transaction hold persists in the absence of a positive SARConsentGranted signal."
+        },
+        {
+          "event_id": "EVT-018",
+          "name": "SARConsentGranted",
+          "provider_service_id": "SVC-014",
+          "purpose": "SVC-001 releases the transaction hold for consent_transaction_ref. This is the ONLY signal that may release the hold."
+        },
+        {
+          "event_id": "EVT-092",
+          "name": "FraudReimbursementApproved",
+          "provider_service_id": "SVC-013",
+          "purpose": "JRN-005: Triggers reimbursement credit execution. SVC-001 credits FraudCase.reimbursement_amount to Account identified by account_id in event payload. Debits APP fraud loss suspense account. Publishes ReimbursementCredited (EVT-094). Idempotent on case_id — duplicate events for the same case_id do not result in duplicate credits."
+        },
+        {
+          "event_id": "EVT-045",
+          "name": "CreditCardIssued",
+          "provider_service_id": "SVC-003",
+          "purpose": "JRN-008 PH-026: SVC-001 updates the customer's product holdings record to include the new CreditCardAccount (ENT-023.account_id). Enables Single Customer View completeness and cross-sell eligibility. Intra-capability event (CAP-001). Idempotent on account_id."
+        }
+      ],
+      "consumed_apis": [
+        {
+          "provider_service_id": "SVC-050",
+          "provider_service_name": "Customer Onboarding Service",
+          "call_pattern": "Synchronous (blocking)",
+          "dependency_criticality": "hard",
+          "purpose": "SVC-001 calls SVC-050 to initiate identity verification and retrieve KYCClearanceGranted or KYCReferralRaised result before creating an Account record."
+        },
+        {
+          "provider_service_id": "SVC-014",
+          "provider_service_name": "KYC/AML Service",
+          "call_pattern": "Asynchronous event subscription (non-blocking)",
+          "dependency_criticality": "soft",
+          "purpose": "SVC-001 consumes the CustomerRiskScoreUpdated event from SVC-014 to adjust account-level monitoring thresholds post-onboarding."
+        },
+        {
+          "provider_service_id": "SVC-100",
+          "provider_service_name": "Identity & Access Management",
+          "call_pattern": "Synchronous (blocking for authenticated session establishment)",
+          "dependency_criticality": "hard",
+          "purpose": "SVC-001 calls SVC-100 for customer authentication in online and mobile banking sessions from PH-006 onwards."
+        }
+      ],
+      "api_endpoints": [
+        "POST /applications",
+        "GET /applications/{id}",
+        "POST /customers",
+        "GET /customers/{id}",
+        "POST /accounts",
+        "GET /accounts/{id}",
+        "POST /cards",
+        "GET /cards/{id}",
+        "POST /payments",
+        "GET /payments/{id}",
+        "POST /payments/{id}/cancel"
+      ],
+      "jrn002_consumed_events": [
+        {
+          "event_id": "EVT-P02",
+          "name": "SanctionsScreeningCompleted",
+          "provider_service_id": "SVC-051",
+          "purpose": "Evaluates sanctions outcome for PaymentIntent. If clear and EVT-P03 also clear: publishes PaymentCleared. If hit: publishes PaymentFailed with reason = sanctions_review and alerts MLRO."
+        },
+        {
+          "event_id": "EVT-P03",
+          "name": "FraudScoreCompleted",
+          "provider_service_id": "SVC-013",
+          "purpose": "Evaluates fraud risk level. If block: publishes PaymentFraudBlocked. If non-block and EVT-P02 also clear: publishes PaymentCleared."
+        },
+        {
+          "event_id": "EVT-P05",
+          "name": "PaymentExecuted",
+          "provider_service_id": "SVC-009",
+          "purpose": "Triggers account ledger debit by payment amount. Updates PaymentIntent.status = completed. Updates Account.daily_payment_total. Publishes AccountDebited."
+        }
+      ],
+      "source_journeys": ["JRN-001", "JRN-002", "JRN-003", "JRN-005", "JRN-006", "JRN-008", "JRN-010", "JRN-012"],
+      "jrn012_additions": {
+        "new_published_events": [
+          "DirectDebitInsufficientFunds — published when D-0 balance check fails for a Direct Debit collection (EVT-074-triggered flow)",
+          "AccountCredited (DD indemnity variant) — published after crediting customer account under DD Guarantee"
+        ],
+        "new_consumed_events": [
+          { "event_id": "EVT-069", "name": "DirectDebitInstructionCreated", "provider_service_id": "SVC-009", "purpose": "Records new DDI against account for account management display. Informational — does not gate any account operation." },
+          { "event_id": "EVT-070", "name": "DirectDebitInstructionValidated", "provider_service_id": "SVC-009", "purpose": "Updates account management state — DDI now active and visible in customer dashboard." },
+          { "event_id": "EVT-071", "name": "DirectDebitCollectionSubmitted", "provider_service_id": "SVC-009", "purpose": "Surfaces upcoming Direct Debit collection in customer's upcoming transactions view at D-2." },
+          { "event_id": "EVT-074", "name": "DirectDebitIndemnityClaimFiled", "provider_service_id": "SVC-009", "purpose": "CRITICAL: triggers immediate account credit under DD Guarantee. Must process within 30 seconds. Idempotent on claim_id. Consumer group for payments.direct-debit topic must be configured as high-priority low-latency." }
+        ],
+        "consumer_group_nfr": "SVC-001's consumer group for topic payments.direct-debit is configured as high-priority with < 30-second processing SLA to meet the DD Guarantee immediate credit obligation on EVT-074."
+      },
+      "jrn010_additions": {
+        "new_owned_entities": ["ENT-030 (OpenBankingConsent)", "ENT-031 (TPPRegistration)"],
+        "new_published_events": ["EVT-058 (ConsentRequested)", "EVT-059 (ConsentAuthorised)", "EVT-060 (ConsentRevoked)", "EVT-061 (OpenBankingPaymentInitiated)", "EVT-062 (OpenBankingPaymentCompleted)", "EVT-063 (OpenBankingPaymentFailed)"],
+        "new_api_endpoints": [
+          "POST /open-banking-consents",
+          "GET /open-banking-consents/{consent_id}",
+          "PATCH /open-banking-consents/{consent_id}"
+        ],
+        "new_consumed_events": [
+          "EVT-P02 (SanctionsScreeningCompleted) — already consumed for JRN-002; extended to handle OB-initiated payments via origination_channel = open_banking flag on PaymentIntent. Clear + EVT-P03 non-block: publish PaymentCleared and subsequently EVT-062 on completion. Hit: publish EVT-P07 and EVT-063.",
+          "EVT-P03 (FraudScoreCompleted) — already consumed for JRN-002; extended to handle OB-initiated payments. Non-block + EVT-P02 clear: publish EVT-P04. Block: publish EVT-P08 and EVT-063.",
+          "EVT-P05 (PaymentExecuted) — already consumed for JRN-002; on completion of OB-initiated payment, additionally publishes EVT-062 (OpenBankingPaymentCompleted)."
+        ],
+        "new_api_consumed": "SVC-100 token introspection — SVC-001 calls SVC-100 to validate TPP access tokens on each POST /payments call for OB-initiated payments.",
+        "entity_extension": "ENT-008 (PaymentIntent) extended with three new fields: consent_id (FK to ENT-030), origination_channel (enum: direct | open_banking), tpp_id (FK to ENT-031). See data-model.json entity_extensions."
+      },
+      "jrn006_additions": {
+        "new_consumed_events": [
+          "EVT-029 (MortgageCompleted from SVC-002) — updates Customer product holdings to reflect completed mortgage",
+          "EVT-030 (MortgageAccountOpened from SVC-002) — updates Single Customer View for FSCS purposes"
+        ],
+        "note": "SVC-001 does not own any new entities for JRN-006. Customer (ENT-001) and Account (ENT-004) data is read by SVC-002 directly via same-capability API call."
+      }
+    },
+    {
+      "service_id": "SVC-014",
+      "name": "KYC/AML Service",
+      "capability_domain": "CAP-005 (Compliance & Regulatory)",
+      "tier": "T1",
+      "owned_entities": ["ENT-003", "ENT-010", "ENT-011", "ENT-B005"],
+      "published_events": ["EVT-003", "EVT-004", "EVT-005", "EVT-006", "EVT-012", "EVT-014", "EVT-015", "EVT-016", "EVT-017", "EVT-018", "EVT-B005", "EVT-B005R", "EVT-B005S"],
+      "jrn004_additions": {
+        "new_owned_entity": "ENT-B005 (BusinessKycAssessment) — company-level KYC/CDD record for legal entity customers, extending the KycAssessment pattern (ENT-003) for commercial-specific requirements",
+        "new_published_events": [
+          { "event_id": "EVT-B005", "name": "BusinessKYCCleared" },
+          { "event_id": "EVT-B005R", "name": "BusinessKYCReferralRaised" },
+          { "event_id": "EVT-B005S", "name": "BusinessSanctionsHitDetected" }
+        ],
+        "new_capabilities": "Fan-out sanctions screening for company + multiple directors/UBOs in parallel; sector risk assessment; jurisdictional risk scoring; EDD trigger determination for legal entities; pKYC monitoring activation on BusinessAccountProvisioned"
+      },
+      "consumed_events": [
+        {
+          "event_id": "EVT-002",
+          "name": "IdentityVerificationCompleted",
+          "provider_service_id": "SVC-050",
+          "purpose": "JRN-001: Signals personal identity verification complete (outcome = pass). SVC-014 uses payload as PEP/sanctions/adverse media screening inputs."
+        },
+        {
+          "event_id": "EVT-B002",
+          "name": "CompaniesHouseVerified",
+          "provider_service_id": "SVC-005",
+          "purpose": "JRN-004: Company details (legal name, SIC codes, incorporation date) as CDD inputs for company-level screening."
+        },
+        {
+          "event_id": "EVT-B003",
+          "name": "UBOIdentified",
+          "provider_service_id": "SVC-005",
+          "purpose": "JRN-004: UBO details — registers individual in the BPH-005 screening queue."
+        },
+        {
+          "event_id": "EVT-B004",
+          "name": "DirectorVerified",
+          "provider_service_id": "SVC-050",
+          "purpose": "JRN-004: Verified identity data (name, DOB, nationality) for each director/UBO — triggers individual PEP/sanctions/adverse media screening."
+        },
+        {
+          "event_id": "EVT-B008",
+          "name": "BusinessAccountProvisioned",
+          "provider_service_id": "SVC-005",
+          "purpose": "JRN-004: Activates pKYC ongoing monitoring for the BusinessCustomer entity."
+        }
+      ],
+      "consumed_apis": [
+        {
+          "provider_service_id": "SVC-051",
+          "provider_service_name": "Sanctions Screening Service",
+          "call_pattern": "Synchronous (blocking per entity — parallel fan-out for JRN-004 business applications)",
+          "dependency_criticality": "hard",
+          "purpose": "SVC-014 calls SVC-051 for sanctions screening. Hard limit: 3,000ms (GOV-005-R02). JRN-004: fan-out to screen company + each director + each UBO in parallel."
+        },
+        {
+          "provider_service_id": "SVC-050",
+          "provider_service_name": "Customer Onboarding Service",
+          "call_pattern": "Asynchronous event subscription",
+          "dependency_criticality": "hard",
+          "purpose": "SVC-014 subscribes to identity verification completion events to obtain verified identity data as CDD inputs."
+        },
+        {
+          "provider_service_id": "SVC-EXT-NCA",
+          "provider_service_name": "NCA SAR Online",
+          "call_pattern": "Synchronous (blocking) — SAR submission with retry",
+          "dependency_criticality": "hard",
+          "purpose": "SVC-014 submits SARs to the NCA UKFIU via SAR Online API. Retry policy: 3 attempts with exponential backoff (1s, 2s, 4s). Fallback: MLRO manual submission via NCA web portal with manual nca_reference entry."
+        }
+      ],
+      "api_endpoints": [
+        "POST /kyc/assessments",
+        "GET /kyc/assessments/{id}",
+        "GET /kyc/assessments/customer/{customer_id}",
+        "POST /kyc/assessments/{id}/sign-off",
+        "POST /kyc/business-assessments",
+        "GET /kyc/business-assessments/{id}",
+        "GET /kyc/business-assessments/business-customer/{business_customer_id}",
+        "POST /kyc/business-assessments/{id}/sign-off",
+        "POST /sars",
+        "GET /sars/{id}",
+        "PATCH /sars/{id}",
+        "POST /sars/{id}/submit",
+        "POST /sars/{id}/consent-response",
+        "POST /investigations",
+        "GET /investigations/{id}",
+        "PATCH /investigations/{id}",
+        "POST /investigations/{id}/evidence",
+        "GET /investigations/customer/{customer_id}"
+      ],
+      "source_journeys": ["JRN-001", "JRN-003", "JRN-004", "JRN-006"],
+      "jrn006_additions": {
+        "new_consumed_events": [
+          "EVT-020 (MortgageEnquiryStarted from SVC-002) — checks if customer KYC is current; publishes KYCClearanceGranted if existing customer with valid KYC",
+          "EVT-022 (CreditCheckRequested, check_reason: full_application) — triggers AML source-of-funds check on property purchase"
+        ],
+        "note": "SVC-014 reuses existing EVT-004 (KYCClearanceGranted), EVT-005 (KYCReferralRaised), EVT-006 (SanctionsHitDetected) for JRN-006 — no new published events required."
+      }
+    },
+    {
+      "service_id": "SVC-015",
+      "name": "Compliance Core",
+      "capability_domain": "CAP-005 (Compliance & Regulatory)",
+      "tier": "T2",
+      "owned_entities": [],
+      "published_events": [],
+      "consumed_events": [
+        {
+          "event_id": "EVT-014",
+          "name": "SARInvestigationOpened",
+          "provider_service_id": "SVC-014",
+          "purpose": "SVC-015 receives this event to create an MLRO case management alert and add the investigation to the MLRO dashboard."
+        },
+        {
+          "event_id": "EVT-015",
+          "name": "SARDecisionMade",
+          "provider_service_id": "SVC-014",
+          "purpose": "SVC-015 updates the MLRO dashboard with decision status and SLA countdown timer."
+        }
+      ],
+      "consumed_apis": [
+        {
+          "provider_service_id": "SVC-014",
+          "provider_service_name": "KYC/AML Service",
+          "call_pattern": "Synchronous (blocking) — all entity reads and writes",
+          "dependency_criticality": "hard",
+          "purpose": "SVC-015 is the MLRO UI/orchestration layer. It delegates all SAR and investigation entity persistence to SVC-014. SVC-015 holds no SAR state independently."
+        }
+      ],
+      "api_endpoints": [],
+      "source_journeys": ["JRN-003"]
+    },
+    {
+      "service_id": "SVC-017",
+      "name": "Digital Channels",
+      "capability_domain": "CAP-007 (Digital Channels)",
+      "tier": "T3",
+      "owned_entities": ["ENT-006"],
+      "published_events": ["EVT-011", "EVT-013"],
+      "consumed_events": [
+        {
+          "event_id": "EVT-001",
+          "name": "ApplicationStarted",
+          "provider_service_id": "SVC-001",
+          "purpose": "SVC-017 uses this event to initialise the application flow UI and display the provisional application reference to PER-001."
+        },
+        {
+          "event_id": "EVT-002",
+          "name": "IdentityVerificationCompleted",
+          "provider_service_id": "SVC-050",
+          "purpose": "SVC-017 advances the application wizard from PH-002 to PH-003 holding screen on receipt of this event (outcome = pass)."
+        },
+        {
+          "event_id": "EVT-004",
+          "name": "KYCClearanceGranted",
+          "provider_service_id": "SVC-014",
+          "purpose": "SVC-017 advances the UI from PH-003 holding screen to PH-004 decision result screen."
+        },
+        {
+          "event_id": "EVT-005",
+          "name": "KYCReferralRaised",
+          "provider_service_id": "SVC-014",
+          "purpose": "SVC-017 displays the 'additional review required' message to PER-001 with the 3-business-day SLA and case reference."
+        },
+        {
+          "event_id": "EVT-006",
+          "name": "SanctionsHitDetected",
+          "provider_service_id": "SVC-014",
+          "purpose": "SVC-017 displays the generic decline message to PER-001 without disclosing the sanctions match (tipping-off prohibition)."
+        },
+        {
+          "event_id": "EVT-007",
+          "name": "ApplicationDecisionMade",
+          "provider_service_id": "SVC-001",
+          "purpose": "SVC-017 renders the decision result screen (approval confirmation, referral status, or decline notification with FOS signpost)."
+        },
+        {
+          "event_id": "EVT-008",
+          "name": "AccountOpened",
+          "provider_service_id": "SVC-001",
+          "purpose": "SVC-017 advances the UI to the account details confirmation screen in PH-005."
+        },
+        {
+          "event_id": "EVT-009",
+          "name": "AccountProvisioned",
+          "provider_service_id": "SVC-001",
+          "purpose": "SVC-017 confirms sort code and account number are live and advances to PH-006 digital channel activation setup."
+        },
+        {
+          "event_id": "EVT-010",
+          "name": "CardIssuanceTriggered",
+          "provider_service_id": "SVC-001",
+          "purpose": "SVC-017 displays the estimated card delivery date in PH-005/PH-007 and triggers the card dispatch notification via SVC-053."
+        }
+      ],
+      "consumed_apis": [
+        {
+          "provider_service_id": "SVC-100",
+          "provider_service_name": "Identity & Access Management",
+          "call_pattern": "Synchronous (blocking)",
+          "dependency_criticality": "hard",
+          "purpose": "SVC-017 calls SVC-100 to create credentials, register FIDO2/WebAuthn device, and verify SCA authentication on first login."
+        },
+        {
+          "provider_service_id": "SVC-001",
+          "provider_service_name": "Retail Banking Core",
+          "call_pattern": "Synchronous read; Asynchronous event subscription",
+          "dependency_criticality": "hard",
+          "purpose": "SVC-017 reads Account data from SVC-001 to render the PH-007 welcome dashboard."
+        },
+        {
+          "provider_service_id": "SVC-053",
+          "provider_service_name": "Notification Service",
+          "call_pattern": "Asynchronous (fire-and-forget with delivery confirmation)",
+          "dependency_criticality": "soft",
+          "purpose": "SVC-017 calls SVC-053 to dispatch all customer-facing communications including the welcome pack and FSCS information sheet."
+        }
+      ],
+      "api_endpoints": [
+        "POST /enrollments",
+        "GET /enrollments/{id}",
+        "GET /enrollments/customer/{customer_id}",
+        "POST /enrollments/{id}/activate",
+        "POST /welcome-pack/dispatch",
+        "POST /business-enrollments",
+        "GET /business-enrollments/{id}",
+        "GET /business-enrollments/business-customer/{business_customer_id}",
+        "POST /business-enrollments/{id}/activate",
+        "POST /business-enrollments/{id}/invite-user",
+        "POST /business-welcome-pack/dispatch"
+      ],
+      "source_journeys": ["JRN-001", "JRN-004", "JRN-010"],
+      "jrn010_additions": {
+        "channel_classification": "SVC-017 is a CHANNEL service (outside the system boundary). It is not a capability in the architectural sense. For JRN-010 it acts as the OBIE-compliant Open Banking API surface, routing consent and payment initiation calls synchronously to SVC-001 (channel → capability call — permitted). It holds no persistent domain state for JRN-010 (ENT-030 and ENT-031 owned by SVC-001).",
+        "new_consumed_events": [
+          "EVT-062 (OpenBankingPaymentCompleted from SVC-001) — updates internal payment status cache to AcceptedSettlementCompleted for TPP polling.",
+          "EVT-063 (OpenBankingPaymentFailed from SVC-001) — updates internal payment status cache to Rejected with mapped OBIE error code for TPP polling."
+        ],
+        "new_api_endpoints_exposed": [
+          "POST /domestic-payment-consents (OBIE v3.1.x)",
+          "GET /domestic-payment-consents/{ConsentId} (OBIE v3.1.x)",
+          "POST /domestic-payments (OBIE v3.1.x)",
+          "GET /domestic-payments/{DomesticPaymentId} (OBIE v3.1.x)",
+          "POST /register (DCR — RFC 7591)",
+          "GET /.well-known/openid-configuration"
+        ],
+        "new_consumed_apis": [
+          "SVC-001: POST /open-banking-consents, PATCH /open-banking-consents/{id}, POST /payments (with consent_id), GET /payments/{id} — synchronous channel → capability calls for consent management and payment initiation.",
+          "SVC-100: OAuth 2.0 authorisation server — DCR, consent authorisation redirect, SCA orchestration, token endpoint, token introspection."
+        ]
+      }
+    },
+    {
+      "service_id": "SVC-050",
+      "name": "Customer Onboarding Service",
+      "capability_domain": "CAP-005 (Compliance & Regulatory) — Shared Service SSC-001",
+      "tier": "T1",
+      "owned_entities": ["ENT-002"],
+      "published_events": ["EVT-002", "EVT-B004"],
+      "jrn004_additions": {
+        "new_published_event": "EVT-B004 (DirectorVerified) — individual identity verification completion event for business customer directors and UBOs. Carries verified identity data (name, DOB, nationality) as CDD inputs for SVC-014 individual screening. One event per individual. Replaces/parallels IdentityVerificationCompleted in the commercial onboarding context.",
+        "new_capabilities": "Multiple concurrent identity verification sessions per business application (up to 10 individuals); secure email invitation dispatch to directors/UBOs who are not the primary applicant; per-individual verification status tracking per business_application_id; context field added to ENT-002 IdentityVerification for commercial use (business_application_id, individual_type, individual_entity_id)"
+      },
+      "consumed_events": [
+        {
+          "event_id": "EVT-001",
+          "name": "ApplicationStarted",
+          "provider_service_id": "SVC-001",
+          "purpose": "JRN-001: Signals new retail application initiated. SVC-050 initialises the identity verification workflow."
+        },
+        {
+          "event_id": "EVT-007",
+          "name": "ApplicationDecisionMade",
+          "provider_service_id": "SVC-001",
+          "purpose": "JRN-001: Closes or archives the onboarding case per MLR 2017 Regulation 40."
+        },
+        {
+          "event_id": "EVT-008",
+          "name": "AccountOpened",
+          "provider_service_id": "SVC-001",
+          "purpose": "JRN-001: Marks the onboarding journey complete; closes the onboarding case."
+        },
+        {
+          "event_id": "EVT-004",
+          "name": "KYCClearanceGranted",
+          "provider_service_id": "SVC-014",
+          "purpose": "JRN-001: Marks KYC/CDD step complete; closes the identity verification orchestration session."
+        },
+        {
+          "event_id": "EVT-B001",
+          "name": "BusinessApplicationStarted",
+          "provider_service_id": "SVC-005",
+          "purpose": "JRN-004: Initialises the business onboarding case. No verification sessions created yet — created after BPH-003 UBO identification."
+        },
+        {
+          "event_id": "EVT-B003",
+          "name": "UBOIdentified",
+          "provider_service_id": "SVC-005",
+          "purpose": "JRN-004: Creates identity verification session for each UBO and dispatches secure invitation email. Primary applicant session activated immediately in-app."
+        }
+      ],
+      "consumed_apis": [
+        {
+          "provider_service_id": "SVC-051",
+          "provider_service_name": "Sanctions Screening Service",
+          "call_pattern": "Synchronous (blocking)",
+          "dependency_criticality": "hard",
+          "purpose": "SVC-050 calls SVC-051 for preliminary sanctions pre-check at the start of both retail (JRN-001) and commercial (JRN-004) onboarding workflows."
+        },
+        {
+          "provider_service_id": "SVC-014",
+          "provider_service_name": "KYC/AML Service",
+          "call_pattern": "Asynchronous (event-driven trigger)",
+          "dependency_criticality": "hard",
+          "purpose": "SVC-050 triggers SVC-014 to initiate CDD assessment via identity verification completion events (IdentityVerificationCompleted for JRN-001; DirectorVerified for JRN-004)."
+        }
+      ],
+      "api_endpoints": [
+        "POST /identity-verifications",
+        "GET /identity-verifications/{id}",
+        "GET /identity-verifications/customer/{customer_id}",
+        "POST /identity-verifications/{id}/retry",
+        "POST /identity-verifications/{id}/invite",
+        "GET /identity-verifications/business-application/{application_id}",
+        "GET /identity-verifications/business-application/{application_id}/status"
+      ],
+      "source_journeys": ["JRN-001", "JRN-004"]
+    },
+    {
+      "service_id": "SVC-051",
+      "name": "Sanctions Screening Service",
+      "capability_domain": "CAP-005 (Compliance & Regulatory) — Shared Service SSC-002",
+      "tier": "T1",
+      "owned_entities": [],
+      "owned_entities_note": "SVC-051 owns no entities. It is a stateless synchronous screening API. The sanctions_screening_result produced by SVC-051 is persisted within KycAssessment.sanctions_screening_result (owned by SVC-014).",
+      "published_events": ["EVT-SVC051-001", "EVT-P02"],
+      "published_events_detail": [
+        {
+          "event_name": "SanctionsListUpdated",
+          "trigger": "SVC-051 receives an updated sanctions list from ComplyAdvantage / Refinitiv World-Check (OFSI, OFAC, UN, EU lists refreshed).",
+          "payload_summary": "update_id, lists_updated, updated_at, record_count_delta",
+          "consumers": ["SVC-014", "SVC-103"]
+        },
+        {
+          "event_name": "SanctionsScreeningCompleted (EVT-P02)",
+          "trigger": "SVC-051 completes a real-time sanctions screen triggered by consuming PaymentIntentCreated (EVT-P01). JRN-002 only.",
+          "payload_summary": "screening_result_id, payment_intent_id, customer_id, payee details, outcome (clear | hit | error), lists_screened, screened_at",
+          "consumers": ["SVC-001", "SVC-103"]
+        }
+      ],
+      "consumed_events": [
+        {
+          "event_id": "EVT-P01",
+          "name": "PaymentIntentCreated",
+          "provider_service_id": "SVC-001",
+          "purpose": "JRN-002: Triggers real-time sanctions screen against payee details. Result published as SanctionsScreeningCompleted."
+        },
+        {
+          "event_id": "EVT-P05",
+          "name": "PaymentExecuted",
+          "provider_service_id": "SVC-009",
+          "purpose": "JRN-002: Writes confirmed FPS execution to OFSI audit log per GOV-005-R02."
+        }
+      ],
+      "consumed_apis": [
+        {
+          "provider_service_id": "SVC-103",
+          "provider_service_name": "Audit & Logging",
+          "call_pattern": "Synchronous write (fire-and-forget after result returned to caller)",
+          "dependency_criticality": "hard",
+          "purpose": "Every screening decision is immutably logged to SVC-103. OFSI requires an audit log of all sanctions screening decisions."
+        }
+      ],
+      "api_endpoints": [
+        "POST /screen",
+        "GET /lists",
+        "GET /lists/{list_name}/last-updated"
+      ],
+      "source_journeys": ["JRN-001", "JRN-002"]
+    },
+    {
+      "service_id": "SVC-009",
+      "name": "Domestic Payments",
+      "capability_domain": "CAP-003 (Payment Operations)",
+      "tier": "T2",
+      "is_new_service": true,
+      "new_service_introduced_by": "JRN-002",
+      "owned_entities": ["ENT-009", "ENT-045", "ENT-034", "ENT-035"],
+      "jrn012_additions": {
+        "new_owned_entities": [
+          "ENT-034 (DirectDebitInstruction) — BACS DDI lifecycle entity introduced by JRN-012",
+          "ENT-035 (DirectDebitCollection) — individual BACS collection event entity introduced by JRN-012"
+        ],
+        "new_published_events": [
+          { "event_id": "EVT-069", "name": "DirectDebitInstructionCreated" },
+          { "event_id": "EVT-070", "name": "DirectDebitInstructionValidated" },
+          { "event_id": "EVT-071", "name": "DirectDebitCollectionSubmitted" },
+          { "event_id": "EVT-072", "name": "DirectDebitCollectionProcessed" },
+          { "event_id": "EVT-073", "name": "DirectDebitCollectionReturned" },
+          { "event_id": "EVT-074", "name": "DirectDebitIndemnityClaimFiled" }
+        ],
+        "new_consumed_events": [
+          { "event_id": "EVT-AccountDebited", "name": "AccountDebited (DD variant)", "provider_service_id": "SVC-001", "purpose": "D-0 collection confirmation: SVC-001 has debited the account. SVC-009 updates ENT-035.status = collected and publishes EVT-072." },
+          { "event_id": "EVT-DirectDebitInsufficientFunds", "name": "DirectDebitInsufficientFunds", "provider_service_id": "SVC-001", "purpose": "D-0 balance check failure: SVC-009 creates ARUDD return, updates ENT-035.status = returned, publishes EVT-073." },
+          { "event_id": "EVT-AccountCredited", "name": "AccountCredited (DD indemnity)", "provider_service_id": "SVC-001", "purpose": "Confirms indemnity credit processed. SVC-009 initiates BACS indemnity recovery from originator and submits AUDDIS 0C if cancellation requested." }
+        ],
+        "new_api_endpoints": [
+          "POST /v1/direct-debits",
+          "GET /v1/direct-debits",
+          "GET /v1/direct-debits/{ddi_id}",
+          "DELETE /v1/direct-debits/{ddi_id}",
+          "GET /v1/direct-debits/{ddi_id}/collections",
+          "POST /v1/direct-debits/{ddi_id}/indemnity-claim"
+        ],
+        "bacs_connectivity_added": "AUDDIS (0N new instruction, 0C cancellation), BACS collection file processing, ARUDD returns, BACS indemnity claim scheme interactions. Added to existing Form3/Bottomline PTX connectivity layer."
+      },
+      "jrn005_additions": {
+        "new_owned_entity": "ENT-045 (ReimbursementClaim) — tracks the 50/50 PSR cost split between sending bank and receiving PSP. Owned by SVC-009 because it is a Pay.UK scheme interaction artefact. SVC-009 submits recovery claims to the receiving PSP via the Pay.UK reimbursement API.",
+        "new_published_events": [
+          { "event_id": "EVT-095", "name": "RecoveryInitiated" },
+          { "event_id": "EVT-096", "name": "RecoveryCompleted" }
+        ],
+        "new_consumed_events": [
+          { "event_id": "EVT-092", "name": "FraudReimbursementApproved", "provider_service_id": "SVC-013", "purpose": "Triggers ReimbursementClaim creation. SVC-009 reads receiving_sort_code and fps_reference from the event payload. Creates ReimbursementClaim (ENT-045). Submits recovery claim to receiving PSP via Pay.UK reimbursement API. Publishes RecoveryInitiated (EVT-095)." }
+        ],
+        "new_api_endpoints": [
+          "POST /reimbursement-claims",
+          "GET /reimbursement-claims/{claim_id}",
+          "GET /reimbursement-claims/case/{case_id}",
+          "PATCH /reimbursement-claims/{claim_id}"
+        ],
+        "pay_uk_reimbursement_integration": "Pay.UK APP fraud reimbursement API added to existing Form3/Bottomline PTX scheme connectivity. SVC-009 orchestration layer extended; connectivity vendor handles scheme protocol."
+      },
+      "published_events": ["EVT-P05", "EVT-P07", "EVT-095", "EVT-096", "EVT-069", "EVT-070", "EVT-071", "EVT-072", "EVT-073", "EVT-074"],
+      "consumed_events": [
+        {
+          "event_id": "EVT-P04",
+          "name": "PaymentCleared",
+          "provider_service_id": "SVC-001",
+          "purpose": "Triggers FPS execution. SVC-009 constructs ISO 20022 pacs.008 and submits to Pay.UK/Vocalink. Creates PaymentExecution (ENT-009). On acceptance: publishes PaymentExecuted (EVT-P05). On rejection after retries: publishes PaymentFailed (EVT-P07)."
+        },
+        {
+          "event_id": "EVT-092",
+          "name": "FraudReimbursementApproved",
+          "provider_service_id": "SVC-013",
+          "purpose": "JRN-005: Triggers ReimbursementClaim (ENT-045) creation and Pay.UK recovery claim submission. SVC-009 reads receiving_sort_code and fps_reference from event payload."
+        }
+      ],
+      "consumed_apis": [],
+      "api_endpoints": [
+        "POST /cop/verify",
+        "GET /executions/{payment_execution_id}",
+        "POST /reimbursement-claims",
+        "GET /reimbursement-claims/{claim_id}",
+        "GET /reimbursement-claims/case/{case_id}",
+        "PATCH /reimbursement-claims/{claim_id}"
+      ],
+      "fps_connectivity": {
+        "scheme": "FPS (Faster Payments Service)",
+        "operator": "Pay.UK / Vocalink",
+        "message_format": "ISO 20022 pacs.008 (FIToFICustomerCreditTransfer)",
+        "build_vs_buy": "Buy candidate — Form3 or Bottomline PTX managed connectivity layer. SVC-009 is the bank-owned orchestration wrapper.",
+        "cop_proxy": "SVC-009 proxies CoP requests to Pay.UK CoP service. Channel calls SVC-009 — never Pay.UK directly."
+      },
+      "source_journeys": ["JRN-002", "JRN-005", "JRN-012"]
+    },
+    {
+      "service_id": "SVC-013",
+      "name": "Fraud Detection",
+      "capability_domain": "CAP-004 (Fraud Detection — promoted standalone capability)",
+      "tier": "T1",
+      "is_new_service": true,
+      "new_service_introduced_by": "JRN-002",
+      "owned_entities": ["ENT-043", "ENT-044"],
+      "owned_entities_note": "JRN-002: SVC-013 owned no entities — fraud scores were provided via FraudScoreCompleted event and persisted on ENT-008 (PaymentIntent) by SVC-001. JRN-005: SVC-013 extended to full fraud case management service. New entities: ENT-043 (FraudCase) and ENT-044 (FraudEvidence).",
+      "published_events": ["EVT-P03", "EVT-090", "EVT-091", "EVT-092", "EVT-093", "EVT-097", "EVT-098"],
+      "jrn005_additions": {
+        "new_owned_entities": ["ENT-043", "ENT-044"],
+        "new_published_events": [
+          { "event_id": "EVT-090", "name": "FraudCaseCreated" },
+          { "event_id": "EVT-091", "name": "FraudInvestigationStarted" },
+          { "event_id": "EVT-092", "name": "FraudReimbursementApproved" },
+          { "event_id": "EVT-093", "name": "FraudReimbursementDeclined" },
+          { "event_id": "EVT-097", "name": "FraudCaseClosed" },
+          { "event_id": "EVT-098", "name": "FraudPatternDetected" }
+        ],
+        "new_api_endpoints": [
+          "POST /fraud-cases",
+          "GET /fraud-cases/{id}",
+          "GET /fraud-cases/customer/{customer_id}",
+          "PATCH /fraud-cases/{id}",
+          "POST /fraud-cases/{id}/decision",
+          "POST /fraud-cases/{id}/evidence",
+          "GET /fraud-cases/{id}/evidence",
+          "GET /fraud-cases/{id}/evidence/{evidence_id}"
+        ],
+        "new_consumed_events_cross_capability": [
+          { "provider": "SVC-001", "purpose": "Receive PaymentIntent and Customer data during investigation via FraudDataProvided event response", "pattern": "Async event response via Event Bus (SVC-102) — cross-capability CAP-004→CAP-001 synchronous calls prohibited" },
+          { "provider": "SVC-009", "purpose": "Receive PaymentExecution data during investigation via FraudPaymentExecutionProvided event response", "pattern": "Async event response via Event Bus (SVC-102) — cross-capability CAP-004→CAP-003 synchronous calls prohibited" }
+        ],
+        "new_consumed_apis": [
+          { "provider": "SVC-017", "purpose": "Read device/session data during investigation", "pattern": "Synchronous read (platform service — permitted)" },
+          { "provider": "SVC-EXT-CIFAS", "purpose": "Cifas National Fraud Database mule account checks", "pattern": "Synchronous external API" }
+        ]
+      },
+      "consumed_events": [
+        {
+          "event_id": "EVT-P01",
+          "name": "PaymentIntentCreated",
+          "provider_service_id": "SVC-001",
+          "purpose": "JRN-002: Triggers ML fraud scoring. Publishes FraudScoreCompleted (EVT-P03) with risk_score, risk_level, top_risk_features, and model_version. P99 < 500ms."
+        },
+        {
+          "event_id": "EVT-P08",
+          "name": "PaymentFraudBlocked",
+          "provider_service_id": "SVC-001",
+          "purpose": "JRN-002 + JRN-005: JRN-002: Creates fraud operations platform case. JRN-005: Auto-creates FraudCase (ENT-043) with trigger_type = realtime_block, total_loss_amount = 0.00."
+        }
+      ],
+      "consumed_events_cross_capability": [
+        {
+          "provider_service_id": "SVC-001",
+          "provider_service_name": "Retail Banking Core",
+          "call_pattern": "Async event response via Event Bus (SVC-102)",
+          "dependency_criticality": "soft",
+          "purpose": "JRN-005: Receive PaymentIntent (cop_result, fraud_score) and Customer (vulnerability context) via FraudDataProvided event during case creation. Cross-capability boundary: CAP-004 must not call CAP-001 synchronously. Read-only — SVC-013 never writes to SVC-001 entities."
+        },
+        {
+          "provider_service_id": "SVC-009",
+          "provider_service_name": "Domestic Payments",
+          "call_pattern": "Async event response via Event Bus (SVC-102)",
+          "dependency_criticality": "soft",
+          "purpose": "JRN-005: Receive PaymentExecution (fps_reference, receiving_sort_code) via FraudPaymentExecutionProvided event during investigation. Cross-capability boundary: CAP-004 must not call CAP-003 synchronously."
+        },
+        {
+          "provider_service_id": "SVC-017",
+          "provider_service_name": "Digital Channels",
+          "call_pattern": "Synchronous read (platform service — cross-capability sync to platform services permitted)",
+          "dependency_criticality": "soft",
+          "purpose": "JRN-005: Read device data and session metadata for fraud evidence collection."
+        }
+      ],
+      "api_endpoints": [
+        "POST /fraud-cases",
+        "GET /fraud-cases/{id}",
+        "GET /fraud-cases/customer/{customer_id}",
+        "PATCH /fraud-cases/{id}",
+        "POST /fraud-cases/{id}/decision",
+        "POST /fraud-cases/{id}/evidence",
+        "GET /fraud-cases/{id}/evidence",
+        "GET /fraud-cases/{id}/evidence/{evidence_id}"
+      ],
+      "source_journeys": ["JRN-002", "JRN-005"]
+    },
+    {
+      "service_id": "SVC-012",
+      "name": "Risk Engine",
+      "capability_domain": "CAP-004 (Risk Management)",
+      "tier": "T2",
+      "description": "Credit scoring, IRB risk parameter calculation, and IFRS 9 ECL computation for lending products. JRN-006: retail mortgage credit bureau checks. JRN-007: commercial IRB PD/LGD/EAD/ECL scoring for SME term loans. JRN-008: personal credit card hard credit check (EVT-041/EVT-042). All communication with other capability services is async-only — no synchronous API exposed to external services.",
+      "owned_entities": ["ENT-018"],
+      "published_events": ["EVT-023", "EVT-033", "EVT-042"],
+      "consumed_events": [
+        {
+          "event_id": "EVT-022",
+          "name": "CreditCheckRequested",
+          "provider_service_id": "SVC-002",
+          "purpose": "JRN-006: Receives credit check request from SVC-002 (Mortgage Service). Calls credit bureau with customer identity data. Publishes CreditCheckCompleted (EVT-023)."
+        },
+        {
+          "event_id": "EVT-041",
+          "name": "CreditCheckRequested",
+          "provider_service_id": "SVC-003",
+          "purpose": "JRN-008 PH-024: Receives hard credit check request from SVC-003 (Credit Card Service). Calls credit bureau (hard search — bureau footprint recorded). Runs internal credit scoring model. Derives recommended_credit_limit from income_declared and bureau data. Publishes EVT-042 CreditCheckCompleted with outcome, risk_band, recommended_limit, and credit_assessment_reference. Idempotent on application_id + check_type."
+        },
+        {
+          "event_id": "EVT-032",
+          "name": "CreditAssessmentRequested",
+          "provider_service_id": "SVC-005",
+          "purpose": "JRN-007 PH-018: Receives cross-capability credit assessment request from SVC-005. Runs IRB PD/LGD/EAD/ECL models on the SME loan application. Creates ENT-018 (CreditAssessment). Publishes EVT-033 (CreditAssessmentCompleted)."
+        },
+        {
+          "event_id": "EVT-037",
+          "name": "LoanDrawnDown",
+          "provider_service_id": "SVC-005",
+          "purpose": "JRN-007 PH-021: Updates Basel 3.1 RWA register with new drawn exposure. Books IFRS 9 ECL provision at loan inception."
+        },
+        {
+          "event_id": "EVT-038",
+          "name": "LoanAccountOpened",
+          "provider_service_id": "SVC-005",
+          "purpose": "JRN-007 PH-021: Adds loan to active credit portfolio register. Initiates periodic IFRS 9 ECL re-assessment schedule."
+        },
+        {
+          "event_id": "EVT-039",
+          "name": "CovenantBreachDetected",
+          "provider_service_id": "SVC-005",
+          "purpose": "JRN-007 PH-022: Triggers IFRS 9 SICR re-assessment. Evaluates whether the breach warrants stage migration from Stage 1 to Stage 2/Stage 3. Updates ECL provision."
+        }
+      ],
+      "consumed_apis": [
+        {
+          "provider_service_id": "EXT-CREDIT-BUREAU",
+          "provider_service_name": "Credit Bureau (Experian/Equifax/TransUnion)",
+          "call_pattern": "Synchronous (blocking — external API call). Timeout: 10s. Retry: 2 attempts with 2s backoff.",
+          "dependency_criticality": "hard",
+          "purpose": "JRN-006: SVC-012 calls the credit bureau for retail mortgage soft/hard credit checks. JRN-008: SVC-012 calls the credit bureau for personal credit card hard credit checks (EVT-041 triggers). JRN-007: credit bureau is NOT called for commercial IRB scoring — commercial scoring uses internal financial statement data via SVC-104 Data Platform."
+        }
+      ],
+      "api_endpoints": [],
+      "cross_capability_note": "SVC-012 has no synchronous API exposed to external services — all interactions are event-driven. CAP-001 (mortgage) uses EVT-022/EVT-023. CAP-001 (credit card) uses EVT-041/EVT-042. CAP-002 uses EVT-032/EVT-033. No service may call SVC-012 synchronously.",
+      "source_journeys": ["JRN-006", "JRN-007", "JRN-008"],
+      "jrn007_additions": {
+        "new_owned_entity": "ENT-018 (CreditAssessment) — IRB credit risk assessment record with PD, LGD, EAD, ECL and committee decision. Owned by SVC-012/CAP-004; SVC-005 holds only the assessment_id reference.",
+        "new_published_event": "EVT-033 (CreditAssessmentCompleted) — publishes IRB scoring results to commercial.credit-assessments topic. Consumed by SVC-005 to continue origination workflow.",
+        "new_consumed_events": "EVT-032, EVT-037, EVT-038, EVT-039 from SVC-005 (CAP-002). All cross-capability async."
+      }
+    },
+    {
+      "service_id": "SVC-010",
+      "name": "International Payments",
+      "capability_domain": "CAP-003 (Payment Operations — International Payments, promoted sub-capability CAP-003.04)",
+      "tier": "T2",
+      "is_new_service": true,
+      "new_service_introduced_by": "JRN-009",
+      "description": "Owns the end-to-end international wire transfer lifecycle (JRN-009). Promoted sub-capability of CAP-003. Same-capability peer to SVC-009 — may call SVC-009 directly for nostro settlement mechanics. Communicates with SVC-005 (CAP-002), SVC-051 (CAP-005), and SVC-013 (CAP-004) exclusively via async events through SVC-102.",
+      "owned_entities": ["ENT-026", "ENT-027", "ENT-028", "ENT-029"],
+      "published_events": ["EVT-049", "EVT-050", "EVT-053", "EVT-054", "EVT-055", "EVT-056", "EVT-057"],
+      "consumed_events": [
+        {
+          "event_id": "EVT-051",
+          "name": "TransferSanctionsScreened",
+          "provider_service_id": "SVC-051",
+          "purpose": "JRN-009 PH-031: Receives consolidated sanctions screening outcome for beneficiary and correspondent chain. If hit: sets InternationalTransfer.status = sanctions_blocked; publishes TransferFailed (EVT-057). If clear: waits for EVT-052 (correlation map on transfer_id)."
+        },
+        {
+          "event_id": "EVT-052",
+          "name": "TransferFraudScored",
+          "provider_service_id": "SVC-013",
+          "purpose": "JRN-009 PH-031: Receives corporate wire fraud score. If block: sets InternationalTransfer.status = fraud_blocked; publishes TransferFailed (EVT-057). If non-block: waits for EVT-051. Correlation map keyed on transfer_id — both events required before publishing TransferCleared (EVT-053)."
+        }
+      ],
+      "consumed_apis": [
+        {
+          "provider_service_id": "SVC-009",
+          "provider_service_name": "Domestic Payments",
+          "call_pattern": "Synchronous (direct API — same-capability CAP-003 permitted)",
+          "dependency_criticality": "soft",
+          "purpose": "Nostro account settlement mechanics. Same-capability direct call. Not on critical path for customer-facing transfer outcome."
+        },
+        {
+          "provider_service_id": "SVC-053",
+          "provider_service_name": "Notification Service",
+          "call_pattern": "Asynchronous (fire-and-forget with delivery confirmation)",
+          "dependency_criticality": "soft",
+          "purpose": "Dispatch customer notifications: FX quote, transfer confirmation, decline (generic), completion."
+        },
+        {
+          "provider_service_id": "SWIFT-SAA",
+          "provider_service_name": "SWIFT Alliance Access (SAA Cloud)",
+          "call_pattern": "Synchronous submission; asynchronous gpi tracker callbacks",
+          "dependency_criticality": "hard",
+          "purpose": "Submit pacs.008 to SWIFT network. Receive gpi ACSP and ACCC status updates via webhooks."
+        },
+        {
+          "provider_service_id": "FX-PRICING-ENGINE",
+          "provider_service_name": "Internal FX Pricing Engine",
+          "call_pattern": "Synchronous (blocking at PH-030, intra-capability)",
+          "dependency_criticality": "hard",
+          "purpose": "Obtain indicative or firm FX rate for cross-currency transfers. Timeout: 1 second."
+        },
+        {
+          "provider_service_id": "SVC-100",
+          "provider_service_name": "Identity & Access Management",
+          "call_pattern": "Synchronous (blocking for SCA validation)",
+          "dependency_criticality": "hard",
+          "purpose": "Validate FIDO2/WebAuthn SCA assertion with dynamic linking (beneficiary IBAN, amount, currency) at PH-029."
+        }
+      ],
+      "api_endpoints": [
+        "POST /international-transfers",
+        "GET /international-transfers/{id}",
+        "POST /international-transfers/{id}/cancel",
+        "GET /international-transfers/{id}/tracking",
+        "POST /fx-quotations/{id}/accept",
+        "GET /fx-quotations/{id}"
+      ],
+      "jrn014_additions": {
+        "new_consumed_events": [
+          {
+            "event_id": "EVT-086",
+            "name": "FXTradeConfirmed",
+            "provider_service_id": "SVC-007",
+            "purpose": "JRN-014 PH-062: SVC-010 consumes FXTradeConfirmed to transmit SWIFT MT300 trade confirmation to the corporate client and counterparty bank. Idempotent on trade_id."
+          },
+          {
+            "event_id": "EVT-087",
+            "name": "FXSettlementInitiated",
+            "provider_service_id": "SVC-007",
+            "purpose": "JRN-014 PH-063: SVC-010 consumes FXSettlementInitiated on value_date (T+2) to execute nostro-to-nostro FX settlement. Reads buy_leg_nostro and sell_leg_nostro BICs from payload, constructs SWIFT MT300 settlement instruction or pacs.009 (CLS). Publishes EVT-088 (FXSettlementCompleted) on success. Idempotent on settlement_id."
+          }
+        ],
+        "new_published_events": [
+          { "event_id": "EVT-088", "name": "FXSettlementCompleted" }
+        ],
+        "note": "JRN-014 adds SVC-007 (Treasury Services) as a promoted sub-capability peer within CAP-002. SVC-010 receives FX trade settlement instructions from SVC-007 via cross-capability events only — no synchronous calls cross the CAP-002/CAP-003 boundary. SVC-010 owns no new entities for JRN-014."
+      },
+      "source_journeys": ["JRN-009", "JRN-014"]
+    },
+    {
+      "service_id": "SVC-005",
+      "name": "Commercial Banking Core",
+      "capability_domain": "CAP-002 (Commercial Banking)",
+      "tier": "T2",
+      "source_journeys": ["JRN-004", "JRN-007", "JRN-009", "JRN-013", "JRN-014"],
+      "jrn009_additions": {
+        "new_consumed_events": [
+          {
+            "event_id": "EVT-054",
+            "name": "SWIFTMessageSent",
+            "provider_service_id": "SVC-010",
+            "purpose": "JRN-009 PH-033: SVC-005 consumes SWIFTMessageSent to debit BusinessAccount.balance by InternationalTransfer.gbp_equivalent. Idempotent on transfer_id. Cross-capability async event from CAP-003 to CAP-002."
+          }
+        ],
+        "note": "SVC-005 owns no new entities for JRN-009. The account debit is triggered by EVT-054 consumption. SVC-005 never calls SVC-010 — all interaction is event-driven."
+      },
+      "jrn014_additions": {
+        "new_consumed_events": [
+          {
+            "event_id": "EVT-085",
+            "name": "FXTradeExecuted",
+            "provider_service_id": "SVC-007",
+            "purpose": "JRN-014 PH-061: SVC-005 updates BusinessCustomer FX exposure summary (notional equivalent GBP) for internal credit risk monitoring. Informational — does not gate any operation."
+          }
+        ],
+        "new_api_endpoints_called_by_svc007": [
+          "GET /business-customers/{id} — PH-059: SVC-007 validates BusinessCustomer.status = active before creating FXTrade",
+          "GET /business-accounts/{id} — PH-061: SVC-007 checks sell-currency account balance before trade booking",
+          "POST /business-accounts/{id}/debit — PH-063: SVC-007 debits sell-currency account at settlement",
+          "POST /business-accounts/{id}/credit — PH-063: SVC-007 credits buy-currency account at settlement"
+        ],
+        "note": "JRN-014 adds SVC-007 (Treasury Services) as a promoted sub-capability peer within CAP-002. SVC-007 calls SVC-005 synchronously (same-capability) for customer/account reads and settlement debits/credits. SVC-005 owns no new entities for JRN-014."
+      }
+    },
+    {
+      "service_id": "SVC-051",
+      "name": "Sanctions Screening Service",
+      "capability_domain": "CAP-005 (Compliance & Regulatory) — Shared Service SSC-002",
+      "tier": "T1",
+      "source_journeys": ["JRN-001", "JRN-002", "JRN-009"],
+      "jrn009_additions": {
+        "new_published_events": [
+          { "event_id": "EVT-051", "name": "TransferSanctionsScreened" }
+        ],
+        "new_consumed_events": [
+          { "event_id": "EVT-049", "name": "InternationalTransferInitiated", "provider_service_id": "SVC-010", "purpose": "JRN-009 PH-031: Triggers multi-entity sanctions fan-out screening: beneficiary name/IBAN/BIC + all correspondent chain BICs. Consolidated outcome published as EVT-051." }
+        ],
+        "capability_extension_note": "JRN-009 extends SVC-051 with multi-entity fan-out screening (up to 6 entities per transfer). No schema change to external EVT-051 event structure. Internal parallelism added to SVC-051 screening execution."
+      }
+    },
+    {
+      "service_id": "SVC-013",
+      "name": "Fraud Detection",
+      "capability_domain": "CAP-004 (Fraud Detection — promoted standalone capability)",
+      "tier": "T1",
+      "source_journeys": ["JRN-002", "JRN-005", "JRN-009"],
+      "jrn009_additions": {
+        "new_published_events": [
+          { "event_id": "EVT-052", "name": "TransferFraudScored" }
+        ],
+        "new_consumed_events": [
+          { "event_id": "EVT-049", "name": "InternationalTransferInitiated", "provider_service_id": "SVC-010", "purpose": "JRN-009 PH-031: Triggers corporate wire fraud ML scoring. Model trained on international wire patterns (distinct from retail FPS fraud model). Publishes EVT-052 (TransferFraudScored)." }
+        ],
+        "capability_extension_note": "JRN-009 adds a corporate wire fraud scoring model to SVC-013, extending the service beyond its existing retail FPS (JRN-002) and APP fraud investigation (JRN-005) capabilities. No new owned entities."
+      },
+      "jrn011_additions": {
+        "new_published_events": [
+          { "event_id": "EVT-068", "name": "SuspiciousCardActivityDetected" }
+        ],
+        "new_consumed_events": [
+          { "event_id": "EVT-065", "name": "CardAuthorisationCompleted", "provider_service_id": "SVC-011", "purpose": "JRN-011 PH-044: Post-authorisation fraud pattern learning. Updates velocity counters and cardholder behaviour model for card_number_token. Evaluates cross-transaction geographic and velocity patterns. Publishes EVT-068 if suspicious pattern detected." },
+          { "event_id": "EVT-066", "name": "CardAuthorisationDeclined", "provider_service_id": "SVC-011", "purpose": "JRN-011 PH-044: Decline pattern analysis. High decline rates signal card testing attacks. Contributes to SVC-013 decline velocity counters per card_number_token." }
+        ],
+        "source_journeys": ["JRN-002", "JRN-005", "JRN-009", "JRN-011"],
+        "capability_extension_note": "JRN-011 extends SVC-013 with card authorisation post-auth fraud pattern detection. SVC-013 does NOT participate in the real-time authorisation path (< 500ms constraint prohibits it). All fraud detection for JRN-011 is post-authorisation async. New event EVT-068 (SuspiciousCardActivityDetected) added — reuses existing FraudCase (ENT-043) entity from JRN-005 for fraud case creation."
+      }
+    },
+    {
+      "service_id": "SVC-011",
+      "name": "Card Processing Service",
+      "capability_domain": "CAP-003 (Payment Operations — Card Processing sub-capability CAP-003.05, promoted)",
+      "tier": "T3",
+      "is_new_service": true,
+      "new_service_introduced_by": "JRN-011",
+      "pci_scope": true,
+      "pci_scope_note": "SVC-011 is the PCI DSS Cardholder Data Environment (CDE) boundary. HSM-backed PAN tokenisation vault, card scheme host gateway (ISO 8583/ISO 20022), authorisation decision engine, and local balance/fraud rules cache are all within the PCI CDE. All other services are out of PCI CDE scope.",
+      "description": "Owns the end-to-end card authorisation and settlement lifecycle (JRN-011). Promoted sub-capability of CAP-003. Provides real-time card authorisation decisions within the Visa/Mastercard 500ms SLA using a local cache of balance, card status, and fraud rules — no synchronous cross-capability calls in the authorisation path. Communicates with SVC-001 (debit balance reservation), SVC-003 (credit balance reservation), and SVC-013 (fraud pattern learning) exclusively via async events through SVC-102. May call SVC-009 (Domestic Payments, same CAP-003 capability) synchronously for settlement funds movement.",
+      "owned_entities": ["ENT-032", "ENT-033"],
+      "published_events": ["EVT-064", "EVT-065", "EVT-066", "EVT-067"],
+      "consumed_events": [
+        {
+          "event_id": "EVT-068",
+          "name": "SuspiciousCardActivityDetected",
+          "provider_service_id": "SVC-013",
+          "purpose": "JRN-011 PH-044: If recommended_action = block_card, SVC-011 immediately updates the local card status cache for card_number_token to suspended_fraud_investigation. Subsequent authorisation requests for the card are declined until PER-054 releases the block."
+        }
+      ],
+      "consumed_apis": [
+        {
+          "provider_service_id": "SVC-009",
+          "provider_service_name": "Domestic Payments",
+          "call_pattern": "Synchronous (intra-capability — both within CAP-003)",
+          "dependency_criticality": "soft",
+          "purpose": "JRN-011 PH-045 (batch): Settlement funds movement via BACS/CHAPS. Not in real-time authorisation path."
+        },
+        {
+          "provider_service_id": "EXT-CARD-SCHEME-VISA",
+          "provider_service_name": "Visa Card Scheme Network",
+          "call_pattern": "Synchronous bidirectional (ISO 8583 / ISO 20022)",
+          "dependency_criticality": "hard",
+          "purpose": "Auth request/response (PH-041/PH-043) and clearing file ingestion (PH-045)"
+        },
+        {
+          "provider_service_id": "EXT-CARD-SCHEME-MC",
+          "provider_service_name": "Mastercard Card Scheme Network",
+          "call_pattern": "Synchronous bidirectional (ISO 8583 / ISO 20022)",
+          "dependency_criticality": "hard",
+          "purpose": "Auth request/response (PH-041/PH-043) and clearing file ingestion (PH-045)"
+        }
+      ],
+      "api_endpoints": [
+        "GET /card-authorisations/{auth_id}",
+        "GET /card-authorisations/card/{card_number_token}",
+        "PATCH /card-status/{card_number_token}",
+        "GET /card-status/{card_number_token}",
+        "GET /card-settlements/{settlement_id}",
+        "GET /card-settlements/unmatched",
+        "POST /card-settlements/unmatched/{item_id}/match"
+      ],
+      "source_journeys": ["JRN-011"],
+      "jrn011_note": "SVC-011 is a new service introduced by JRN-011. It wraps a card processing platform (GPS or Marqeta as buy candidate, per CAP-003 build-vs-buy decision DD-002). SVC-011 owns the local authorisation cache (Redis Cluster) that holds balance, card status, and fraud rules for sub-500ms decision making."
+    },
+    {
+      "service_id": "SVC-001",
+      "name": "Retail Banking Core",
+      "capability_domain": "CAP-001 (Retail Banking)",
+      "tier": "T2",
+      "source_journeys": ["JRN-001", "JRN-002", "JRN-003", "JRN-005", "JRN-006", "JRN-010", "JRN-011"],
+      "jrn011_additions": {
+        "new_consumed_events": [
+          { "event_id": "EVT-065", "name": "CardAuthorisationCompleted", "provider_service_id": "SVC-011", "purpose": "JRN-011 PH-044 (debit cards only): Decrements Account.available_balance by billing_amount_gbp. Creates internal balance reservation keyed on auth_id. Idempotent on auth_id. P99 < 2 seconds." },
+          { "event_id": "EVT-067", "name": "CardSettlementProcessed", "provider_service_id": "SVC-011", "purpose": "JRN-011 PH-045 (debit cards only): Posts final debit of settlement_amount to Account ledger. Releases balance reservation from EVT-065. Handles amount variance between authorisation and settlement. Idempotent on settlement_id." }
+        ],
+        "note": "SVC-001 adds no new owned entities for JRN-011. The available_balance field on ENT-004 (Account) is updated by this journey, consistent with ENT-004 design. SVC-001 filters EVT-065/EVT-067 on card_type = debit."
+      }
+    },
+    {
+      "service_id": "SVC-003",
+      "name": "Credit Card Service",
+      "capability_domain": "CAP-001 (Retail Banking — Credit Cards sub-capability, promoted)",
+      "tier": "T2",
+      "source_journeys": ["JRN-008", "JRN-011"],
+      "jrn011_additions": {
+        "new_consumed_events": [
+          { "event_id": "EVT-065", "name": "CardAuthorisationCompleted", "provider_service_id": "SVC-011", "purpose": "JRN-011 PH-044 (credit cards only): Decrements CreditCardAccount.available_balance by billing_amount_gbp. Creates internal balance reservation keyed on auth_id. Idempotent on auth_id. Exercises DD-ENT023-03 (available_balance as cached field for real-time auth). P99 < 2 seconds." },
+          { "event_id": "EVT-067", "name": "CardSettlementProcessed", "provider_service_id": "SVC-011", "purpose": "JRN-011 PH-045 (credit cards only): Posts final debit of settlement_amount to CreditCardAccount statement balance. Releases balance reservation from EVT-065. Idempotent on settlement_id." }
+        ],
+        "note": "SVC-003 adds no new owned entities for JRN-011. JRN-011 is the primary journey that exercises the CreditCardAccount.available_balance cache (ENT-023 DD-ENT023-03). SVC-003 filters EVT-065/EVT-067 on card_type = credit."
+      }
+    },
+    {
+    "service_id": "SVC-006",
+    "name": "Trade Finance Service",
+    "capability_domain": "CAP-002 (Commercial Banking — Trade Finance sub-capability, CAP-002.03, PROMOTED)",
+    "tier": "T3",
+    "is_new_service": true,
+    "new_service_introduced_by": "JRN-013",
+    "description": "Owns the end-to-end Letter of Credit lifecycle (JRN-013). Promoted sub-capability of CAP-002. Same-capability peer to SVC-005 — may call SVC-005 directly for facility checks and settlement account debits. Communicates with SVC-051 (CAP-005 — sanctions screening on beneficiary and goods) and SVC-010 (CAP-003 — SWIFT MT700/MT202 messaging) exclusively via async events through SVC-102. Enforces UCP 600 5-banking-day document examination deadline (Article 14(b)) as a hard system constraint. ETDA 2023 compliant electronic LC issuance supported.",
+    "owned_entities": ["ENT-036", "ENT-037", "ENT-038", "ENT-039"],
+    "published_events": ["EVT-075", "EVT-076", "EVT-078", "EVT-079", "EVT-080", "EVT-081", "EVT-082"],
+    "consumed_events": [
+      {
+        "event_id": "EVT-077",
+        "name": "LCComplianceCleared",
+        "provider_service_id": "SVC-051",
+        "purpose": "JRN-013 PH-054: Gates LC issuance. SVC-006 transitions LetterOfCredit.compliance_status = cleared on receipt. Will not proceed to PH-055 (LC Issuance) without this event. Idempotent on screening_request_id. Fail-closed: no LC issued if EVT-077 not received within SLA."
+      }
+    ],
+    "consumed_apis": [
+      {
+        "provider_service_id": "SVC-005",
+        "provider_service_name": "Commercial Banking Core",
+        "call_pattern": "Synchronous (direct API — same-capability permitted, both in CAP-002)",
+        "dependency_criticality": "hard",
+        "purpose": "JRN-013 PH-052: GET /business-customers/{id} to validate applicant status. PH-053: GET /business-accounts/{id} for facility headroom check. PH-058: POST /business-accounts/{id}/debit to debit settlement amount before publishing LCSettled event. No local copies of BusinessCustomer or BusinessAccount entity data."
+      },
+      {
+        "provider_service_id": "SVC-054",
+        "provider_service_name": "Document Management",
+        "call_pattern": "Synchronous (direct API — cross-cutting service)",
+        "dependency_criticality": "soft",
+        "purpose": "Trade document PDFs and images (bills of lading, invoices, insurance certificates) stored and retrieved via SVC-054. ENT-038 stores metadata and SVC-054 storage references only."
+      }
+    ],
+    "api_endpoints": [
+      "POST /trade-finance/lc-applications",
+      "GET /trade-finance/lc-applications/{lc_id}",
+      "POST /trade-finance/lc-applications/{lc_id}/discrepancy-waiver",
+      "POST /trade-finance/lc-applications/{lc_id}/amendments",
+      "GET /trade-finance/lc-applications/{lc_id}/amendments",
+      "POST /trade-finance/lc-applications/{lc_id}/presentations",
+      "GET /trade-finance/lc-applications/{lc_id}/presentations",
+      "POST /trade-finance/lc-applications/{lc_id}/presentations/{presentation_id}/examination",
+      "GET /trade-finance/lc-applications/{lc_id}/presentations/{presentation_id}/examination"
+    ],
+    "source_journeys": ["JRN-013"]
+  },
+  {
+    "service_id": "SVC-007",
+    "name": "Treasury Services",
+    "capability_domain": "CAP-002 (Commercial Banking — Treasury Services sub-capability, CAP-002.04, PROMOTED)",
+    "tier": "T3",
+    "is_new_service": true,
+    "new_service_introduced_by": "JRN-014",
+    "description": "Owns the end-to-end FX spot trade lifecycle (JRN-014). Promoted sub-capability of CAP-002. Same-capability peer to SVC-005 — may call SVC-005 directly for BusinessCustomer validation and account debit/credit at settlement. Communicates with SVC-051 (CAP-005 — counterparty sanctions screening) and SVC-010 (CAP-003 — SWIFT confirmation and nostro settlement) exclusively via async events through SVC-102. Enforces 30-second firm quote validity window server-side. Manages UK MiFIR transaction reporting to FCA trade repository. FCA-certified dealing function (SM&CR) — dealer_id on every FXTrade must be a certified individual.",
+    "owned_entities": ["ENT-040", "ENT-041", "ENT-042"],
+    "published_events": ["EVT-083", "EVT-084", "EVT-085", "EVT-086", "EVT-087", "EVT-089"],
+    "consumed_events": [
+      {
+        "event_id": "EVT-088",
+        "name": "FXSettlementCompleted",
+        "provider_service_id": "SVC-010",
+        "purpose": "JRN-014 PH-063: Received from CAP-003 on completion of nostro settlement. SVC-007 updates FXSettlement.settlement_status = settled, populates settled_at and swift_settlement_ref from event payload, transitions FXTrade.status = settled, and records FX P&L mark. Idempotent on settlement_id."
+      }
+    ],
+    "consumed_apis": [
+      {
+        "provider_service_id": "SVC-005",
+        "provider_service_name": "Commercial Banking Core",
+        "call_pattern": "Synchronous (direct API — same-capability permitted, both within CAP-002)",
+        "dependency_criticality": "hard",
+        "purpose": "PH-059: GET /business-customers/{id} to validate BusinessCustomer.status = active. PH-061: GET /business-accounts/{id} for sell-currency balance check. PH-063: POST /business-accounts/{id}/debit (sell leg) and POST /business-accounts/{id}/credit (buy leg) at settlement. No local copies of BusinessCustomer or BusinessAccount entity data."
+      },
+      {
+        "provider_service_id": "EXT-BLOOMBERG-FXGO",
+        "provider_service_name": "Bloomberg FXGO / ECN Rate Feed (External)",
+        "call_pattern": "Synchronous streaming subscription (sub-250ms staleness threshold)",
+        "dependency_criticality": "hard",
+        "purpose": "Real-time interbank FX mid-rate for indicative and firm quote generation (PH-059, PH-060). Rate feed outage triggers 503 and manual pricing fallback workflow."
+      },
+      {
+        "provider_service_id": "EXT-FCA-TRADE-REPOSITORY",
+        "provider_service_name": "FCA Trade Repository (UK MiFIR)",
+        "call_pattern": "Synchronous batch submission (end-of-day T; retry with exponential backoff)",
+        "dependency_criticality": "hard",
+        "purpose": "MiFIR transaction reporting. SVC-007 generates UTI and submits trade report from FXTrade fields to FCA-approved trade repository by end of business day T."
+      }
+    ],
+    "api_endpoints": [
+      "POST /treasury/fx-trades/enquiry",
+      "GET /treasury/fx-trades/{trade_id}",
+      "POST /treasury/fx-trades/{trade_id}/quote",
+      "POST /treasury/fx-trades/{trade_id}/accept",
+      "GET /treasury/fx-trades/{trade_id}/quotes",
+      "GET /treasury/fx-trades/{trade_id}/settlement",
+      "POST /treasury/fx-trades/{trade_id}/sanctions-release"
+    ],
+    "source_journeys": ["JRN-014"]
+  }
+  ],
+  "cross_service_interaction_summary": {
+    "description": "End-to-end event and API flow across service boundaries. Covers JRN-001 (Personal Current Account Opening), JRN-002 (Faster Payment Initiation), JRN-003 (SAR Filing by MLRO), JRN-005 (APP Fraud Detection and Reimbursement), JRN-006 (Residential Mortgage Application), JRN-009 (International Wire Transfer Corporate), JRN-011 (Card Transaction Authorisation), JRN-013 (Trade Finance Letter of Credit Issuance), and JRN-014 (FX Spot Trade Execution Corporate).",
+    "interaction_sequence": [
+      {
+        "step": 1,
+        "phase": "PH-001",
+        "description": "PER-001 submits application. SVC-017 calls SVC-001 to create Customer (prospect) and ApplicationRecord. SVC-001 publishes ApplicationStarted (EVT-001).",
+        "services_involved": ["SVC-017", "SVC-001"]
+      },
+      {
+        "step": 2,
+        "phase": "PH-002",
+        "description": "SVC-050 receives ApplicationStarted. Orchestrates identity verification via Onfido/Jumio. Creates IdentityVerification entity. Calls SVC-051 for preliminary sanctions pre-check. Publishes IdentityVerificationCompleted (EVT-002).",
+        "services_involved": ["SVC-050", "SVC-051", "SVC-103"]
+      },
+      {
+        "step": 3,
+        "phase": "PH-003",
+        "description": "SVC-014 subscribes to IdentityVerificationCompleted. Calls SVC-051 for full sanctions screening (blocking, 3,000ms hard limit). Performs PEP and adverse media screening. Creates KycAssessment entity. Publishes KYCClearanceGranted (EVT-004).",
+        "services_involved": ["SVC-014", "SVC-051", "SVC-103", "SVC-111"]
+      },
+      {
+        "step": 4,
+        "phase": "PH-004",
+        "description": "SVC-001 subscribes to KYCClearanceGranted. Automated decision engine runs. ApplicationRecord.status transitions to 'approved'. SVC-001 publishes ApplicationDecisionMade (EVT-007).",
+        "services_involved": ["SVC-001", "SVC-017", "SVC-103", "SVC-111"]
+      },
+      {
+        "step": 5,
+        "phase": "PH-005",
+        "description": "SVC-001 creates Account entity (sort code/account number allocated). Updates Customer.status to 'active'. Updates FSCS SCV. Creates CardIssuance entity. Publishes AccountOpened (EVT-008), AccountProvisioned (EVT-009), CardIssuanceTriggered (EVT-010).",
+        "services_involved": ["SVC-001", "SVC-103", "SVC-111"]
+      },
+      {
+        "step": 6,
+        "phase": "PH-006",
+        "description": "SVC-017 receives AccountProvisioned. Guides PER-001 through credential creation and biometric SCA enrolment (calls SVC-100). Creates DigitalEnrollment entity. Publishes DigitalChannelActivated (EVT-011).",
+        "services_involved": ["SVC-017", "SVC-100", "SVC-103"]
+      },
+      {
+        "step": 7,
+        "phase": "PH-007",
+        "description": "SVC-017 receives DigitalChannelActivated. Renders welcome dashboard (reads Account from SVC-001). Calls SVC-053 to dispatch welcome pack (email + in-app, FSCS information sheet). Publishes WelcomePackDispatched (EVT-013).",
+        "services_involved": ["SVC-017", "SVC-001", "SVC-053", "SVC-103", "SVC-111"]
+      },
+      {
+        "step": 8,
+        "journey": "JRN-003",
+        "phase": "SAR-PH-001 to SAR-PH-002",
+        "description": "Suspicion trigger received (automated SanctionsHitDetected EVT-006 or manual staff disclosure via SVC-015). SVC-014 creates SARInvestigationRecord (ENT-009). Publishes SARInvestigationOpened (EVT-014). SVC-015 notifies MLRO via secure case management alert. MLRO investigates: reads ENT-001 (Customer) and ENT-003 (KycAssessment) from SVC-014, and transaction history from SVC-001. Evidence items added to SARInvestigationRecord (WORM append-only).",
+        "services_involved": ["SVC-014", "SVC-015", "SVC-001", "SVC-103", "SVC-111"]
+      },
+      {
+        "step": 9,
+        "journey": "JRN-003",
+        "phase": "SAR-PH-003 to SAR-PH-005",
+        "description": "MLRO records filing decision. SVC-014 creates SuspiciousActivityReport (ENT-008). Publishes SARDecisionMade (EVT-015). MLRO completes NCA SAR form, confirms tipping-off review. SVC-014 submits SAR to NCA SAR Online (synchronous with 3-retry backoff). NCA acknowledges with nca_reference. SVC-014 records filed_date, computes sla_status. Publishes SARFiled (EVT-016) — minimal payload only: customer_id + restriction_required flag. SVC-001 consumes SARFiled, applies enhanced_monitoring_flag to customer accounts. SVC-001 publishes AccountRestrictionApplied (EVT-019).",
+        "services_involved": ["SVC-014", "SVC-015", "SVC-001", "SVC-103", "SVC-111"]
+      },
+      {
+        "step": 10,
+        "journey": "JRN-003 — consent path only (EX-002)",
+        "phase": "SAR-PH-005 to SAR-PH-006",
+        "description": "For consent SARs: SVC-014 also publishes SARConsentRequested (EVT-017). SVC-001 places the specific transaction on hold (fail-closed — no release without EVT-018). MLRO monitors NCA consent response out-of-band via SAR Online portal. On NCA consent grant, MLRO records via POST /sars/{id}/consent-response. SVC-014 publishes SARConsentGranted (EVT-018). SVC-001 releases transaction hold. MLRO closes SARInvestigationRecord. Investigation lifecycle complete.",
+        "services_involved": ["SVC-014", "SVC-015", "SVC-001", "SVC-103", "SVC-111"]
+      },
+      {
+        "step": 11,
+        "journey": "JRN-005",
+        "phase": "PH-064",
+        "description": "Customer reports APP fraud via mobile app (CH-002). SVC-017 calls SVC-013 POST /fraud-cases. SVC-013 creates FraudCase (ENT-043, status=open). Publishes FraudCaseCreated (EVT-090). SVC-053 dispatches case confirmation to PER-001. Alternatively: SVC-013 auto-creates FraudCase on PaymentFraudBlocked (EVT-P08) consumption with trigger_type=realtime_block.",
+        "services_involved": ["SVC-017", "SVC-013", "SVC-053", "SVC-111"]
+      },
+      {
+        "step": 12,
+        "journey": "JRN-005",
+        "phase": "PH-065 to PH-066",
+        "description": "Fraud Analyst (PER-054) assigned. SVC-013 (CAP-004) publishes FraudDataRequested to Event Bus (SVC-102). SVC-001 (CAP-001) responds async with FraudDataProvided (PaymentIntent: cop_result, fraud_score). SVC-009 (CAP-003) responds async with FraudPaymentExecutionProvided (fps_reference, receiving_sort_code). Cross-capability synchronous calls are prohibited — all CAP-004↔CAP-001 and CAP-004↔CAP-003 data exchange is async via Event Bus. FraudEvidence records (ENT-044) created. FraudCase.status = investigating. Publishes FraudInvestigationStarted (EVT-091). Investigation conducted against PSR PS23/3 eligibility criteria (vulnerability, gross negligence, CoP evidence).",
+        "services_involved": ["SVC-013", "SVC-001", "SVC-009", "SVC-017", "SVC-053", "SVC-103"]
+      },
+      {
+        "step": 13,
+        "journey": "JRN-005",
+        "phase": "PH-067",
+        "description": "Analyst records decision via POST /fraud-cases/{id}/decision. Senior Manager co-sign required for declines and reimbursements > £25,000. SVC-013 publishes FraudReimbursementApproved (EVT-092) or FraudReimbursementDeclined (EVT-093). SVC-053 dispatches regulated outcome letter within 5 business days of FraudCase.reported_date (PSR PS23/3 GOV-003-R01).",
+        "services_involved": ["SVC-013", "SVC-053", "SVC-103", "SVC-111"]
+      },
+      {
+        "step": 14,
+        "journey": "JRN-005",
+        "phase": "PH-068",
+        "description": "Dual consumption of FraudReimbursementApproved (EVT-092): (1) SVC-001 credits reimbursement_amount to customer Account. Publishes ReimbursementCredited (EVT-094). P99 < 30 minutes. SVC-053 dispatches credit push notification to PER-001. (2) SVC-009 creates ReimbursementClaim (ENT-045): sending_bank_share and receiving_bank_share = reimbursement_amount * 0.5 each. Submits recovery claim to receiving PSP via Pay.UK reimbursement API. Publishes RecoveryInitiated (EVT-095).",
+        "services_involved": ["SVC-001", "SVC-009", "SVC-053", "SVC-103", "SVC-111"]
+      },
+      {
+        "step": 15,
+        "journey": "JRN-005",
+        "phase": "PH-069 to PH-070",
+        "description": "Receiving PSP responds to Pay.UK recovery claim. SVC-009 updates ReimbursementClaim.recovery_status. Publishes RecoveryCompleted (EVT-096) on terminal recovery state. Analyst closes FraudCase: SVC-013 publishes FraudCaseClosed (EVT-097) and FraudPatternDetected (EVT-098) — anonymised pattern features fed back to SVC-013 ML model training pipeline to close the detection-investigation feedback loop. SVC-111 archives full case record (7-year WORM retention).",
+        "services_involved": ["SVC-009", "SVC-013", "SVC-053", "SVC-111", "SVC-103"]
+      },
+      {
+        "step": 16,
+        "journey": "JRN-013",
+        "phase": "PH-052 to PH-053",
+        "description": "PER-002 submits LC application via trade finance portal. SVC-006 calls SVC-005 GET /business-customers/{id} (same-capability) to validate applicant. SVC-006 creates LetterOfCredit (ENT-036). Publishes EVT-075 (LCApplicationSubmitted). SVC-006 calls SVC-005 GET /business-accounts/{id} (same-capability) for facility headroom check. In-limit: credit_status = facility_confirmed.",
+        "services_involved": ["SVC-006", "SVC-005", "SVC-053", "SVC-103"]
+      },
+      {
+        "step": 17,
+        "journey": "JRN-013",
+        "phase": "PH-054 — CAP-002/CAP-005 boundary",
+        "description": "SVC-006 publishes EVT-076 (LCComplianceScreeningRequested) to SVC-102 — crosses CAP-002/CAP-005 boundary. SVC-051 screens beneficiary against OFSI, OFAC, UN lists and HS tariff codes against export controls. On all-clear: SVC-051 publishes EVT-077 (LCComplianceCleared). SVC-006 consumes EVT-077 to gate LC issuance. If hit: SVC-051 raises internal compliance alert; MLRO (PER-058) notified; LC blocked; EVT-077 never published.",
+        "services_involved": ["SVC-006", "SVC-051", "SVC-102", "SVC-103", "SVC-111"]
+      },
+      {
+        "step": 18,
+        "journey": "JRN-013",
+        "phase": "PH-055 — CAP-002/CAP-003 boundary (SWIFT MT700)",
+        "description": "SVC-006 formats LC terms and publishes EVT-078 (LCIssued) — crosses CAP-002/CAP-003 boundary. SVC-010 consumes EVT-078 and transmits SWIFT MT700 (Issue of Documentary Credit) to advising bank. Applicant receives issuance confirmation via SVC-053.",
+        "services_involved": ["SVC-006", "SVC-010", "SVC-102", "SVC-053", "SVC-103"]
+      },
+      {
+        "step": 19,
+        "journey": "JRN-013",
+        "phase": "PH-056 to PH-057",
+        "description": "PER-059 (Trade Finance Operations) registers document presentation via POST /trade-finance/lc-applications/{id}/presentations. SVC-006 creates ENT-038 (TradeDocument). Publishes EVT-079 (DocumentPresented). 5-banking-day UCP 600 examination clock starts. PER-059 examines documents against LC terms within deadline. SVC-006 records ENT-039 (DocumentExamination). Publishes EVT-080 (DocumentExamined, result=compliant).",
+        "services_involved": ["SVC-006", "SVC-053", "SVC-103", "SVC-111"]
+      },
+      {
+        "step": 20,
+        "journey": "JRN-013",
+        "phase": "PH-058 — Settlement (same-capability debit + cross-capability SWIFT reimbursement)",
+        "description": "SVC-006 calls SVC-005 POST /business-accounts/{id}/debit (same-capability) — account debit must succeed before SWIFT event published. On debit confirmation: SVC-006 publishes EVT-081 (LCSettled) — crosses CAP-002/CAP-003 boundary. SVC-010 transmits SWIFT MT202 reimbursement to advising/reimbursing bank. LetterOfCredit.status = settled. If no presentation before expiry: SVC-006 publishes EVT-082 (LCExpired); SVC-005 releases facility headroom.",
+        "services_involved": ["SVC-006", "SVC-005", "SVC-010", "SVC-102", "SVC-053", "SVC-103", "SVC-111"]
+      }
+    ]
+  }
+}

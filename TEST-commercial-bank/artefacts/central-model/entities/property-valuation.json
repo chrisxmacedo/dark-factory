@@ -1,0 +1,102 @@
+{
+  "entity_id": "ENT-014",
+  "name": "PropertyValuation",
+  "description": "Records the result of the property valuation instructed by the bank in PH-012. The valuation_amount is the authoritative value used for LTV recalculation and underwriting. If valuation_amount < purchase_price, down_valuation_flag is set and EX-001 exception path is triggered. Owned by SVC-002.",
+  "owning_service": "SVC-002",
+  "reachable_from_phases": ["PH-012", "PH-013"],
+  "aggregate_root": false,
+  "fields": [
+    {
+      "name": "valuation_id",
+      "type": "UUID",
+      "validation_rule": "RFC 4122 UUID v4. System-generated. Immutable.",
+      "source": "PH-012",
+      "governed_by": null
+    },
+    {
+      "name": "application_id",
+      "type": "UUID",
+      "validation_rule": "Required. FK → MortgageApplication.application_id (ENT-012). Immutable.",
+      "source": "PH-012",
+      "governed_by": null
+    },
+    {
+      "name": "property_address",
+      "type": "object",
+      "validation_rule": "Required. UK address object. Must match parent MortgageApplication.property_address.",
+      "source": "PH-012",
+      "governed_by": null
+    },
+    {
+      "name": "valuation_amount",
+      "type": "decimal",
+      "validation_rule": "Required when status = completed. Positive decimal, GBP. Surveyor's assessed open market value.",
+      "source": "PH-012",
+      "governed_by": null
+    },
+    {
+      "name": "valuation_date",
+      "type": "date",
+      "validation_rule": "Required when status = completed. ISO 8601. Must be <= 3 months at time of mortgage completion.",
+      "source": "PH-012",
+      "governed_by": null
+    },
+    {
+      "name": "surveyor_id",
+      "type": "string",
+      "validation_rule": "Required for physical valuations. RICS surveyor ID or 'AVM' for desktop.",
+      "source": "PH-012",
+      "governed_by": null
+    },
+    {
+      "name": "valuation_type",
+      "type": "enum",
+      "validation_rule": "Required. Enum: desktop | drive_by | full.",
+      "source": "PH-012",
+      "governed_by": null
+    },
+    {
+      "name": "status",
+      "type": "enum",
+      "validation_rule": "Required. Enum: instructed | in_progress | completed | failed | cancelled.",
+      "source": "PH-012",
+      "governed_by": null
+    },
+    {
+      "name": "down_valuation_flag",
+      "type": "boolean",
+      "validation_rule": "Required when status = completed. true if valuation_amount < MortgageApplication.purchase_price.",
+      "source": "PH-012",
+      "governed_by": null
+    },
+    {
+      "name": "report_reference",
+      "type": "string",
+      "validation_rule": "Optional. External surveyor report reference.",
+      "source": "PH-012",
+      "governed_by": null
+    },
+    {
+      "name": "instructed_at",
+      "type": "timestamp",
+      "validation_rule": "System-generated. ISO 8601 UTC. Immutable.",
+      "source": "PH-012",
+      "governed_by": null
+    },
+    {
+      "name": "completed_at",
+      "type": "timestamp",
+      "validation_rule": "Conditional. ISO 8601 UTC. Set when status = completed.",
+      "source": "PH-012",
+      "governed_by": null
+    }
+  ],
+  "relationships": [
+    {
+      "target_entity": "ENT-012",
+      "type": "many-to-one",
+      "description": "PropertyValuation belongs to one MortgageApplication."
+    }
+  ],
+  "source_journeys": ["JRN-006"]
+}

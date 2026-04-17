@@ -1,0 +1,89 @@
+{
+  "entity_id": "ENT-021",
+  "name": "CovenantMonitoring",
+  "description": "A covenant test result record created by SVC-005 (Commercial Banking Core) in PH-022 (JRN-007) for each covenant tested on each test date. One record per covenant per test event — immutable once compliance_status is set. A compliance_status = breached triggers EVT-039 (CovenantBreachDetected). Records accumulate over the loan term providing a full covenant compliance audit trail.",
+  "owning_service": "SVC-005",
+  "owning_capability": "CAP-002 (Commercial Banking)",
+  "aggregate_root": false,
+  "reachable_from_phases": ["PH-022"],
+  "fields": [
+    {
+      "name": "monitoring_id",
+      "type": "UUID",
+      "validation_rule": "RFC 4122 UUID v4. System-generated. Immutable.",
+      "source": "PH-022",
+      "governed_by": null
+    },
+    {
+      "name": "loan_account_id",
+      "type": "UUID",
+      "validation_rule": "Required. FK → ENT-020 (LoanAccount.account_id). Immutable.",
+      "source": "PH-022",
+      "governed_by": null
+    },
+    {
+      "name": "covenant_type",
+      "type": "enum",
+      "validation_rule": "Required. Enum: dscr_min | leverage_max | interest_cover_min | tangible_net_worth_min | other. Must match a covenant in FacilityAgreement.covenants.",
+      "source": "PH-022",
+      "governed_by": "GOV-002-R01"
+    },
+    {
+      "name": "target_value",
+      "type": "decimal",
+      "validation_rule": "Required. Decimal, 4 dp. Contractually agreed threshold from FacilityAgreement.covenants.",
+      "source": "PH-022",
+      "governed_by": null
+    },
+    {
+      "name": "actual_value",
+      "type": "decimal",
+      "validation_rule": "Required. Decimal, 4 dp. Borrower-reported or bank-calculated actual covenant metric value.",
+      "source": "PH-022",
+      "governed_by": null
+    },
+    {
+      "name": "compliance_status",
+      "type": "enum",
+      "validation_rule": "Required. Enum: compliant | breached | waived | not_yet_tested. Transitions to 'waived' only via formal committee waiver — not by overwriting original record.",
+      "source": "PH-022",
+      "governed_by": "GOV-002-R01"
+    },
+    {
+      "name": "review_date",
+      "type": "date",
+      "validation_rule": "Required. ISO 8601 (YYYY-MM-DD). Date the covenant test was performed.",
+      "source": "PH-022",
+      "governed_by": null
+    },
+    {
+      "name": "test_period_end_date",
+      "type": "date",
+      "validation_rule": "Required. ISO 8601 (YYYY-MM-DD). Financial period end date to which actual_value relates.",
+      "source": "PH-022",
+      "governed_by": null
+    },
+    {
+      "name": "created_at",
+      "type": "timestamp",
+      "validation_rule": "System-generated. ISO 8601 UTC. Immutable.",
+      "source": "PH-022",
+      "governed_by": null
+    }
+  ],
+  "relationships": [
+    {
+      "target_entity": "ENT-020",
+      "type": "many-to-one",
+      "description": "CovenantMonitoring belongs to one LoanAccount. Multiple test records accumulate over the loan term."
+    }
+  ],
+  "design_decisions": [
+    {
+      "id": "DD-ENT021-01",
+      "decision": "One immutable CovenantMonitoring record per covenant per test date — never overwritten.",
+      "rationale": "Covenant test results are a regulated audit trail. Overwriting records would destroy IFRS 9 impairment evidence and BBRS/PRA audit trail. Waiver creates a new record, not an update."
+    }
+  ],
+  "source_journeys": ["JRN-007"]
+}

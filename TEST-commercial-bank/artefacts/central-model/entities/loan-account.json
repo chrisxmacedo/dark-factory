@@ -1,0 +1,113 @@
+{
+  "entity_id": "ENT-020",
+  "name": "LoanAccount",
+  "description": "The active loan ledger account created by SVC-005 (Commercial Banking Core) in PH-021 (JRN-007) at first drawdown. Tracks outstanding balance, repayment schedule, and next payment date throughout the loan term. Distinct from BusinessAccount (ENT-B002) — a customer may have multiple concurrent LoanAccount records. Each record requires independent IFRS 9 ECL staging assessment per-instrument.",
+  "owning_service": "SVC-005",
+  "owning_capability": "CAP-002 (Commercial Banking)",
+  "aggregate_root": false,
+  "reachable_from_phases": ["PH-021", "PH-022"],
+  "fields": [
+    {
+      "name": "account_id",
+      "type": "UUID",
+      "validation_rule": "RFC 4122 UUID v4. System-generated. Immutable.",
+      "source": "PH-021",
+      "governed_by": null
+    },
+    {
+      "name": "business_customer_id",
+      "type": "UUID",
+      "validation_rule": "Required. FK → ENT-B001 (BusinessCustomer.business_customer_id). Immutable.",
+      "source": "PH-021",
+      "governed_by": null
+    },
+    {
+      "name": "facility_id",
+      "type": "UUID",
+      "validation_rule": "Required. FK → ENT-019 (FacilityAgreement.agreement_id). Immutable.",
+      "source": "PH-021",
+      "governed_by": null
+    },
+    {
+      "name": "outstanding_balance",
+      "type": "decimal",
+      "validation_rule": "Required. Non-negative decimal, 2 dp (GBP). Updated on each repayment and drawdown. EAD input for Basel 3.1 RWA and IFRS 9 ECL.",
+      "source": "PH-021",
+      "governed_by": "GOV-002-R01"
+    },
+    {
+      "name": "next_payment_date",
+      "type": "date",
+      "validation_rule": "Required. ISO 8601 (YYYY-MM-DD). Null when status = repaid.",
+      "source": "PH-021",
+      "governed_by": null
+    },
+    {
+      "name": "status",
+      "type": "enum",
+      "validation_rule": "Required. Enum: active | arrears | default | watch_list | repaid | closed.",
+      "source": "PH-021",
+      "governed_by": "GOV-002-R01"
+    },
+    {
+      "name": "drawn_down_amount",
+      "type": "decimal",
+      "validation_rule": "Required. Positive decimal, 2 dp (GBP). Cumulative total drawn. <= FacilityAgreement.approved_amount.",
+      "source": "PH-021",
+      "governed_by": null
+    },
+    {
+      "name": "drawdown_date",
+      "type": "date",
+      "validation_rule": "Required. ISO 8601 (YYYY-MM-DD). Date of first drawdown. Immutable. Interest accrual start date.",
+      "source": "PH-021",
+      "governed_by": null
+    },
+    {
+      "name": "maturity_date",
+      "type": "date",
+      "validation_rule": "Required. ISO 8601 (YYYY-MM-DD). drawdown_date + term_months. Immutable unless formally extended.",
+      "source": "PH-021",
+      "governed_by": null
+    },
+    {
+      "name": "created_at",
+      "type": "timestamp",
+      "validation_rule": "System-generated. ISO 8601 UTC. Immutable.",
+      "source": "PH-021",
+      "governed_by": null
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamp",
+      "validation_rule": "System-generated. ISO 8601 UTC. Updated on any field mutation.",
+      "source": "PH-021",
+      "governed_by": null
+    }
+  ],
+  "relationships": [
+    {
+      "target_entity": "ENT-B001",
+      "type": "many-to-one",
+      "description": "LoanAccount belongs to one BusinessCustomer. A BusinessCustomer may have multiple concurrent LoanAccount records."
+    },
+    {
+      "target_entity": "ENT-019",
+      "type": "many-to-one",
+      "description": "LoanAccount is governed by one FacilityAgreement via facility_id FK."
+    },
+    {
+      "target_entity": "ENT-021",
+      "type": "one-to-many",
+      "description": "LoanAccount has zero or more CovenantMonitoring records."
+    }
+  ],
+  "design_decisions": [
+    {
+      "id": "DD-ENT020-01",
+      "decision": "LoanAccount is a separate entity from BusinessAccount (ENT-B002).",
+      "rationale": "A term loan carries distinct amortisation logic, IFRS 9 staging, and covenant monitoring. Conflating with the current account prevents multi-facility structures and violates IFRS 9 per-instrument staging requirements."
+    }
+  ],
+  "source_journeys": ["JRN-007"]
+}

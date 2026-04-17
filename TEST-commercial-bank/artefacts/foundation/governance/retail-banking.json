@@ -4,126 +4,158 @@
   "capability_name": "Retail Banking",
   "rules": [
     {
-      "rule_id": "RULE-RB-001",
-      "name": "Consumer Duty Outcomes",
-      "source_legislation": "FCA Consumer Duty (PS22/9) — effective 31 July 2023",
-      "description": "The bank must deliver good outcomes across the four Consumer Duty outcome areas: products and services, price and value, consumer understanding, and consumer support. Product governance frameworks, fair value assessments, and communications must be reviewed at least annually. The board must receive an annual Consumer Duty report confirming outcomes are being met.",
+      "rule_id": "GOV-001-R01",
+      "name": "Consumer Duty — Ongoing Fair Value Assessment",
+      "source_legislation": "FCA Consumer Duty (PS22/9), effective 31 July 2023 (open book) and 31 July 2024 (closed book)",
+      "description": "The board must receive an annual attestation that all retail products — including current accounts, savings, overdrafts, personal loans, and packaged accounts — deliver fair value to their target market. The assessment must cover price/value, consumer understanding, consumer support, and products and services outcomes. Remedial action plans must be documented and tracked where gaps are identified.",
       "authority_level": "board",
       "approval_chain": [
+        "Product Owner",
+        "Head of Retail Banking",
         "Chief Customer Officer",
-        "Chief Risk Officer",
-        "Executive Committee",
+        "Consumer Duty Board Champion",
         "Board Risk Committee",
-        "Board"
+        "Full Board"
       ],
       "disclosure_obligations": [
-        "Annual Consumer Duty board report attesting to outcome delivery",
-        "Fair value assessment results published or made available to distributors",
-        "Material customer harm events reported to FCA via SUP 15 within prescribed timescales",
-        "Product review outcomes documented and retained for regulatory inspection"
+        "Annual board Consumer Duty attestation published in board minutes",
+        "Fair value assessment summary provided to FCA upon supervisory request",
+        "Product-level cost and benefit summary disclosed in standardised terms and conditions",
+        "Evidence of customer outcome monitoring retained for FCA review for minimum 5 years"
       ],
       "constraints": [
-        "Products must not be sold to customers where they do not meet the target market definition",
-        "Ongoing fair value assessments must be completed at least annually for all retail products",
-        "Customer support channels must be no harder to access than sales channels",
-        "Foreseeable harm must be identified and mitigated before product launch"
-      ]
+        "Products found to deliver poor value must be withdrawn or restructured within a documented remediation timeline",
+        "Closed-book products must also be assessed — no grandfather exemption from July 2024",
+        "Marketing and communications must not mislead customers about price or features"
+      ],
+      "status": "current"
     },
     {
-      "rule_id": "RULE-RB-002",
-      "name": "Mortgage Affordability Assessment",
-      "source_legislation": "FCA Mortgages and Home Finance: Conduct of Business (MCOB) 11.6",
-      "description": "Before granting a residential mortgage, the bank must conduct a thorough affordability assessment of the customer's income, committed expenditure, and the impact of likely future interest rate increases (minimum 3 percentage point stress test). Responsible lending obligations require that the mortgage is only granted if the customer can afford repayments both now and under the stress scenario. Assessed disposable income must be documented in the credit file.",
+      "rule_id": "GOV-001-R02",
+      "name": "FSCS Deposit Protection — Eligible Deposits Limit",
+      "source_legislation": "PRA Rulebook — Depositor Protection; Financial Services Compensation Scheme (FSCS) rules",
+      "description": "All retail deposits up to £85,000 per eligible depositor per authorised firm must be protected under FSCS and clearly communicated at account opening and annually. Temporary high balance protection of up to £1m applies for 6 months following qualifying life events (home sale, divorce settlement, etc.). The bank must ensure FSCS information is displayed on all deposit product communications and maintain a depositor data file (Single Customer View) that can be extracted within 24 hours of a request from the FSCS.",
       "authority_level": "senior_manager",
       "approval_chain": [
-        "Mortgage Underwriter",
-        "Senior Underwriter",
-        "Head of Mortgage Underwriting"
+        "Head of Deposits",
+        "Chief Finance Officer",
+        "PRA-designated Senior Manager (Depositor Protection)"
       ],
       "disclosure_obligations": [
-        "European Standardised Information Sheet (ESIS) provided to customer before binding offer",
-        "Annual Mortgage Statement issued to customer each year",
-        "Declined application reasons communicated to customer on request",
-        "FCA Mortgage Lenders and Administrators Return (MLAR) submitted quarterly"
+        "FSCS information sheet and exclusions list provided at account opening and annually",
+        "Temporary High Balance protection notification to eligible customers at point of qualifying deposit",
+        "Single Customer View file available to FSCS within 24 hours of a payout trigger",
+        "FSCS levy contribution reported annually to PRA"
       ],
       "constraints": [
-        "Loan-to-income ratio above 4.5x requires senior underwriter sign-off and triggers PRA LTI flow limit monitoring",
-        "Interest rate stress test must apply a minimum +3 percentage point shock over initial rate for the first five years",
-        "Self-certified income is prohibited; all income must be verified against documentary evidence",
-        "High LTV (>85%) lending subject to enhanced affordability scrutiny and separate credit policy approval"
-      ]
+        "Maximum FSCS coverage per eligible depositor is £85,000 (standard) or £1,000,000 (temporary high balance, time-limited to 6 months)",
+        "Single Customer View system must be tested annually with PRA",
+        "Deposits in joint accounts count as £85,000 per account holder"
+      ],
+      "status": "current"
     },
     {
-      "rule_id": "RULE-RB-003",
-      "name": "Credit Card Persistent Debt Rules",
-      "source_legislation": "FCA Credit Card Market Study Remedies — CONC 6.7A",
-      "description": "Customers in persistent credit card debt (paying more in interest and charges than principal reduction over 18 months) must be contacted with options to repay faster. At 36 months of persistent debt, the bank must offer a repayment plan that will clear the balance within a reasonable period. If the customer cannot afford any of the options offered, the bank must suspend the card and refer to forbearance or debt management.",
+      "rule_id": "GOV-001-R03",
+      "name": "Overdraft Pricing — Single Annual Percentage Rate",
+      "source_legislation": "FCA PS19/16 (Overdraft Reforms), effective April 2020; FCA CONC 5A",
+      "description": "All authorised overdraft products must be priced using a single Annual Percentage Rate (APR). Fixed daily or monthly fees for overdraft usage are prohibited. The same APR must apply to arranged and unarranged overdrafts. The bank must conduct affordability assessments before granting or significantly increasing overdraft facilities, and must proactively identify and support customers in persistent debt.",
       "authority_level": "department_head",
       "approval_chain": [
-        "Collections Team Lead",
-        "Head of Credit Card Operations",
-        "Head of Consumer Credit"
+        "Head of Retail Lending",
+        "Head of Retail Banking",
+        "Chief Risk Officer (credit policy sign-off)"
       ],
       "disclosure_obligations": [
-        "Persistent debt intervention letters sent at 18 and 36 month trigger points",
-        "Repayment plan options documented and retained on customer record",
-        "Regulatory reporting via FCA REP017 persistent debt return (annual)",
-        "Referral to free debt advice services signposted in all persistent debt communications"
+        "APR displayed prominently on all overdraft product pages, statements, and app interfaces",
+        "Pre-overdraft usage warning message when customer is about to enter overdraft (via app/SMS)",
+        "Annual overdraft interest cost summary in customer statements",
+        "Persistent debt letter at 18-month trigger point; suspension of facility at 36 months if not resolved"
       ],
       "constraints": [
-        "Credit card account must be suspended if customer is in persistent debt at 36 months and cannot afford offered repayment options",
-        "Minimum repayment amounts must be set so that debt reduces meaningfully, not just interest covered",
-        "No new promotional balance transfers may be offered to customers already in the 36-month persistent debt stage",
-        "Persistent debt intervention must occur irrespective of account profitability"
-      ]
+        "No fixed daily or monthly overdraft fees permitted",
+        "Unarranged overdraft rate cannot exceed the arranged overdraft APR",
+        "Persistent debt customers (paying more in charges than principal over 18 months) must receive intervention communication",
+        "Overdraft facility must be suspended for persistent debt customers if no resolution after 36 months"
+      ],
+      "status": "current"
     },
     {
-      "rule_id": "RULE-RB-004",
-      "name": "Deposit Protection Limits",
-      "source_legislation": "Financial Services Compensation Scheme (FSCS) — Depositor Protection Rules (PRA Rulebook)",
-      "description": "The bank must ensure eligible deposits held by retail customers are protected up to £85,000 per depositor per institution (£170,000 for joint accounts). Temporary high balance protection of up to £1 million applies for up to six months following qualifying life events. The bank must display FSCS protection information prominently, maintain accurate depositor records to support a 24-hour payout within seven working days, and participate in the SCV (Single Customer View) framework.",
-      "authority_level": "automated",
-      "approval_chain": [
-        "Head of Deposit Operations",
-        "Chief Financial Officer"
-      ],
-      "disclosure_obligations": [
-        "FSCS Information Sheet provided to customers at account opening and annually",
-        "FSCS Exclusions List provided alongside Information Sheet",
-        "Prominent display of FSCS logo and protection limit on website and branches",
-        "Annual SCV submission and attestation to the PRA",
-        "Temporary High Balance notifications to FSCS when qualifying events identified"
-      ],
-      "constraints": [
-        "FSCS protection limit is £85,000 per eligible depositor (£170,000 joint); no promotional claims may suggest higher coverage",
-        "SCV file must be producible within 24 hours of a request from FSCS or PRA",
-        "Non-eligible depositors (e.g. financial institutions) must be correctly flagged in the SCV and not presented as protected",
-        "Temporary high balance protection window is limited to six months from the qualifying life event"
-      ]
-    },
-    {
-      "rule_id": "RULE-RB-005",
-      "name": "Vulnerable Customer Treatment",
-      "source_legislation": "FCA Guidance for Firms on the Fair Treatment of Vulnerable Customers (FG21/1) — Consumer Duty reinforcement",
-      "description": "The bank must have embedded processes to identify, record, and act on customer vulnerability across all retail channels. Staff must be trained to recognise signs of vulnerability and adapt their approach accordingly. Products and services must be designed and delivered so that vulnerable customers achieve outcomes as good as those of non-vulnerable customers. Vulnerability data, where consented, must be shared across customer touchpoints to avoid repeat disclosure.",
+      "rule_id": "GOV-001-R04",
+      "name": "Strong Customer Authentication (SCA) for Online Banking and Payments",
+      "source_legislation": "Payment Services Regulations 2017 (PSR 2017) Reg. 100; FCA RTS on SCA; OBIE SCA standards",
+      "description": "The bank must apply Strong Customer Authentication whenever a retail customer accesses their payment account online, initiates an electronic payment transaction, or carries out any action through a remote channel that may imply a risk of payment fraud or other abuses. SCA requires at least two independent elements from: knowledge (something only the user knows), possession (something only the user has), and inherence (something the user is). Exemptions (low-value, trusted beneficiary, low-risk transaction) must be monitored for fraud rate thresholds.",
       "authority_level": "senior_manager",
       "approval_chain": [
-        "Customer Vulnerability Lead",
-        "Head of Customer Experience",
-        "Chief Customer Officer"
+        "Head of Digital Channels",
+        "Head of Fraud and Financial Crime",
+        "CTO",
+        "Senior Manager (Payment Services)"
       ],
       "disclosure_obligations": [
-        "Consumer Duty annual board report must include section on vulnerable customer outcomes",
-        "Staff training completion rates and quality assurance results reported to Board Risk Committee",
-        "Complaint root cause analysis broken down by vulnerability indicator (where identified)",
-        "Regulatory reporting of vulnerable customer handling deficiencies via SUP 15 if systemic harm identified"
+        "SCA method options disclosed to customers at onboarding and on-demand",
+        "Exemption usage rates reported to FCA quarterly under PSR 2017 monitoring",
+        "Fraud rates on SCA-exempt transactions monitored and escalated if thresholds breached"
       ],
       "constraints": [
-        "Vulnerability status must not be used to deny access to products or services without documented, fair justification",
-        "No automated digital-only journeys may be the sole route to access essential banking services",
-        "Staff must not pressure a customer identified as vulnerable into making an immediate financial decision",
-        "Vulnerability records must be reviewed and updated at each significant customer interaction"
-      ]
+        "SCA must be applied to all online account access at least every 90 days (or session-by-session for higher-risk)",
+        "Low-value payment exemption limited to transactions under £30; aggregate cap £100 or 5 consecutive transactions",
+        "If fraud rate on a specific exemption type exceeds EBA reference thresholds, exemption must be suspended",
+        "Biometric authentication data must not be shared with third parties without explicit customer consent"
+      ],
+      "status": "current"
+    },
+    {
+      "rule_id": "GOV-001-R05",
+      "name": "BNPL Regulation — Affordability and CONC Compliance",
+      "source_legislation": "Financial Services and Markets Act 2000 (Credit Agreements) (Amendment) Order (expected 2025–2026); FCA CONC extension to BNPL",
+      "description": "Following the incoming extension of the Consumer Credit Act and FCA CONC to Buy Now Pay Later products, the bank's any instalment credit or deferred payment product offered at point-of-sale will require full affordability assessments, right-to-withdraw disclosures, regulated credit agreements, and access to the Financial Ombudsman Service. Products must be assessed against Consumer Duty fair value requirements.",
+      "authority_level": "executive_committee",
+      "approval_chain": [
+        "Head of Retail Lending",
+        "Head of Compliance",
+        "Chief Risk Officer",
+        "Executive Committee",
+        "Board Risk Committee"
+      ],
+      "disclosure_obligations": [
+        "Pre-contractual credit information (SECCI) in FCA-prescribed format",
+        "APR disclosed before credit agreement execution",
+        "14-day right-to-withdraw notice included in credit agreement",
+        "FOS jurisdiction disclosed in terms and conditions"
+      ],
+      "constraints": [
+        "Affordability assessment required before each instalment credit agreement is entered",
+        "Maximum deferred payment period subject to FCA CONC rules once enacted",
+        "Must be FCA authorised for consumer credit if offering BNPL as principal (not agent)"
+      ],
+      "status": "incoming",
+      "expected_date": "2025-2026"
+    },
+    {
+      "rule_id": "GOV-001-R06",
+      "name": "Open Finance — Smart Data Scheme Participation",
+      "source_legislation": "Data (Use and Access) Act 2025; FCA Smart Data Scheme Rules (anticipated 2026–2027)",
+      "description": "The Data (Use and Access) Act 2025 creates the legislative basis for Smart Data schemes beyond Open Banking, extending data portability obligations to mortgage, savings, pensions, and insurance data. Once FCA makes scheme rules, the bank must provide standardised APIs granting eligible third parties access to customer data across all in-scope product lines, with customer consent. Participation will be mandatory for banks above the scheme threshold.",
+      "authority_level": "executive_committee",
+      "approval_chain": [
+        "Head of Open Banking and Data",
+        "Chief Data Officer",
+        "Head of Compliance",
+        "CTO",
+        "Executive Committee"
+      ],
+      "disclosure_obligations": [
+        "Customer-facing consent dashboard showing all active data-sharing consents across product lines",
+        "Annual Smart Data participation report to FCA",
+        "Privacy notices updated to reflect Smart Data scheme data flows"
+      ],
+      "constraints": [
+        "Data must be provided in FCA-mandated standardised format within prescribed latency",
+        "Customer data may only be shared pursuant to valid, recorded customer consent",
+        "Bank must not discriminate against customers who share data with third parties"
+      ],
+      "status": "incoming",
+      "expected_date": "2026-2027"
     }
   ]
 }

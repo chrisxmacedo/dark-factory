@@ -1,103 +1,158 @@
 {
-  "id": "GOV-007",
+  "id": "GOV-006",
   "capability_id": "CAP-007",
   "capability_name": "Digital Channels",
   "rules": [
     {
-      "rule_id": "RULE-DC-001",
-      "name": "Open Banking Consent Management",
-      "source_legislation": "Payment Services Regulations 2017 (PSR 2017) — Regulations 67–69 (implementing PSD2 Articles 65–67); Open Banking Implementation Entity (OBIE) Standards v3.1+",
-      "description": "The bank (as Account Servicing Payment Service Provider, ASPSP) must provide access to customer payment account data and payment initiation to FCA-authorised Third Party Providers (TPPs) in accordance with the Open Banking standards. Customer consent to TPP access must be obtained directly by the TPP and must be explicit and granular. The bank must not impose obstacles to Open Banking access and must provide a dedicated interface (API) that meets OBIE technical standards. Consent must be re-confirmed by the customer at least every 90 days for data access.",
+      "rule_id": "GOV-006-R01",
+      "name": "Open Banking API — ASPSP Obligations under PSR 2017",
+      "source_legislation": "Payment Services Regulations 2017 (PSR 2017) Regs. 68–71; OBIE / Open Banking Ltd API Standards v3.1.x; FCA EMPI supervisory framework",
+      "description": "As an Account Servicing Payment Service Provider (ASPSP), the bank must maintain Open Banking-compliant APIs enabling authorised AISPs and PISPs to access customer payment accounts with customer consent. APIs must meet OBIE technical standards, be available 99.5%+ of the time, and not introduce unnecessary friction for TPP access. The bank must provide a fallback interface for TPPs if the primary API is unavailable. A quarterly API availability and performance report must be submitted to Open Banking Ltd.",
       "authority_level": "senior_manager",
       "approval_chain": [
-        "Open Banking Technical Lead",
+        "Head of Open Banking",
         "Head of Digital Channels",
-        "Chief Product Officer"
+        "Senior Manager (Payment Services)"
       ],
       "disclosure_obligations": [
-        "OBIE Directory registration kept up to date; any changes to API endpoints or certificates communicated within prescribed timescales",
-        "API performance and availability statistics reported to OBIE quarterly",
-        "Customer-facing documentation explaining Open Banking consent and how to revoke it",
-        "FCA notification of material disruption to Open Banking API availability beyond OBIE SLA thresholds"
+        "API availability and performance statistics published on the Open Banking Directory quarterly",
+        "TPP registration and onboarding process published on the bank's developer portal",
+        "Customer-facing consent dashboard showing active AIS and PIS consents with revocation functionality"
       ],
       "constraints": [
-        "The bank must not discriminate against TPP-initiated transactions relative to direct customer transactions",
-        "Customer consent for Account Information Service access must be re-established at least every 90 days",
-        "The bank must not require TPPs to enter into commercial agreements or pay fees as a condition of API access",
-        "Fallback access mechanism must be available 24/7 where the dedicated interface is unavailable"
-      ]
+        "API uptime must meet the 99.5% monthly availability threshold — sustained underperformance triggers FCA supervisory engagement",
+        "No additional authentication steps beyond those required for direct customer access may be imposed on TPPs",
+        "90-day re-authentication must be offered via app-based authentication, not require customers to use online banking",
+        "Fallback interface must be available and tested; blocking a fallback is an immediate FCA notification obligation"
+      ],
+      "status": "current"
     },
     {
-      "rule_id": "RULE-DC-002",
-      "name": "Digital Accessibility",
-      "source_legislation": "Equality Act 2010 — Section 20 (Reasonable Adjustments); Public Sector Bodies (Websites and Mobile Applications) (No. 2) Accessibility Regulations 2018; WCAG 2.1 Level AA (referenced standard)",
-      "description": "All digital customer-facing channels (internet banking, mobile app, and public website) must comply with WCAG 2.1 Level AA as a minimum, ensuring they are accessible to customers with disabilities. Public sector body regulations apply directly to the bank's public website; Equality Act duties apply to all channels. An accessibility statement must be published on the website, identifying any known non-compliances, and a feedback mechanism and enforcement contact must be provided. Accessibility must be assessed at the design stage and retested following material releases.",
+      "rule_id": "GOV-006-R02",
+      "name": "Consumer Duty — Understanding and Consumer Support Outcomes in Digital Channels",
+      "source_legislation": "FCA Consumer Duty (PS22/9); FCA Guidance FG22/5; FCA Consumer Understanding and Support Outcomes",
+      "description": "All digital channel designs — including mobile app UX, notification content, product information pages, and customer support routing — must meet the Consumer Duty Understanding and Consumer Support outcomes. Customers must be able to understand the products and services they are using based on digital communications alone. The bank must ensure digital support is accessible, not designed to deter customers from seeking help, and that customers in vulnerable circumstances can access equivalent support digitally or via accessible alternatives.",
       "authority_level": "department_head",
       "approval_chain": [
-        "Accessibility Lead",
-        "Head of Digital Experience",
-        "Chief Product Officer"
+        "Head of Digital Channels",
+        "Head of Customer Experience",
+        "Consumer Duty Board Champion",
+        "Head of Compliance"
       ],
       "disclosure_obligations": [
-        "Accessibility statement published on website and updated within 12 months of the previous statement",
-        "Known non-compliances listed in accessibility statement with remediation timeline",
-        "Accessibility testing results retained and available to the Equality and Human Rights Commission on request",
-        "Customer feedback route for accessibility issues clearly signposted on all digital channels"
+        "Annual Consumer Duty assessment for digital channels covering understanding and support outcomes",
+        "Accessibility audit results (WCAG 2.1 AA) shared with Head of Compliance and Board",
+        "Customer satisfaction and complaint data from digital channels included in Consumer Duty fair value assessments"
       ],
       "constraints": [
-        "All new digital features must pass WCAG 2.1 Level AA accessibility testing before production release",
-        "Accessibility statement must be reviewed and updated at least annually or following a material change to the service",
-        "Alternative accessible channel (e.g. telephone) must be available where a digital journey cannot be made accessible",
-        "Third-party components embedded in bank digital services must also meet WCAG 2.1 Level AA or an equivalent standard"
-      ]
+        "Sludge practices (excessive friction in cancellation, complaint, or switching flows) are prohibited under Consumer Duty",
+        "Customer support must not be designed to deter customers from making complaints or exercising rights",
+        "Digital channels must be accessible to WCAG 2.1 AA standard — failure is treated as a Consumer Duty breach by FCA",
+        "Vulnerable customer flags must carry across all digital touchpoints — not reset between sessions"
+      ],
+      "status": "current"
     },
     {
-      "rule_id": "RULE-DC-003",
-      "name": "Session Timeout Requirements",
-      "source_legislation": "FCA Guidance on Cybersecurity — SYSC 13; FCA PS19/26 SCA-RTS (UK); NCSC Guidance on Session Management",
-      "description": "To reduce the risk of unauthorised access to customer accounts, online banking sessions must time out after a defined period of inactivity. The bank's SCA-RTS implementation requires that sessions accessing sensitive payment account data are re-authenticated using SCA after a maximum of 90 days, but session inactivity timeout must occur much sooner to meet cybersecurity obligations. Sessions must also be explicitly terminated on customer logout, invalidating all session tokens server-side.",
+      "rule_id": "GOV-006-R03",
+      "name": "Operational Resilience — Digital Banking Important Business Services",
+      "source_legislation": "FCA PS21/3 (Operational Resilience); PRA SS1/21; Financial Services and Markets Act 2023 Part 5",
+      "description": "Mobile banking and online banking are designated important business services (IBS). The bank must set board-approved impact tolerances (expressed as maximum acceptable downtime) for each digital IBS, test them against severe-but-plausible disruption scenarios annually, and demonstrate the ability to remain within tolerances. From March 2025, PRA and FCA focus on remediation evidence — banks must have addressed vulnerabilities identified in self-assessments.",
+      "authority_level": "board",
+      "approval_chain": [
+        "Head of Digital Channels",
+        "Chief Technology Officer",
+        "Chief Operating Officer",
+        "Board Risk Committee",
+        "Full Board"
+      ],
+      "disclosure_obligations": [
+        "Impact tolerance statements for digital banking IBS in the annual operational resilience self-assessment",
+        "Material digital service outage reported to FCA within 4 hours (initial) and 24 hours (full report)",
+        "Customer communication during sustained IBS breach within prescribed timeframe"
+      ],
+      "constraints": [
+        "Impact tolerance must be set in terms of maximum continuous downtime and cumulative downtime per rolling 12 months",
+        "RTO and RPO targets for digital banking systems must be documented and tested",
+        "Critical third-party cloud and CDN providers must be included in resilience scenario testing",
+        "Board must review and approve impact tolerances annually — not delegated below Board Risk Committee"
+      ],
+      "status": "current"
+    },
+    {
+      "rule_id": "GOV-006-R04",
+      "name": "Variable Recurring Payments (VRP) Commercial Expansion — JROC Roadmap",
+      "source_legislation": "JROC VRP Roadmap (2023); PSR Variable Recurring Payments policy; FCA cVRP Scheme; PSR 2017",
+      "description": "The JROC roadmap requires banks to enable commercial VRP (cVRP) beyond sweeping use cases by 2026. The bank must build and expose cVRP APIs within the digital channels layer, surface mandate management to customers in the app and online banking, and ensure its digital consent journey meets FCA cVRP scheme technical requirements. cVRP mandates create a new recurring payment rail that competes with card recurring mandates and BACS direct debits.",
       "authority_level": "department_head",
       "approval_chain": [
-        "Cyber Security Engineer",
-        "Head of Cyber Security",
-        "Chief Information Security Officer"
+        "Head of Open Banking",
+        "Head of Digital Channels",
+        "Head of Payment Operations",
+        "Senior Manager (Payment Services)"
       ],
       "disclosure_obligations": [
-        "Session timeout behaviour disclosed in digital channel Terms and Conditions",
-        "Session management controls included in the bank's annual CQUEST self-assessment (Bank of England CBEST framework)",
-        "Material changes to session timeout policy reviewed by the CISO and communicated to customers with 30 days notice",
-        "Incident reports for session hijacking or replay attacks submitted to FCA where meeting regulatory notification thresholds"
+        "Customer-facing cVRP mandate management interface in mobile app and online banking from scheme go-live",
+        "Notification to customer when a cVRP mandate is created, amended, or revoked by the PISP",
+        "Scheme participation reporting to PSR / FCA per cVRP scheme rules"
       ],
       "constraints": [
-        "Internet banking inactivity session timeout must not exceed 10 minutes for non-active user sessions",
-        "Session tokens must be invalidated server-side upon logout; client-side clearance alone is not sufficient",
-        "SCA re-authentication is required after 90 days of continuous session access regardless of activity",
-        "Concurrent session limits must be enforced; simultaneous logins from materially different geolocations must trigger risk-based authentication challenge"
-      ]
+        "cVRP mandate creation must require explicit customer consent through the bank's digital channel",
+        "Customer must be able to view, pause, and revoke any cVRP mandate instantly in the app",
+        "Payment limits and merchant scope set in the cVRP mandate must be enforced at execution — no override without a new consent"
+      ],
+      "status": "incoming",
+      "expected_date": "2026"
     },
     {
-      "rule_id": "RULE-DC-004",
-      "name": "Open Banking API Availability SLAs",
-      "source_legislation": "Open Banking Implementation Entity (OBIE) Operational Guidelines v1.0+; FCA PS18/25 — Approach to Final RTS on SCA and CSC; PSR 2017 Regulation 69(3)",
-      "description": "The bank must ensure its Open Banking dedicated interface achieves availability and performance standards at least equivalent to the bank's own direct customer-facing channels. The OBIE operational guidelines specify target availability of 99.5% per month. Planned downtime must be communicated to the OBIE Directory at least 24 hours in advance. Where the dedicated interface is unavailable or underperforming, the bank must activate its fallback mechanism and notify the FCA if the outage exceeds regulatory thresholds.",
-      "authority_level": "team_lead",
+      "rule_id": "GOV-006-R05",
+      "name": "UK Digital Identity and Attributes Trust Framework — Identity Relying Party Obligations",
+      "source_legislation": "DSIT UK Digital Identity and Attributes Trust Framework (DIATF); Data (Use and Access) Act 2025",
+      "description": "The Data (Use and Access) Act 2025 establishes the statutory basis for the UK Digital Identity Trust Framework. The bank as an identity relying party (accepting certified digital identities for onboarding) and potential identity provider must seek DIATF certification. Digital onboarding flows must be updated to accept DIATF-certified identity documents and attributes. This may materially simplify KYC onboarding flows for retail and SME customers and reduce document fraud risk.",
+      "authority_level": "department_head",
       "approval_chain": [
-        "Open Banking Platform Engineer",
-        "API Operations Team Lead",
-        "Head of Digital Channels"
+        "Head of Digital Channels",
+        "Head of Compliance (KYC/AML sign-off)",
+        "Chief Information Security Officer",
+        "Head of Digital Identity"
       ],
       "disclosure_obligations": [
-        "API availability and performance statistics published on the OBIE Directory on a monthly basis",
-        "Planned maintenance windows communicated to OBIE and registered TPPs at least 24 hours in advance",
-        "FCA notification if API availability falls below 99.5% over a rolling month for more than two consecutive months",
-        "API incident post-mortem reports retained and provided to FCA on request"
+        "DIATF certification status published on the bank's website",
+        "Customer-facing disclosure of which digital identity providers the bank accepts",
+        "Privacy notice updated to reflect identity attribute data flows under DIATF"
       ],
       "constraints": [
-        "Open Banking API monthly uptime must meet or exceed 99.5%; sustained breach triggers mandatory FCA reporting",
-        "Planned maintenance must not occur during peak payment windows (Mon-Fri 08:00–18:00 UK time) without prior FCA agreement",
-        "Response time for account data requests must not exceed 2 seconds at the 95th percentile under normal load",
-        "TPP API access must not be throttled below the rate afforded to the bank's own direct channel applications"
-      ]
+        "Only DIATF-certified identity providers may be relied upon for identity verification under the framework",
+        "Bank cannot use DIATF identity data beyond the purposes consented to by the customer",
+        "MLR 2017 CDD obligations are not waived by DIATF identity verification — AML risk assessment must still be completed"
+      ],
+      "status": "incoming",
+      "expected_date": "2026-2027"
+    },
+    {
+      "rule_id": "GOV-006-R06",
+      "name": "Smart Data — Investment and Pensions Data Portability APIs",
+      "source_legislation": "Data (Use and Access) Act 2025; FCA Smart Data Scheme Rules (anticipated); HM Treasury Smart Data roadmap",
+      "description": "Smart Data schemes under the Data (Use and Access) Act 2025 will extend Open Banking-style mandatory data portability to investments, pensions, mortgages, and insurance products once FCA makes scheme rules. The bank's digital channels must be enhanced to support broader consent management, API provision for new data categories, and a unified customer data-sharing dashboard covering all in-scope product lines. This is a multi-year investment programme requiring coordination across all capability areas.",
+      "authority_level": "executive_committee",
+      "approval_chain": [
+        "Head of Open Banking and Data",
+        "Chief Data Officer",
+        "Chief Technology Officer",
+        "Head of Compliance",
+        "Executive Committee"
+      ],
+      "disclosure_obligations": [
+        "Customer data-sharing dashboard in the digital channel covering all Smart Data scheme consents",
+        "Annual Smart Data participation report to FCA",
+        "Privacy notices updated to reflect each new Smart Data scheme data category added"
+      ],
+      "constraints": [
+        "Smart Data APIs must be available from scheme commencement date — extensions require FCA approval",
+        "Participation is mandatory for banks above the scheme threshold — opt-out not available",
+        "Data must be provided in FCA-mandated format and within mandated latency targets"
+      ],
+      "status": "incoming",
+      "expected_date": "2026-2028"
     }
   ]
 }
