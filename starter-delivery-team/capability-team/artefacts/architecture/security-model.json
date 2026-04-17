@@ -1,0 +1,39 @@
+{
+  "$comment": "Security model — what the downstream dev team must enforce. Phase B step 5.",
+  "status": "Draft",
+  "zero_trust": {
+    "policy_source": "service.yaml per service",
+    "enforcement": "service mesh with workload identity",
+    "policy_vs_observed_diffs_are_signals": true
+  },
+  "mtls": {
+    "required_between_all_services": true,
+    "trust_root": "",
+    "workload_identity_field": "spiffe_id"
+  },
+  "data_classifications": [
+    { "level": "public", "description": "No restrictions; may be published externally" },
+    { "level": "internal", "description": "Visible to employees only" },
+    { "level": "confidential", "description": "Named roles only; audited access" },
+    { "level": "regulated", "description": "Special handling (PII, PCI, health, etc.)" }
+  ],
+  "network_zones": [
+    { "id": "dmz", "name": "DMZ", "allowed_ingress": ["external"], "allowed_egress": ["application"] },
+    { "id": "application", "name": "Application", "allowed_ingress": ["dmz", "application"], "allowed_egress": ["application", "data", "compliance"] },
+    { "id": "data", "name": "Data", "allowed_ingress": ["application"], "allowed_egress": ["compliance"] },
+    { "id": "compliance", "name": "Compliance", "allowed_ingress": ["application", "data"], "allowed_egress": [] },
+    { "id": "management", "name": "Management", "allowed_ingress": ["management"], "allowed_egress": ["application", "data", "compliance"] }
+  ],
+  "controls": [
+    "Zero-trust policy map",
+    "mTLS status per service pair",
+    "Secret rotation schedule",
+    "Blast radius visualiser (from service-dependencies.json)",
+    "CVE exposure map (weighted by data_classification)",
+    "Audit log physical separation (WORM, auditor-only)"
+  ],
+  "secret_policy": {
+    "per_service_manifest": "service.yaml",
+    "required_fields_per_secret": ["name", "rotation_days", "owner_role", "storage_backend"]
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "$comment": "Channel model — how each participant type accesses the system. Phase B step 5.",
+  "status": "Draft",
+  "channels": [
+    {
+      "channel_id": "CHN-001",
+      "name": "",
+      "description": "",
+      "participant_types": [],
+      "auth_model": "",
+      "rate_limit_class": "",
+      "data_projection": "",
+      "audit_requirements": "",
+      "capabilities_accessible": []
+    }
+  ]
+}

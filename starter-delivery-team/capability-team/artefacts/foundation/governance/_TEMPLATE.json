@@ -1,0 +1,44 @@
+{
+  "$comment": "Template. Copy to {capability-slug}.json — one governance file per capability.",
+  "capability_id": "CAP-001",
+  "status": "Draft",
+  "rules": [
+    {
+      "id": "GOV-001",
+      "name": "",
+      "source": {
+        "type": "legislation | regulation | policy | contract",
+        "reference": "",
+        "url_or_doc_ref": "",
+        "jurisdiction": "",
+        "effective_date": "",
+        "review_cadence": ""
+      },
+      "description": "What the rule requires, in one sentence.",
+      "scope": {
+        "applies_to_personas": [],
+        "applies_to_phases": [],
+        "applies_to_entities": []
+      },
+      "enforcement_points": [
+        "Where in the journey / data flow the rule must be checked."
+      ],
+      "data_requirements": [
+        "Data fields or records that must be captured to prove compliance."
+      ],
+      "retention_requirement": "",
+      "audit_requirement": "",
+      "status_effective": "current | incoming | under_review"
+    }
+  ],
+  "incoming_regulation": [
+    {
+      "id": "GOV-INC-001",
+      "regulation": "",
+      "jurisdiction": "",
+      "earliest_effective_date": "",
+      "capability_impact": "",
+      "readiness_assessment": ""
+    }
+  ]
+}

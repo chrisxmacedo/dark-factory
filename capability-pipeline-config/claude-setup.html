@@ -13,7 +13,6 @@
   --bg-phase-a: #E8F0FE;
   --bg-phase-b: #EEEDFE;
   --bg-phase-c: #E1F5EE;
-  --bg-phase-d: #FDF2E0;
   --text: #1A1A18;
   --text-secondary: #6B6B65;
   --text-tertiary: #9C9C95;
@@ -23,7 +22,6 @@
   --phase-a: #2563EB;
   --phase-b: #6D28D9;
   --phase-c: #059669;
-  --phase-d: #D97706;
   --tag-full: #DEF7EC;
   --tag-full-text: #03543F;
   --tag-partial: #FEF3C7;
@@ -59,12 +57,10 @@ pre { background: var(--bg-code); padding: 16px 20px; border-radius: 8px; overfl
 .step-card.phase-a { border-left-color: var(--phase-a); }
 .step-card.phase-b { border-left-color: var(--phase-b); }
 .step-card.phase-c { border-left-color: var(--phase-c); }
-.step-card.phase-d { border-left-color: var(--phase-d); }
 .step-num { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 500; display: inline-block; padding: 2px 8px; border-radius: 4px; margin-bottom: 8px; }
 .step-num.a { background: var(--bg-phase-a); color: var(--phase-a); }
 .step-num.b { background: var(--bg-phase-b); color: var(--phase-b); }
 .step-num.c { background: var(--bg-phase-c); color: var(--phase-c); }
-.step-num.d { background: var(--bg-phase-d); color: var(--phase-d); }
 .step-title { font-size: 16px; font-weight: 600; margin-bottom: 10px; }
 .meta-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin: 12px 0; }
 .meta-box { background: var(--bg); border-radius: 6px; padding: 10px 12px; }
@@ -91,7 +87,6 @@ tr:last-child td { border-bottom: none; }
 .phase-banner.a { background: var(--bg-phase-a); color: var(--phase-a); }
 .phase-banner.b { background: var(--bg-phase-b); color: var(--phase-b); }
 .phase-banner.c { background: var(--bg-phase-c); color: var(--phase-c); }
-.phase-banner.d { background: var(--bg-phase-d); color: var(--phase-d); }
 ul, ol { margin: 8px 0 12px 20px; }
 li { margin-bottom: 4px; }
 .entity-field { font-family: 'JetBrains Mono', monospace; font-size: 12px; background: var(--bg-code); padding: 1px 5px; border-radius: 3px; }
@@ -147,6 +142,7 @@ hr { border: none; border-top: 1px solid var(--border-light); margin: 32px 0; }
 <li><a href="#team">Team &amp; roles</a></li>
 <li><a href="#infrastructure">Infrastructure sizing</a></li>
 <li><a href="#crosscutting">Cross-cutting services</a></li>
+<li><a href="#process-improvements">Process improvements</a></li>
 </ul>
 <div class="nav-section">Development</div>
 <ul>
@@ -227,6 +223,20 @@ hr { border: none; border-top: 1px solid var(--border-light); margin: 32px 0; }
 <tr><td><strong>Contract Layer</strong></td><td>Design-time</td><td>Specification artefacts that live in the repository and CI pipeline: API contracts (OpenAPI), event contracts (schemas), journey contracts (process specs). Not runtime containers, not on C4 diagrams. The Schema Registry is the sole runtime manifestation.</td></tr>
 </table>
 
+<h3>The four valid communication paths</h3>
+<p>There are exactly four ways a service can be reached. No other communication paths exist. Services are never directly addressable from outside their capability.</p>
+<table>
+<tr><th>#</th><th>Path</th><th>Mechanism</th><th>Rule</th></tr>
+<tr><td>1</td><td><strong>Channel → Capability API</strong></td><td>Synchronous REST</td><td>Channels call the capability's published REST API. The capability routes internally to whatever service handles the request. The channel never addresses a service directly — it only sees the capability's API surface. A persona always interacts through a channel, never directly with a service.</td></tr>
+<tr><td>2</td><td><strong>Event Bus → Capability</strong></td><td>Async event</td><td>A capability publishes a domain event to the Event Bus. Other capabilities consume it independently. This is the <em>sole mechanism for cross-capability communication</em>. No synchronous cross-capability calls.</td></tr>
+<tr><td>3</td><td><strong>Service → Service (within same capability)</strong></td><td>Internal (any)</td><td>Services within the same capability communicate by whatever means the capability decides — direct method call, shared database, internal REST/gRPC, internal queue. This is an internal implementation detail, invisible outside the capability boundary.</td></tr>
+<tr><td>4</td><td><strong>Service → Platform service</strong></td><td>Any</td><td>Any service can call platform infrastructure (IAM, Audit, Observability, Cache, Schema Registry, Notifications). These are shared mechanisms that sit below the capability layer and are not subject to cross-capability communication rules.</td></tr>
+</table>
+
+<div class="callout callout-warn">
+<strong>Artefact consequences.</strong> These paths have direct consequences for what artefacts look like: API contracts are per-capability (not per-service). Sequence diagrams show <code>Channel → Capability API</code>, never <code>Persona → Service</code> or <code>Channel → Service</code>. A persona (credit analyst, customer, officer) always interacts through a channel; the channel calls the capability. Channel services and platform services are excluded from cross-capability violation checks.
+</div>
+
 <h3>Journey state</h3>
 <p>User journeys are not orchestrated by a central process manager or saga. Journey state is implicit in the data held by capabilities. There is no separate state machine. The data IS the state. Coordination happens through capabilities reacting to each other's published events.</p>
 
@@ -266,6 +276,30 @@ hr { border: none; border-top: 1px solid var(--border-light); margin: 32px 0; }
 
 <div class="callout callout-warn">
 <strong>Headless system specification.</strong> This pipeline produces a headless system specification. Channel UIs (web, mobile, branch, partner portals) sit outside the system boundary and are a separate development concern. They consume the capability APIs and journey contracts produced here. Channel teams start once the first journey's API contracts are stable.
+</div>
+
+<h3>Script assignment by team and stage</h3>
+<p>The pipeline uses six deterministic scripts. Each script is owned by a specific team and run at a specific moment. Scripts are never run out of order.</p>
+<table>
+<tr><th>Script</th><th>Run by</th><th>When</th></tr>
+<tr><td><code>scaffold-journey.py</code></td><td>Capability Lead</td><td>Before spawning Journey Modelling Team — creates directory, manifest, template files with globally sequential IDs</td></tr>
+<tr><td><code>cleanup-ids.py</code></td><td>Journey Modelling Team</td><td>After steps 7-13, before signalling complete — strips annotated IDs (<code>ENT-012 (Name)</code> → <code>ENT-012</code>)</td></tr>
+<tr><td><code>sync-central-model.py</code></td><td>Journey Modelling Team</td><td>After cleanup, before signalling complete — copies entities to <code>central-model/entities/</code>, appends events to catalogue, merges service map. Output saved to <code>evidence/sync-summary.txt</code>.</td></tr>
+<tr><td><code>validate-journey.py</code></td><td>Review Team (Stage 1)</td><td>First action when reviewing — checks files, ID formats, entity ownership, central model sync. Output saved to <code>evidence/validate-journey.txt</code>.</td></tr>
+<tr><td><code>validate-sequences.py</code></td><td>Review Team (Stage 1)</td><td>After validate-journey passes — checks sequence diagrams for cross-capability synchronous violations. Output saved to <code>evidence/validate-sequences.txt</code>.</td></tr>
+<tr><td><code>validate-central-model-impact.py</code></td><td>Capability Lead</td><td>After REVIEW COMPLETE (approved), before Gate 2 — lists prior journeys whose artefacts reference entities/events touched by this journey. Informational only, not a Gate 2 blocker. Output saved to <code>evidence/central-model-impact.txt</code>.</td></tr>
+</table>
+
+<h3>Deterministic vs reasoning split</h3>
+<p>The pipeline divides work into scripted (deterministic) operations and reasoning (agent) operations. Neither replaces the other — they handle fundamentally different concerns.</p>
+<table>
+<tr><th>Type</th><th>Share</th><th>Examples</th><th>Why scripted/reasoned</th></tr>
+<tr><td><strong>Deterministic (scripted)</strong></td><td>~40%</td><td>ID assignment, central model entity sync, annotated ID cleanup, cross-capability violation detection, file structure validation</td><td>Agents get these wrong consistently — ID format drift in ~20% of runs, entity file sync failures in ~30% of runs. Scripts eliminate a class of failure entirely.</td></tr>
+<tr><td><strong>Reasoning (agent)</strong></td><td>~60%</td><td>Capability decomposition, sub-capability promotion test, journey narrative, participant interaction, service boundary decisions, API contract design, event modelling, architectural review</td><td>These require institutional knowledge, design judgment, and cross-artefact reasoning that scripts cannot encode.</td></tr>
+</table>
+
+<div class="callout callout-tip">
+<strong>Why both?</strong> Early journeys modelled without scripts required full remediation afterwards — ID format renames, central model sync, cross-capability violation fixes. Later journeys modelled with the scaffold + manifest + validate loop passed first time or with minor fixes. Invest in the scripted layer before the first journey.
 </div>
 
 <h3 id="seq-vs-iter">Sequential vs iterative: understanding the two rhythms</h3>
@@ -803,12 +837,16 @@ hr { border: none; border-top: 1px solid var(--border-light); margin: 32px 0; }
 <h2 id="step12">Step 12 — API contracts</h2>
 <div class="card step-card phase-c">
 <span class="step-num c">PHASE C · STEP 12</span>
-<div class="step-title">Define synchronous API contracts and sequence diagrams</div>
-<p>For each service-to-service interaction in the journey, produce an OpenAPI specification and a sequence diagram showing the call flow. Include both internal API surfaces (between services) and external API surfaces (for institution-facing and public-facing endpoints).</p>
+<div class="step-title">Define capability API contracts and sequence diagrams</div>
+<p>For each capability touched by the journey, produce an OpenAPI specification for its published REST surface and sequence diagrams showing the call flows. API contracts are <strong>per-capability, not per-service</strong> — each capability exposes one API surface to channels; internal service routing is an L3 concern. Sequence diagrams show <code>Channel → Capability API</code>, never <code>Persona → Service</code>. The JSON sequence file is the source of truth; the Mermaid <code>.mmd</code> file is its renderable representation — both must be committed together and kept in sync.</p>
 <div class="meta-grid">
 <div class="meta-box"><div class="meta-label">Inputs</div><div class="meta-value">Service boundaries, data model, participant interaction model</div></div>
-<div class="meta-box"><div class="meta-label">Outputs</div><div class="meta-value"><code>models/{journey}/api-contracts/*.openapi.json</code> and <code>models/{journey}/sequence-diagrams/*.json</code></div></div>
+<div class="meta-box"><div class="meta-label">Outputs</div><div class="meta-value"><code>models/{journey}/api-contracts/{capability}.openapi.json</code> (one per capability) and <code>models/{journey}/sequence-diagrams/*.json</code> + <code>*.mmd</code> pairs</div></div>
 <div class="meta-box"><div class="meta-label">Owner</div><div class="meta-value"><span class="tag tag-both">Agent + Architect</span> — agent generates OpenAPI specs from data model and boundaries, architect reviews for correctness and consistency</div></div>
+</div>
+
+<div class="callout callout-warn">
+<strong>Common violations caught by validate-sequences.py.</strong> Sequence diagram JSON files use raw service IDs where the capability boundary is not visible — cross-capability synchronous calls tend to appear there rather than in Mermaid files (where the violation is obvious from the visual notation). The validator checks both. Every capability touched by a journey must also have a corresponding API contract — if a capability appears in service-boundaries, it needs a contract file.
 </div>
 </div>
 
@@ -1000,7 +1038,27 @@ hr { border: none; border-top: 1px solid var(--border-light); margin: 32px 0; }
 <!-- ============================================ -->
 <h2 id="team">Team and roles</h2>
 
-<h3>Design team (Phases A-C)</h3>
+<h3>Orchestration layer</h3>
+<table>
+<tr><th>Role</th><th>Responsibilities</th><th>Signals</th></tr>
+<tr><td><strong>Programme Lead</strong></td><td>Top-level orchestrator. Spawns the Capability Lead. Polls <code>PIPELINE-STATE.md</code> for gate events. Owns Jira handoff to DEV — creates Deliverable tickets after Gate 1 (Sprint 0) and after each Gate 2 (journey slice). Does NOT produce artefacts.</td><td>Receives: <code>GATE 1 PASSED</code>, <code>GATE 2 PASSED</code>, <code>REFINEMENT SCHEDULED</code>, <code>FIX EXHAUSTED</code></td></tr>
+<tr><td><strong>Capability Lead</strong></td><td>Persistent orchestrator for the capability pipeline. Manages Phase A-C flow. Scaffolds journeys. Spawns specialist teams. Runs <code>validate-central-model-impact.py</code> after each review. Tracks state in <code>PIPELINE-STATE.md</code>. Does NOT produce artefacts or run validation scripts (except impact detection). Does NOT create DEV tickets.</td><td>Sends: gate signals to Programme Lead via <code>PIPELINE-STATE.md</code></td></tr>
+</table>
+
+<h3>Specialist teams (spawned per phase or per journey)</h3>
+<table>
+<tr><th>Team</th><th>Spawned for</th><th>Responsibilities</th><th>Scripts run</th></tr>
+<tr><td><strong>Discovery Team</strong></td><td>Phase A + B (once)</td><td>Steps 1-6: capabilities (with market research), technical services, governance, personas, visual architecture + C4 workspace, journey inventory. Signals <code>DISCOVERY COMPLETE</code> when Gate 1 criteria are met.</td><td>None</td></tr>
+<tr><td><strong>Refinement Team</strong></td><td>Per journey (before modelling)</td><td>Produces <code>_refinement-brief.md</code> for the journey. Provides context brief for the Journey Modelling Team.</td><td>None</td></tr>
+<tr><td><strong>Journey Modelling Team</strong></td><td>Phase C, per journey</td><td>Steps 7-13: journey detail, participant interaction, NFRs, data model, service boundaries, API contracts + sequences, event catalogue. After step 13: runs cleanup and sync scripts, then signals <code>JOURNEY MODEL COMPLETE</code>.</td><td><code>cleanup-ids.py</code>, <code>sync-central-model.py</code></td></tr>
+<tr><td><strong>Review Team</strong></td><td>Per journey (after modelling)</td><td>Stage 1: runs deterministic validation scripts and writes output to <code>evidence/</code>. Stage 2: reasoning review across five dimensions (architectural compliance, internal consistency, cross-artefact consistency, completeness, buildability). Signals <code>REVIEW COMPLETE</code> with verdict.</td><td><code>validate-journey.py</code>, <code>validate-sequences.py</code></td></tr>
+</table>
+
+<div class="callout callout-info">
+<strong>Programme Lead re-spawn.</strong> The orchestrating agent cannot maintain context across many journeys — it hits context or rate limits after 2–3 journeys. This is expected behaviour. The Programme Lead is designed to re-spawn: it reads pipeline state from <code>PIPELINE-STATE.md</code> and the artefact directory (which journeys have models, which are stable) rather than relying on in-memory state. Scaffolds must always be sequential — one journey at a time — because the scaffold script assigns globally sequential IDs by scanning existing artefacts.
+</div>
+
+<h3>Design team (human roles)</h3>
 <table>
 <tr><th>Role</th><th>Phase focus</th><th>Agentic augmentation</th><th>Count</th></tr>
 <tr><td><strong>Domain analyst</strong></td><td>Leads A + B, authority on C (journey accuracy)</td><td>Low — value is tacit institutional knowledge that isn't written down</td><td>1-2</td></tr>
@@ -1084,6 +1142,34 @@ hr { border: none; border-top: 1px solid var(--border-light); margin: 32px 0; }
 <tr><td>Fraud / AML screening</td><td>Payment systems</td><td>Synchronous API (inline screening)</td></tr>
 <tr><td>Open data / API gateway</td><td>Research &amp; data, Transparency</td><td>Public REST API</td></tr>
 </table>
+
+<!-- ============================================ -->
+<!-- PROCESS IMPROVEMENTS -->
+<!-- ============================================ -->
+<h2 id="process-improvements">Process improvements</h2>
+
+<p>Generalised learnings from running the full pipeline across 30 journeys. These inform script design, team instructions, and review gates. They are recorded here so teams starting a new project can apply them from journey 1 rather than rediscovering them.</p>
+
+<h3>Early journeys set the quality bar</h3>
+<p>The first 5 journeys modelled before scripts and standards existed required full remediation afterwards — ID format renames, cross-capability violation fixes, central model sync. Later journeys modelled with the scaffold + manifest + validate loop passed first time or with minor fixes. <strong>Invest in tooling and standards before the first journey.</strong> The scaffold script, manifest format rules, and validation scripts pay back their setup cost by journey 3.</p>
+
+<h3>Central model entity sync is the #1 failure mode</h3>
+<p>Across 30 journeys, the agent forgot to create <code>central-model/entities/</code> files in approximately 30% of runs. It consistently updated <code>service-map.json</code> and <code>event-catalogue.json</code> but omitted the individual entity files. The <code>sync-central-model.py</code> script eliminates this entirely — it creates missing entity files automatically from the journey's <code>data-model.json</code>. <strong>Never rely on the agent for deterministic file operations.</strong></p>
+
+<h3>Annotated IDs persist despite explicit instructions</h3>
+<p>The agent writes <code>"ENT-012 (MortgageApplication)"</code> in <code>owned_entities</code> and <code>published_events</code> in approximately 20% of runs despite the manifest specifying plain IDs only. The <code>cleanup-ids.py</code> script runs after every journey. Accept this as a known agent behaviour pattern and script around it — do not add further instructions to the manifest expecting the problem to disappear.</p>
+
+<h3>Sequence diagram JSON and Mermaid diverge</h3>
+<p>The agent sometimes produces only the Mermaid <code>.mmd</code> without the JSON, or vice versa. In some cases the JSON steps array was present but empty (stub file). The validator catches both conditions. Both files must exist and both must have content. The JSON is the source of truth; the Mermaid is the renderable representation — they must be committed together.</p>
+
+<h3>Programme Lead cannot persist across many journeys</h3>
+<p>The orchestrating agent hits context or rate limits after 2–3 journeys. Design for re-spawn: the Programme Lead reads pipeline state from <code>PIPELINE-STATE.md</code> and the artefact directory (which journeys have models, which are stable) rather than maintaining in-memory state. This is not a failure condition — it is the expected operating model. All state lives on disk.</p>
+
+<h3>API contracts must be per-capability, not per-service</h3>
+<p>Early journeys produced one OpenAPI spec per service (e.g. <code>retail-banking-core.openapi.json</code>, <code>customer-onboarding.openapi.json</code>, <code>kyc-aml.openapi.json</code>). Later journeys correctly produced one per capability (e.g. <code>retail-banking.openapi.json</code>, <code>commercial-banking.openapi.json</code>). The per-service approach leaks implementation detail and contradicts the architecture — channels call capabilities, not services. The first journey that touches a capability creates its contract; subsequent journeys extend it.</p>
+
+<h3>Cross-capability violations appear in JSON, not Mermaid</h3>
+<p>Synchronous cross-capability calls tend to appear in the JSON sequence files rather than in the Mermaid files. The visual Mermaid notation makes violations obvious — the boundary is drawn explicitly. The JSON files use raw service IDs where the capability boundary is not visible. Both files are validated by <code>validate-sequences.py</code>, but pay closer attention to the JSON files during reasoning review. When a journey produces its sequence diagrams, check the JSON steps array explicitly for synchronous calls between services in different capabilities.</p>
 
 <hr>
 

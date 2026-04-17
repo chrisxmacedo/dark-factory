@@ -1,0 +1,35 @@
+{
+  "$comment": "Template. Copy to {service-slug}.json — one file per service.",
+  "service_id": "SVC-001",
+  "name": "",
+  "classification": "domain | cross-cutting | foundation | channel",
+  "capability_id": "CAP-001 or null for platform/channel services",
+  "description": "One sentence describing the service's responsibility.",
+  "tier": "T0 | T1 | T2 | T3 | T4",
+  "deployment_unit": "own-repo | shared-repo",
+  "data_store": {
+    "type": "relational | document | key-value | event-log | none",
+    "shared_with_services_in_same_capability": [],
+    "data_classification": "public | internal | confidential | regulated"
+  },
+  "exposes": {
+    "capability_api_endpoints": [],
+    "internal_apis": []
+  },
+  "produces_events": [],
+  "consumes_events": [],
+  "depends_on": [
+    {
+      "service_id": "SVC-000",
+      "protocol": "rest | grpc | event | direct",
+      "criticality": "hard | soft"
+    }
+  ],
+  "sla": {
+    "availability": "",
+    "latency_p99_ms": null,
+    "throughput_rps": null
+  },
+  "owner_role": "",
+  "design_decisions": []
+}

@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "technical-service.schema.json",
+  "title": "Technical service",
+  "type": "object",
+  "required": ["service_id", "name", "classification", "description", "tier"],
+  "properties": {
+    "service_id": { "type": "string", "pattern": "^SVC-[0-9]{3}$" },
+    "name": { "type": "string" },
+    "classification": { "enum": ["domain", "cross-cutting", "foundation", "channel"] },
+    "capability_id": {
+      "oneOf": [
+        { "type": "string", "pattern": "^CAP-[0-9]{3}$" },
+        { "type": "null" }
+      ]
+    },
+    "description": { "type": "string" },
+    "tier": { "enum": ["T0", "T1", "T2", "T3", "T4"] },
+    "deployment_unit": { "enum": ["own-repo", "shared-repo"] },
+    "data_store": {
+      "type": "object",
+      "properties": {
+        "type": { "enum": ["relational", "document", "key-value", "event-log", "none"] },
+        "shared_with_services_in_same_capability": { "type": "array", "items": { "type": "string" } },
+        "data_classification": { "enum": ["public", "internal", "confidential", "regulated"] }
+      }
+    },
+    "exposes": {
+      "type": "object",
+      "properties": {
+        "capability_api_endpoints": { "type": "array" },
+        "internal_apis": { "type": "array" }
+      }
+    },
+    "produces_events": { "type": "array", "items": { "type": "string", "pattern": "^EVT-[0-9]{3}$" } },
+    "consumes_events": { "type": "array", "items": { "type": "string", "pattern": "^EVT-[0-9]{3}$" } },
+    "depends_on": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["service_id", "protocol", "criticality"],
+        "properties": {
+          "service_id": { "type": "string" },
+          "protocol": { "enum": ["rest", "grpc", "event", "direct"] },
+          "criticality": { "enum": ["hard", "soft"] }
+        }
+      }
+    },
+    "sla": {
+      "type": "object",
+      "properties": {
+        "availability": { "type": "string" },
+        "latency_p99_ms": { "type": ["number", "null"] },
+        "throughput_rps": { "type": ["number", "null"] }
+      }
+    },
+    "owner_role": { "type": "string" }
+  }
+}

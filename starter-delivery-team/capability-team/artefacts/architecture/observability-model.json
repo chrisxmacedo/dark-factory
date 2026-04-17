@@ -1,0 +1,38 @@
+{
+  "$comment": "Observability model — what the downstream dev team must implement. Phase B step 5.",
+  "status": "Draft",
+  "ingestion_principles": {
+    "sole_ingestion_point": "OTel Collector",
+    "pii_scrubbing_location": "central collector pipeline",
+    "direct_store_writes": "forbidden"
+  },
+  "stores": [
+    { "id": "LOG", "name": "Log Store", "retention_days": 90, "access": "engineering" },
+    { "id": "TRACE", "name": "Trace Store", "retention_days": 30, "access": "engineering" },
+    { "id": "METRICS", "name": "Metrics Store", "retention_months": 13, "access": "engineering" },
+    { "id": "AUDIT", "name": "Audit Log Store", "retention_years": 7, "access": "auditor-only", "worm": true }
+  ],
+  "instrumentation_checklist": [
+    "Structured JSON logs per category schema",
+    "Distinct log categories emitted",
+    "Traces with service metadata",
+    "Metrics for throughput, latency, error rate",
+    "Health endpoint exposed",
+    "service.yaml present and valid"
+  ],
+  "log_categories": [
+    { "id": "api_edge", "required_fields": ["request_id", "caller", "route", "status"] },
+    { "id": "core_domain", "required_fields": ["entity_id", "operation", "outcome"] },
+    { "id": "payment", "required_fields": ["payment_id", "amount", "currency", "rail"] },
+    { "id": "identity_auth", "required_fields": ["subject_id", "auth_method", "mfa_used"] },
+    { "id": "async_event", "required_fields": ["topic", "event_id", "correlation_id"] },
+    { "id": "admin_config", "required_fields": ["actor", "config_key", "before", "after"] },
+    { "id": "batch", "required_fields": ["job_id", "batch_size", "duration_ms"] }
+  ],
+  "data_freshness_slas": [
+    { "store": "LOG", "p99_seconds": 60 },
+    { "store": "TRACE", "p99_seconds": 60 },
+    { "store": "METRICS", "p99_seconds": 30 },
+    { "store": "AUDIT", "p99_seconds": 300 }
+  ]
+}

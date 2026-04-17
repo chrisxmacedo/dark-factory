@@ -1,0 +1,22 @@
+{
+  "$comment": "Prioritised backlog of journeys. Produced at Phase B, step 6. Consumed by Phase C one journey at a time.",
+  "status": "Draft",
+  "generated_from": {
+    "capabilities": "artefacts/foundation/capabilities/",
+    "personas": "artefacts/foundation/personas/",
+    "method": "sub-capability × persona matrix"
+  },
+  "journeys": [
+    {
+      "journey_id": "JRN-001",
+      "priority": 1,
+      "name": "",
+      "triggering_persona": "PER-001",
+      "capabilities_touched": ["CAP-001"],
+      "sub_capabilities_touched": ["SUB-001"],
+      "description": "One sentence describing the end-to-end flow.",
+      "depends_on": [],
+      "rationale_for_priority": "Why this journey is scheduled ahead of others (e.g. establishes Customer/Account entities needed by JRN-003)."
+    }
+  ]
+}

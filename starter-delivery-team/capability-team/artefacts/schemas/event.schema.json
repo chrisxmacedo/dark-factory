@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "event.schema.json",
+  "title": "Event — catalogue entry",
+  "type": "object",
+  "required": ["event_id", "name", "source_service", "source_entity", "trigger", "payload_schema", "consumers", "ordering_guarantees", "topic", "data_classification", "worm_audit_pipeline", "retention", "cloudevents_type"],
+  "properties": {
+    "event_id": { "type": "string", "pattern": "^EVT-[0-9]{3}$" },
+    "name": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Za-z0-9]+(ed|en|n)$",
+      "description": "PascalCase, past tense (e.g. AccountOpened, LoanDecided)."
+    },
+    "source_service": { "type": "string", "pattern": "^SVC-[0-9]{3}$" },
+    "source_entity": { "type": "string", "pattern": "^ENT-[0-9]{3}$" },
+    "trigger": { "type": "string" },
+    "journey_phase": { "type": "string" },
+    "payload_schema": { "type": "object" },
+    "derived_from": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "description": "Map of payload field path -> entity field path."
+    },
+    "consumers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["service_id"],
+        "properties": {
+          "service_id": { "type": "string", "pattern": "^SVC-[0-9]{3}$" },
+          "capability_id": { "type": "string", "pattern": "^CAP-[0-9]{3}$" },
+          "maps_to": { "type": "object", "additionalProperties": { "type": "string" } }
+        }
+      }
+    },
+    "ordering_guarantees": { "type": "string" },
+    "topic": { "type": "string" },
+    "data_classification": { "enum": ["public", "internal", "confidential", "regulated"] },
+    "worm_audit_pipeline": { "type": "boolean" },
+    "retention": { "type": "string" },
+    "cloudevents_type": { "type": "string" }
+  }
+}

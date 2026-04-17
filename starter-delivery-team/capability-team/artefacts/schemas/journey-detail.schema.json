@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "journey-detail.schema.json",
+  "title": "Journey detail — Phase C step 7 output",
+  "type": "object",
+  "required": ["journey_id", "name", "status", "triggering_persona", "capabilities_touched", "phases", "paths"],
+  "properties": {
+    "journey_id": { "type": "string", "pattern": "^JRN-[0-9]{3}$" },
+    "name": { "type": "string" },
+    "status": { "enum": ["Draft", "In review", "Stable", "Revised"] },
+    "triggering_persona": { "type": "string", "pattern": "^PER-[0-9]{3}$" },
+    "capabilities_touched": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^CAP-[0-9]{3}$" },
+      "minItems": 1
+    },
+    "phases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "description"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^PH-[0-9]{3}$" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "actors": { "type": "array", "items": { "type": "string" } },
+          "services": { "type": "array", "items": { "type": "string" } },
+          "governance_rules": { "type": "array", "items": { "type": "string", "pattern": "^GOV-[0-9]{3}$" } },
+          "entry_conditions": { "type": "array", "items": { "type": "string" } },
+          "exit_conditions": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "paths": {
+      "type": "object",
+      "required": ["happy_path", "alternative_paths", "exception_paths"],
+      "properties": {
+        "happy_path": {
+          "type": "object",
+          "required": ["description", "phases"],
+          "properties": {
+            "description": { "type": "string" },
+            "phases": { "type": "array", "items": { "type": "string", "pattern": "^PH-[0-9]{3}$" } }
+          }
+        },
+        "alternative_paths": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["description", "phases"]
+          }
+        },
+        "exception_paths": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["description", "phases"]
+          }
+        }
+      }
+    },
+    "design_decisions": { "type": "array" }
+  }
+}

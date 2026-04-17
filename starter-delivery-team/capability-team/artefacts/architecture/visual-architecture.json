@@ -1,0 +1,51 @@
+{
+  "$comment": "Structured representation of the single visual architecture diagram. Phase B step 5. Architect defines layering; agent produces the JSON.",
+  "status": "Draft",
+  "layers": [
+    {
+      "id": "LAY-001",
+      "name": "Channels",
+      "description": "How personas access the system — web, mobile, branch, partner portals, internal tools.",
+      "contains": []
+    },
+    {
+      "id": "LAY-002",
+      "name": "Capabilities",
+      "description": "Business-domain groupings owning data, services, and APIs.",
+      "contains": []
+    },
+    {
+      "id": "LAY-003",
+      "name": "Platform",
+      "description": "Shared runtime infrastructure — Event Bus, Schema Registry, Observability, Audit, Auth, Cache.",
+      "contains": []
+    },
+    {
+      "id": "LAY-004",
+      "name": "External systems",
+      "description": "Third-party systems integrated via API, events, or batch.",
+      "contains": []
+    }
+  ],
+  "channels": [],
+  "flows": [
+    {
+      "from": "LAY-001 (channel)",
+      "to": "LAY-002 (capability)",
+      "type": "sync REST",
+      "description": "Channels call capability APIs synchronously."
+    },
+    {
+      "from": "LAY-002 (capability)",
+      "to": "LAY-002 (capability)",
+      "type": "async event",
+      "description": "Cross-capability communication is exclusively events."
+    },
+    {
+      "from": "LAY-002 (capability)",
+      "to": "LAY-003 (platform)",
+      "type": "sync or async",
+      "description": "Capabilities depend on platform services."
+    }
+  ]
+}

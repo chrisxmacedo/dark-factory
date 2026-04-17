@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "governance.schema.json",
+  "title": "Governance rules for a capability",
+  "type": "object",
+  "required": ["capability_id", "rules"],
+  "properties": {
+    "capability_id": { "type": "string", "pattern": "^CAP-[0-9]{3}$" },
+    "status": { "enum": ["Draft", "In review", "Approved", "Baselined", "Revised"] },
+    "rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "source", "description"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^GOV-[0-9]{3}$" },
+          "name": { "type": "string" },
+          "source": {
+            "type": "object",
+            "required": ["type", "reference"],
+            "properties": {
+              "type": { "enum": ["legislation", "regulation", "policy", "contract"] },
+              "reference": { "type": "string" },
+              "url_or_doc_ref": { "type": "string" },
+              "jurisdiction": { "type": "string" },
+              "effective_date": { "type": "string" },
+              "review_cadence": { "type": "string" }
+            }
+          },
+          "description": { "type": "string" },
+          "scope": {
+            "type": "object",
+            "properties": {
+              "applies_to_personas": { "type": "array", "items": { "type": "string" } },
+              "applies_to_phases": { "type": "array", "items": { "type": "string" } },
+              "applies_to_entities": { "type": "array", "items": { "type": "string" } }
+            }
+          },
+          "enforcement_points": { "type": "array", "items": { "type": "string" } },
+          "data_requirements": { "type": "array", "items": { "type": "string" } },
+          "retention_requirement": { "type": "string" },
+          "audit_requirement": { "type": "string" },
+          "status_effective": { "enum": ["current", "incoming", "under_review"] }
+        }
+      }
+    },
+    "incoming_regulation": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "regulation"],
+        "properties": {
+          "id": { "type": "string" },
+          "regulation": { "type": "string" },
+          "jurisdiction": { "type": "string" },
+          "earliest_effective_date": { "type": "string" },
+          "capability_impact": { "type": "string" },
+          "readiness_assessment": { "type": "string" }
+        }
+      }
+    }
+  }
+}

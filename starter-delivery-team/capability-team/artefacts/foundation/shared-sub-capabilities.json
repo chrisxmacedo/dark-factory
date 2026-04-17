@@ -1,0 +1,16 @@
+{
+  "$comment": "Lists sub-capabilities that appear in more than one capability, with the architectural resolution. Phase A step 1 output.",
+  "status": "Draft",
+  "shared_sub_capabilities": [
+    {
+      "id": "SHARED-001",
+      "name": "",
+      "appears_in": ["CAP-001", "CAP-002"],
+      "authoritative_capability": "CAP-001",
+      "resolution_pattern": "share-contract-not-implementation",
+      "resolution_description": "Each capability owns its own representation of the concept. Authoritative capability publishes events; consumers subscribe read-only. No shared data model.",
+      "published_events_from_authoritative": [],
+      "consumer_projection_notes": ""
+    }
+  ]
+}

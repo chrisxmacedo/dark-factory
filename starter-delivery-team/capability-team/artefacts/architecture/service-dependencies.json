@@ -1,0 +1,43 @@
+{
+  "$comment": "Service dependency graph with tiers and criticality. Derived from foundation/technical-services/*.json. Phase B step 5.",
+  "status": "Draft",
+  "tiers": {
+    "T0": "Foundation — no upstream dependencies",
+    "T1": "Core Infrastructure — depends only on T0",
+    "T2": "Business Services — depends on T0 + T1",
+    "T3": "Composite — depends on T0 + T1 + T2",
+    "T4": "Overlay — depends on full stack"
+  },
+  "services": [
+    {
+      "service_id": "SVC-001",
+      "capability_id": "CAP-001",
+      "tier": "T2",
+      "depends_on": [
+        {
+          "service_id": "SVC-PLATFORM-001",
+          "protocol": "event",
+          "criticality": "soft"
+        }
+      ],
+      "capability_mappings": []
+    }
+  ],
+  "build_phases": [
+    {
+      "phase": 1,
+      "description": "T0 + T1 — platform prerequisites",
+      "services": []
+    },
+    {
+      "phase": 2,
+      "description": "Compliance prerequisites (KYC, sanctions, fraud)",
+      "services": []
+    },
+    {
+      "phase": 3,
+      "description": "Core business services",
+      "services": []
+    }
+  ]
+}

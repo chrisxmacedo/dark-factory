@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "capability.schema.json",
+  "title": "Capability",
+  "description": "Single-capability specification consumed by the downstream development pipeline.",
+  "type": "object",
+  "required": ["capability_id", "name", "status", "description", "sub_capabilities", "owned_data_domains"],
+  "properties": {
+    "capability_id": { "type": "string", "pattern": "^CAP-[0-9]{3}$" },
+    "name": { "type": "string", "minLength": 1 },
+    "status": { "enum": ["Draft", "In review", "Approved", "Baselined", "Revised"] },
+    "mandate_source": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["type", "reference"],
+        "properties": {
+          "type": { "enum": ["legislation", "regulation", "policy", "charter", "strategy"] },
+          "reference": { "type": "string" },
+          "url_or_doc_ref": { "type": "string" }
+        }
+      }
+    },
+    "description": { "type": "string", "minLength": 1 },
+    "outcomes": { "type": "array", "items": { "type": "string" } },
+    "sub_capabilities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "promotion_test"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^SUB-[0-9]{3}$" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "promotion_test": {
+            "type": "object",
+            "required": ["distinct_participants", "separate_regulatory_framework", "distinct_lifecycle", "independent_scalability", "criteria_met", "promoted"],
+            "properties": {
+              "distinct_participants": { "type": "boolean" },
+              "separate_regulatory_framework": { "type": "boolean" },
+              "distinct_lifecycle": { "type": "boolean" },
+              "independent_scalability": { "type": "boolean" },
+              "criteria_met": { "type": "integer", "minimum": 0, "maximum": 4 },
+              "promoted": { "type": "boolean" },
+              "rationale": { "type": "string" }
+            }
+          },
+          "shared_with": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "owned_data_domains": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "market_context": {
+      "type": "object",
+      "properties": {
+        "competitive_landscape": { "type": "string" },
+        "regulatory_horizon": { "type": "string" },
+        "build_vs_buy": { "type": "string" },
+        "sub_capability_boundary_evidence": { "type": "string" }
+      }
+    },
+    "design_decisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "decision", "rationale"],
+        "properties": {
+          "id": { "type": "string" },
+          "decision": { "type": "string" },
+          "rationale": { "type": "string" },
+          "alternatives_considered": { "type": "array", "items": { "type": "string" } },
+          "rejected_because": { "type": "string" }
+        }
+      }
+    }
+  }
+}

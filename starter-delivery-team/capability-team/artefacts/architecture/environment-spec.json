@@ -1,0 +1,51 @@
+{
+  "$comment": "Environment specification — defines CI, RC, prod-parity configurations for the downstream dev team. Phase B step 5.",
+  "status": "Draft",
+  "environments": [
+    {
+      "id": "ci",
+      "purpose": "Feature branch integration; fast feedback",
+      "services_real": ["all domain capabilities", "platform"],
+      "services_stubbed": ["external systems"],
+      "databases": "ephemeral per run",
+      "otel_pipeline": "collector only",
+      "secrets_source": "test values"
+    },
+    {
+      "id": "rc",
+      "purpose": "Release candidate stabilisation",
+      "services_real": ["all domain capabilities", "platform"],
+      "services_stubbed": ["external systems"],
+      "databases": "persistent",
+      "otel_pipeline": "full stack (collector + stores)",
+      "secrets_source": "rotated"
+    },
+    {
+      "id": "prod-parity",
+      "purpose": "Pre-prod validation against production-shaped data",
+      "services_real": ["all domain capabilities", "platform"],
+      "services_stubbed_or_sandbox": ["external systems (sandbox where available)"],
+      "databases": "persistent with seed data",
+      "otel_pipeline": "full stack + audit pipeline",
+      "secrets_source": "secrets-manager-backed, rotated"
+    }
+  ],
+  "service_startup_ordering": [
+    {
+      "phase": 1,
+      "description": "T0 platform services",
+      "services": []
+    },
+    {
+      "phase": 2,
+      "description": "T1 observability + auth + compliance",
+      "services": []
+    },
+    {
+      "phase": 3,
+      "description": "T2+ business services",
+      "services": []
+    }
+  ],
+  "external_system_stubs": []
+}

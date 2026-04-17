@@ -1,0 +1,29 @@
+{
+  "$comment": "Template for a central-model entity file. Created by sync-central-model.py from journey data-model.json. One file per entity.",
+  "entity_id": "ENT-001",
+  "name": "",
+  "owning_capability": "CAP-001",
+  "owning_service": "SVC-001",
+  "description": "",
+  "fields": [
+    {
+      "name": "",
+      "type": "",
+      "required": true,
+      "validation": "",
+      "source_journey": "JRN-001",
+      "data_classification": "public | internal | confidential | regulated",
+      "computed_from": null
+    }
+  ],
+  "relationships": [
+    {
+      "to_entity_id": "ENT-002",
+      "cardinality": "1..1 | 1..n | n..n",
+      "description": ""
+    }
+  ],
+  "introduced_by_journey": "JRN-001",
+  "extended_by_journeys": [],
+  "design_decisions": []
+}

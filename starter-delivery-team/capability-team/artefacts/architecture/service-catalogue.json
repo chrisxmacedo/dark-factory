@@ -1,0 +1,22 @@
+{
+  "$comment": "Consolidated catalogue of all services. Phase B step 5. Derived from foundation/technical-services/*.json.",
+  "status": "Draft",
+  "services": [
+    {
+      "service_id": "SVC-001",
+      "name": "",
+      "classification": "domain | cross-cutting | foundation | channel",
+      "capability_id": "",
+      "owner_role": "",
+      "api_style": "rest | grpc | events-only | none",
+      "data_store_type": "relational | document | key-value | event-log | none",
+      "data_classification": "public | internal | confidential | regulated",
+      "sla": {
+        "availability": "",
+        "latency_p99_ms": null,
+        "throughput_rps": null
+      },
+      "repo_name_hint": ""
+    }
+  ]
+}

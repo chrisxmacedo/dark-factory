@@ -1,0 +1,28 @@
+{
+  "$comment": "Template. Copy to {persona-slug}.json — one file per persona.",
+  "persona_id": "PER-001",
+  "name": "",
+  "type": "internal | external",
+  "subtype": "employee | customer | counterparty | regulator | partner | public | other",
+  "description": "One sentence describing who this persona is and their role.",
+  "capabilities_accessed": [
+    {
+      "capability_id": "CAP-001",
+      "purpose": ""
+    }
+  ],
+  "channels": [
+    {
+      "channel_id": "CHN-001",
+      "access_purpose": "",
+      "auth_model": "",
+      "rate_limit_class": "",
+      "data_projection": ""
+    }
+  ],
+  "legal_basis": "If applicable — consent / contract / legitimate interest / legal obligation.",
+  "data_classification_granted": "public | internal | confidential | regulated",
+  "market_context": {
+    "revealed_by_research": "If this persona type was identified through market research (e.g. TPPs, ESG rating agencies), note the source and trigger."
+  }
+}

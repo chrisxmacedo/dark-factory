@@ -1,0 +1,52 @@
+{
+  "$comment": "Template. Copy to {capability-slug}.json and replace values. Remove the $comment keys.",
+  "capability_id": "CAP-001",
+  "name": "",
+  "status": "Draft",
+  "mandate_source": [
+    {
+      "type": "legislation | regulation | policy | charter | strategy",
+      "reference": "",
+      "url_or_doc_ref": ""
+    }
+  ],
+  "description": "One paragraph describing what this capability does and why it exists.",
+  "outcomes": [
+    "Outcome the capability must deliver for the organisation."
+  ],
+  "sub_capabilities": [
+    {
+      "id": "SUB-001",
+      "name": "",
+      "description": "",
+      "promotion_test": {
+        "distinct_participants": false,
+        "separate_regulatory_framework": false,
+        "distinct_lifecycle": false,
+        "independent_scalability": false,
+        "criteria_met": 0,
+        "promoted": false,
+        "rationale": ""
+      },
+      "shared_with": []
+    }
+  ],
+  "owned_data_domains": [
+    "Named data domain owned by this capability (one or more databases/schemas)."
+  ],
+  "market_context": {
+    "competitive_landscape": "Who provides this capability in the market. What is table stakes vs differentiator.",
+    "regulatory_horizon": "Current and incoming regulation in the next 2-3 years.",
+    "build_vs_buy": "Whether this organisation builds, buys, or partners — with rationale.",
+    "sub_capability_boundary_evidence": "Market evidence used to support promotion decisions."
+  },
+  "design_decisions": [
+    {
+      "id": "DD-001",
+      "decision": "",
+      "rationale": "",
+      "alternatives_considered": [],
+      "rejected_because": ""
+    }
+  ]
+}
