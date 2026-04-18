@@ -16,43 +16,20 @@
         "properties": {
           "persona_id": { "type": "string" },
           "persona_name": { "type": "string" },
-          "channel": { "type": "string" },
+          "channel": {},
           "phases": {
             "type": "array",
             "items": {
               "type": "object",
               "required": ["phase_id", "data_provided", "data_received"],
               "properties": {
-                "phase_id": { "type": "string", "pattern": "^PH-\\d{3}$" },
+                "phase_id": { "type": "string" },
                 "description": { "type": "string" },
-                "data_provided": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "required": ["field", "entity"],
-                    "properties": {
-                      "field": { "type": "string" },
-                      "entity": { "type": "string" },
-                      "type": { "type": "string" },
-                      "required": { "type": "boolean" }
-                    }
-                  }
-                },
-                "data_received": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "required": ["field", "entity"],
-                    "properties": {
-                      "field": { "type": "string" },
-                      "entity": { "type": "string" },
-                      "type": { "type": "string" }
-                    }
-                  }
-                },
-                "actions_permitted": { "type": "array", "items": { "type": "string" } },
+                "data_provided": { "type": "array" },
+                "data_received": { "type": "array" },
+                "actions_permitted": { "type": "array" },
                 "notifications": { "type": "array" },
-                "data_withheld": { "type": "array", "items": { "type": "string" } }
+                "data_withheld": { "type": "array" }
               }
             }
           }

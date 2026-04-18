@@ -18,18 +18,9 @@
           "source_service": { "type": "string", "pattern": "^SVC-\\d{3}$" },
           "source_entity": { "type": "string" },
           "trigger": { "type": "string" },
-          "journey_phase": { "type": "string", "pattern": "^PH-\\d{3}$" },
+          "journey_phase": { "type": "string" },
           "payload_schema": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "object",
-              "required": ["type"],
-              "properties": {
-                "type": { "type": "string" },
-                "description": { "type": "string" },
-                "derived_from": { "type": "string" }
-              }
-            }
+            "type": "object"
           },
           "consumers": { "type": "array" },
           "ordering_guarantees": { "type": "string" },

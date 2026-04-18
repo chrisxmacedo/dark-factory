@@ -12,14 +12,9 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["phase_id", "latency", "availability"],
+        "required": ["phase_id"],
         "properties": {
-          "phase_id": { "type": "string", "pattern": "^PH-\\d{3}$" },
-          "latency": { "type": "string" },
-          "throughput": { "type": "string" },
-          "availability": { "type": "string" },
-          "security_classification": { "type": "string" },
-          "data_classification": { "type": "string" }
+          "phase_id": { "type": "string" }
         }
       }
     },

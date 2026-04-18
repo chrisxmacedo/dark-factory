@@ -110,7 +110,7 @@ def main():
         "journey_id": journey_id,
         "document_version": "0.1.0",
         "status": "Draft",
-        "new_entities": [
+        "entities": [
             {
                 "id": f"ENT-{next_entity:03d}",
                 "name": "",

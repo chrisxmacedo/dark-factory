@@ -24,7 +24,7 @@
           },
           "published_events": {
             "type": "array",
-            "items": { "type": "string", "pattern": "^EVT-\\d{3}$" }
+            "items": { "type": "string", "pattern": "^(EVT-\\d{3}|[A-Za-z][A-Za-z0-9]*)$" }
           },
           "consumed_events": {
             "type": "array",

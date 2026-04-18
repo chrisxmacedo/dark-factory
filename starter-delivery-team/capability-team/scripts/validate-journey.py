@@ -11,6 +11,12 @@ import re
 import sys
 from pathlib import Path
 
+try:
+    from jsonschema import validate as json_validate, ValidationError
+    HAS_JSONSCHEMA = True
+except ImportError:
+    HAS_JSONSCHEMA = False
+
 ARTEFACTS = Path(__file__).parent.parent / "artefacts"
 MODELS = ARTEFACTS / "models"
 CENTRAL = ARTEFACTS / "central-model"
@@ -326,6 +332,75 @@ def check_service_map(d):
             error(f"{sid} NOT in service map")
 
 
+# ---------- CHECK: JSON Schema validation ----------
+
+SCHEMA_MAP = {
+    "journey-detail.json": "journey-detail.schema.json",
+    "participant-interaction.json": "participant-interaction.schema.json",
+    "data-model.json": "data-model.schema.json",
+    "service-boundaries.json": "service-boundaries.schema.json",
+    "nfr.json": "nfr.schema.json",
+}
+
+def check_json_schemas(d):
+    """Validate artefact files against their canonical JSON schemas."""
+    print("\n[9] JSON schema validation")
+
+    if not HAS_JSONSCHEMA:
+        warn("jsonschema package not installed — skipping schema validation (pip install jsonschema)")
+        return
+
+    schemas_dir = ARTEFACTS / "schemas"
+    validated = 0
+    schema_errors = 0
+
+    for filename, schema_name in SCHEMA_MAP.items():
+        filepath = d / filename
+        schema_path = schemas_dir / schema_name
+
+        if not filepath.exists():
+            continue
+        if not schema_path.exists():
+            warn(f"Schema {schema_name} not found in {schemas_dir}")
+            continue
+
+        try:
+            data = json.load(open(filepath))
+            schema = json.load(open(schema_path))
+            json_validate(instance=data, schema=schema)
+            ok(f"{filename} conforms to {schema_name}")
+            validated += 1
+        except ValidationError as e:
+            # Extract the most useful part of the error
+            path = " → ".join(str(p) for p in e.absolute_path) if e.absolute_path else "root"
+            msg = str(e.message)[:120]
+            error(f"{filename} schema violation at {path}: {msg}")
+            schema_errors += 1
+        except Exception as e:
+            warn(f"{filename} schema check failed: {e}")
+
+    # Also validate event catalogue
+    evt_path = d / "events" / "event-catalogue.json"
+    evt_schema = schemas_dir / "event-catalogue.schema.json"
+    if evt_path.exists() and evt_schema.exists():
+        try:
+            data = json.load(open(evt_path))
+            schema = json.load(open(evt_schema))
+            json_validate(instance=data, schema=schema)
+            ok(f"events/event-catalogue.json conforms to schema")
+            validated += 1
+        except ValidationError as e:
+            path = " → ".join(str(p) for p in e.absolute_path) if e.absolute_path else "root"
+            msg = str(e.message)[:120]
+            error(f"events/event-catalogue.json schema violation at {path}: {msg}")
+            schema_errors += 1
+        except Exception as e:
+            warn(f"events/event-catalogue.json schema check failed: {e}")
+
+    if validated and not schema_errors:
+        ok(f"{validated} files validated against schemas")
+
+
 # ---------- MAIN ----------
 
 def main():
@@ -351,6 +426,7 @@ def main():
     check_events_in_central(d)
     check_entities_in_central(d)
     check_service_map(d)
+    check_json_schemas(d)
 
     print(f"\n{'='*60}")
     if errors:

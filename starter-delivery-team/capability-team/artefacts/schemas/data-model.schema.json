@@ -29,11 +29,17 @@
                 "required": { "type": "boolean" },
                 "validation": { "type": "string" },
                 "computed_from": {
-                  "type": ["object", "null"],
-                  "properties": {
-                    "formula": { "type": "string" },
-                    "source_fields": { "type": "array", "items": { "type": "string" } }
-                  }
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "formula": { "type": "string" },
+                        "source_fields": { "type": "array", "items": { "type": "string" } }
+                      }
+                    },
+                    { "type": "string" },
+                    { "type": "null" }
+                  ]
                 }
               }
             }
