@@ -197,36 +197,210 @@ def extract_data_from_step_label(label):
 
 
 def extract_participant_data(participant_interaction, phase_id):
-    """Extract what each participant sees and can do at this phase."""
+    """Extract what each participant sees and can do at this phase.
+    Handles multiple structural variants found across journeys."""
     result = {}
     if not participant_interaction:
         return result
 
     for participant in participant_interaction.get("participants", []):
-        pid = participant.get("id", participant.get("persona_id", ""))
+        pid = participant.get("id", participant.get("persona_id",
+              participant.get("participant_id", "")))
+        pname = participant.get("persona_name", participant.get("name", pid))
         if not pid:
             continue
 
-        phases_data = participant.get("phases", participant.get("phase_interactions",
-                        participant.get("touchpoints", [])))
+        # Check for top-level projections/entitlements (hnw pattern)
+        top_projections = participant.get("projections", [])
+        top_entitlements = participant.get("entitlements", [])
+        top_notifications = participant.get("notifications", [])
 
+        if top_projections and isinstance(top_projections, list) and top_projections and isinstance(top_projections[0], dict):
+            # projections is phase-keyed at top level
+            for proj in top_projections:
+                if not isinstance(proj, dict):
+                    continue
+                ref = str(proj.get("phase", proj.get("phase_id", "")))
+                if phase_id in ref:
+                    result[pid] = {
+                        "data_visible": proj.get("data_exposed", proj.get("data_visible", [])),
+                        "actions_permitted": [],
+                        "notifications": [],
+                        "data_withheld": proj.get("data_withheld", []),
+                    }
+                    if proj.get("projection_note"):
+                        result[pid]["note"] = proj["projection_note"]
+                    # Add entitlements if they exist at top level
+                    if top_entitlements:
+                        result[pid]["actions_permitted"] = top_entitlements if isinstance(top_entitlements, list) else [top_entitlements]
+                    # Add notifications for this phase
+                    if isinstance(top_notifications, list):
+                        for notif in top_notifications:
+                            if isinstance(notif, dict) and phase_id in str(notif.get("phase", "")):
+                                result[pid]["notifications"].append(notif)
+                    break
+            if pid in result:
+                continue
+
+        # Try multiple keys for phase-level data
+        phases_data = None
+        phases_key = None
+        for key in ["phases", "phase_interactions", "touchpoints", "interactions_by_phase",
+                     "interaction_phases", "interactions"]:
+            if key in participant:
+                phases_data = participant[key]
+                phases_key = key
+                break
+
+        # Some journeys have "phases" as a list of IDs AND "touchpoints" as the detail
+        if isinstance(phases_data, list) and phases_data and isinstance(phases_data[0], str):
+            # phases is just IDs — look for touchpoints as the detail
+            for alt_key in ["touchpoints", "interaction_phases", "phase_interactions"]:
+                if alt_key in participant and alt_key != phases_key:
+                    alt_data = participant[alt_key]
+                    if isinstance(alt_data, list) and alt_data and isinstance(alt_data[0], dict):
+                        phases_data = alt_data
+                        phases_key = alt_key
+                        break
+
+        if phases_data is None:
+            continue
+
+        # Handle list of strings (just phase IDs, no detail)
+        if isinstance(phases_data, list) and phases_data and isinstance(phases_data[0], str):
+            if phase_id in phases_data:
+                result[pid] = {
+                    "data_visible": [],
+                    "actions_permitted": [],
+                    "notifications": [],
+                    "note": "Phase listed but no detail structure",
+                }
+            continue
+
+        # Handle list of dicts (most common)
         if isinstance(phases_data, list):
             for pd in phases_data:
                 if not isinstance(pd, dict):
                     continue
-                ref = str(pd.get("phase_id", pd.get("phase", "")))
-                if phase_id in ref:
-                    projection = pd.get("projection", pd.get("projections",
-                                  pd.get("data_visible", pd.get("sees", []))))
-                    entitlement = pd.get("entitlement", pd.get("entitlements",
-                                   pd.get("actions", pd.get("can_do", []))))
-                    notifications = pd.get("notifications", pd.get("notified", []))
 
+                # Handle nested interactions_by_phase: {phase_id, interactions: [...]}
+                if "interactions" in pd and isinstance(pd["interactions"], list):
+                    nested_ref = str(pd.get("phase_id", pd.get("phase", "")))
+                    if phase_id in nested_ref:
+                        all_projection = []
+                        all_entitlement = []
+                        all_notifications = []
+                        for interaction in pd["interactions"]:
+                            if isinstance(interaction, dict):
+                                if interaction.get("data_received"):
+                                    all_projection.append(interaction["data_received"])
+                                if interaction.get("data_returned"):
+                                    all_projection.append(interaction["data_returned"])
+                                if interaction.get("data_provided"):
+                                    all_entitlement.append(interaction["data_provided"])
+                                if interaction.get("action"):
+                                    all_entitlement.append(interaction["action"])
+                                if interaction.get("notification"):
+                                    all_notifications.append(interaction["notification"])
+                            elif isinstance(interaction, str):
+                                all_entitlement.append(interaction)
+                        result[pid] = {
+                            "data_visible": all_projection,
+                            "actions_permitted": all_entitlement,
+                            "notifications": all_notifications,
+                        }
+                    continue
+
+                ref = str(pd.get("phase_id", pd.get("phase", "")))
+                if phase_id not in ref:
+                    continue
+
+                # Extract projection/visibility — try many key names
+                projection = (
+                    pd.get("projection") or pd.get("projections") or
+                    pd.get("data_visible") or pd.get("sees") or
+                    pd.get("information_surfaced") or pd.get("data_visibility_rules") or
+                    pd.get("data_shown") or pd.get("data_received") or
+                    pd.get("data_returned") or pd.get("outcome") or
+                    pd.get("information_disclosed_to_participant") or []
+                )
+
+                # Extract entitlements/actions
+                entitlement = (
+                    pd.get("entitlement") or pd.get("entitlements") or
+                    pd.get("actions") or pd.get("can_do") or
+                    pd.get("permitted_actions") or pd.get("action") or
+                    pd.get("data_provided") or pd.get("interaction") or
+                    pd.get("information_collected_from_participant") or []
+                )
+
+                # Extract notifications
+                notifications = (
+                    pd.get("notifications") or pd.get("notified") or
+                    pd.get("notification_sent") or pd.get("alerts") or []
+                )
+
+                # Extract withheld data (important for tipping-off etc.)
+                withheld = (
+                    pd.get("information_withheld") or pd.get("data_withheld") or
+                    pd.get("data_never_visible") or []
+                )
+
+                # Normalise to lists
+                def to_list(v):
+                    if isinstance(v, list):
+                        return v
+                    if isinstance(v, dict):
+                        return [v]
+                    if isinstance(v, str) and v:
+                        return [v]
+                    return []
+
+                entry = {
+                    "data_visible": to_list(projection),
+                    "actions_permitted": to_list(entitlement),
+                    "notifications": to_list(notifications),
+                }
+                if withheld:
+                    entry["data_withheld"] = to_list(withheld)
+
+                # Also pull description if present
+                desc = pd.get("description", pd.get("interaction_type", ""))
+                if desc:
+                    entry["interaction_description"] = desc
+
+                result[pid] = entry
+
+        # Handle dict keyed by phase ID
+        elif isinstance(phases_data, dict):
+            if phase_id in phases_data:
+                pd = phases_data[phase_id]
+                if isinstance(pd, dict):
                     result[pid] = {
-                        "data_visible": projection if isinstance(projection, (list, dict)) else [projection] if projection else [],
-                        "actions_permitted": entitlement if isinstance(entitlement, (list, dict)) else [entitlement] if entitlement else [],
-                        "notifications": notifications if isinstance(notifications, (list, dict)) else [notifications] if notifications else [],
+                        "data_visible": pd.get("projection", pd.get("sees", [])),
+                        "actions_permitted": pd.get("entitlement", pd.get("actions", [])),
+                        "notifications": pd.get("notifications", []),
                     }
+
+        # Also check top-level participant fields for global visibility rules
+        global_visible = participant.get("data_visible_to_persona", [])
+        global_withheld = participant.get("data_never_visible_to_persona", [])
+        if pid in result:
+            if global_visible and not result[pid].get("data_visible"):
+                result[pid]["data_visible_global"] = global_visible
+            if global_withheld:
+                result[pid]["data_withheld_global"] = global_withheld
+        elif global_visible or global_withheld:
+            # Participant has global rules but no phase-specific data
+            result[pid] = {
+                "data_visible": [],
+                "actions_permitted": [],
+                "notifications": [],
+            }
+            if global_visible:
+                result[pid]["data_visible_global"] = global_visible
+            if global_withheld:
+                result[pid]["data_withheld_global"] = global_withheld
 
     return result
 
