@@ -224,6 +224,29 @@ Consequences for artefacts:
     boundary isn't visible. The validator catches both but the JSON
     files need more attention.
 
+26. **Canonical JSON schemas eliminate structural drift.** Without
+    enforced schemas, agents produce artefacts with 12+ key name
+    variants for the same concept (persona_id vs participant_id vs id,
+    phases vs touchpoints vs interactions vs phase_interactions). Define
+    one canonical schema per artefact type, enforce it via JSON schema
+    validation in the validator, and migrate existing data to conform.
+    The step manifest generator drops from 50+ lines of fallback logic
+    to trivial single-key access.
+
+27. **Schemas should be strict on structure, relaxed on content.** The
+    schema enforces which keys exist and their types. It does NOT
+    enforce string patterns too strictly (e.g. governance rules include
+    sub-IDs like GOV-001-R01, not just GOV-001). Overly strict patterns
+    cause false failures. Let the data integrity validator handle
+    content correctness; let the schema handle structure.
+
+28. **Migration scripts are one-time but template-worthy.** The
+    `migrate-to-canonical-schema.py` script was used once to fix 467
+    key name mismatches across 30 journeys. Future projects that start
+    from the canonical scaffold templates won't need it, but it's
+    useful when onboarding existing artefacts or inheriting from a
+    project that evolved its structure mid-run.
+
 ## Pipeline ordering constraints
 
 18b. **Scaffolds must be sequential.** The scaffold script assigns
@@ -244,4 +267,7 @@ Consequences for artefacts:
 | `validate-sequences.py` | Checks sequence diagrams for cross-capability sync violations | Review Team (Stage 1) | After validate-journey passes |
 | `validate-central-model-impact.py` | Lists prior journeys whose artefacts reference entities/events touched by the current journey | Capability Lead | After `sync-central-model.py`, before Gate 2. Informational, not blocking. |
 | `validate-data-integrity.py` | Deep structural integrity check — traces data flow from entity fields through event payloads through consumed mappings through API contracts. Surfaces field references that don't resolve. | Review Team (Stage 1) | After validate-sequences passes. The most thorough check — catches 80% of issues that would block a developer. |
-| `generate-event-schemas.py` | Generates Avro schema files (.avsc) from event catalogue payload definitions. One file per event, organised by topic. Includes CloudEvents envelope. | Capability Lead | After all journeys complete (or periodically). Deterministic — no reasoning needed. |
+| `validate-data-integrity.py` | Deep field-level data flow traceability — traces entity fields through event payloads, consumed mappings, and API contracts. 8 checks. | Review Team (Stage 1) | After validate-sequences passes. Catches field references that don't resolve. |
+| `generate-event-schemas.py` | Generates Avro schema files (.avsc) from event catalogue payload definitions. One per event, organised by topic. CloudEvents envelope. | Capability Lead | After all journeys complete (or periodically). Deterministic. |
+| `generate-step-manifest.py` | Produces per-step data manifest — participant I/O, API request/response schemas, events pub/consumed, entity modifications, cross-step data lineage. | Capability Lead | After all journeys complete (or per journey). Deterministic. |
+| `migrate-to-canonical-schema.py` | One-time migration: remaps variant key names to canonical schema structure across all journey artefacts. | Capability Lead | Once, when standardising existing artefacts. |
