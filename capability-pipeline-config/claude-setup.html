@@ -136,6 +136,10 @@ hr { border: none; border-top: 1px solid var(--border-light); margin: 32px 0; }
 </ul>
 <div class="nav-section">Supporting structures</div>
 <ul>
+<li><a href="#step-manifest">Step manifest</a></li>
+<li><a href="#data-integrity">Data integrity validation</a></li>
+<li><a href="#avro-schemas">Avro schema generation</a></li>
+<li><a href="#canonical-schemas">Canonical JSON schemas</a></li>
 <li><a href="#transparency">Transparency framework</a></li>
 <li><a href="#artefact-repo">Artefact repository</a></li>
 <li><a href="#jira">Jira configuration</a></li>
@@ -279,15 +283,19 @@ hr { border: none; border-top: 1px solid var(--border-light); margin: 32px 0; }
 </div>
 
 <h3>Script assignment by team and stage</h3>
-<p>The pipeline uses six deterministic scripts. Each script is owned by a specific team and run at a specific moment. Scripts are never run out of order.</p>
+<p>The pipeline uses ten deterministic scripts. Each script is owned by a specific team and run at a specific moment. Scripts are never run out of order.</p>
 <table>
 <tr><th>Script</th><th>Run by</th><th>When</th></tr>
-<tr><td><code>scaffold-journey.py</code></td><td>Capability Lead</td><td>Before spawning Journey Modelling Team — creates directory, manifest, template files with globally sequential IDs</td></tr>
+<tr><td><code>scaffold-journey.py</code></td><td>Programme Lead</td><td>Before spawning Journey Modelling Team — creates directory, manifest, template files with globally sequential IDs</td></tr>
 <tr><td><code>cleanup-ids.py</code></td><td>Journey Modelling Team</td><td>After steps 7-13, before signalling complete — strips annotated IDs (<code>ENT-012 (Name)</code> → <code>ENT-012</code>)</td></tr>
 <tr><td><code>sync-central-model.py</code></td><td>Journey Modelling Team</td><td>After cleanup, before signalling complete — copies entities to <code>central-model/entities/</code>, appends events to catalogue, merges service map. Output saved to <code>evidence/sync-summary.txt</code>.</td></tr>
-<tr><td><code>validate-journey.py</code></td><td>Review Team (Stage 1)</td><td>First action when reviewing — checks files, ID formats, entity ownership, central model sync. Output saved to <code>evidence/validate-journey.txt</code>.</td></tr>
+<tr><td><code>validate-journey.py</code></td><td>Review Team (Stage 1)</td><td>First action when reviewing — checks files, ID formats, entity ownership, central model sync. Now includes JSON schema conformance validation. Output saved to <code>evidence/validate-journey.txt</code>.</td></tr>
 <tr><td><code>validate-sequences.py</code></td><td>Review Team (Stage 1)</td><td>After validate-journey passes — checks sequence diagrams for cross-capability synchronous violations. Output saved to <code>evidence/validate-sequences.txt</code>.</td></tr>
-<tr><td><code>validate-central-model-impact.py</code></td><td>Capability Lead</td><td>After REVIEW COMPLETE (approved), before Gate 2 — lists prior journeys whose artefacts reference entities/events touched by this journey. Informational only, not a Gate 2 blocker. Output saved to <code>evidence/central-model-impact.txt</code>.</td></tr>
+<tr><td><code>validate-data-integrity.py</code></td><td>Review Team (Stage 1)</td><td>After validate-sequences passes — deep field-level traceability check: traces entity fields → event payloads → consumed mappings → API contracts. 8 checks. Output saved to <code>evidence/validate-data-integrity.txt</code>.</td></tr>
+<tr><td><code>validate-central-model-impact.py</code></td><td>Programme Lead</td><td>After REVIEW COMPLETE (approved), before Gate 2 — lists prior journeys whose artefacts reference entities/events touched by this journey. Informational only, not a Gate 2 blocker. Output saved to <code>evidence/central-model-impact.txt</code>.</td></tr>
+<tr><td><code>generate-event-schemas.py</code></td><td>Programme Lead</td><td>After all journeys complete (or periodically) — produces Avro <code>.avsc</code> files from event catalogue payload definitions, one file per event organised by topic. Deterministic — no reasoning needed.</td></tr>
+<tr><td><code>generate-step-manifest.py</code></td><td>Programme Lead</td><td>After journey reaches Stable — produces a per-step data manifest (<code>step-manifest.json</code>) showing participant input/output, API calls with request/response schemas, events published/consumed, entity modifications, and cross-step data lineage.</td></tr>
+<tr><td><code>migrate-to-canonical-schema.py</code></td><td>Programme Lead</td><td>One-time migration — normalises existing journey artefacts to conform to the canonical JSON schemas. Run once per project if artefacts were produced before canonical schemas were established.</td></tr>
 </table>
 
 <h3>Deterministic vs reasoning split</h3>
@@ -882,6 +890,163 @@ hr { border: none; border-top: 1px solid var(--border-light); margin: 32px 0; }
 </div>
 
 <!-- ============================================ -->
+<!-- STEP MANIFEST -->
+<!-- ============================================ -->
+<h2 id="step-manifest">Step manifest</h2>
+
+<p>Each journey produces a <code>step-manifest.json</code> file generated by <code>generate-step-manifest.py</code>. The step manifest provides a per-phase breakdown of exactly what data moves, where it comes from, and where it goes — bridging the gap between the narrative journey detail and the structural artefacts (data model, API contracts, event catalogue).</p>
+
+<h3>What each step entry captures</h3>
+<table>
+<tr><th>Field</th><th>Description</th></tr>
+<tr><td><code>phase_id</code></td><td>References a phase in <code>journey-detail.json</code></td></tr>
+<tr><td><code>participant_inputs</code></td><td>Data received from participants at this phase — field names, types, and source channel</td></tr>
+<tr><td><code>participant_outputs</code></td><td>Data returned to participants — field names, types, projection tier</td></tr>
+<tr><td><code>api_calls[]</code></td><td>Each synchronous API call made in this phase: capability, endpoint, request schema reference, response schema reference</td></tr>
+<tr><td><code>events_published[]</code></td><td>Events published during this phase: event ID, producing service, key payload fields</td></tr>
+<tr><td><code>events_consumed[]</code></td><td>Events consumed during this phase: event ID, consuming service, how the payload maps to internal entities</td></tr>
+<tr><td><code>entity_modifications[]</code></td><td>Entity state changes: entity ID, operation (create/update/delete), fields written, owning service</td></tr>
+<tr><td><code>cross_step_lineage[]</code></td><td>Data dependencies between steps — which output from step N becomes the input to step M</td></tr>
+</table>
+
+<div class="callout callout-tip">
+<strong>Why the step manifest exists.</strong> The data model describes data at rest. The API contracts describe the external surface. The event catalogue describes async payloads. None of them show how data flows through a journey end-to-end. The step manifest is the traceability document that connects them — it is the input the <code>validate-data-integrity.py</code> script uses to verify field-level continuity.
+</div>
+
+<h3>Artefact schema (excerpt)</h3>
+<pre>{
+  "journey_id": "ela-facility-approval",
+  "generated_at": "2025-03-01T09:00:00Z",
+  "steps": [
+    {
+      "phase_id": "intake",
+      "participant_inputs": [
+        { "field": "amount_requested", "type": "decimal", "source": "institution_portal" },
+        { "field": "urgency_tier",     "type": "string",  "source": "institution_portal" }
+      ],
+      "participant_outputs": [
+        { "field": "request_id",  "type": "uuid",   "projection_tier": "delayed_30d" },
+        { "field": "status",      "type": "string", "projection_tier": "immediate"   }
+      ],
+      "api_calls": [
+        {
+          "capability": "lender-of-last-resort",
+          "endpoint": "POST /ela/requests",
+          "request_schema": "#/components/schemas/ElaRequestInput",
+          "response_schema": "#/components/schemas/ElaRequestCreated"
+        }
+      ],
+      "events_published": [
+        {
+          "event_id": "facility_request.received",
+          "publishing_service": "emergency-lending-service",
+          "key_payload_fields": ["request_id", "institution_id", "urgency_tier"]
+        }
+      ],
+      "events_consumed": [],
+      "entity_modifications": [
+        {
+          "entity_id": "ENT-041",
+          "entity_name": "FacilityRequest",
+          "operation": "create",
+          "fields_written": ["request_id", "institution_id", "amount_requested", "urgency_tier", "status"],
+          "owning_service": "emergency-lending-service"
+        }
+      ],
+      "cross_step_lineage": [
+        { "provides_to_step": "collateral-assessment", "fields": ["request_id", "institution_id"] }
+      ]
+    }
+  ]
+}</pre>
+
+<!-- ============================================ -->
+<!-- DATA INTEGRITY VALIDATION -->
+<!-- ============================================ -->
+<h2 id="data-integrity">Data integrity validation</h2>
+
+<p>The <code>validate-data-integrity.py</code> script performs a deep field-level traceability check across all artefacts for a journey. It is run by the Review Team at Stage 1, after <code>validate-sequences.py</code> passes. It is the most thorough deterministic check in the pipeline — it catches approximately 80% of issues that would block a developer before the handoff reaches the DEV team.</p>
+
+<h3>The traceability chain</h3>
+<p>The validator traces a single path through the artefact stack:</p>
+<pre>Entity fields (data-model.json)
+  → Event payload fields (event-catalogue / events/*.json)
+    → Consumed event mappings (service-boundaries.json consumed_events)
+      → API contract request/response fields (api-contracts/*.openapi.json)</pre>
+
+<p>Any break in this chain — a field referenced in an event payload that doesn't exist in its source entity, an API response field that has no entity backing, a consumed event mapping that refers to a field not present in the event schema — is surfaced as a validation failure.</p>
+
+<h3>Eight checks performed</h3>
+<table>
+<tr><th>#</th><th>Check</th><th>What it catches</th></tr>
+<tr><td>1</td><td><strong>Entity field coverage</strong></td><td>Every field referenced in event payloads resolves to a field in its owning entity's <code>data-model.json</code></td></tr>
+<tr><td>2</td><td><strong>Event payload completeness</strong></td><td>Every event in <code>events/*.json</code> has a non-empty schema with typed fields</td></tr>
+<tr><td>3</td><td><strong>Consumed event mapping resolution</strong></td><td>Every <code>maps_to</code> entry in <code>consumed_events</code> references a field that exists in the consuming service's entities</td></tr>
+<tr><td>4</td><td><strong>API response entity backing</strong></td><td>Every response field in the OpenAPI spec traces to a field in an entity owned by the responding capability</td></tr>
+<tr><td>5</td><td><strong>API request field validation</strong></td><td>Every request body field that is stored (not just passed through) has a corresponding entity field to receive it</td></tr>
+<tr><td>6</td><td><strong>Cross-step lineage continuity</strong></td><td>Fields declared in <code>cross_step_lineage[]</code> in the step manifest exist in both the producing and consuming steps</td></tr>
+<tr><td>7</td><td><strong>Derived field declarations</strong></td><td>Fields marked <code>computed_from</code> in the data model have all their source fields present in the same entity or declared cross-entity</td></tr>
+<tr><td>8</td><td><strong>Outbound event derivation coverage</strong></td><td>Events with a <code>derived_from</code> section reference only fields present in the publishing service's owned entities</td></tr>
+</table>
+
+<div class="callout callout-warn">
+<strong>Run order matters.</strong> <code>validate-data-integrity.py</code> must run after <code>validate-journey.py</code> and <code>validate-sequences.py</code>. It assumes file structure and ID formats are already clean. Running it on an artefact set with ID format errors will produce misleading results.
+</div>
+
+<!-- ============================================ -->
+<!-- AVRO SCHEMA GENERATION -->
+<!-- ============================================ -->
+<h2 id="avro-schemas">Avro schema generation</h2>
+
+<p>The <code>generate-event-schemas.py</code> script produces Avro schema files (<code>.avsc</code>) from the event catalogue payload definitions. It is run by the Programme Lead after all journeys are complete, or periodically as the event catalogue grows. The output is consumed directly by the Schema Registry and by event broker topic provisioning.</p>
+
+<h3>What the script produces</h3>
+<ul>
+<li>One <code>.avsc</code> file per event, named <code>{topic}/{event_id}.avsc</code></li>
+<li>Organised by topic — all events on the same Kafka/Redpanda topic are grouped under a single directory</li>
+<li>Includes the CloudEvents envelope fields (<code>specversion</code>, <code>id</code>, <code>source</code>, <code>type</code>, <code>datacontenttype</code>, <code>time</code>) wrapping the domain payload</li>
+<li>Type mapping from the pipeline's JSON field types to Avro types (e.g. <code>uuid</code> → <code>string</code>, <code>decimal</code> → <code>{"type":"bytes","logicalType":"decimal"}</code>, <code>iso8601</code> → <code>{"type":"long","logicalType":"timestamp-millis"}</code>)</li>
+</ul>
+
+<h3>Output structure</h3>
+<pre>central-model/
+  event-schemas/
+    lender-of-last-resort.ela-lifecycle/
+      facility_request.received.avsc
+      facility_assessment.completed.avsc
+      ela_facility.approved.avsc
+      ela_facility.closed.avsc
+    payment-systems.settlement/
+      settlement_instruction.submitted.avsc
+      settlement_instruction.confirmed.avsc</pre>
+
+<h3>Example output</h3>
+<pre>{
+  "type": "record",
+  "name": "FacilityRequestReceived",
+  "namespace": "org.example.lender-of-last-resort.ela-lifecycle",
+  "doc": "Published when an ELA facility request is received from an institution.",
+  "fields": [
+    { "name": "specversion",      "type": "string", "default": "1.0" },
+    { "name": "id",               "type": "string"                   },
+    { "name": "source",           "type": "string"                   },
+    { "name": "type",             "type": "string",
+      "default": "org.example.facility_request.received"             },
+    { "name": "time",             "type": { "type": "long", "logicalType": "timestamp-millis" } },
+    { "name": "request_id",       "type": "string"                   },
+    { "name": "institution_id",   "type": "string"                   },
+    { "name": "amount_requested",
+      "type": { "type": "bytes", "logicalType": "decimal", "precision": 18, "scale": 2 } },
+    { "name": "urgency_tier",     "type": "string"                   },
+    { "name": "timestamp",        "type": { "type": "long", "logicalType": "timestamp-millis" } }
+  ]
+}</pre>
+
+<div class="callout callout-info">
+<strong>Deterministic output.</strong> The script is fully deterministic — given the same event catalogue, it always produces the same <code>.avsc</code> files. No reasoning is involved. Re-run it whenever the event catalogue changes to keep the Schema Registry inputs current.
+</div>
+
+<!-- ============================================ -->
 <!-- TRANSPARENCY -->
 <!-- ============================================ -->
 <h2 id="transparency">Transparency framework</h2>
@@ -976,19 +1141,42 @@ hr { border: none; border-top: 1px solid var(--border-light); margin: 32px 0; }
 
   models/                           # Phase C outputs (per journey)
     ela-facility-approval/
+      _manifest.json
+      _refinement-brief.md
       journey-detail.json
       participant-interaction.json
       nfr.json
       data-model.json
       service-boundaries.json
+      step-manifest.json            # Per-step data lineage (generated)
       api-contracts/
       events/
       sequence-diagrams/            # JSON + Mermaid (.mmd) pairs
+      evidence/                     # Validator outputs + Stage 2 review
 
   central-model/                    # Aggregated from all journeys
     entities/
     service-map.json
-    event-catalogue.json</pre>
+    event-catalogue.json
+    event-schemas/                  # Avro .avsc files (generated)</pre>
+
+<h3 id="canonical-schemas">Canonical JSON schemas</h3>
+<p>Every Phase C artefact must conform to one of the seven canonical schemas stored in <code>artefacts/schemas/</code>. The <code>validate-journey.py</code> script enforces conformance at review time — a journey cannot pass Stage 1 if any artefact file fails schema validation.</p>
+
+<table>
+<tr><th>Schema</th><th>File</th><th>Key required fields</th></tr>
+<tr><td><strong>journey-detail</strong></td><td><code>journey-detail.json</code></td><td><code>journey_id</code>, <code>phases[]</code> (each with <code>id</code>, <code>name</code>, <code>actors</code>, <code>happy_path</code>, <code>capabilities_active</code>, <code>services_active</code>)</td></tr>
+<tr><td><strong>participant-interaction</strong></td><td><code>participant-interaction.json</code></td><td><code>journey_id</code>, <code>phases[]</code> (each with <code>id</code>, <code>participants[]</code> each having <code>data_projection</code>, <code>action_entitlements</code>, <code>notification_routing</code>, <code>temporal_visibility</code>)</td></tr>
+<tr><td><strong>data-model</strong></td><td><code>data-model.json</code></td><td><code>journey_id</code>, <code>entities[]</code> (each with <code>id</code>, <code>name</code>, <code>owning_service</code>, <code>fields[]</code>, <code>design_decisions[]</code>)</td></tr>
+<tr><td><strong>service-boundaries</strong></td><td><code>service-boundaries.json</code></td><td><code>journey_id</code>, <code>services[]</code> (each with <code>id</code>, <code>capability</code>, <code>owned_entities[]</code>, <code>published_events[]</code>, <code>consumed_events[]</code>, <code>integration_patterns[]</code>)</td></tr>
+<tr><td><strong>event-catalogue</strong></td><td><code>events/*.json</code></td><td><code>event_id</code>, <code>publisher</code>, <code>subscribers[]</code>, <code>schema</code> (object with typed fields), <code>delivery_guarantee</code>, <code>topic</code></td></tr>
+<tr><td><strong>nfr</strong></td><td><code>nfr.json</code></td><td><code>journey_id</code>, <code>phases[]</code> (each with <code>id</code>, <code>latency</code>, <code>consistency</code>, <code>availability</code>, <code>data_classification</code>, <code>audit_depth</code>)</td></tr>
+<tr><td><strong>step-manifest</strong></td><td><code>step-manifest.json</code></td><td><code>journey_id</code>, <code>steps[]</code> (each with <code>phase_id</code>, <code>participant_inputs</code>, <code>participant_outputs</code>, <code>api_calls[]</code>, <code>events_published[]</code>, <code>events_consumed[]</code>, <code>entity_modifications[]</code>, <code>cross_step_lineage[]</code>)</td></tr>
+</table>
+
+<div class="callout callout-info">
+<strong>Schema conformance is a Gate 2 blocker.</strong> The <code>validate-journey.py</code> script validates every artefact file against its canonical schema at Stage 1 review. Any conformance failure blocks Gate 2 — the Review Team cannot approve a journey with schema violations. Use <code>migrate-to-canonical-schema.py</code> to normalise artefacts produced before the canonical schemas were established.
+</div>
 
 <!-- ============================================ -->
 <!-- JIRA -->
@@ -1051,7 +1239,7 @@ hr { border: none; border-top: 1px solid var(--border-light); margin: 32px 0; }
 <tr><td><strong>Discovery Team</strong></td><td>Phase A + B (once)</td><td>Steps 1-6: capabilities (with market research), technical services, governance, personas, visual architecture + C4 workspace, journey inventory. Signals <code>DISCOVERY COMPLETE</code> when Gate 1 criteria are met.</td><td>None</td></tr>
 <tr><td><strong>Refinement Team</strong></td><td>Per journey (before modelling)</td><td>Produces <code>_refinement-brief.md</code> for the journey. Provides context brief for the Journey Modelling Team.</td><td>None</td></tr>
 <tr><td><strong>Journey Modelling Team</strong></td><td>Phase C, per journey</td><td>Steps 7-13: journey detail, participant interaction, NFRs, data model, service boundaries, API contracts + sequences, event catalogue. After step 13: runs cleanup and sync scripts, then signals <code>JOURNEY MODEL COMPLETE</code>.</td><td><code>cleanup-ids.py</code>, <code>sync-central-model.py</code></td></tr>
-<tr><td><strong>Review Team</strong></td><td>Per journey (after modelling)</td><td>Stage 1: runs deterministic validation scripts and writes output to <code>evidence/</code>. Stage 2: reasoning review across five dimensions (architectural compliance, internal consistency, cross-artefact consistency, completeness, buildability). Signals <code>REVIEW COMPLETE</code> with verdict.</td><td><code>validate-journey.py</code>, <code>validate-sequences.py</code></td></tr>
+<tr><td><strong>Review Team</strong></td><td>Per journey (after modelling)</td><td>Stage 1: runs deterministic validation scripts and writes output to <code>evidence/</code>. Stage 2: reasoning review across five dimensions (architectural compliance, internal consistency, cross-artefact consistency, completeness, buildability). Signals <code>REVIEW COMPLETE</code> with verdict.</td><td><code>validate-journey.py</code>, <code>validate-sequences.py</code>, <code>validate-data-integrity.py</code></td></tr>
 </table>
 
 <div class="callout callout-info">
@@ -1170,6 +1358,12 @@ hr { border: none; border-top: 1px solid var(--border-light); margin: 32px 0; }
 
 <h3>Cross-capability violations appear in JSON, not Mermaid</h3>
 <p>Synchronous cross-capability calls tend to appear in the JSON sequence files rather than in the Mermaid files. The visual Mermaid notation makes violations obvious — the boundary is drawn explicitly. The JSON files use raw service IDs where the capability boundary is not visible. Both files are validated by <code>validate-sequences.py</code>, but pay closer attention to the JSON files during reasoning review. When a journey produces its sequence diagrams, check the JSON steps array explicitly for synchronous calls between services in different capabilities.</p>
+
+<h3>Data transformation gaps appear late and block developers</h3>
+<p>The pipeline produces data at rest (data model), call order (sequence diagrams), and payload schemas (event catalogue) — but does not natively capture how data transforms as it flows. Four transformation types are commonly missing: inbound event mapping (how a consumed payload maps to internal entities), outbound event derivation (which entity fields populate which payload fields), API response projection (field-level projection per persona/entitlement), and cross-entity derivation (computed fields spanning multiple entities). These are L3 concerns — add them as extensions to existing artefacts rather than new artefact types. The step manifest and data integrity validator surface the gaps before handoff.</p>
+
+<h3>Canonical schema standardisation eliminates structural drift</h3>
+<p>Across a multi-project run, artefacts produced in months 1–3 had different structures from artefacts produced in months 6–8 — field renames, optional fields that later became required, inconsistent nesting. This made cross-journey queries and automated processing unreliable. Establishing the seven canonical schemas (journey-detail, participant-interaction, data-model, service-boundaries, event-catalogue, nfr, step-manifest) as required standards, enforced by <code>validate-journey.py</code> at review time, eliminates structural drift. Use <code>migrate-to-canonical-schema.py</code> once to bring legacy artefacts into conformance. Every new journey should validate against the schemas from journey 1 — do not defer schema enforcement until the migration problem is unavoidable.</p>
 
 <hr>
 
