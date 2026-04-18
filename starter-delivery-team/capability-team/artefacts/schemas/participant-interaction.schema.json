@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "participant-interaction.schema.json",
+  "title": "Participant Interaction",
+  "type": "object",
+  "required": ["journey_id", "status", "participants"],
+  "properties": {
+    "journey_id": { "type": "string", "pattern": "^JRN-\\d{3}$" },
+    "document_version": { "type": "string" },
+    "status": { "enum": ["Draft", "In review", "Stable", "Revised"] },
+    "participants": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["persona_id", "persona_name", "phases"],
+        "properties": {
+          "persona_id": { "type": "string" },
+          "persona_name": { "type": "string" },
+          "channel": { "type": "string" },
+          "phases": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["phase_id", "data_provided", "data_received"],
+              "properties": {
+                "phase_id": { "type": "string", "pattern": "^PH-\\d{3}$" },
+                "description": { "type": "string" },
+                "data_provided": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["field", "entity"],
+                    "properties": {
+                      "field": { "type": "string" },
+                      "entity": { "type": "string" },
+                      "type": { "type": "string" },
+                      "required": { "type": "boolean" }
+                    }
+                  }
+                },
+                "data_received": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["field", "entity"],
+                    "properties": {
+                      "field": { "type": "string" },
+                      "entity": { "type": "string" },
+                      "type": { "type": "string" }
+                    }
+                  }
+                },
+                "actions_permitted": { "type": "array", "items": { "type": "string" } },
+                "notifications": { "type": "array" },
+                "data_withheld": { "type": "array", "items": { "type": "string" } }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

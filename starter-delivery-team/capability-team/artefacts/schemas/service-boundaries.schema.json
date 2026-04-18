@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "service-boundaries.schema.json",
+  "title": "Service Boundaries",
+  "type": "object",
+  "required": ["journey_id", "status", "services"],
+  "properties": {
+    "journey_id": { "type": "string", "pattern": "^JRN-\\d{3}$" },
+    "document_version": { "type": "string" },
+    "status": { "enum": ["Draft", "In review", "Stable", "Revised"] },
+    "architectural_principle": { "type": "string" },
+    "services": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["service_id", "capability_id", "owned_entities", "published_events", "consumed_events"],
+        "properties": {
+          "service_id": { "type": "string", "pattern": "^SVC-\\d{3}$" },
+          "service_name": { "type": "string" },
+          "capability_id": { "type": "string" },
+          "owned_entities": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^ENT-\\d{3}$" }
+          },
+          "published_events": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^EVT-\\d{3}$" }
+          },
+          "consumed_events": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["event_id"],
+              "properties": {
+                "event_id": { "type": "string", "pattern": "^EVT-\\d{3}$" },
+                "name": { "type": "string" },
+                "maps_to": {
+                  "type": "object",
+                  "properties": {
+                    "target_entity": { "type": "string", "pattern": "^ENT-\\d{3}$" },
+                    "field_mapping": { "type": "object" }
+                  }
+                }
+              }
+            }
+          },
+          "consumed_apis": { "type": "array" },
+          "design_decisions": { "type": "array" }
+        }
+      }
+    },
+    "cross_service_interaction_summary": { "type": "array" }
+  }
+}

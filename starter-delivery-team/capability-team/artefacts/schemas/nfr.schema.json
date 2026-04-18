@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "nfr.schema.json",
+  "title": "Non-Functional Requirements",
+  "type": "object",
+  "required": ["journey_id", "status", "per_phase_nfrs", "cross_cutting_nfrs", "regulatory_slas"],
+  "properties": {
+    "journey_id": { "type": "string", "pattern": "^JRN-\\d{3}$" },
+    "document_version": { "type": "string" },
+    "status": { "enum": ["Draft", "In review", "Stable", "Revised"] },
+    "per_phase_nfrs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["phase_id", "latency", "availability"],
+        "properties": {
+          "phase_id": { "type": "string", "pattern": "^PH-\\d{3}$" },
+          "latency": { "type": "string" },
+          "throughput": { "type": "string" },
+          "availability": { "type": "string" },
+          "security_classification": { "type": "string" },
+          "data_classification": { "type": "string" }
+        }
+      }
+    },
+    "cross_cutting_nfrs": { "type": "array" },
+    "regulatory_slas": { "type": "array" }
+  }
+}

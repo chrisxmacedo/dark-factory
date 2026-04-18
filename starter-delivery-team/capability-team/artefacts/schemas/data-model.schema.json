@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "data-model.schema.json",
+  "title": "Data Model",
+  "type": "object",
+  "required": ["journey_id", "status", "entities"],
+  "properties": {
+    "journey_id": { "type": "string", "pattern": "^JRN-\\d{3}$" },
+    "document_version": { "type": "string" },
+    "status": { "enum": ["Draft", "In review", "Stable", "Revised"] },
+    "entities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "description", "owning_service", "fields"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^ENT-\\d{3}$" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "owning_service": { "type": "string", "pattern": "^SVC-\\d{3}$" },
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["name", "type"],
+              "properties": {
+                "name": { "type": "string" },
+                "type": { "type": "string" },
+                "required": { "type": "boolean" },
+                "validation": { "type": "string" },
+                "computed_from": {
+                  "type": ["object", "null"],
+                  "properties": {
+                    "formula": { "type": "string" },
+                    "source_fields": { "type": "array", "items": { "type": "string" } }
+                  }
+                }
+              }
+            }
+          },
+          "relationships": { "type": "array" },
+          "design_decisions": { "type": "array" }
+        }
+      }
+    },
+    "referenced_existing_entities": { "type": "array" },
+    "entity_extensions": { "type": "array" }
+  }
+}
