@@ -243,3 +243,4 @@ Consequences for artefacts:
 | `validate-journey.py` | Checks files, ID formats, entity ownership, central model sync | Review Team (Stage 1) | First action when reviewing a journey |
 | `validate-sequences.py` | Checks sequence diagrams for cross-capability sync violations | Review Team (Stage 1) | After validate-journey passes |
 | `validate-central-model-impact.py` | Lists prior journeys whose artefacts reference entities/events touched by the current journey | Capability Lead | After `sync-central-model.py`, before Gate 2. Informational, not blocking. |
+| `generate-event-schemas.py` | Generates Avro schema files (.avsc) from event catalogue payload definitions. One file per event, organised by topic. Includes CloudEvents envelope. | Capability Lead | After all journeys complete (or periodically). Deterministic — no reasoning needed. |
