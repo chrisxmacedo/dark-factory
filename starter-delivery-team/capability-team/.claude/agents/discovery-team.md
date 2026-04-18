@@ -18,7 +18,7 @@ Outputs are baselined and rarely revised.
 | Step | Artefact | Lead | Agent role |
 |------|----------|------|------------|
 | 1. Capabilities | `foundation/capabilities/*.json` | Domain Analyst | Researches market landscape, competitive structure, and regulatory horizon before drafting capabilities (see Step 1 research brief below) |
-| 3. Governance | `foundation/governance/*.json` | Domain Analyst | Structures current rules AND flags incoming regulation from Step 1 horizon scanning; cannot validate correctness |
+| 3. Governance | `foundation/governance/*.json` | Domain Analyst | Structures current rules AND flags incoming regulation from Step 1 horizon scanning; every rule cites a regulation by `id` from `starter-regulations/` where one exists; cannot validate correctness |
 | 4. Personas | `foundation/personas/*.json` | Domain Analyst | Generates from capabilities including persona types revealed by market research (e.g. TPPs from open banking, ESG rating agencies from sustainability regulation); human adds tacit knowledge |
 
 These artefacts are **deeply institutional**. The agent generates first
@@ -53,6 +53,28 @@ breadth; the Domain Analyst does the depth.
   capabilities or reshape existing ones?
 - What enforcement actions or supervisory statements signal where the
   regulator's attention is focused?
+
+**Start with the starter library:**
+
+Read `../../../../../starter-regulations/` (from
+`capability-team/.claude/agents/` that is five levels up) as the
+first pass. It is indexed by sector — read the sector files that
+correspond to the capabilities under design plus any cross-cutting
+files (e.g. `data-protection.json`, `cybersecurity-and-resilience.json`).
+Also read `../../../../../starter-standards/` for non-regulatory
+standards the project may need to meet (accessibility, ISO, SOC).
+
+Each regulation in the starter library has an `applicable_countries`
+field — filter by the project's target markets. Each regulation
+carries a canonical `id` — use that id verbatim in
+`capability.mandate_source.reference` and
+`governance.rules[].source.reference` (step 3). Do NOT invent
+alternative identifiers.
+
+If a regulation you need is not in the starter library, create a
+governance rule anyway and flag to the Domain Analyst that the
+library should be extended — the starter library is a baseline, not
+exhaustive.
 
 **Competitive positioning:**
 - What is being commoditised vs where is there genuine differentiation?

@@ -10,6 +10,20 @@ The **Capability Lead** runs this pipeline. The **Programme Lead**
 the development team's consumption — you do not create DEV Deliverables
 yourself.
 
+## Reference libraries (outside this folder)
+
+At the `templates/` root, two sibling folders hold starter reference
+data consumed during Phase A:
+
+- `../../starter-regulations/` — sector-indexed regulations per market.
+  The Discovery Team reads this during Phase A step 1 (market research)
+  and step 3 (governance mapping). Every governance rule cites a
+  regulation `id` from this library where one exists.
+- `../../starter-standards/` — non-regulatory standards (accessibility,
+  information security, SOC, quality). Read by the Discovery Team
+  (Phase A/B) and the Architect (Phase B step 5) when the project
+  commits to non-regulatory quality targets.
+
 ## Structure
 
 ```

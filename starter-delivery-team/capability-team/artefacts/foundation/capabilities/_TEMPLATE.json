@@ -6,7 +6,7 @@
   "mandate_source": [
     {
       "type": "legislation | regulation | policy | charter | strategy",
-      "reference": "",
+      "reference": "regulation id from ../../../../starter-regulations/{sector}.json (e.g. FIN-UK-FSMA-2000) where applicable, or free-text citation otherwise",
       "url_or_doc_ref": ""
     }
   ],

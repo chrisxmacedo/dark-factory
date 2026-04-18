@@ -2,6 +2,29 @@
 
 Read by: all teams, all starters
 
+## Where the security requirements come from
+
+The capability team specifies the project's security model in
+`capability-team/artefacts/architecture/security-model.json` (zero-trust
+policy, mTLS, data classifications, network zones, controls). That spec
+is **derived** from regulations and standards — for context and for
+resolving ambiguity, the underlying libraries are at:
+
+- `../../../../starter-regulations/cybersecurity-and-resilience.json`
+  (DORA, NIS 2, CPS 234, NYDFS Part 500, etc.)
+- `../../../../starter-regulations/data-protection.json` (GDPR, HIPAA,
+  CCPA, LGPD, etc.)
+- `../../../../starter-standards/information-security.json` (ISO
+  27001/27017/27018, NIST CSF, NIST 800-53, NIST 800-63, CIS Controls)
+- `../../../../starter-standards/service-organization-controls.json`
+  (SOC 1/2/3)
+
+**Read the spec first.** Only consult the libraries when the spec is
+ambiguous, when a regulation is cited by `id` and you need its full
+requirements, or when the Diagnostics Team is tracing a control back
+to its origin (see `SPEC DEFECT RAISED` in
+`../defect-handling.md`).
+
 ## Input validation
 
 - Validate at EVERY system boundary: API endpoints, queue messages, webhook payloads, file uploads

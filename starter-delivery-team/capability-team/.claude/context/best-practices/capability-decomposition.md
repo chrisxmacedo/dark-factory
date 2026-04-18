@@ -28,13 +28,29 @@ chart produces a shallow architecture.
 Research captures:
 - **Competitive landscape** — who does what, what's being unbundled or
   re-bundled
-- **Regulatory horizon** — what's coming in 2-3 years
+- **Regulatory horizon** — what's coming in 2-3 years. Start with
+  `starter-regulations/` (sector files filtered by the project's
+  target countries), then layer on market-specific research
 - **Build-vs-buy assessment** — what platforms exist, what must be in-house
 - **Sub-capability boundary evidence** — market structure informs the
   promotion test
 
 Each capability artefact includes a `market_context` section capturing
-the research findings that informed its design.
+the research findings that informed its design. `mandate_source`
+entries should cite regulation IDs from `starter-regulations/` where
+the regulation exists in the library.
+
+## Starter reference libraries
+
+Available outside the delivery-team folder at the `templates/` root:
+
+- `templates/starter-regulations/` — sector-indexed regulations with
+  applicable-country tagging
+- `templates/starter-standards/` — non-regulatory standards
+  (accessibility, information security, SOC, quality)
+
+Treat these as baselines. Extend the library when a jurisdiction- or
+sector-specific regulation is missing.
 
 ## Sub-capability promotion test
 

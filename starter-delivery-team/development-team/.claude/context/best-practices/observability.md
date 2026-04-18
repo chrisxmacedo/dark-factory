@@ -2,6 +2,25 @@
 
 Read by: all teams, all starters
 
+## Where the observability requirements come from
+
+The spec lives in
+`capability-team/artefacts/architecture/observability-model.json` —
+OTel Collector as sole ingestion point, four stores (Log/Trace/
+Metrics/Audit-WORM), per-service instrumentation checklist, logging
+schema per service category. **Read the spec first.**
+
+Underlying libraries for context and audit-trail:
+
+- `../../../../starter-regulations/cybersecurity-and-resilience.json`
+  — incident notification windows (72h GDPR/NIS2, 24h NYDFS for
+  extortion, 12h AU SOCI critical) shape log retention and alert
+  thresholds
+- `../../../../starter-regulations/data-protection.json` — audit
+  logging requirements per privacy regime
+- `../../../../starter-standards/information-security.json` — NIST
+  CSF Detect function and ISO 27001 logging/monitoring controls
+
 ## Three pillars — all required
 
 - **Logs**: structured JSON (Pino for TS, structlog for Python)

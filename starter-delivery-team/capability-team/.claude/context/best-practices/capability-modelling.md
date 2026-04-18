@@ -43,6 +43,16 @@ prescribe implementation.
 - [`service-boundaries.md`](service-boundaries.md) — the capability
   boundary rules and the four valid communication paths
 
+## External reference libraries (at `templates/` root)
+
+- `starter-regulations/` — sector-indexed regulations (finance,
+  data-protection, cybersecurity-and-resilience, etc.). Read at
+  Phase A step 1 and step 3. Cite regulation `id`s in
+  `mandate_source` and in governance rule `source.reference`.
+- `starter-standards/` — non-regulatory standards (WCAG, ISO 27001,
+  SOC 2, ISO 9001). Referenced from `security.md` and
+  `observability.md` as baseline control sets.
+
 ## The handoff
 
 Every file in this directory describes **what the capability team

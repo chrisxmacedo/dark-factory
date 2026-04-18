@@ -2,6 +2,25 @@
 
 Read by: all teams working on starter-api (SQLAlchemy + Alembic) and starter-web (Prisma). Cross-cutting rules for both ORMs.
 
+## Where retention and classification requirements come from
+
+Retention periods, PII handling, encryption-at-rest, and right-to-
+erasure implementations are driven by the capability-team spec:
+
+- `capability-team/artefacts/architecture/security-model.json` — data
+  classification levels per entity
+- `capability-team/artefacts/foundation/governance/*.json` — rules
+  citing regulation IDs (e.g. `DP-EU-GDPR` imposes storage
+  limitation; `HEALTH-US-HIPAA` imposes PHI safeguards)
+
+Underlying libraries for context:
+
+- `../../../../starter-regulations/data-protection.json` — full
+  requirements for GDPR, HIPAA, CCPA, LGPD, PIPEDA, UAE PDPL,
+  DIFC/ADGM DP, nFADP, PDPA SG, Privacy Act AU, Quebec Law 25
+- `../../../../starter-standards/information-security.json` — ISO
+  27018 (cloud PII processors) and NIST 800-53 Privacy baseline
+
 ## Schema design
 
 Every table MUST have these columns:

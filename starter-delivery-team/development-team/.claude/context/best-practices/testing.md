@@ -2,6 +2,23 @@
 
 Read by: all teams, all starters
 
+## Where quality targets come from
+
+Functional targets are in the capability team's journey artefacts
+(`data-model.json`, `api-contracts/*.openapi.json`, `nfr.json`).
+Cross-cutting baselines are drawn from the starter standards:
+
+- `../../../../starter-standards/accessibility.json` — WCAG 2.2 AA is
+  the common target for web UI. EN 301 549 for EU public-sector ICT.
+- `../../../../starter-standards/information-security.json` —
+  security test scope drawn from the ISO 27001 / NIST CSF control
+  scope chosen at Phase B
+- `../../../../starter-standards/service-organization-controls.json`
+  — SOC 2 Type 2 readiness shapes test evidence retention
+- `../../../../starter-regulations/cybersecurity-and-resilience.json`
+  — resilience testing (DORA TLPT, AU CPS 230 severe-but-plausible
+  scenarios) feeds regression scope
+
 ## Test pyramid
 
 - **Many** unit tests (fast, isolated, cheap)

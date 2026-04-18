@@ -6,6 +6,24 @@ The security model is a **specification** consumed by the downstream
 development pipeline. This file describes what the spec must contain,
 not how it is enforced at runtime.
 
+## Starter baselines to pull from
+
+Before drafting, read the relevant entries from the starter libraries:
+
+- `../../../../starter-regulations/cybersecurity-and-resilience.json`
+  — jurisdictional obligations (DORA, NIS 2, CPS 234, NYDFS Part 500,
+  MAS TRM, OSFI B-13, BACEN Cyber, FINMA Circ 2023/1)
+- `../../../../starter-regulations/data-protection.json` — where the
+  security model enforces privacy obligations
+- `../../../../starter-standards/information-security.json` — control
+  catalogues commonly adopted (ISO 27001/27002/27017/27018, NIST CSF,
+  NIST 800-53, NIST 800-63, CIS Controls, CSA CCM)
+- `../../../../starter-standards/service-organization-controls.json`
+  — if SOC 2 is a customer-driven target
+
+Cite regulation/standard IDs in the security model artefact's control
+entries where applicable.
+
 ## Zero-trust policy
 
 - `service.yaml` is the authoritative allowed-call policy source per

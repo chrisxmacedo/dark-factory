@@ -82,8 +82,18 @@ application code. Changes should still be logged in `workflow-improvements.md`.
 If the Diagnostics Team concludes the root cause is in the **specification**
 (API contract contradicts itself, event schema incompatible with data
 model, sequence diagram drifts from event catalogue, NFR unattainable
-under the declared architecture, etc.), do NOT apply an in-code
+under the declared architecture, governance rule cites a
+non-existent regulation id, etc.), do NOT apply an in-code
 workaround.
+
+When the suspected defect involves a regulation citation, verify the
+`id` against `../../../../starter-regulations/{sector}.json`. If the
+regulation does not exist in the library, that may be because:
+- The library needs extending (treat as spec defect + library gap)
+- The capability team invented a non-canonical id (definite spec defect)
+
+Quote the looked-up regulation text in the Diagnostics report so the
+capability team has an unambiguous fix basis.
 
 1. Diagnostics Team attaches its report to the DEV ticket.
 2. Team Lead transitions the ticket back to Backlog with a `spec-defect`

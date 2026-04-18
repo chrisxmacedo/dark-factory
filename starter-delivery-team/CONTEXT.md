@@ -3,6 +3,16 @@
 End-to-end delivery pipeline. Contains two sub-pipelines and an
 orchestrating Programme Lead who moves work across them.
 
+Sibling reference folders at the `templates/` root:
+- `../starter-regulations/` — sector-indexed regulations (finance,
+  data-protection, cybersecurity, etc.), each with applicable-country
+  tagging. Consumed by the capability team during Phase A.
+- `../starter-standards/` — non-regulatory standards (accessibility,
+  information security, SOC, quality management). Consumed by both
+  teams — capability team in Phase A/B (governance, security model),
+  development team in build (testing against accessibility or security
+  baselines where a project commits to them).
+
 ```
 starter-delivery-team/
   PIPELINE.md              — Programme Lead orchestration (top-level script)
@@ -90,8 +100,10 @@ Link conventions:
   retrospectives (handoff friction, misaligned evidence, misrouted
   defects)
 - `capability-team/workflow-improvements.md` — design retrospectives
-- Development team retrospectives are appended to `workflow-improvements.md`
-  in each service repo (see development-team context)
+- `development-team/workflow-improvements.md` — build-pipeline
+  retrospectives across all Deliverables (owned by the Team Lead)
+- Service repos may additionally keep their own `workflow-improvements.md`
+  for code/test patterns specific to that service
 
 ## Placeholders to replace (top-level)
 

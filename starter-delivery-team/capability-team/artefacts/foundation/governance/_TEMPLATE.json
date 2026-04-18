@@ -8,9 +8,10 @@
       "name": "",
       "source": {
         "type": "legislation | regulation | policy | contract",
-        "reference": "",
+        "reference": "regulation id from ../../../../starter-regulations/{sector}.json (e.g. DP-EU-GDPR) — use the canonical id; do not invent alternatives",
+        "standard_reference": "optional — standard id from ../../../../starter-standards/{category}.json (e.g. STD-WCAG-2-2) when the rule derives from a standard",
         "url_or_doc_ref": "",
-        "jurisdiction": "",
+        "jurisdiction": "country code per starter-regulations/README.md (UK, EU, US, US-CA, CA, AU, SG, CH, AE, AE-DIFC, BR, GLOBAL)",
         "effective_date": "",
         "review_cadence": ""
       },
@@ -34,7 +35,7 @@
   "incoming_regulation": [
     {
       "id": "GOV-INC-001",
-      "regulation": "",
+      "regulation": "regulation id from ../../../../starter-regulations/{sector}.json if already listed there, or a descriptive name if not yet in the starter library",
       "jurisdiction": "",
       "earliest_effective_date": "",
       "capability_impact": "",

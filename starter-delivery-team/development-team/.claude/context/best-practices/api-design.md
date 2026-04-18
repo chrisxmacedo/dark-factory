@@ -2,6 +2,24 @@
 
 Read by: all teams exposing HTTP endpoints (starter-api, starter-web API routes, starter-gateway)
 
+## Where the contract comes from
+
+Each Deliverable builds part of a per-capability OpenAPI specified by
+the capability team at
+`capability-team/artefacts/models/{slug}/api-contracts/{capability}.openapi.json`.
+Field-level projection notes (per-persona data visibility) are in the
+spec — do not invent projections.
+
+Regulatory context for field projections, auth, and rate-limiting:
+
+- `../../../../starter-regulations/data-protection.json` — data
+  subject rights impact API behaviour (GDPR access, erasure,
+  portability; CCPA opt-out)
+- `../../../../starter-regulations/payments-and-open-finance.json` —
+  PSD2 SCA, FAPI security profile for open banking / open finance
+- `../../../../starter-standards/information-security.json` — NIST
+  800-63 for auth (IAL/AAL/FAL levels)
+
 ## Response envelopes
 
 Every endpoint must use a standard envelope. Never return bare arrays, raw objects, or unstructured responses.

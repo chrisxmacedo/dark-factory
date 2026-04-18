@@ -3,6 +3,18 @@
 Read by: Discovery Team (step 5), Journey Modelling Team (when new log
 categories emerge)
 
+## Starter baselines to pull from
+
+- `../../../../starter-regulations/cybersecurity-and-resilience.json`
+  — incident notification windows vary by jurisdiction (72h GDPR/NIS2,
+  24h NYDFS for extortion, 12h AU SOCI for critical incidents) and
+  shape log retention + alerting requirements
+- `../../../../starter-regulations/data-protection.json` — audit
+  logging and access logging requirements per privacy regime
+- `../../../../starter-standards/information-security.json` — NIST CSF
+  Detect function and ISO 27001 logging/monitoring controls inform
+  baseline coverage
+
 ## Ingestion
 
 - OTel Collector is the sole telemetry ingestion point.

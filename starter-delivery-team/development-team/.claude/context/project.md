@@ -36,3 +36,20 @@ Only Deliverables trigger the team spawning and gating process.
 PIPELINE.md / CLAUDE.md changes that affect pipeline operations should be
 committed directly to ci and merged to main — not routed through feature
 branches. These are operational configuration changes, not feature work.
+
+## Reference libraries
+
+At the `templates/` root, two sibling folders are consumed indirectly —
+via the capability team's specifications, not by dev-team agents
+directly. Read them only when verifying a regulation citation or
+tracing a spec defect:
+
+- `../../../starter-regulations/` — sector-indexed regulations that
+  shape the security-model, governance, and NFR specs the dev team
+  builds against
+- `../../../starter-standards/` — non-regulatory standards (WCAG,
+  ISO 27001, SOC 2, ISO 9001) that shape the test and audit scope
+
+Details of when to read these are in `best-practices/security.md`,
+`best-practices/observability.md`, `best-practices/database.md`,
+`best-practices/api-design.md`, and `best-practices/testing.md`.
