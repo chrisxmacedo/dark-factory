@@ -10,3 +10,6 @@ __pycache__/
 
 # Audit logs written by pipeline scripts when a template is run in place
 _audit.jsonl
+
+# Machine-local Claude permissions never belong in a starter (one leaked a token)
+starter-*/.claude/settings.local.json
