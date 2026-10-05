@@ -1,0 +1,2369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{PRODUCT_NAME} — {PRODUCT_SUBTITLE}</title>
+<style>
+  :root {
+    --bg: #0a0c10;
+    --surface: #111318;
+    --surface2: #181c24;
+    --border: #1e2430;
+    --border-bright: #2a3348;
+    --gold: #c9a84c;
+    --gold-dim: #8a6f30;
+    --cyan: #4ec9b0;
+    --cyan-dim: #2a6b5e;
+    --red: #f07070;
+    --red-dim: #6b3030;
+    --blue: #569cd6;
+    --blue-dim: #2a4a6b;
+    --purple: #b48ead;
+    --purple-dim: #4a3a4a;
+    --green: #6a9955;
+    --green-dim: #2a3a22;
+    --orange: #ce9178;
+    --orange-dim: #5a3a28;
+    --text: #d4d8e0;
+    --text-dim: #6a7080;
+    --text-bright: #f0f2f5;
+    --accent-dim: #1a3a5c;
+    --accent: #58a6ff;
+    --row-even: #111318;
+    --row-odd: #161b22;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+  }
+
+  /* ── Header ── */
+  header {
+    padding: 40px 48px 32px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+
+  .header-left h1 {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: clamp(28px, 4vw, 48px);
+    font-weight: 900;
+    color: var(--text-bright);
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+  }
+
+  .header-left h1 span { color: var(--gold); }
+
+  .header-left p {
+    margin-top: 8px;
+    font-size: 13px;
+    color: var(--text-dim);
+    font-family: 'SF Mono', SFMono-Regular, ui-monospace, 'Cascadia Code', Menlo, Consolas, monospace;
+    letter-spacing: 0.05em;
+  }
+
+  .c4-levels {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .level-pill {
+    padding: 6px 14px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-family: 'SF Mono', SFMono-Regular, ui-monospace, 'Cascadia Code', Menlo, Consolas, monospace;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+  }
+
+  .level-pill.active, .level-pill:hover { opacity: 1; }
+  .level-pill { opacity: 0.6; }
+
+  .pill-l1 { background: #1a1e10; color: var(--green); border-color: var(--green-dim); }
+  .pill-l1.active { background: var(--green-dim); border-color: var(--green); opacity: 1; }
+  .pill-l2 { background: #101a2a; color: var(--blue); border-color: var(--blue-dim); }
+  .pill-l2.active { background: var(--blue-dim); border-color: var(--blue); opacity: 1; }
+  .pill-l3 { background: #1a1020; color: var(--purple); border-color: var(--purple-dim); }
+  .pill-l3.active { background: var(--purple-dim); border-color: var(--purple); opacity: 1; }
+
+  /* ── Tab Navigation ── */
+  .level-nav {
+    padding: 0 48px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 0;
+    overflow-x: auto;
+  }
+
+  .level-tab {
+    padding: 16px 24px;
+    font-size: 12px;
+    font-family: 'SF Mono', SFMono-Regular, ui-monospace, 'Cascadia Code', Menlo, Consolas, monospace;
+    letter-spacing: 0.06em;
+    color: var(--text-dim);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .level-tab:hover { color: var(--text); }
+  .level-tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+  /* ── Main layout ── */
+  .main {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    min-height: calc(100vh - 160px);
+  }
+
+  .main.sidebar-hidden {
+    grid-template-columns: 1fr;
+  }
+
+  .main.sidebar-hidden .sidebar {
+    display: none;
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    border-right: 1px solid var(--border);
+    padding: 24px 0;
+    overflow-y: auto;
+    max-height: calc(100vh - 160px);
+    position: sticky;
+    top: 0;
+  }
+
+  .sidebar-section {
+    margin-bottom: 8px;
+  }
+
+  .sidebar-section-header {
+    padding: 8px 24px;
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .sidebar-section-label {
+    padding: 8px 24px;
+    font-size: 10px;
+    font-family: 'SF Mono', SFMono-Regular, ui-monospace, 'Cascadia Code', Menlo, Consolas, monospace;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+
+  .sidebar-toggle { font-size: 12px; color: var(--text-dim); transition: transform 0.2s; }
+  .sidebar-section.collapsed .sidebar-toggle { transform: rotate(-90deg); }
+
+  .use-case-item {
+    padding: 10px 24px;
+    cursor: pointer;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    border-left: 2px solid transparent;
+    transition: all 0.15s;
+  }
+
+  .use-case-item:hover { background: var(--surface); }
+  .use-case-item.active {
+    background: var(--surface);
+    border-left-color: var(--gold);
+  }
+
+  .use-case-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    margin-top: 6px;
+    flex-shrink: 0;
+  }
+
+  .use-case-item .uc-title {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.4;
+    font-weight: 500;
+  }
+
+  .use-case-item.active .uc-title { color: var(--text-bright); }
+
+  /* ── Content area ── */
+  .content {
+    padding: 32px 40px;
+    overflow-y: auto;
+  }
+
+  /* ── Level panels ── */
+  .level-panel { display: none; }
+  .level-panel.active { display: block; }
+
+  /* ── Collapsible Sections ── */
+  .section {
+    margin-bottom: 48px;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 24px;
+    user-select: none;
+  }
+
+  .section-header:hover .section-title { color: var(--gold); }
+
+  .section-num {
+    font-family: 'SF Mono', SFMono-Regular, ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12px;
+    color: var(--gold);
+    background: var(--gold-dim);
+    padding: 4px 10px;
+    border-radius: 4px;
+    letter-spacing: 0.06em;
+    flex-shrink: 0;
+  }
+
+  .section-title {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 22px;
+    color: var(--text-bright);
+    transition: color 0.15s;
+    flex: 1;
+  }
+
+  .section-toggle {
+    font-size: 18px;
+    color: var(--text-dim);
+    transition: transform 0.2s;
+    flex-shrink: 0;
+  }
+
+  .section-header.collapsed .section-toggle {
+    transform: rotate(-90deg);
+  }
+
+  .section-body {
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+  }
+
+  .section-body.collapsed {
+    max-height: 0 !important;
+    overflow: hidden;
+  }
+
+  /* ── Use Case Detail ── */
+  .uc-detail {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 28px;
+    margin-bottom: 24px;
+    animation: fadeIn 0.2s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .uc-detail-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .uc-badge {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .uc-detail-title {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 22px;
+    color: var(--text-bright);
+    margin-bottom: 4px;
+  }
+
+  .uc-detail-category {
+    font-size: 11px;
+    font-family: 'SF Mono', SFMono-Regular, ui-monospace, 'Cascadia Code', Menlo, Consolas, monospace;
+    color: var(--text-dim);
+    letter-spacing: 0.06em;
+  }
+
+  .uc-sections {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+
+  .uc-section {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px;
+  }
+
+  .uc-section.full-width {
+    grid-column: 1 / -1;
+  }
+
+  .uc-section-label {
+    font-size: 10px;
+    font-family: 'SF Mono', SFMono-Regular, ui-monospace, 'Cascadia Code', Menlo, Consolas, monospace;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .uc-section p {
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text);
+  }
+
+  .flow-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+
+  .flow-num {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--gold-dim);
+    color: var(--gold);
+    font-size: 11px;
+    font-family: 'SF Mono', SFMono-Regular, ui-monospace, 'Cascadia Code', Menlo, Consolas, monospace;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-weight: 600;
+  }
+
+  .flow-text {
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.5;
+    padding-top: 3px;
+  }
+
+  /* ── Tags ── */
+  .reg-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-family: 'SF Mono', SFMono-Regular, ui-monospace, 'Cascadia Code', Menlo, Consolas, monospace;
+    background: var(--red-dim);
+    color: var(--red);
+    border: 1px solid rgba(240,112,112,0.2);
+    margin: 2px;
+  }
+
+  .service-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-family: 'SF Mono', SFMono-Regular, ui-monospace, 'Cascadia Code', Menlo, Consolas, monospace;
+    background: var(--cyan-dim);
+    color: var(--cyan);
+    border: 1px solid rgba(78,201,176,0.2);
+    margin: 2px;
+  }
+
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-family: 'SF Mono', SFMono-Regular, ui-monospace, Menlo, Consolas, monospace;
+    margin: 2px;
+    letter-spacing: 0.04em;
+  }
+
+  .tag-reg { background: var(--red-dim); color: var(--red); border: 1px solid rgba(240,112,112,0.2); }
+  .tag-svc { background: var(--cyan-dim); color: var(--cyan); border: 1px solid rgba(78,201,176,0.2); }
+  .tag-cap { background: var(--gold-dim); color: var(--gold); border: 1px solid rgba(201,168,76,0.2); }
+
+  /* ── C4 Boxes & Diagrams ── */
+  .c4-diagram {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 32px;
+    margin-bottom: 32px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .c4-diagram::before {
+    content: attr(data-level);
+    position: absolute;
+    top: 16px;
+    right: 20px;
+    font-family: 'SF Mono', SFMono-Regular, ui-monospace, 'Cascadia Code', Menlo, Consolas, monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+  }
+
+  .diagram-title {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 20px;
+    color: var(--text-bright);
+    margin-bottom: 6px;
+  }
+
+  .diagram-subtitle {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-bottom: 28px;
+  }
+
+  .c4-grid {
+    display: grid;
+    gap: 16px;
+  }
+
+  .c4-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .c4-zone {
+    border: 1px dashed var(--border-bright);
+    border-radius: 6px;
+    padding: 20px;
+    flex: 1;
+    min-width: clamp(160px, 40vw, 200px);
+  }
+
+  .c4-zone-label {
+    font-size: 10px;
+    font-family: 'SF Mono', SFMono-Regular, ui-monospace, 'Cascadia Code', Menlo, Consolas, monospace;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    margin-bottom: 14px;
+    text-transform: uppercase;
+  }
+
+  .c4-box {
+    background: var(--surface2);
+    border: 1px solid var(--border-bright);
+    border-radius: 6px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+
+  .c4-box:last-child { margin-bottom: 0; }
+
+  .c4-box:hover {
+    border-color: var(--gold-dim);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+
+  .c4-box-type {
+    font-size: 9px;
+    font-family: 'SF Mono', SFMono-Regular, ui-monospace, 'Cascadia Code', Menlo, Consolas, monospace;
+    letter-spacing: 0.1em;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+  }
+
+  .c4-box-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-bright);
+    margin-bottom: 4px;
+  }
+
+  .c4-box-desc {
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+
+  .c4-box-tech {
+    margin-top: 8px;
+    font-size: 10px;
+    font-family: 'SF Mono', SFMono-Regular, ui-monospace, 'Cascadia Code', Menlo, Consolas, monospace;
+    color: var(--text-dim);
+  }
+
+  .box-person { border-left: 3px solid var(--green); }
+  .box-person .c4-box-type { color: var(--green); }
+  .box-external { border-left: 3px solid var(--text-dim); }
+  .box-external .c4-box-type { color: var(--text-dim); }
+  .box-system { border-left: 3px solid var(--blue); }
+  .box-system .c4-box-type { color: var(--blue); }
+  .box-container { border-left: 3px solid var(--cyan); }
+  .box-container .c4-box-type { color: var(--cyan); }
+  .box-component { border-left: 3px solid var(--purple); }
+  .box-component .c4-box-type { color: var(--purple); }
+  .box-db { border-left: 3px solid var(--orange); }
+  .box-db .c4-box-type { color: var(--orange); }
+  .box-queue { border-left: 3px solid var(--gold); }
+  .box-queue .c4-box-type { color: var(--gold); }
+
+  /* ── Tables ── */
+  .table-wrap {
+    overflow-x: auto;
+    margin-bottom: 24px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  thead th {
+    background: var(--surface2);
+    color: var(--text-bright);
+    font-weight: 600;
+    font-size: 11px;
+    font-family: 'SF Mono', SFMono-Regular, ui-monospace, Menlo, Consolas, monospace;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+
+  tbody tr:nth-child(odd) { background: var(--row-odd); }
+  tbody tr:nth-child(even) { background: var(--row-even); }
+
+  tbody td {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+    line-height: 1.5;
+  }
+
+  tbody tr:last-child td { border-bottom: none; }
+
+  /* ── Entity cards ── */
+  .entity-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+
+  .entity-title {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 18px;
+    color: var(--text-bright);
+    margin-bottom: 16px;
+  }
+
+  .entity-fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 12px;
+  }
+
+  .entity-field {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px;
+  }
+
+  .entity-field-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--gold);
+    font-family: 'SF Mono', SFMono-Regular, ui-monospace, Menlo, Consolas, monospace;
+    margin-bottom: 4px;
+  }
+
+  .entity-field-type {
+    font-size: 10px;
+    color: var(--text-dim);
+    font-family: 'SF Mono', SFMono-Regular, ui-monospace, Menlo, Consolas, monospace;
+    margin-bottom: 6px;
+  }
+
+  .entity-field-desc {
+    font-size: 11px;
+    color: var(--text);
+    line-height: 1.4;
+  }
+
+  /* ── Text elements ── */
+  h2 {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 20px;
+    color: var(--text-bright);
+    margin: 24px 0 12px;
+  }
+
+  h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-bright);
+    margin: 24px 0 12px;
+  }
+
+  h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--gold);
+    margin: 20px 0 10px;
+    font-family: 'SF Mono', SFMono-Regular, ui-monospace, Menlo, Consolas, monospace;
+    letter-spacing: 0.03em;
+  }
+
+  p { margin-bottom: 12px; font-size: 14px; line-height: 1.7; }
+
+  ul, ol { margin: 0 0 16px 20px; font-size: 14px; }
+  li { margin-bottom: 6px; line-height: 1.6; }
+
+  strong { color: var(--text-bright); }
+
+  code {
+    font-family: 'SF Mono', SFMono-Regular, ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12px;
+    background: var(--surface2);
+    padding: 2px 6px;
+    border-radius: 3px;
+    color: var(--cyan);
+  }
+
+  pre {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px 20px;
+    font-family: 'SF Mono', SFMono-Regular, ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12px;
+    color: var(--text);
+    overflow-x: auto;
+    margin-bottom: 20px;
+    line-height: 1.6;
+  }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin-bottom: 16px;
+  }
+
+  .card-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-bright);
+    margin-bottom: 8px;
+  }
+
+  .card p { font-size: 13px; color: var(--text); }
+
+  /* ── Service Dependencies Visualization ── */
+  .dep-matrix td:first-child {
+    font-weight: 600;
+    color: var(--text-bright);
+    white-space: nowrap;
+  }
+
+  /* ── Cost Calculator ── */
+  .cost-controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .cost-control {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+  }
+
+  .cost-control label {
+    display: block;
+    font-size: 11px;
+    font-family: 'SF Mono', SFMono-Regular, ui-monospace, Menlo, Consolas, monospace;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .cost-control select {
+    width: 100%;
+    padding: 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 4px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+
+  .cost-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 16px;
+    margin-top: 24px;
+  }
+
+  .cost-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+  }
+
+  .cost-card-label {
+    font-size: 12px;
+    font-family: 'SF Mono', SFMono-Regular, ui-monospace, Menlo, Consolas, monospace;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+
+  .cost-card-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--gold);
+    font-family: 'SF Mono', SFMono-Regular, ui-monospace, Menlo, Consolas, monospace;
+    margin-bottom: 12px;
+  }
+
+  .cost-card-breakdown {
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+
+  /* ── ASCII Diagram ── */
+  .diagram-ascii {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px 20px;
+    font-family: 'SF Mono', SFMono-Regular, ui-monospace, Menlo, Consolas, monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    overflow-x: auto;
+    white-space: pre;
+    line-height: 1.4;
+    margin-bottom: 20px;
+  }
+
+  /* ── OKR Styles ── */
+  .indicator-legend { display: flex; flex-wrap: wrap; gap: 12px 24px; padding: 16px 0; }
+  .indicator-legend-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-dim); }
+  .indicator-legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+  .okr-block { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+  .okr-objective-header { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+  .okr-objective-number { background: var(--gold); color: var(--bg); font-weight: 700; font-size: 14px; padding: 4px 12px; border-radius: 4px; font-family: 'SF Mono', SFMono-Regular, ui-monospace, monospace; }
+  .okr-objective-text { flex: 1; font-size: 15px; color: var(--text-bright); line-height: 1.4; }
+  .okr-objective-timeframe { font-size: 12px; color: var(--text-dim); font-family: 'SF Mono', SFMono-Regular, ui-monospace, monospace; background: var(--surface); padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border); white-space: nowrap; }
+
+  .okr-key-results { list-style: none; padding: 0; margin: 0; }
+  .okr-kr { display: flex; gap: 16px; padding: 12px 0; border-top: 1px solid var(--border); }
+  .okr-kr-label { font-family: 'SF Mono', SFMono-Regular, ui-monospace, monospace; font-size: 12px; color: var(--text-dim); min-width: 48px; padding-top: 2px; }
+  .okr-kr-content { flex: 1; }
+  .okr-kr-text { font-size: 14px; color: var(--text); margin-bottom: 8px; line-height: 1.5; }
+  .okr-kr-indicator { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-dim); margin-right: 16px; }
+  .okr-kr-indicator-icon { font-size: 10px; }
+  .okr-kr-target { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-family: 'SF Mono', SFMono-Regular, ui-monospace, monospace; padding: 2px 8px; border-radius: 4px; }
+  .okr-kr-target.up { background: rgba(106,153,85,0.15); color: var(--green); }
+  .okr-kr-target.down { background: rgba(240,112,112,0.15); color: var(--red); }
+  .okr-kr-target.absolute { background: rgba(86,156,214,0.15); color: var(--blue); }
+</style>
+</head>
+
+<body>
+
+<!-- ════════════════════ HEADER ════════════════════ -->
+<header>
+  <div class="header-left">
+    <h1>{PRODUCT_TAGLINE}</h1>
+    <p>{PRODUCT_SUBTITLE} · {VERSION}</p>
+  </div>
+  <div class="c4-levels" id="c4-levels" style="display:none;">
+    <div class="level-pill pill-l1 active" onclick="setLevel('l1')">L1 • Context</div>
+    <div class="level-pill pill-l2" onclick="setLevel('l2')">L2 • Container</div>
+    <div class="level-pill pill-l3" onclick="setLevel('l3')">L3 • Component</div>
+  </div>
+</header>
+
+<!-- ════════════════════ TAB NAVIGATION ════════════════════ -->
+<div class="level-nav">
+  <div class="level-tab active" onclick="setTab('problems',0)">Problems & Problem Statement</div>
+  <div class="level-tab" onclick="setTab('vision',1)">Vision & Core Concepts</div>
+  <div class="level-tab" onclick="setTab('strategy',2)">Strategy</div>
+  <div class="level-tab" onclick="setTab('metrics',3)">Metrics</div>
+  <div class="level-tab" onclick="setTab('capabilities',4)">Capabilities</div>
+  <div class="level-tab" onclick="setTab('usecases',5)">Use Cases</div>
+  <div class="level-tab" onclick="setTab('architecture',6)">Architecture</div>
+  <div class="level-tab" onclick="setTab('observability',7)">Observability & Security</div>
+  <div class="level-tab" onclick="setTab('delivery',8)">Delivery</div>
+  <div class="level-tab" onclick="setTab('cost',9)">Cost Estimate</div>
+</div>
+
+<!-- ════════════════════ MAIN CONTENT ════════════════════ -->
+<div class="main">
+
+  <!-- SIDEBAR (for Use Cases tab) -->
+  <div class="sidebar" id="sidebar">
+    <!-- Populated by JS for use cases -->
+  </div>
+
+  <!-- CONTENT AREA -->
+  <div class="content">
+
+    <!-- ──────────────── TAB 1: PROBLEMS & PROBLEM STATEMENT ──────────────── -->
+    <div class="level-panel active" id="tab-problems">
+
+      <!-- Section 1: Problems -->
+      <div class="section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span class="section-num">01</span>
+          <span class="section-title">Problems</span>
+          <span class="section-toggle">›</span>
+        </div>
+        <div class="section-body">
+          <ul>
+            <li><strong>{PROBLEM_1_TITLE}:</strong> {PROBLEM_1_DESCRIPTION}</li>
+            <li><strong>{PROBLEM_2_TITLE}:</strong> {PROBLEM_2_DESCRIPTION}</li>
+            <!-- Repeat for each problem -->
+          </ul>
+        </div>
+      </div>
+
+      <!-- Section 2: Personas & Pain Points -->
+      <div class="section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span class="section-num">02</span>
+          <span class="section-title">Personas & Pain Points</span>
+          <span class="section-toggle">›</span>
+        </div>
+        <div class="section-body">
+          <p><strong>{PERSONA_1_NAME}:</strong> {PERSONA_1_PAIN}</p>
+          <p><strong>{PERSONA_2_NAME}:</strong> {PERSONA_2_PAIN}</p>
+        </div>
+      </div>
+
+      <!-- Section 3: Cost of Inaction -->
+      <div class="section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span class="section-num">03</span>
+          <span class="section-title">Cost of Inaction</span>
+          <span class="section-toggle">›</span>
+        </div>
+        <div class="section-body">
+          <p>{COST_OF_INACTION_DESCRIPTION}</p>
+        </div>
+      </div>
+
+      <!-- Section 4: Problem Statement -->
+      <div class="section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span class="section-num">04</span>
+          <span class="section-title">Problem Statement</span>
+          <span class="section-toggle">›</span>
+        </div>
+        <div class="section-body">
+          <p>{PROBLEM_STATEMENT}</p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ──────────────── TAB 2: VISION & CORE CONCEPTS ──────────────── -->
+    <div class="level-panel" id="tab-vision">
+
+      <!-- Section 1: Vision Statement -->
+      <div class="section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span class="section-num">01</span>
+          <span class="section-title">Vision Statement</span>
+          <span class="section-toggle">›</span>
+        </div>
+        <div class="section-body">
+          <p><strong>{VISION_STATEMENT}</strong></p>
+        </div>
+      </div>
+
+      <!-- Section 2: Product Principles -->
+      <div class="section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span class="section-num">02</span>
+          <span class="section-title">Product Principles</span>
+          <span class="section-toggle">›</span>
+        </div>
+        <div class="section-body">
+          <ul>
+            <li><strong>{PRINCIPLE_1_NAME}:</strong> {PRINCIPLE_1_DESCRIPTION}</li>
+            <li><strong>{PRINCIPLE_2_NAME}:</strong> {PRINCIPLE_2_DESCRIPTION}</li>
+            <li><strong>{PRINCIPLE_3_NAME}:</strong> {PRINCIPLE_3_DESCRIPTION}</li>
+            <!-- Repeat for each principle -->
+          </ul>
+        </div>
+      </div>
+
+      <!-- Section 3: Categories -->
+      <div class="section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span class="section-num">03</span>
+          <span class="section-title">Categories</span>
+          <span class="section-toggle">›</span>
+        </div>
+        <div class="section-body">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Category</th>
+                  <th>Description</th>
+                  <th>Focus Area</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>{CAT_1_NAME}</td>
+                  <td>{CAT_1_DESCRIPTION}</td>
+                  <td>{CAT_1_FOCUS}</td>
+                </tr>
+                <tr>
+                  <td>{CAT_2_NAME}</td>
+                  <td>{CAT_2_DESCRIPTION}</td>
+                  <td>{CAT_2_FOCUS}</td>
+                </tr>
+                <!-- Repeat for each category -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ──────────────── TAB 3: STRATEGY ──────────────── -->
+    <div class="level-panel" id="tab-strategy">
+
+      <!-- Section 1: Target Market -->
+      <div class="section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span class="section-num">01</span>
+          <span class="section-title">Target Market</span>
+          <span class="section-toggle">›</span>
+        </div>
+        <div class="section-body">
+          <p>{TARGET_MARKET_DESCRIPTION}</p>
+          <h4>Market Size</h4>
+          <p>{MARKET_SIZE}</p>
+          <h4>Market Segments</h4>
+          <p><strong>{MARKET_SEGMENT_1_NAME}:</strong> {MARKET_SEGMENT_1_DESC}</p>
+          <p><strong>{MARKET_SEGMENT_2_NAME}:</strong> {MARKET_SEGMENT_2_DESC}</p>
+        </div>
+      </div>
+
+      <!-- Section 2: Competition -->
+      <div class="section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span class="section-num">02</span>
+          <span class="section-title">Competition</span>
+          <span class="section-toggle">›</span>
+        </div>
+        <div class="section-body">
+          <h4>{COMPETITOR_1_NAME}</h4>
+          <p><strong>Strengths:</strong> {COMPETITOR_1_STRENGTHS}</p>
+          <p><strong>Weaknesses:</strong> {COMPETITOR_1_WEAKNESSES}</p>
+
+          <h4>{COMPETITOR_2_NAME}</h4>
+          <p><strong>Strengths:</strong> {COMPETITOR_2_STRENGTHS}</p>
+          <p><strong>Weaknesses:</strong> {COMPETITOR_2_WEAKNESSES}</p>
+
+          <h4>Our Competitive Advantage</h4>
+          <p>{COMPETITIVE_ADVANTAGE}</p>
+        </div>
+      </div>
+
+      <!-- Section 3: Strategy Options -->
+      <div class="section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span class="section-num">03</span>
+          <span class="section-title">Strategy Options</span>
+          <span class="section-toggle">›</span>
+        </div>
+        <div class="section-body">
+          <h4>{STRATEGY_OPTION_1_NAME}</h4>
+          <p><strong>Description:</strong> {STRATEGY_OPTION_1_DESC}</p>
+          <p><strong>Pros:</strong> {STRATEGY_OPTION_1_PROS}</p>
+          <p><strong>Cons:</strong> {STRATEGY_OPTION_1_CONS}</p>
+
+          <h4>{STRATEGY_OPTION_2_NAME}</h4>
+          <p><strong>Description:</strong> {STRATEGY_OPTION_2_DESC}</p>
+          <p><strong>Pros:</strong> {STRATEGY_OPTION_2_PROS}</p>
+          <p><strong>Cons:</strong> {STRATEGY_OPTION_2_CONS}</p>
+
+          <h4>Chosen Strategy</h4>
+          <p><strong>{CHOSEN_STRATEGY}</strong></p>
+          <p><strong>Rationale:</strong> {STRATEGY_RATIONALE}</p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ──────────────── TAB 4: METRICS (OKR FORMAT) ──────────────── -->
+    <div class="level-panel" id="tab-metrics">
+
+      <!-- Indicators Legend -->
+      <div style="margin-bottom: 32px;">
+        <h3>Key Result Indicators</h3>
+        <div class="indicator-legend">
+          <div class="indicator-legend-item">
+            <div class="indicator-legend-dot" style="background-color: {INDICATOR_1_COLOR};"></div>
+            <span>{INDICATOR_1_NAME}</span>
+          </div>
+          <div class="indicator-legend-item">
+            <div class="indicator-legend-dot" style="background-color: {INDICATOR_2_COLOR};"></div>
+            <span>{INDICATOR_2_NAME}</span>
+          </div>
+          <div class="indicator-legend-item">
+            <div class="indicator-legend-dot" style="background-color: {INDICATOR_3_COLOR};"></div>
+            <span>{INDICATOR_3_NAME}</span>
+          </div>
+          <!-- Repeat for each indicator -->
+        </div>
+      </div>
+
+      <!-- OKR Blocks -->
+      <div style="margin-bottom: 24px;">
+        <h3>Objectives & Key Results</h3>
+
+        <!-- Objective 1 -->
+        <div class="okr-block">
+          <div class="okr-objective-header">
+            <div class="okr-objective-number">{OBJ_1_ID}</div>
+            <div class="okr-objective-text">{OBJ_1_TEXT}</div>
+            <div class="okr-objective-timeframe">{OBJ_1_TIMEFRAME}</div>
+          </div>
+          <ul class="okr-key-results">
+            <li class="okr-kr">
+              <div class="okr-kr-label">{OBJ_1_KR_1_ID}</div>
+              <div class="okr-kr-content">
+                <div class="okr-kr-text">{OBJ_1_KR_1_TEXT}</div>
+                <span class="okr-kr-indicator">
+                  <span class="okr-kr-indicator-icon" style="color:{OBJ_1_KR_1_INDICATOR_COLOR};">&#9679;</span>
+                  {OBJ_1_KR_1_INDICATOR_NAME}
+                </span>
+                <span class="okr-kr-target {OBJ_1_KR_1_DIRECTION}">
+                  <span class="okr-kr-target-arrow">{OBJ_1_KR_1_ARROW}</span> {OBJ_1_KR_1_TARGET}
+                </span>
+              </div>
+            </li>
+            <li class="okr-kr">
+              <div class="okr-kr-label">{OBJ_1_KR_2_ID}</div>
+              <div class="okr-kr-content">
+                <div class="okr-kr-text">{OBJ_1_KR_2_TEXT}</div>
+                <span class="okr-kr-indicator">
+                  <span class="okr-kr-indicator-icon" style="color:{OBJ_1_KR_2_INDICATOR_COLOR};">&#9679;</span>
+                  {OBJ_1_KR_2_INDICATOR_NAME}
+                </span>
+                <span class="okr-kr-target {OBJ_1_KR_2_DIRECTION}">
+                  <span class="okr-kr-target-arrow">{OBJ_1_KR_2_ARROW}</span> {OBJ_1_KR_2_TARGET}
+                </span>
+              </div>
+            </li>
+            <li class="okr-kr">
+              <div class="okr-kr-label">{OBJ_1_KR_3_ID}</div>
+              <div class="okr-kr-content">
+                <div class="okr-kr-text">{OBJ_1_KR_3_TEXT}</div>
+                <span class="okr-kr-indicator">
+                  <span class="okr-kr-indicator-icon" style="color:{OBJ_1_KR_3_INDICATOR_COLOR};">&#9679;</span>
+                  {OBJ_1_KR_3_INDICATOR_NAME}
+                </span>
+                <span class="okr-kr-target {OBJ_1_KR_3_DIRECTION}">
+                  <span class="okr-kr-target-arrow">{OBJ_1_KR_3_ARROW}</span> {OBJ_1_KR_3_TARGET}
+                </span>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Objective 2 -->
+        <div class="okr-block">
+          <div class="okr-objective-header">
+            <div class="okr-objective-number">{OBJ_2_ID}</div>
+            <div class="okr-objective-text">{OBJ_2_TEXT}</div>
+            <div class="okr-objective-timeframe">{OBJ_2_TIMEFRAME}</div>
+          </div>
+          <ul class="okr-key-results">
+            <li class="okr-kr">
+              <div class="okr-kr-label">{OBJ_2_KR_1_ID}</div>
+              <div class="okr-kr-content">
+                <div class="okr-kr-text">{OBJ_2_KR_1_TEXT}</div>
+                <span class="okr-kr-indicator">
+                  <span class="okr-kr-indicator-icon" style="color:{OBJ_2_KR_1_INDICATOR_COLOR};">&#9679;</span>
+                  {OBJ_2_KR_1_INDICATOR_NAME}
+                </span>
+                <span class="okr-kr-target {OBJ_2_KR_1_DIRECTION}">
+                  <span class="okr-kr-target-arrow">{OBJ_2_KR_1_ARROW}</span> {OBJ_2_KR_1_TARGET}
+                </span>
+              </div>
+            </li>
+            <li class="okr-kr">
+              <div class="okr-kr-label">{OBJ_2_KR_2_ID}</div>
+              <div class="okr-kr-content">
+                <div class="okr-kr-text">{OBJ_2_KR_2_TEXT}</div>
+                <span class="okr-kr-indicator">
+                  <span class="okr-kr-indicator-icon" style="color:{OBJ_2_KR_2_INDICATOR_COLOR};">&#9679;</span>
+                  {OBJ_2_KR_2_INDICATOR_NAME}
+                </span>
+                <span class="okr-kr-target {OBJ_2_KR_2_DIRECTION}">
+                  <span class="okr-kr-target-arrow">{OBJ_2_KR_2_ARROW}</span> {OBJ_2_KR_2_TARGET}
+                </span>
+              </div>
+            </li>
+          </ul>
+        </div>
+        <!-- Repeat for each objective -->
+
+      </div>
+
+    </div>
+
+    <!-- ──────────────── TAB 5: CAPABILITIES ──────────────── -->
+    <div class="level-panel" id="tab-capabilities">
+
+      <!-- Section: Capabilities -->
+      <div class="section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span class="section-num">01</span>
+          <span class="section-title">Capabilities</span>
+          <span class="section-toggle">›</span>
+        </div>
+        <div class="section-body">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Category</th>
+                  <th>Description</th>
+                  <th>Regulations</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>{CAP_01_ID}</code></td>
+                  <td>{CAP_01_NAME}</td>
+                  <td><span class="tag tag-cap">{CAP_01_CATEGORY}</span></td>
+                  <td>{CAP_01_DESCRIPTION}</td>
+                  <td><span class="tag tag-reg">{REG_1_CODE}</span></td>
+                </tr>
+                <tr>
+                  <td><code>{CAP_02_ID}</code></td>
+                  <td>{CAP_02_NAME}</td>
+                  <td><span class="tag tag-cap">{CAP_02_CATEGORY}</span></td>
+                  <td>{CAP_02_DESCRIPTION}</td>
+                  <td><span class="tag tag-reg">{REG_2_CODE}</span></td>
+                </tr>
+                <!-- Repeat for each capability -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section: Regulations -->
+      <div class="section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span class="section-num">02</span>
+          <span class="section-title">Regulations</span>
+          <span class="section-toggle">›</span>
+        </div>
+        <div class="section-body">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Regulation</th>
+                  <th>Scope</th>
+                  <th>Services Affected</th>
+                  <th>Key Requirement</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>{REG_1_NAME}</td>
+                  <td>{REG_1_SCOPE}</td>
+                  <td>{REG_1_SERVICES}</td>
+                  <td>{REG_1_REQUIREMENT}</td>
+                </tr>
+                <tr>
+                  <td>{REG_2_NAME}</td>
+                  <td>{REG_2_SCOPE}</td>
+                  <td>{REG_2_SERVICES}</td>
+                  <td>{REG_2_REQUIREMENT}</td>
+                </tr>
+                <!-- Repeat for each regulation -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ──────────────── TAB 6: USE CASES ──────────────── -->
+    <div class="level-panel" id="tab-usecases">
+
+      <div id="uc-detail-container">
+        <!-- Populated by JS -->
+      </div>
+
+    </div>
+
+    <!-- ──────────────── TAB 7: ARCHITECTURE ──────────────── -->
+    <div class="level-panel" id="tab-architecture">
+
+      <!-- Section: System Context Diagram (L1) -->
+      <div class="section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span class="section-num">01</span>
+          <span class="section-title">System Context</span>
+          <span class="section-toggle">›</span>
+        </div>
+        <div class="section-body">
+          <div class="c4-diagram" data-level="C4 · LEVEL 1 · CONTEXT">
+            <div class="diagram-title">{PRODUCT_NAME} System Context</div>
+            <div class="diagram-subtitle">High-level actors and system boundaries</div>
+            <div class="c4-grid">
+              <div class="c4-zone">
+                <div class="c4-zone-label">Users</div>
+                <div class="c4-box box-person">
+                  <div class="c4-box-type">Person</div>
+                  <div class="c4-box-name">{ACTOR_1_NAME}</div>
+                  <div class="c4-box-desc">{ACTOR_1_DESCRIPTION}</div>
+                </div>
+              </div>
+              <div class="c4-zone">
+                <div class="c4-zone-label">System</div>
+                <div class="c4-box box-system">
+                  <div class="c4-box-type">Software System</div>
+                  <div class="c4-box-name">{PRODUCT_NAME}</div>
+                  <div class="c4-box-desc">{SYSTEM_DESCRIPTION}</div>
+                </div>
+              </div>
+              <div class="c4-zone">
+                <div class="c4-zone-label">External Systems</div>
+                <div class="c4-box box-external">
+                  <div class="c4-box-type">External System</div>
+                  <div class="c4-box-name">{EXT_SYSTEM_1_NAME}</div>
+                  <div class="c4-box-desc">{EXT_SYSTEM_1_DESCRIPTION}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section: Container Diagram (L2) -->
+      <div class="section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span class="section-num">02</span>
+          <span class="section-title">Container Architecture</span>
+          <span class="section-toggle">›</span>
+        </div>
+        <div class="section-body">
+          <div class="c4-diagram" data-level="C4 · LEVEL 2 · CONTAINER">
+            <div class="diagram-title">{PRODUCT_NAME} Containers</div>
+            <div class="diagram-subtitle">Applications, services, databases, and infrastructure</div>
+            <div class="c4-grid">
+              <div class="c4-zone">
+                <div class="c4-zone-label">Edge Layer</div>
+                <div class="c4-box box-container">
+                  <div class="c4-box-type">Container</div>
+                  <div class="c4-box-name">{CONTAINER_1_NAME}</div>
+                  <div class="c4-box-desc">{CONTAINER_1_DESCRIPTION}</div>
+                  <div class="c4-box-tech">{CONTAINER_1_TECH}</div>
+                </div>
+              </div>
+              <div class="c4-zone">
+                <div class="c4-zone-label">Core Services</div>
+                <div class="c4-box box-container">
+                  <div class="c4-box-type">Container</div>
+                  <div class="c4-box-name">{CONTAINER_2_NAME}</div>
+                  <div class="c4-box-desc">{CONTAINER_2_DESCRIPTION}</div>
+                  <div class="c4-box-tech">{CONTAINER_2_TECH}</div>
+                </div>
+              </div>
+              <div class="c4-zone">
+                <div class="c4-zone-label">Infrastructure</div>
+                <div class="c4-box box-db">
+                  <div class="c4-box-type">Database</div>
+                  <div class="c4-box-name">{INFRA_1_NAME}</div>
+                  <div class="c4-box-desc">{INFRA_1_DESCRIPTION}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section: Technical Services -->
+      <div class="section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span class="section-num">03</span>
+          <span class="section-title">Technical Services</span>
+          <span class="section-toggle">›</span>
+        </div>
+        <div class="section-body">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Service</th>
+                  <th>Capabilities</th>
+                  <th>Contract</th>
+                  <th>Data Owned</th>
+                  <th>SLO</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>{SVC_01_NAME}</strong></td>
+                  <td>{SVC_01_CAPABILITIES}</td>
+                  <td><code>{SVC_01_PROTOCOL}</code></td>
+                  <td>{SVC_01_DATA}</td>
+                  <td>{SVC_01_SLO}</td>
+                </tr>
+                <tr>
+                  <td><strong>{SVC_02_NAME}</strong></td>
+                  <td>{SVC_02_CAPABILITIES}</td>
+                  <td><code>{SVC_02_PROTOCOL}</code></td>
+                  <td>{SVC_02_DATA}</td>
+                  <td>{SVC_02_SLO}</td>
+                </tr>
+                <!-- Repeat for each service -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section: Service Dependencies -->
+      <div class="section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span class="section-num">04</span>
+          <span class="section-title">Service Dependencies</span>
+          <span class="section-toggle">›</span>
+        </div>
+        <div class="section-body">
+          <div id="dependencies-container" style="min-height:300px;"></div>
+        </div>
+      </div>
+
+      <!-- Section: Structurizr Workspace -->
+      <div class="section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span class="section-num">05</span>
+          <span class="section-title">Structurizr Workspace</span>
+          <span class="section-toggle">›</span>
+        </div>
+        <div class="section-body">
+          <h3>C4 Model DSL Mapping</h3>
+          <p>The architecture is defined in Structurizr DSL and available at: <code>{STRUCTURIZR_WORKSPACE_URL}</code></p>
+
+          <h4>System Mapping</h4>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Component</th>
+                  <th>DSL Element</th>
+                  <th>Technology</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>{DSL_COMPONENT_1_NAME}</td>
+                  <td><code>{DSL_COMPONENT_1_ELEMENT}</code></td>
+                  <td>{DSL_COMPONENT_1_TECH}</td>
+                </tr>
+                <tr>
+                  <td>{DSL_COMPONENT_2_NAME}</td>
+                  <td><code>{DSL_COMPONENT_2_ELEMENT}</code></td>
+                  <td>{DSL_COMPONENT_2_TECH}</td>
+                </tr>
+                <!-- Repeat for each DSL component -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ──────────────── TAB 8: OBSERVABILITY & SECURITY ──────────────── -->
+    <div class="level-panel" id="tab-observability">
+
+      <!-- Section: Log Routing Architecture -->
+      <div class="section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span class="section-num">01</span>
+          <span class="section-title">Log Routing Architecture</span>
+          <span class="section-toggle">›</span>
+        </div>
+        <div class="section-body">
+          <div class="diagram-ascii">┌────────────────────┐
+│   Services         │
+│ (Instrumented)     │
+└─────────┬──────────┘
+          │
+          ↓
+┌────────────────────────────────────┐
+│  OpenTelemetry Collector           │
+│  (gRPC 4317)                       │
+└──────┬───┬───┬───┬────────────────┘
+       │   │   │   │
+    ┌──┴┐ │  │  └──┬──┐
+    │   │ │  │     │  │
+    ↓   ↓ ↓  ↓     ↓  ↓
+  {LOG_DEST_1}  {LOG_DEST_2}  {LOG_DEST_3}</div>
+
+          <h3>Mandatory Service Instrumentation</h3>
+          <p style="color:var(--text-dim);margin-bottom:12px;">Every service in every environment must satisfy these six requirements. Enforced by <code>{INSTRUMENTATION_LIBRARY}</code> at startup — missing fields cause startup failure.</p>
+
+          <div class="control-grid">
+            <div class="control-item">
+              <div class="control-check"></div>
+              <div class="control-text"><strong>Structured Logging</strong> — JSON only to stdout. Mandatory base schema: <code>timestamp</code>, <code>level</code>, <code>service</code>, <code>version</code>, <code>environment</code>, <code>trace_id</code>, <code>span_id</code>, <code>message</code>. No plain text logging.</div>
+            </div>
+            <div class="control-item">
+              <div class="control-check"></div>
+              <div class="control-text"><strong>Distributed Tracing</strong> — OTel SDK with <code>service.name</code>, <code>service.version</code>, <code>deployment.environment</code>. All HTTP handlers/clients wrapped. {MESSAGE_BUS_NAME} producers inject <code>traceparent</code>; consumers extract and create child spans. DB queries traced with sanitised SQL.</div>
+            </div>
+            <div class="control-item">
+              <div class="control-check"></div>
+              <div class="control-text"><strong>Prometheus Metrics</strong> — <code>/metrics</code> endpoint on every service. Mandatory labels: <code>service</code>, <code>version</code>, <code>environment</code>. Required: <code>{METRIC_HISTOGRAM_NAME}</code> histogram, <code>{METRIC_CONSUMER_LAG_NAME}</code> per topic/partition, <code>{METRIC_SECRET_EXPIRY_NAME}</code> per secret. No entity IDs as labels.</div>
+            </div>
+            <div class="control-item">
+              <div class="control-check"></div>
+              <div class="control-text"><strong>Health Endpoints</strong> — Three distinct, never conflated: <code>GET /healthz</code> (liveness only, no deps), <code>GET /readyz</code> (checks DB, consumer lag, critical deps; returns 503 if unavailable), <code>GET /infoz</code> (service name, version, commit SHA, build timestamp; unauthenticated, rate-limited).</div>
+            </div>
+            <div class="control-item">
+              <div class="control-check"></div>
+              <div class="control-text"><strong>{EVENT_ENVELOPE_STANDARD} Envelope</strong> — All messages carry headers: <code>specversion</code>, <code>type</code> (reverse-DNS), <code>source</code>, <code>id</code> (UUIDv4), <code>time</code>, <code>traceparent</code>. Producers and consumers log the envelope <code>id</code> for end-to-end correlation.</div>
+            </div>
+            <div class="control-item">
+              <div class="control-check"></div>
+              <div class="control-text"><strong>service.yaml Manifest</strong> — Machine-readable per-repo manifest: <code>id</code>, <code>tier</code>, <code>depends_on</code> (protocol + criticality: hard/soft), <code>topics_produced</code>, <code>topics_consumed</code>, <code>data_classification</code> ({DATA_CLASS_LEVELS}), <code>secrets</code> with <code>rotation_days</code>.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section: Security Posture -->
+      <div class="section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span class="section-num">02</span>
+          <span class="section-title">Security Posture</span>
+          <span class="section-toggle">›</span>
+        </div>
+        <div class="section-body">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Control</th>
+                  <th>Implementation</th>
+                  <th>Scope</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Zero Trust</strong></td>
+                  <td>{ZERO_TRUST_IMPL}</td>
+                  <td>{ZERO_TRUST_SCOPE}</td>
+                </tr>
+                <tr>
+                  <td><strong>mTLS</strong></td>
+                  <td>{MTLS_IMPL}</td>
+                  <td>{MTLS_SCOPE}</td>
+                </tr>
+                <tr>
+                  <td><strong>Secret Rotation</strong></td>
+                  <td>{SECRET_ROTATION_IMPL}</td>
+                  <td>{SECRET_ROTATION_SCOPE}</td>
+                </tr>
+                <tr>
+                  <td><strong>Blast Radius</strong></td>
+                  <td>{BLAST_RADIUS_IMPL}</td>
+                  <td>{BLAST_RADIUS_SCOPE}</td>
+                </tr>
+                <tr>
+                  <td><strong>CVE Management</strong></td>
+                  <td>{CVE_IMPL}</td>
+                  <td>{CVE_SCOPE}</td>
+                </tr>
+                <tr>
+                  <td><strong>Audit Separation</strong></td>
+                  <td>{AUDIT_IMPL}</td>
+                  <td>{AUDIT_SCOPE}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section: Logging Schema -->
+      <div class="section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span class="section-num">03</span>
+          <span class="section-title">Logging Schema by Service Category</span>
+          <span class="section-toggle">›</span>
+        </div>
+        <div class="section-body">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Service Category</th>
+                  <th>Schema Fields</th>
+                  <th>Retention</th>
+                  <th>Sampling</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>{SVC_CAT_1_NAME}</td>
+                  <td>{SVC_CAT_1_SCHEMA}</td>
+                  <td>{SVC_CAT_1_RETENTION}</td>
+                  <td>{SVC_CAT_1_SAMPLING}</td>
+                </tr>
+                <tr>
+                  <td>{SVC_CAT_2_NAME}</td>
+                  <td>{SVC_CAT_2_SCHEMA}</td>
+                  <td>{SVC_CAT_2_RETENTION}</td>
+                  <td>{SVC_CAT_2_SAMPLING}</td>
+                </tr>
+                <!-- Repeat for each category -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section: Data Freshness & Volumes -->
+      <div class="section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span class="section-num">04</span>
+          <span class="section-title">Data Freshness & Request Volume</span>
+          <span class="section-toggle">›</span>
+        </div>
+        <div class="section-body">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Metric</th>
+                  <th>Target</th>
+                  <th>Current Volume</th>
+                  <th>SLI</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>{FRESHNESS_1_NAME}</td>
+                  <td>{FRESHNESS_1_TARGET}</td>
+                  <td>{FRESHNESS_1_VOLUME}</td>
+                  <td>{FRESHNESS_1_SLI}</td>
+                </tr>
+                <tr>
+                  <td>{FRESHNESS_2_NAME}</td>
+                  <td>{FRESHNESS_2_TARGET}</td>
+                  <td>{FRESHNESS_2_VOLUME}</td>
+                  <td>{FRESHNESS_2_SLI}</td>
+                </tr>
+                <!-- Repeat for each metric -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section: Per-Service Domain Metrics -->
+      <div class="section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span class="section-num">05</span>
+          <span class="section-title">Per-Service Domain Metrics</span>
+          <span class="section-toggle">›</span>
+        </div>
+        <div class="section-body">
+          <p style="color:var(--text-dim);margin-bottom:12px;">Additional to mandatory baseline. Each service exposes domain-specific metrics beyond the platform requirements.</p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Service</th>
+                  <th>Key Domain Metrics</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>{DOMAIN_METRIC_SVC_1_NAME}</strong></td>
+                  <td><code>{DOMAIN_METRIC_SVC_1_METRICS}</code></td>
+                </tr>
+                <tr>
+                  <td><strong>{DOMAIN_METRIC_SVC_2_NAME}</strong></td>
+                  <td><code>{DOMAIN_METRIC_SVC_2_METRICS}</code></td>
+                </tr>
+                <tr>
+                  <td><strong>{DOMAIN_METRIC_SVC_3_NAME}</strong></td>
+                  <td><code>{DOMAIN_METRIC_SVC_3_METRICS}</code></td>
+                </tr>
+                <!-- Repeat for each service -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section: Per-Service Data Classification -->
+      <div class="section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span class="section-num">06</span>
+          <span class="section-title">Per-Service Data Classification</span>
+          <span class="section-toggle">›</span>
+        </div>
+        <div class="section-body">
+          <p style="color:var(--text-dim);margin-bottom:12px;">Drives log routing and WORM audit decisions. Classification declared in each service's <code>service.yaml</code> manifest.</p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Service</th>
+                  <th>data_classification</th>
+                  <th>Rationale</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>{DATA_CLASS_SVC_1_NAME}</strong></td>
+                  <td><span class="tag tag-reg">{DATA_CLASS_SVC_1_LEVEL}</span></td>
+                  <td>{DATA_CLASS_SVC_1_RATIONALE}</td>
+                </tr>
+                <tr>
+                  <td><strong>{DATA_CLASS_SVC_2_NAME}</strong></td>
+                  <td><span class="tag tag-reg">{DATA_CLASS_SVC_2_LEVEL}</span></td>
+                  <td>{DATA_CLASS_SVC_2_RATIONALE}</td>
+                </tr>
+                <tr>
+                  <td><strong>{DATA_CLASS_SVC_3_NAME}</strong></td>
+                  <td><span class="tag tag-reg">{DATA_CLASS_SVC_3_LEVEL}</span></td>
+                  <td>{DATA_CLASS_SVC_3_RATIONALE}</td>
+                </tr>
+                <!-- Repeat for each service -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section: Environment Observability Matrix -->
+      <div class="section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span class="section-num">07</span>
+          <span class="section-title">Environment Observability Matrix</span>
+          <span class="section-toggle">›</span>
+        </div>
+        <div class="section-body">
+          <p style="color:var(--text-dim);margin-bottom:16px;">What observability infrastructure is required — and explicitly excluded — in each environment.</p>
+
+          <!-- Development / Local -->
+          <h3>Development / Local</h3>
+          <p style="margin-bottom:4px;"><strong>Purpose:</strong> {ENV_DEV_PURPOSE}</p>
+          <div class="table-wrap" style="margin-bottom:24px;">
+            <table>
+              <thead>
+                <tr><th>Component</th><th>Status</th><th>Notes</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>OTel Collector</td><td><span class="tag tag-cap">Not required</span></td><td>{ENV_DEV_OTEL_NOTES}</td></tr>
+                <tr><td>Logs</td><td><span class="tag tag-cap">stdout</span></td><td>{ENV_DEV_LOG_NOTES}</td></tr>
+                <tr><td>Traces</td><td><span class="tag tag-cap">stdout</span></td><td>{ENV_DEV_TRACE_NOTES}</td></tr>
+                <tr><td>Metrics</td><td><span class="tag tag-cap">Active, unscraped</span></td><td>{ENV_DEV_METRIC_NOTES}</td></tr>
+                <tr><td>Health Endpoints</td><td><span class="tag tag-reg">Active</span></td><td>All three active and tested locally</td></tr>
+                <tr><td>Audit Log</td><td><span class="tag tag-cap">Not active</span></td><td>No WORM pipeline</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- CI -->
+          <h3>CI Environment</h3>
+          <p style="margin-bottom:4px;"><strong>Purpose:</strong> {ENV_CI_PURPOSE}</p>
+          <div class="table-wrap" style="margin-bottom:24px;">
+            <table>
+              <thead>
+                <tr><th>Component</th><th>Status</th><th>Notes</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>OTel Collector</td><td><span class="tag tag-cap">Not deployed</span></td><td>{ENV_CI_OTEL_NOTES}</td></tr>
+                <tr><td>Logs</td><td><span class="tag tag-cap">stdout</span></td><td>{ENV_CI_LOG_NOTES}</td></tr>
+                <tr><td>Traces</td><td><span class="tag tag-cap">Not collected</span></td><td>trace_id/span_id still propagated in log fields for debugging</td></tr>
+                <tr><td>Metrics</td><td><span class="tag tag-cap">Active, unscraped</span></td><td>Prometheus not deployed</td></tr>
+                <tr><td>Health Endpoints</td><td><span class="tag tag-reg">Active</span></td><td>{ENV_CI_HEALTH_NOTES}</td></tr>
+                <tr><td>Audit Log</td><td><span class="tag tag-cap">Not active</span></td><td></td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Test -->
+          <h3>Test Environment (Integration)</h3>
+          <p style="margin-bottom:4px;"><strong>Purpose:</strong> {ENV_TEST_PURPOSE}</p>
+          <div class="table-wrap" style="margin-bottom:24px;">
+            <table>
+              <thead>
+                <tr><th>Component</th><th>Status</th><th>Notes</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Logs</td><td><span class="tag tag-cap">stdout</span></td><td>{ENV_TEST_LOG_NOTES}</td></tr>
+                <tr><td>Traces</td><td><span class="tag tag-cap">Not collected</span></td><td>{ENV_TEST_TRACE_NOTES}</td></tr>
+                <tr><td>Metrics</td><td><span class="tag tag-cap">Active, asserted</span></td><td>{ENV_TEST_METRIC_NOTES}</td></tr>
+                <tr><td>Health Endpoints</td><td><span class="tag tag-reg">Active</span></td><td>{ENV_TEST_HEALTH_NOTES}</td></tr>
+                <tr><td>Audit Log</td><td><span class="tag tag-cap">DB only</span></td><td>{ENV_TEST_AUDIT_NOTES}</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pre-Production -->
+          <h3>Pre-Production / Prod-Parity</h3>
+          <p style="margin-bottom:4px;"><strong>Purpose:</strong> {ENV_PREPROD_PURPOSE}</p>
+          <div class="table-wrap" style="margin-bottom:24px;">
+            <table>
+              <thead>
+                <tr><th>Component</th><th>Status</th><th>Notes</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>OTel Collector</td><td><span class="tag tag-reg">Full deployment</span></td><td>{ENV_PREPROD_OTEL_NOTES}</td></tr>
+                <tr><td>Logs</td><td><span class="tag tag-reg">Routed</span></td><td>{ENV_PREPROD_LOG_NOTES}</td></tr>
+                <tr><td>Traces</td><td><span class="tag tag-reg">Full</span></td><td>{ENV_PREPROD_TRACE_NOTES}</td></tr>
+                <tr><td>Metrics</td><td><span class="tag tag-reg">Scraped</span></td><td>{ENV_PREPROD_METRIC_NOTES}</td></tr>
+                <tr><td>PII Scrubbing</td><td><span class="tag tag-reg">Active</span></td><td>{ENV_PREPROD_PII_NOTES}</td></tr>
+                <tr><td>Audit Log</td><td><span class="tag tag-reg">Active</span></td><td>{ENV_PREPROD_AUDIT_NOTES}</td></tr>
+                <tr><td>Dashboards</td><td><span class="tag tag-reg">Active</span></td><td>{ENV_PREPROD_DASHBOARD_NOTES}</td></tr>
+                <tr><td>Replicas</td><td><span class="tag tag-reg">Multi-replica</span></td><td>{ENV_PREPROD_REPLICA_NOTES}</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Production -->
+          <h3>Production</h3>
+          <p style="margin-bottom:4px;"><strong>Purpose:</strong> {ENV_PROD_PURPOSE}</p>
+          <div class="table-wrap" style="margin-bottom:24px;">
+            <table>
+              <thead>
+                <tr><th>Component</th><th>Status</th><th>Notes</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>OTel Collector</td><td><span class="tag tag-reg">Managed</span></td><td>{ENV_PROD_OTEL_NOTES}</td></tr>
+                <tr><td>Logs</td><td><span class="tag tag-reg">Managed store</span></td><td>{ENV_PROD_LOG_NOTES}</td></tr>
+                <tr><td>Audit Log</td><td><span class="tag tag-reg">WORM pipeline</span></td><td>{ENV_PROD_AUDIT_NOTES}</td></tr>
+                <tr><td>Metrics</td><td><span class="tag tag-reg">Full</span></td><td>{ENV_PROD_METRIC_NOTES}</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section: Audit & Compliance -->
+      <div class="section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span class="section-num">08</span>
+          <span class="section-title">Audit & Compliance</span>
+          <span class="section-toggle">›</span>
+        </div>
+        <div class="section-body">
+          <h3>Audit Pipeline</h3>
+          <p style="margin-bottom:12px;">{AUDIT_PIPELINE_DESCRIPTION}</p>
+          <div class="table-wrap" style="margin-bottom:24px;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Property</th>
+                  <th>Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td><strong>Storage</strong></td><td>{AUDIT_STORAGE_TYPE}</td></tr>
+                <tr><td><strong>Retention</strong></td><td>{AUDIT_RETENTION_PERIOD}</td></tr>
+                <tr><td><strong>Isolation</strong></td><td>{AUDIT_ISOLATION_DESC}</td></tr>
+                <tr><td><strong>Write Behaviour</strong></td><td>{AUDIT_WRITE_BEHAVIOUR}</td></tr>
+                <tr><td><strong>DB Permissions</strong></td><td>{AUDIT_DB_PERMISSIONS}</td></tr>
+                <tr><td><strong>Compliance Basis</strong></td><td>{AUDIT_COMPLIANCE_BASIS}</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h3>Secret Rotation Schedule</h3>
+          <p style="color:var(--text-dim);margin-bottom:12px;">Declared in each service's <code>service.yaml</code> manifest under <code>secrets.rotation_days</code>. Alert fires when <code>{METRIC_SECRET_EXPIRY_NAME}</code> &lt; 7 days.</p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Secret Type</th>
+                  <th>Rotation Period</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>{SECRET_TYPE_1_NAME}</td>
+                  <td>{SECRET_TYPE_1_ROTATION}</td>
+                </tr>
+                <tr>
+                  <td>{SECRET_TYPE_2_NAME}</td>
+                  <td>{SECRET_TYPE_2_ROTATION}</td>
+                </tr>
+                <tr>
+                  <td>{SECRET_TYPE_3_NAME}</td>
+                  <td>{SECRET_TYPE_3_ROTATION}</td>
+                </tr>
+                <!-- Repeat for each secret type -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ──────────────── TAB 9: DELIVERY ──────────────── -->
+    <div class="level-panel" id="tab-delivery">
+
+      <!-- Section: Initiatives -->
+      <div class="section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span class="section-num">01</span>
+          <span class="section-title">Initiatives</span>
+          <span class="section-toggle">›</span>
+        </div>
+        <div class="section-body">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Journeys</th>
+                  <th>Capabilities</th>
+                  <th>Services</th>
+                  <th>Size</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>{INIT_01_ID}</code></td>
+                  <td>{INIT_01_NAME}</td>
+                  <td>{INIT_01_JOURNEYS}</td>
+                  <td>{INIT_01_CAPABILITIES}</td>
+                  <td>{INIT_01_SERVICES}</td>
+                  <td><span class="tag tag-cap">{INIT_01_SIZE}</span></td>
+                </tr>
+                <tr>
+                  <td><code>{INIT_02_ID}</code></td>
+                  <td>{INIT_02_NAME}</td>
+                  <td>{INIT_02_JOURNEYS}</td>
+                  <td>{INIT_02_CAPABILITIES}</td>
+                  <td>{INIT_02_SERVICES}</td>
+                  <td><span class="tag tag-cap">{INIT_02_SIZE}</span></td>
+                </tr>
+                <!-- Repeat for each initiative -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ──────────────── TAB 10: COST ESTIMATE ──────────────── -->
+    <div class="level-panel" id="tab-cost">
+
+      <h3>Cost Estimator</h3>
+
+      <div class="cost-controls">
+        <div class="cost-control">
+          <label>Scale</label>
+          <select onchange="renderCost()">
+            <option value="small">{SCALE_OPTION_1}</option>
+            <option value="medium" selected>{SCALE_OPTION_2}</option>
+            <option value="large">{SCALE_OPTION_3}</option>
+          </select>
+        </div>
+        <div class="cost-control">
+          <label>Region</label>
+          <select onchange="renderCost()">
+            <option value="us">{REGION_OPTION_1}</option>
+            <option value="eu" selected>{REGION_OPTION_2}</option>
+            <option value="apac">{REGION_OPTION_3}</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="cost-grid" id="cost-grid">
+        <!-- Populated by JS renderCost() -->
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+// ════════════════════ USE CASES DATA ════════════════════
+const useCases = {
+  'primary_transaction': {
+    title: 'Primary Transaction',
+    category: 'Primary',
+    icon: '💳',
+    description: 'Core transaction processing with real-time settlement.',
+    painPoints: [
+      'Settlement delays causing cash flow issues',
+      'Lack of real-time visibility into transaction status',
+      'Limited reporting capabilities for compliance'
+    ],
+    processFlow: [
+      'User initiates transaction through portal',
+      'System validates against rules engine',
+      'Transaction routed to settlement service',
+      'Confirmation sent to user',
+      'Settlement completed and recorded'
+    ],
+    regulations: ['PCI-DSS', 'AML/KYC', 'FCA'],
+    services: ['Transaction Service', 'Settlement Service', 'Rules Engine'],
+    sequenceDiagram: 'Portal -> API Gateway -> Transaction Service -> Settlement Service -> Ledger'
+  },
+  'reporting_analytics': {
+    title: 'Reporting & Analytics',
+    category: 'Operations',
+    icon: '📊',
+    description: 'Real-time reporting and data analytics for business intelligence.',
+    painPoints: [
+      'Delayed reporting affecting decision-making',
+      'Custom report requests taking weeks',
+      'Limited drill-down capabilities'
+    ],
+    processFlow: [
+      'Data collected from services',
+      'Ingested into data warehouse',
+      'Processed and aggregated',
+      'Exposed via analytics API',
+      'Rendered in dashboards'
+    ],
+    regulations: ['GDPR', 'Data Retention'],
+    services: ['Analytics Service', 'Data Warehouse', 'Reporting Engine'],
+    sequenceDiagram: 'Services -> Event Stream -> Data Warehouse -> Analytics Engine -> API'
+  },
+  'customer_support': {
+    title: 'Customer Support',
+    category: 'Support',
+    icon: '🎧',
+    description: 'Multi-channel customer support with case management.',
+    painPoints: [
+      'Support tickets lost between channels',
+      'Inconsistent customer information',
+      'Long resolution times'
+    ],
+    processFlow: [
+      'Customer submits inquiry via channel',
+      'Case created and routed',
+      'Agent assigned from pool',
+      'Issue resolved',
+      'Follow-up scheduled'
+    ],
+    regulations: ['GDPR', 'Accessibility'],
+    services: ['Support Portal', 'Case Management', 'Notification Service'],
+    sequenceDiagram: 'Customer -> Portal -> Case Service -> Agent Workspace -> External Systems'
+  }
+};
+
+// ════════════════════ SERVICES DATA ════════════════════
+const services = [
+  {
+    id: '{SVC_01_ID}',
+    name: '{SVC_01_NAME}',
+    category: '{SVC_01_CATEGORY}',
+    description: '{SVC_01_DESCRIPTION}',
+    dependsOn: ['{SVC_02_NAME}']
+  },
+  {
+    id: '{SVC_02_ID}',
+    name: '{SVC_02_NAME}',
+    category: '{SVC_02_CATEGORY}',
+    description: '{SVC_02_DESCRIPTION}',
+    dependsOn: []
+  },
+  {
+    id: '{SVC_03_ID}',
+    name: '{SVC_03_NAME}',
+    category: '{SVC_03_CATEGORY}',
+    description: '{SVC_03_DESCRIPTION}',
+    dependsOn: ['{SVC_01_NAME}', '{SVC_02_NAME}']
+  }
+  // Add more services to the services array
+];
+
+// ════════════════════ COST DATA ════════════════════
+// Replace the example numbers below with your actual cost estimates.
+// The category and item name strings are token placeholders;
+// the numeric values must be real numbers (not token strings) for JS to calculate.
+const costData = {
+  small: {
+    '{COST_CATEGORY_1}': [
+      { item: '{COST_ITEM_1_NAME}', low: 100, high: 200 },   // replace 100/200 with actual low/high
+      { item: '{COST_ITEM_2_NAME}', low: 50, high: 120 }     // replace 50/120 with actual low/high
+    ],
+    '{COST_CATEGORY_2}': [
+      { item: '{COST_ITEM_3_NAME}', low: 80, high: 150 }     // replace 80/150 with actual low/high
+    ]
+    // Add more cost categories
+  },
+  medium: {
+    '{COST_CATEGORY_1}': [
+      { item: '{COST_ITEM_1_NAME}', low: 200, high: 400 },
+      { item: '{COST_ITEM_2_NAME}', low: 100, high: 240 }
+    ],
+    '{COST_CATEGORY_2}': [
+      { item: '{COST_ITEM_3_NAME}', low: 160, high: 300 }
+    ]
+  },
+  large: {
+    '{COST_CATEGORY_1}': [
+      { item: '{COST_ITEM_1_NAME}', low: 500, high: 1000 },
+      { item: '{COST_ITEM_2_NAME}', low: 250, high: 600 }
+    ],
+    '{COST_CATEGORY_2}': [
+      { item: '{COST_ITEM_3_NAME}', low: 400, high: 750 }
+    ]
+  }
+};
+
+// ════════════════════ TAB MANAGEMENT ════════════════════
+function setTab(tab, idx) {
+  document.querySelectorAll('.level-panel').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.level-tab').forEach(el => el.classList.remove('active'));
+
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.querySelectorAll('.level-tab')[idx !== undefined ? idx : 0].classList.add('active');
+
+  // Show/hide sidebar on use cases tab
+  const main = document.querySelector('.main');
+  if (tab === 'usecases') {
+    main.classList.remove('sidebar-hidden');
+    renderUseCases();
+  } else {
+    main.classList.add('sidebar-hidden');
+  }
+
+  // Show/hide C4 level pills on architecture tab
+  if (tab === 'architecture') {
+    document.getElementById('c4-levels').style.display = 'flex';
+  } else {
+    document.getElementById('c4-levels').style.display = 'none';
+  }
+}
+
+// ════════════════════ C4 LEVEL TOGGLE ════════════════════
+function setLevel(level) {
+  document.querySelectorAll('.level-pill').forEach(el => el.classList.remove('active'));
+  document.querySelector('.pill-' + level).classList.add('active');
+  // Implementation: show/hide different C4 diagrams based on level
+}
+
+// ════════════════════ USE CASES RENDERING ════════════════════
+function renderUseCases() {
+  const sidebar = document.getElementById('sidebar');
+  sidebar.innerHTML = '<div class="sidebar-section-label">Primary Use Cases</div>';
+
+  // Categorize use cases
+  const categories = {};
+  for (const [slug, uc] of Object.entries(useCases)) {
+    if (!categories[uc.category]) {
+      categories[uc.category] = [];
+    }
+    categories[uc.category].push({ slug, ...uc });
+  }
+
+  // Render sidebar sections
+  for (const [category, items] of Object.entries(categories)) {
+    const section = document.createElement('div');
+    section.className = 'sidebar-section';
+    section.innerHTML = `
+      <div class="sidebar-section-header" onclick="toggleSidebarSection(this)">
+        <span style="flex:1;color:var(--text-dim);font-size:10px;text-transform:uppercase;letter-spacing:0.1em;font-family:'SF Mono', SFMono-Regular, ui-monospace, Menlo, Consolas, monospace;">${category}</span>
+        <span class="sidebar-toggle">›</span>
+      </div>
+      <div class="sidebar-items">
+        ${items.map(item => `
+          <div class="use-case-item" onclick="selectUC('${item.slug}')">
+            <div class="use-case-dot" style="background:${getDotColor(item.category)}"></div>
+            <div>
+              <div class="uc-title">${item.title}</div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+    sidebar.appendChild(section);
+  }
+
+  // Render first use case
+  const firstKey = Object.keys(useCases)[0];
+  selectUC(firstKey);
+}
+
+function selectUC(id) {
+  document.querySelectorAll('.use-case-item').forEach(el => el.classList.remove('active'));
+  const items = document.querySelectorAll('.use-case-item');
+  for (let item of items) {
+    if (item.getAttribute('onclick') === `selectUC('${id}')`) {
+      item.classList.add('active');
+      break;
+    }
+  }
+  renderUC(id);
+}
+
+function renderUC(id) {
+  const uc = useCases[id];
+  if (!uc) return;
+
+  const container = document.getElementById('uc-detail-container');
+  container.innerHTML = `
+    <div class="uc-detail">
+      <div class="uc-detail-header">
+        <div class="uc-badge" style="background:${getDotColor(uc.category)}">${uc.icon}</div>
+        <div>
+          <div class="uc-detail-title">${uc.title}</div>
+          <div class="uc-detail-category">${uc.category}</div>
+        </div>
+      </div>
+
+      <div class="uc-sections">
+        <div class="uc-section">
+          <div class="uc-section-label">Description</div>
+          <p>${uc.description}</p>
+        </div>
+
+        <div class="uc-section">
+          <div class="uc-section-label">Pain Points</div>
+          <ul style="margin:0;padding:0 0 0 16px;">
+            ${uc.painPoints.map(p => `<li>${p}</li>`).join('')}
+          </ul>
+        </div>
+
+        <div class="uc-section full-width">
+          <div class="uc-section-label">Process Flow</div>
+          ${uc.processFlow.map((step, i) => `
+            <div class="flow-step">
+              <div class="flow-num">${i + 1}</div>
+              <div class="flow-text">${step}</div>
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="uc-section">
+          <div class="uc-section-label">Regulations</div>
+          <div>
+            ${uc.regulations.map(r => `<span class="reg-tag">${r}</span>`).join('')}
+          </div>
+        </div>
+
+        <div class="uc-section">
+          <div class="uc-section-label">Services</div>
+          <div>
+            ${uc.services.map(s => `<span class="service-tag">${s}</span>`).join('')}
+          </div>
+        </div>
+
+        <div class="uc-section full-width">
+          <div class="uc-section-label">Sequence Diagram</div>
+          <p style="color:var(--text-dim);font-style:italic;">${uc.sequenceDiagram}</p>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function getDotColor(category) {
+  const colors = {
+    'Primary': '#6a9955',
+    'Operations': '#569cd6',
+    'Support': '#ce9178'
+  };
+  return colors[category] || '#c9a84c';
+}
+
+function toggleSidebarSection(header) {
+  const section = header.parentElement;
+  section.classList.toggle('collapsed');
+}
+
+// ════════════════════ SECTION COLLAPSING ════════════════════
+function toggleSection(header) {
+  const body = header.nextElementSibling;
+  const isCollapsed = body.classList.contains('collapsed');
+
+  if (isCollapsed) {
+    body.classList.remove('collapsed');
+    header.classList.remove('collapsed');
+    body.style.maxHeight = body.scrollHeight + 'px';
+  } else {
+    body.classList.add('collapsed');
+    header.classList.add('collapsed');
+    body.style.maxHeight = '0';
+  }
+}
+
+// ════════════════════ DEPENDENCIES VISUALIZATION ════════════════════
+function renderDependencies() {
+  const container = document.getElementById('dependencies-container');
+  container.innerHTML = '';
+
+  // Create dependency matrix
+  const table = document.createElement('div');
+  table.className = 'table-wrap';
+  table.innerHTML = `
+    <table class="dep-matrix">
+      <thead>
+        <tr>
+          <th>Service</th>
+          ${services.map(s => `<th>${s.name}</th>`).join('')}
+        </tr>
+      </thead>
+      <tbody>
+        ${services.map(s => `
+          <tr>
+            <td>${s.name}</td>
+            ${services.map(dep => `
+              <td style="text-align:center;">
+                ${s.dependsOn.includes(dep.name) ? '✓' : ''}
+              </td>
+            `).join('')}
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+  container.appendChild(table);
+}
+
+// ════════════════════ COST CALCULATOR ════════════════════
+function renderCost() {
+  const scale = document.querySelector('.cost-control select').value;
+  const data = costData[scale];
+  const grid = document.getElementById('cost-grid');
+
+  grid.innerHTML = '';
+  let totalLow = 0, totalHigh = 0;
+
+  for (const [category, items] of Object.entries(data)) {
+    let catLow = 0, catHigh = 0;
+    items.forEach(item => {
+      catLow += item.low;
+      catHigh += item.high;
+    });
+    totalLow += catLow;
+    totalHigh += catHigh;
+
+    const card = document.createElement('div');
+    card.className = 'cost-card';
+    card.innerHTML = `
+      <div class="cost-card-label">${category}</div>
+      <div class="cost-card-value">$${Math.round(catLow)} - $${Math.round(catHigh)}</div>
+      <div class="cost-card-breakdown">
+        ${items.map(i => `<div>• ${i.item}: $${Math.round(i.low)} - $${Math.round(i.high)}</div>`).join('')}
+      </div>
+    `;
+    grid.appendChild(card);
+  }
+
+  const totalCard = document.createElement('div');
+  totalCard.className = 'cost-card';
+  totalCard.style.borderColor = 'var(--gold)';
+  totalCard.innerHTML = `
+    <div class="cost-card-label" style="color:var(--gold);">TOTAL MONTHLY COST</div>
+    <div class="cost-card-value">$${Math.round(totalLow)} - $${Math.round(totalHigh)}</div>`;
+  grid.appendChild(totalCard);
+}
+
+// ════════════════════ INITIALIZATION ════════════════════
+document.addEventListener('DOMContentLoaded', function() {
+  renderDependencies();
+  renderCost();
+  setTab('problems', 0);
+});
+</script>
+
+</body>
+</html>

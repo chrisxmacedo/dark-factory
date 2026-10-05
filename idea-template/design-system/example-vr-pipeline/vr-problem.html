@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Problem &mdash; VR Pipeline Dashboard</title>
+  <link rel="icon" type="image/svg+xml" href="vr-favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="vr-styles.css">
+</head>
+<body>
+
+<div class="page-wrap">
+
+  <!-- TOP NAV -->
+  <nav class="topnav">
+    <a href="vr-problem.html" class="nav-logo">
+      <div class="nav-logo-dot">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 14 14" fill="none">
+          <rect x="1.5" y="4" width="11" height="6" rx="2.5" stroke="#C084FC" stroke-width="1"/>
+          <circle cx="5" cy="7" r="1.5" stroke="#C084FC" stroke-width="0.8"/>
+          <circle cx="9" cy="7" r="1.5" stroke="#C084FC" stroke-width="0.8"/>
+          <circle cx="3.5" cy="7" r="0.6" fill="#F59E0B"/>
+          <circle cx="7" cy="7" r="0.6" fill="#2AAD6A"/>
+          <circle cx="10.5" cy="7" r="0.6" fill="#60A5FA"/>
+        </svg>
+      </div>
+      VR Pipeline<span> Dashboard</span>
+    </a>
+
+    <div class="nav-links">
+      <a href="vr-problem.html" class="nav-link active">Problem</a>
+      <a href="vr-vision.html" class="nav-link">Vision</a>
+      <a href="vr-strategy.html" class="nav-link">Strategy</a>
+      <a href="vr-metrics.html" class="nav-link">Metrics</a>
+      <a href="vr-initiatives.html" class="nav-link">Initiatives</a>
+    </div>
+
+    <div class="nav-meta">Product Docs &middot; Internal</div>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- TABLE OF CONTENTS -->
+    <div class="toc">
+      <div class="toc-label">Contents</div>
+      <ol class="toc-list">
+        <li><span class="toc-number">01</span><a href="#toc-problems">Identified Problems</a></li>
+        <li><span class="toc-number">02</span><a href="#toc-problem-statement">Problem Statement</a></li>
+        <li><span class="toc-number">03</span><a href="#toc-vision">Vision</a></li>
+      </ol>
+    </div>
+
+    <!-- HERO -->
+    <div class="hero">
+      <div class="hero-tag">
+        <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><circle cx="4" cy="4" r="4"/></svg>
+        Problem Definition
+      </div>
+      <h1 class="hero-title">The<br><em>Problem</em></h1>
+      <p class="hero-subtitle">The identified problems that motivate the VR Pipeline Dashboard, refined into a single problem statement and a vision for the solution.</p>
+      <div class="hero-meta">
+        <div><strong>Author</strong> Christian Macedo</div>
+        <div><strong>Version</strong> 0.1 &mdash; Draft</div>
+        <div><strong>Updated</strong> March 2026</div>
+      </div>
+    </div>
+
+
+    <!-- SECTION 1 — IDENTIFIED PROBLEMS -->
+    <div class="guide-section" id="toc-problems">
+      <div class="section-header">
+        <div class="section-number">01</div>
+        <h2 class="section-title">Identified Problems</h2>
+      </div>
+
+      <p style="font-size: 14px; color: var(--ch-slate-mid); margin-bottom: 24px; line-height: 1.65;">
+        The following problems have been observed in development teams operating with AI-assisted automation pipelines. Each problem is independently verifiable and contributes to the overall case for a spatial, real-time pipeline visualisation tool.
+      </p>
+
+      <!-- Problem 1 -->
+      <div class="problem-card">
+        <div class="problem-number">1</div>
+        <div class="problem-content">
+          <div class="problem-title">Fragmented Visibility</div>
+          <div class="problem-desc">Pipeline state is distributed across Jira, GitHub, and deployment dashboards. Understanding the current status of any single feature requires checking three or more disconnected interfaces. There is no unified view.</div>
+        </div>
+      </div>
+
+      <!-- Problem 2 -->
+      <div class="problem-card">
+        <div class="problem-number">2</div>
+        <div class="problem-content">
+          <div class="problem-title">Context Switching Overhead</div>
+          <div class="problem-desc">Developers and managers lose significant time switching between tools to answer basic questions: &ldquo;What is being worked on?&rdquo;, &ldquo;What is blocked?&rdquo;, &ldquo;What deployed today?&rdquo;. Each context switch carries a cognitive cost that compounds across the team.</div>
+        </div>
+      </div>
+
+      <!-- Problem 3 -->
+      <div class="problem-card">
+        <div class="problem-number">3</div>
+        <div class="problem-content">
+          <div class="problem-title">Invisible Bottlenecks</div>
+          <div class="problem-desc">A feature stuck in CI, a PR waiting on review, a deployment that failed silently &mdash; these states are indistinguishable without actively querying each system. Bottlenecks go unnoticed until someone asks or a deadline is missed.</div>
+        </div>
+      </div>
+
+      <!-- Problem 4 -->
+      <div class="problem-card">
+        <div class="problem-number">4</div>
+        <div class="problem-content">
+          <div class="problem-title">No Passive Monitoring</div>
+          <div class="problem-desc">Existing dashboards require active reading and interpretation. There is no ambient, always-on representation of pipeline health that can be passively observed &mdash; the way a factory floor or air traffic control screen provides at-a-glance awareness.</div>
+        </div>
+      </div>
+
+      <!-- Problem 5 -->
+      <div class="problem-card">
+        <div class="problem-number">5</div>
+        <div class="problem-content">
+          <div class="problem-title">AI Automation Opacity</div>
+          <div class="problem-desc">As AI agents (Claude, Copilot) handle more of the development lifecycle autonomously, the human operator's role shifts from doing to supervising. But there is no supervisory interface designed for this mode of operation &mdash; existing tools assume the human is the primary actor.</div>
+        </div>
+      </div>
+
+      <!-- Problem 6 -->
+      <div class="problem-card">
+        <div class="problem-number">6</div>
+        <div class="problem-content">
+          <div class="problem-title">Reporting Requires Manual Aggregation</div>
+          <div class="problem-desc">Producing a coherent picture of pipeline throughput, deployment frequency, or sprint velocity requires manually pulling data from multiple systems and assembling it into reports. This is time-consuming and the output is always stale by the time it is shared.</div>
+        </div>
+      </div>
+
+      <!-- Problem 7 -->
+      <div class="problem-card">
+        <div class="problem-number">7</div>
+        <div class="problem-content">
+          <div class="problem-title">Stakeholder Communication Gap</div>
+          <div class="problem-desc">Non-technical stakeholders cannot meaningfully interpret Jira boards, GitHub PR lists, or CI/CD logs. There is no representation of the delivery pipeline that is accessible to people outside the engineering team without explanation.</div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- SECTION 2 — PROBLEM STATEMENT -->
+    <div class="guide-section" id="toc-problem-statement">
+      <div class="section-header">
+        <div class="section-number">02</div>
+        <h2 class="section-title">Problem Statement</h2>
+      </div>
+
+      <div class="statement-block">
+        <div class="statement-label">Problem Statement</div>
+        <div class="statement-text">
+          Development teams using AI-assisted automation have <em>no unified, real-time, spatial view</em> of their delivery pipeline. Pipeline state is fragmented across disconnected tools, bottlenecks are invisible without active investigation, and the shift from human-driven to AI-driven development has created a <em>supervisory gap</em> &mdash; operators need to observe and intervene, but existing interfaces are designed for direct participation, not oversight.
+        </div>
+      </div>
+    </div>
+
+
+    <!-- SECTION 3 — VISION -->
+    <div class="guide-section" id="toc-vision">
+      <div class="section-header">
+        <div class="section-number">03</div>
+        <h2 class="section-title">Vision</h2>
+      </div>
+
+      <div class="statement-block">
+        <div class="statement-label">Vision Statement</div>
+        <div class="statement-text">
+          A persistent, immersive 3D environment where the entire software delivery lifecycle &mdash; from ticket to production &mdash; is <em>spatially visible, always live, and immediately intuitive</em>. Features flow through the space as physical objects: consumed by AI agents, transformed into builds, and deployed onto environment surfaces. The pipeline becomes something you <em>watch</em>, not something you query &mdash; an operational control room for AI-augmented software delivery.
+        </div>
+      </div>
+
+      <div class="notes-section" style="margin-top: 32px;">
+        <ul>
+          <li>The vision prioritises <strong>passive observation</strong> over active interaction &mdash; the default state is watching, not clicking</li>
+          <li>The spatial metaphor is not decorative &mdash; position, movement, and visual state encode <strong>meaningful pipeline data</strong></li>
+          <li>The system must work at the speed of the pipeline &mdash; <strong>real-time updates</strong>, not polling intervals</li>
+          <li>Accessibility is non-negotiable &mdash; the full experience must work on <strong>desktop browsers</strong> without VR hardware</li>
+          <li>The product is designed for the emerging reality of <strong>AI-first development</strong> where humans supervise, not execute</li>
+        </ul>
+      </div>
+    </div>
+
+
+    <!-- FOOTER -->
+    <div class="guide-footer">
+      <div class="footer-brand">VR Pipeline<span> Dashboard</span></div>
+      <div class="footer-meta">Problem &middot; March 2026</div>
+    </div>
+
+  </main>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6C3FA0"/>
+      <stop offset="100%" style="stop-color:#4C1D95"/>
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="6" fill="url(#bg)"/>
+  <!-- VR goggles shape -->
+  <rect x="5" y="11" width="22" height="11" rx="5" fill="none" stroke="#C084FC" stroke-width="1.8"/>
+  <!-- Left lens -->
+  <circle cx="11.5" cy="16.5" r="3.5" fill="none" stroke="#C084FC" stroke-width="1.5"/>
+  <!-- Right lens -->
+  <circle cx="20.5" cy="16.5" r="3.5" fill="none" stroke="#C084FC" stroke-width="1.5"/>
+  <!-- Bridge -->
+  <path d="M15 16.5 Q16 14 17 16.5" fill="none" stroke="#C084FC" stroke-width="1.2"/>
+  <!-- Pipeline dots flowing through -->
+  <circle cx="8" cy="16.5" r="1.2" fill="#F59E0B"/>
+  <circle cx="16" cy="16.5" r="1.2" fill="#2AAD6A"/>
+  <circle cx="24" cy="16.5" r="1.2" fill="#60A5FA"/>
+</svg>

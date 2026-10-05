@@ -35,6 +35,13 @@ Category (domain grouping)
 
 ## Files
 
-- **TEMPLATE.md** — the full template with all 12 sections
-- This template replaces the separate `/idea` output + ARCHITECTURE.md approach
-  with a single unified document
+- **TEMPLATE.md** — the full template with all 12 sections (Markdown)
+- **blueprint/** — the same framework as a single-file, 10-tab interactive HTML
+  blueprint (`template-blueprint.html`, tokens in `TOKENS.md`), plus the
+  capability-driven design methodology page
+- **design-system/** — the stylesheet `/idea` builds its HTML pages on
+  (`styles.css`) and a complete worked example (`example-vr-pipeline/`) to copy
+  structure and CSS classes from. Never edit the example; copy it.
+
+Ideas themselves (one folder per product) live outside the toolkit, in
+`$IDEAS_DIR` from `~/.config/pipeline-toolkit/config.env`.

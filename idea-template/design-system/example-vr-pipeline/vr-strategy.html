@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Strategy &mdash; VR Pipeline Dashboard</title>
+  <link rel="icon" type="image/svg+xml" href="vr-favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="vr-styles.css">
+</head>
+<body>
+
+<div class="page-wrap">
+
+  <!-- TOP NAV -->
+  <nav class="topnav">
+    <a href="vr-problem.html" class="nav-logo">
+      <div class="nav-logo-dot">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 14 14" fill="none">
+          <rect x="1.5" y="4" width="11" height="6" rx="2.5" stroke="#C084FC" stroke-width="1"/>
+          <circle cx="5" cy="7" r="1.5" stroke="#C084FC" stroke-width="0.8"/>
+          <circle cx="9" cy="7" r="1.5" stroke="#C084FC" stroke-width="0.8"/>
+          <circle cx="3.5" cy="7" r="0.6" fill="#F59E0B"/>
+          <circle cx="7" cy="7" r="0.6" fill="#2AAD6A"/>
+          <circle cx="10.5" cy="7" r="0.6" fill="#60A5FA"/>
+        </svg>
+      </div>
+      VR Pipeline<span> Dashboard</span>
+    </a>
+
+    <div class="nav-links">
+      <a href="vr-problem.html" class="nav-link">Problem</a>
+      <a href="vr-vision.html" class="nav-link">Vision</a>
+      <a href="vr-strategy.html" class="nav-link active">Strategy</a>
+      <a href="vr-metrics.html" class="nav-link">Metrics</a>
+      <a href="vr-initiatives.html" class="nav-link">Initiatives</a>
+    </div>
+
+    <div class="nav-meta">Product Docs &middot; Internal</div>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- TABLE OF CONTENTS -->
+    <div class="toc">
+      <div class="toc-label">Contents</div>
+      <ol class="toc-list">
+        <li><span class="toc-number">01</span><a href="#toc-target-market">Target Market</a></li>
+        <li><span class="toc-number">02</span><a href="#toc-competition">Competition</a></li>
+        <li><span class="toc-number">03</span><a href="#toc-strategies">Strategy Options</a></li>
+      </ol>
+    </div>
+
+    <!-- HERO -->
+    <div class="hero">
+      <div class="hero-tag">
+        <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><circle cx="4" cy="4" r="4"/></svg>
+        Strategy
+      </div>
+      <h1 class="hero-title">Go-to-Market<br><em>Strategy</em></h1>
+      <p class="hero-subtitle">Target market analysis, competitive landscape, and candidate strategies for bringing the VR Pipeline Dashboard to market. One strategy will be selected for execution.</p>
+      <div class="hero-meta">
+        <div><strong>Author</strong> Christian Macedo</div>
+        <div><strong>Version</strong> 0.1 &mdash; Draft</div>
+        <div><strong>Updated</strong> March 2026</div>
+      </div>
+    </div>
+
+
+    <!-- SECTION 1 — TARGET MARKET -->
+    <div class="guide-section" id="toc-target-market">
+      <div class="section-header">
+        <div class="section-number">01</div>
+        <h2 class="section-title">Target Market</h2>
+      </div>
+
+      <p style="font-size: 14px; color: var(--ch-slate-mid); margin-bottom: 24px; line-height: 1.65;">
+        The primary market is software development teams that have adopted or are adopting AI-assisted automation in their delivery pipelines. This is a rapidly expanding segment driven by the proliferation of AI coding agents.
+      </p>
+
+      <div class="card-grid" style="margin-bottom: 32px;">
+        <div class="card">
+          <div class="card-icon" style="background: #6C3FA0;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C084FC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+          </div>
+          <div class="card-title">Primary: AI-Augmented Teams</div>
+          <div class="card-desc">Engineering teams using Claude, Copilot, Devin, or custom AI agents to automate code generation, PR creation, and deployment. These teams have the highest need for supervisory tooling.</div>
+          <div class="card-meta">5&ndash;50 engineers &middot; Series A&ndash;C startups &middot; Innovation labs at enterprise</div>
+        </div>
+        <div class="card">
+          <div class="card-icon" style="background: #D97706;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FDE68A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
+          </div>
+          <div class="card-title">Secondary: DevOps-Mature Teams</div>
+          <div class="card-desc">Teams with mature CI/CD pipelines and high deployment frequency who want better observability and stakeholder communication, regardless of AI adoption.</div>
+          <div class="card-meta">50+ deploys/week &middot; Platform engineering teams &middot; SRE functions</div>
+        </div>
+        <div class="card">
+          <div class="card-icon" style="background: #0052CC;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#93C5FD" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+          </div>
+          <div class="card-title">Tertiary: Technical Leadership</div>
+          <div class="card-desc">CTOs, VPs of Engineering, and engineering managers who need to communicate pipeline health and delivery cadence to non-technical stakeholders, investors, or boards.</div>
+          <div class="card-meta">Board reporting &middot; Investor updates &middot; Client demos</div>
+        </div>
+        <div class="card">
+          <div class="card-icon" style="background: #15803D;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#86EFAC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+          </div>
+          <div class="card-title">Adjacent: Developer Tool Ecosystem</div>
+          <div class="card-desc">The broader developer tooling market where spatial/3D interfaces are emerging as a differentiation vector &mdash; particularly as VR/AR hardware becomes mainstream.</div>
+          <div class="card-meta">Developer experience &middot; DevOps tooling &middot; Spatial computing</div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- SECTION 2 — COMPETITION -->
+    <div class="guide-section" id="toc-competition">
+      <div class="section-header">
+        <div class="section-number">02</div>
+        <h2 class="section-title">Competition</h2>
+      </div>
+
+      <p style="font-size: 14px; color: var(--ch-slate-mid); margin-bottom: 24px; line-height: 1.65;">
+        No direct competitor offers an immersive 3D/VR pipeline visualisation. Competition comes from adjacent categories: traditional dashboards, DevOps observability platforms, and project management tools with pipeline views.
+      </p>
+
+      <div class="market-grid">
+
+        <div class="competitor-card">
+          <div class="competitor-type">DevOps Dashboard</div>
+          <div class="competitor-name">Grafana</div>
+          <div class="competitor-desc">Industry-standard observability dashboards. Highly configurable but entirely 2D, panel-based, and requires active interpretation. No pipeline lifecycle view.</div>
+          <div class="competitor-gap">Gap: 2D only &middot; No pipeline flow &middot; No spatial representation</div>
+        </div>
+
+        <div class="competitor-card">
+          <div class="competitor-type">DevOps Platform</div>
+          <div class="competitor-name">LinearB / Sleuth / Jellyfish</div>
+          <div class="competitor-desc">Engineering metrics platforms that track cycle time, deployment frequency, and DORA metrics. Provide analytics but not real-time spatial awareness.</div>
+          <div class="competitor-gap">Gap: Retrospective analytics &middot; No real-time view &middot; No VR</div>
+        </div>
+
+        <div class="competitor-card">
+          <div class="competitor-type">Project Management</div>
+          <div class="competitor-name">Jira / Linear / Shortcut</div>
+          <div class="competitor-desc">Ticket boards with workflow columns. Show ticket status but not the full delivery lifecycle. No integration with deployment state or CI status in the primary view.</div>
+          <div class="competitor-gap">Gap: Ticket-only view &middot; No deployment state &middot; No 3D</div>
+        </div>
+
+        <div class="competitor-card">
+          <div class="competitor-type">CI/CD Visibility</div>
+          <div class="competitor-name">GitHub Actions / GitLab CI UI</div>
+          <div class="competitor-desc">Pipeline run views showing CI/CD job status. Focused on individual runs, not the holistic flow of features across the delivery lifecycle.</div>
+          <div class="competitor-gap">Gap: Per-run view &middot; No backlog context &middot; No environment mapping</div>
+        </div>
+
+        <div class="competitor-card">
+          <div class="competitor-type">Value Stream</div>
+          <div class="competitor-name">Plutora / Tasktop (Planview)</div>
+          <div class="competitor-desc">Enterprise value stream management platforms. Track flow from ideation to delivery but are heavy, expensive, and entirely 2D. Targeted at large enterprises.</div>
+          <div class="competitor-gap">Gap: Enterprise-only &middot; Heavyweight &middot; No spatial/VR &middot; Not real-time</div>
+        </div>
+
+        <div class="competitor-card">
+          <div class="competitor-type">Spatial / 3D</div>
+          <div class="competitor-name">No direct competitor</div>
+          <div class="competitor-desc">There is currently no product that provides a 3D or VR representation of a software delivery pipeline with live data. The intersection of spatial computing and DevOps is unoccupied.</div>
+          <div class="competitor-gap">Gap: This is the whitespace</div>
+        </div>
+
+      </div>
+    </div>
+
+
+    <!-- SECTION 3 — STRATEGY OPTIONS -->
+    <div class="guide-section" id="toc-strategies">
+      <div class="section-header">
+        <div class="section-number">03</div>
+        <h2 class="section-title">Strategy Options</h2>
+      </div>
+
+      <p style="font-size: 14px; color: var(--ch-slate-mid); margin-bottom: 32px; line-height: 1.65;">
+        Three candidate strategies for bringing the VR Pipeline Dashboard to market. Each represents a different entry point, risk profile, and growth trajectory. One will be selected for execution.
+      </p>
+
+      <!-- Strategy A -->
+      <div class="strategy-option selected">
+        <div class="strategy-option-header">
+          <div class="strategy-option-number active">A</div>
+          <div>
+            <div class="strategy-option-title">Open-Source Core, Hosted Pro</div>
+            <div class="strategy-option-subtitle">Build in public, monetise with a hosted service</div>
+          </div>
+          <div class="strategy-option-badge recommended">Recommended</div>
+        </div>
+        <div class="strategy-option-body">
+          <p>Release the VR frontend and orchestration server as open-source (MIT). The core product is free to self-host. Monetise through a hosted SaaS version with managed integrations, team features, and zero-config setup.</p>
+          <p>This strategy leverages the novelty of the product to generate organic adoption and community interest. The open-source core builds trust, generates feedback, and creates a distribution channel. The hosted version captures revenue from teams that want convenience over self-management.</p>
+          <div class="strategy-pros-cons">
+            <div class="strategy-pros">
+              <div class="strategy-pros-label">Strengths</div>
+              <ul>
+                <li>Maximum distribution and discoverability</li>
+                <li>Community contributions accelerate development</li>
+                <li>Builds trust and credibility in a novel category</li>
+                <li>Low barrier to trial &mdash; no sales cycle for initial adoption</li>
+              </ul>
+            </div>
+            <div class="strategy-cons">
+              <div class="strategy-cons-label">Risks</div>
+              <ul>
+                <li>Open-source maintenance burden</li>
+                <li>Conversion from free to paid is uncertain</li>
+                <li>Competitors can fork the core</li>
+                <li>Requires strong developer marketing</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Strategy B -->
+      <div class="strategy-option">
+        <div class="strategy-option-header">
+          <div class="strategy-option-number default">B</div>
+          <div>
+            <div class="strategy-option-title">Vertical SaaS for AI-First Teams</div>
+            <div class="strategy-option-subtitle">Closed product, targeted at teams using AI coding agents</div>
+          </div>
+          <div class="strategy-option-badge alternative">Alternative</div>
+        </div>
+        <div class="strategy-option-body">
+          <p>Build a closed SaaS product specifically for teams using Claude, Devin, and similar AI agents. Position as the &ldquo;control room&rdquo; for AI-augmented development. Deep integration with Claude&rsquo;s agent events as a primary differentiator.</p>
+          <p>This strategy narrows the market but deepens the value proposition. By focusing exclusively on AI-first teams, the product can be optimised for the supervisory use case &mdash; monitoring what the AI is doing rather than what humans are doing.</p>
+          <div class="strategy-pros-cons">
+            <div class="strategy-pros">
+              <div class="strategy-pros-label">Strengths</div>
+              <ul>
+                <li>Clear, differentiated positioning</li>
+                <li>Higher willingness to pay from AI-forward teams</li>
+                <li>Tight integration with Claude creates lock-in</li>
+                <li>Smaller market but faster product-market fit</li>
+              </ul>
+            </div>
+            <div class="strategy-cons">
+              <div class="strategy-cons-label">Risks</div>
+              <ul>
+                <li>Small addressable market today (though growing fast)</li>
+                <li>Dependent on continued AI agent adoption</li>
+                <li>AI platform providers may build native dashboards</li>
+                <li>Sales cycle with no free tier</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Strategy C -->
+      <div class="strategy-option">
+        <div class="strategy-option-header">
+          <div class="strategy-option-number default">C</div>
+          <div>
+            <div class="strategy-option-title">Integration Plugin for Existing Platforms</div>
+            <div class="strategy-option-subtitle">Ship as a plugin/extension for Jira, GitHub, or Linear</div>
+          </div>
+          <div class="strategy-option-badge alternative">Alternative</div>
+        </div>
+        <div class="strategy-option-body">
+          <p>Instead of a standalone product, build the VR pipeline view as an integration for existing platforms. A Jira plugin, a GitHub App, or a Linear integration that adds a &ldquo;3D View&rdquo; button to existing workflows.</p>
+          <p>This strategy reduces distribution friction by meeting users where they already are. It trades independence for access to existing user bases and marketplace distribution channels.</p>
+          <div class="strategy-pros-cons">
+            <div class="strategy-pros">
+              <div class="strategy-pros-label">Strengths</div>
+              <ul>
+                <li>Built-in distribution via platform marketplaces</li>
+                <li>Lower adoption friction &mdash; no new tool to adopt</li>
+                <li>Platform trust transfers to the plugin</li>
+                <li>Potentially faster time to first users</li>
+              </ul>
+            </div>
+            <div class="strategy-cons">
+              <div class="strategy-cons-label">Risks</div>
+              <ul>
+                <li>Platform dependency &mdash; API changes can break the product</li>
+                <li>Limited to data available within one platform</li>
+                <li>Marketplace revenue sharing reduces margins</li>
+                <li>Plugin UX constraints may limit the VR experience</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+
+    <!-- FOOTER -->
+    <div class="guide-footer">
+      <div class="footer-brand">VR Pipeline<span> Dashboard</span></div>
+      <div class="footer-meta">Strategy &middot; March 2026</div>
+    </div>
+
+  </main>
+</div>
+
+</body>
+</html>

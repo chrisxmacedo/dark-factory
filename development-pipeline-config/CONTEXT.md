@@ -4,7 +4,7 @@ Step-by-step guide for setting up the Jira + Claude Code development pipeline on
 
 ## Location
 
-`templates/development-pipeline-config/` in the pipeline-toolkit repo. This supersedes the standalone `/Users/christianmacedo/Projects/Pipeline Config/` folder, which is an older copy of these pages.
+`templates/development-pipeline-config/` in the pipeline-toolkit repo. This supersedes the old standalone `~/Projects/Pipeline Config/` folder, which is an older copy of these pages.
 
 ## Contents
 

@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Initiatives &mdash; VR Pipeline Dashboard</title>
+  <link rel="icon" type="image/svg+xml" href="vr-favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="vr-styles.css">
+  <style>
+    /* ================================
+       INITIATIVE STYLES
+    ================================ */
+    .initiative-block {
+      background: var(--ch-white);
+      border: 1px solid var(--ch-light-grey);
+      border-radius: var(--radius-lg);
+      margin-bottom: 32px;
+      overflow: hidden;
+      transition: border-color 0.15s;
+    }
+    .initiative-block:hover {
+      border-color: #C084FC;
+    }
+
+    .initiative-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 22px 24px;
+      border-bottom: 1px solid var(--ch-light-grey);
+      background: var(--ch-offwhite);
+    }
+
+    .initiative-number {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      flex-shrink: 0;
+      color: #fff;
+    }
+
+    .initiative-title-group {
+      flex: 1;
+    }
+    .initiative-title {
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--ch-navy);
+      line-height: 1.3;
+    }
+    .initiative-subtitle {
+      font-size: 12px;
+      color: var(--ch-mid-grey);
+      margin-top: 2px;
+    }
+
+    .initiative-body {
+      padding: 24px;
+    }
+
+    .initiative-desc {
+      font-size: 14px;
+      color: var(--ch-slate-mid);
+      line-height: 1.65;
+      margin-bottom: 20px;
+    }
+
+    /* OKR references under each initiative */
+    .initiative-okrs {
+      margin-bottom: 24px;
+    }
+    .initiative-okrs-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-family: var(--font-mono);
+      color: var(--ch-mid-grey);
+      margin-bottom: 10px;
+    }
+
+    .initiative-okr-ref {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 10px 14px;
+      background: var(--ch-offwhite);
+      border: 1px solid var(--ch-light-grey);
+      border-radius: 8px;
+      margin-bottom: 8px;
+      font-size: 12.5px;
+      line-height: 1.5;
+      color: var(--ch-slate);
+    }
+
+    .initiative-okr-tag {
+      font-size: 10px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      padding: 2px 8px;
+      border-radius: 4px;
+      white-space: nowrap;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .initiative-okr-tag.objective {
+      background: #6C3FA0;
+      color: #fff;
+    }
+    .initiative-okr-tag.kr {
+      background: var(--ch-light-grey);
+      color: var(--ch-slate);
+    }
+
+    .initiative-okr-target {
+      margin-left: auto;
+      font-size: 10px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      padding: 2px 8px;
+      border-radius: 4px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .initiative-okr-target.up {
+      background: rgba(21,128,61,0.08);
+      color: #15803D;
+    }
+    .initiative-okr-target.down {
+      background: rgba(220,38,38,0.08);
+      color: #DC2626;
+    }
+    .initiative-okr-target.absolute {
+      background: rgba(108,63,160,0.08);
+      color: #6C3FA0;
+    }
+
+    /* Features / deliverables list */
+    .initiative-features-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-family: var(--font-mono);
+      color: var(--ch-mid-grey);
+      margin-bottom: 10px;
+    }
+
+    .initiative-feature {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 16px;
+      background: var(--ch-white);
+      border: 1px solid var(--ch-light-grey);
+      border-radius: 8px;
+      margin-bottom: 8px;
+      transition: border-color 0.1s;
+    }
+    .initiative-feature:hover {
+      border-color: #C084FC;
+    }
+
+    .feature-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 13px;
+    }
+
+    .feature-content {
+      flex: 1;
+    }
+    .feature-name {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--ch-navy);
+      margin-bottom: 3px;
+    }
+    .feature-desc {
+      font-size: 12px;
+      color: var(--ch-mid-grey);
+      line-height: 1.55;
+    }
+
+    .feature-tag {
+      font-size: 9px;
+      font-weight: 600;
+      font-family: var(--font-mono);
+      padding: 2px 7px;
+      border-radius: 4px;
+      white-space: nowrap;
+      margin-top: 2px;
+    }
+    .feature-tag.frontend { background: #ede8f8; color: #6C3FA0; }
+    .feature-tag.backend  { background: #e0f0ff; color: #0a4070; }
+    .feature-tag.integration { background: #ddeeff; color: #0a3d6b; }
+    .feature-tag.design   { background: #fdefd4; color: #7a4a00; }
+    .feature-tag.infra    { background: #f0f0f0; color: #444; }
+    .feature-tag.growth   { background: #d4f0e8; color: #1a6b52; }
+
+    @media (max-width: 700px) {
+      .initiative-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+      .initiative-okr-ref { flex-direction: column; gap: 6px; }
+      .initiative-okr-target { margin-left: 0; }
+      .initiative-feature { flex-direction: column; gap: 8px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="page-wrap">
+
+  <!-- TOP NAV -->
+  <nav class="topnav">
+    <a href="vr-problem.html" class="nav-logo">
+      <div class="nav-logo-dot">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 14 14" fill="none">
+          <rect x="1.5" y="4" width="11" height="6" rx="2.5" stroke="#C084FC" stroke-width="1"/>
+          <circle cx="5" cy="7" r="1.5" stroke="#C084FC" stroke-width="0.8"/>
+          <circle cx="9" cy="7" r="1.5" stroke="#C084FC" stroke-width="0.8"/>
+          <circle cx="3.5" cy="7" r="0.6" fill="#F59E0B"/>
+          <circle cx="7" cy="7" r="0.6" fill="#2AAD6A"/>
+          <circle cx="10.5" cy="7" r="0.6" fill="#60A5FA"/>
+        </svg>
+      </div>
+      VR Pipeline<span> Dashboard</span>
+    </a>
+
+    <div class="nav-links">
+      <a href="vr-problem.html" class="nav-link">Problem</a>
+      <a href="vr-vision.html" class="nav-link">Vision</a>
+      <a href="vr-strategy.html" class="nav-link">Strategy</a>
+      <a href="vr-metrics.html" class="nav-link">Metrics</a>
+      <a href="vr-initiatives.html" class="nav-link active">Initiatives</a>
+    </div>
+
+    <div class="nav-meta">Product Docs &middot; Internal</div>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- TABLE OF CONTENTS -->
+    <div class="toc">
+      <div class="toc-label">Contents</div>
+      <ol class="toc-list">
+        <li><span class="toc-number">01</span><a href="#toc-init-onboarding">Zero-Friction Onboarding</a></li>
+        <li><span class="toc-number">02</span><a href="#toc-init-realtime">Real-time Pipeline View</a></li>
+        <li><span class="toc-number">03</span><a href="#toc-init-bottleneck">Bottleneck Detection</a></li>
+        <li><span class="toc-number">04</span><a href="#toc-init-vr">Immersive VR Experience</a></li>
+        <li><span class="toc-number">05</span><a href="#toc-init-teams">Team Workspaces</a></li>
+        <li><span class="toc-number">06</span><a href="#toc-init-integrations">Integration Ecosystem</a></li>
+        <li><span class="toc-number">07</span><a href="#toc-init-monetisation">Monetisation &amp; Tiers</a></li>
+      </ol>
+    </div>
+
+    <!-- HERO -->
+    <div class="hero">
+      <div class="hero-tag">
+        <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><circle cx="4" cy="4" r="4"/></svg>
+        Initiatives
+      </div>
+      <h1 class="hero-title">Product<br><em>Initiatives</em></h1>
+      <p class="hero-subtitle">Each initiative targets specific objectives and key results. It encapsulates the features and deliverables that, when shipped, will drive the tracked indicators toward their targets.</p>
+      <div class="hero-meta">
+        <div><strong>Author</strong> Christian Macedo</div>
+        <div><strong>Version</strong> 0.1 &mdash; Draft</div>
+        <div><strong>Updated</strong> March 2026</div>
+      </div>
+    </div>
+
+
+    <!-- ============================================================
+         INITIATIVE 1 — ZERO-FRICTION ONBOARDING
+    ============================================================ -->
+    <div class="guide-section" id="toc-init-onboarding">
+      <div class="section-header">
+        <div class="section-number">01</div>
+        <h2 class="section-title">Zero-Friction Onboarding</h2>
+      </div>
+
+      <div class="initiative-block">
+        <div class="initiative-header">
+          <div class="initiative-number" style="background: #6C3FA0;">I1</div>
+          <div class="initiative-title-group">
+            <div class="initiative-title">Zero-Friction Onboarding</div>
+            <div class="initiative-subtitle">Get a team from sign-up to a live pipeline view in under 5 minutes</div>
+          </div>
+        </div>
+        <div class="initiative-body">
+          <div class="initiative-desc">
+            Reduce every barrier between a new user and a functioning pipeline visualisation. One-click OAuth for Jira and GitHub, automatic workspace creation, guided first-run experience, and a demo mode populated with sample data so the product sells itself before any integration is connected.
+          </div>
+
+          <div class="initiative-okrs">
+            <div class="initiative-okrs-label">Targeted Objectives &amp; Key Results</div>
+            <div class="initiative-okr-ref">
+              <span class="initiative-okr-tag objective">O1</span>
+              <span class="initiative-okr-tag kr">KR 1.1</span>
+              <span>Grow registered users &mdash; frictionless sign-up drives top-of-funnel volume</span>
+              <span class="initiative-okr-target up">&uarr; +500 users</span>
+            </div>
+            <div class="initiative-okr-ref">
+              <span class="initiative-okr-tag objective">O1</span>
+              <span class="initiative-okr-tag kr">KR 1.2</span>
+              <span>Grow active workspaces &mdash; guided setup converts sign-ups into connected teams</span>
+              <span class="initiative-okr-target up">&uarr; +100 workspaces</span>
+            </div>
+            <div class="initiative-okr-ref">
+              <span class="initiative-okr-tag objective">O1</span>
+              <span class="initiative-okr-tag kr">KR 1.3</span>
+              <span>Improve NPS &mdash; a smooth first experience drives positive sentiment</span>
+              <span class="initiative-okr-target absolute">&ge; NPS 40</span>
+            </div>
+          </div>
+
+          <div class="initiative-features-label">Features &amp; Deliverables</div>
+          <div class="initiative-feature">
+            <div class="feature-icon" style="background: #ede8f8; color: #6C3FA0;">&#9889;</div>
+            <div class="feature-content">
+              <div class="feature-name">One-click OAuth Integration</div>
+              <div class="feature-desc">Single-click connect for Jira and GitHub via OAuth. No manual API key configuration. Workspace auto-detects available projects and repos.</div>
+            </div>
+            <span class="feature-tag integration">Integration</span>
+          </div>
+          <div class="initiative-feature">
+            <div class="feature-icon" style="background: #fdefd4; color: #7a4a00;">&#9733;</div>
+            <div class="feature-content">
+              <div class="feature-name">Interactive Demo Mode</div>
+              <div class="feature-desc">Pre-populated sample pipeline with animated tickets flowing through stages. Available instantly on sign-up before any integration is connected. Shows the full product value proposition.</div>
+            </div>
+            <span class="feature-tag frontend">Frontend</span>
+          </div>
+          <div class="initiative-feature">
+            <div class="feature-icon" style="background: #d4f0e8; color: #1a6b52;">&#10003;</div>
+            <div class="feature-content">
+              <div class="feature-name">Guided First-Run Experience</div>
+              <div class="feature-desc">Step-by-step onboarding flow: connect Jira, connect GitHub, see your first live ticket appear. Progress indicators and contextual tooltips.</div>
+            </div>
+            <span class="feature-tag design">Design</span>
+          </div>
+          <div class="initiative-feature">
+            <div class="feature-icon" style="background: #e0f0ff; color: #0a4070;">&#9881;</div>
+            <div class="feature-content">
+              <div class="feature-name">Auto-Workspace Provisioning</div>
+              <div class="feature-desc">Workspace created automatically on sign-up with sensible defaults. No manual configuration required. Architecture pane pre-configured based on detected repo structure.</div>
+            </div>
+            <span class="feature-tag backend">Backend</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ============================================================
+         INITIATIVE 2 — REAL-TIME PIPELINE VIEW
+    ============================================================ -->
+    <div class="guide-section" id="toc-init-realtime">
+      <div class="section-header">
+        <div class="section-number">02</div>
+        <h2 class="section-title">Real-time Pipeline View</h2>
+      </div>
+
+      <div class="initiative-block">
+        <div class="initiative-header">
+          <div class="initiative-number" style="background: #D97706;">I2</div>
+          <div class="initiative-title-group">
+            <div class="initiative-title">Real-time Pipeline View</div>
+            <div class="initiative-subtitle">The core 3D scene that makes pipeline state spatially visible and always live</div>
+          </div>
+        </div>
+        <div class="initiative-body">
+          <div class="initiative-desc">
+            Build the foundational 3D pipeline view that delivers the core value proposition. Tickets appear as boxes, flow through stages, and land on environment panes &mdash; all updated in real time via WebSocket. This is the feature that keeps users coming back daily.
+          </div>
+
+          <div class="initiative-okrs">
+            <div class="initiative-okrs-label">Targeted Objectives &amp; Key Results</div>
+            <div class="initiative-okr-ref">
+              <span class="initiative-okr-tag objective">O2</span>
+              <span class="initiative-okr-tag kr">KR 2.1</span>
+              <span>Increase DAU/MAU ratio &mdash; a live, useful view drives daily return visits</span>
+              <span class="initiative-okr-target up">&uarr; +40% DAU/MAU</span>
+            </div>
+            <div class="initiative-okr-ref">
+              <span class="initiative-okr-tag objective">O2</span>
+              <span class="initiative-okr-tag kr">KR 2.2</span>
+              <span>Increase session duration &mdash; an ambient view encourages longer passive observation</span>
+              <span class="initiative-okr-target up">&uarr; +25% avg duration</span>
+            </div>
+            <div class="initiative-okr-ref">
+              <span class="initiative-okr-tag objective">O4</span>
+              <span class="initiative-okr-tag kr">KR 4.1</span>
+              <span>Increase pipeline visibility score &mdash; spatial representation improves situational awareness</span>
+              <span class="initiative-okr-target up">&uarr; +60% avg score</span>
+            </div>
+            <div class="initiative-okr-ref">
+              <span class="initiative-okr-tag objective">O2</span>
+              <span class="initiative-okr-tag kr">KR 2.4</span>
+              <span>Reduce monthly churn &mdash; daily utility prevents cancellation</span>
+              <span class="initiative-okr-target down">&darr; &lt;5% monthly churn</span>
+            </div>
+          </div>
+
+          <div class="initiative-features-label">Features &amp; Deliverables</div>
+          <div class="initiative-feature">
+            <div class="feature-icon" style="background: #ede8f8; color: #6C3FA0;">&#9608;</div>
+            <div class="feature-content">
+              <div class="feature-name">3D Ticket Boxes</div>
+              <div class="feature-desc">Jira tickets rendered as floating 3D boxes. Colour encodes priority, size encodes story points. Labels show ticket key and summary. Grouped loosely by epic.</div>
+            </div>
+            <span class="feature-tag frontend">Frontend</span>
+          </div>
+          <div class="initiative-feature">
+            <div class="feature-icon" style="background: #ede8f8; color: #6C3FA0;">&#10230;</div>
+            <div class="feature-content">
+              <div class="feature-name">Stage Transition Animations</div>
+              <div class="feature-desc">Smooth animations as tickets move between pipeline stages. Boxes float toward Claude agent, transform into build artifacts, arc toward environment panes. Spring-based physics via XState.</div>
+            </div>
+            <span class="feature-tag frontend">Frontend</span>
+          </div>
+          <div class="initiative-feature">
+            <div class="feature-icon" style="background: #d4f0e8; color: #1a6b52;">&#9638;</div>
+            <div class="feature-content">
+              <div class="feature-name">Environment Pane Renderer</div>
+              <div class="feature-desc">Semi-transparent vertical planes for test and production. Architecture components (API, DB, Worker, CDN) as opaque cards. Components light up green on successful deploy, red on failure.</div>
+            </div>
+            <span class="feature-tag frontend">Frontend</span>
+          </div>
+          <div class="initiative-feature">
+            <div class="feature-icon" style="background: #e0f0ff; color: #0a4070;">&#8644;</div>
+            <div class="feature-content">
+              <div class="feature-name">WebSocket State Sync</div>
+              <div class="feature-desc">Bidirectional WebSocket connection from frontend to orchestration server. Pipeline state pushed on every change. Reconnect with exponential backoff. Delta compression for efficiency.</div>
+            </div>
+            <span class="feature-tag backend">Backend</span>
+          </div>
+          <div class="initiative-feature">
+            <div class="feature-icon" style="background: #fdefd4; color: #7a4a00;">&#128269;</div>
+            <div class="feature-content">
+              <div class="feature-name">Ticket Inspection Panel</div>
+              <div class="feature-desc">Click or gaze at a ticket box to open a detail panel showing full Jira data: description, assignee, linked PR, CI status, deploy history. Works in both desktop and VR.</div>
+            </div>
+            <span class="feature-tag frontend">Frontend</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ============================================================
+         INITIATIVE 3 — BOTTLENECK DETECTION
+    ============================================================ -->
+    <div class="guide-section" id="toc-init-bottleneck">
+      <div class="section-header">
+        <div class="section-number">03</div>
+        <h2 class="section-title">Bottleneck Detection</h2>
+      </div>
+
+      <div class="initiative-block">
+        <div class="initiative-header">
+          <div class="initiative-number" style="background: #DC2626;">I3</div>
+          <div class="initiative-title-group">
+            <div class="initiative-title">Bottleneck Detection &amp; Alerting</div>
+            <div class="initiative-subtitle">Make stuck builds, failed deploys, and stalled PRs immediately visible</div>
+          </div>
+        </div>
+        <div class="initiative-body">
+          <div class="initiative-desc">
+            Automatically detect when features stall at any pipeline stage and make the blockage visually prominent in the 3D scene. Tickets stuck in CI glow red. Failed deployments trigger visual and optional audio alerts. The spatial view turns bottlenecks from invisible into unmissable.
+          </div>
+
+          <div class="initiative-okrs">
+            <div class="initiative-okrs-label">Targeted Objectives &amp; Key Results</div>
+            <div class="initiative-okr-ref">
+              <span class="initiative-okr-tag objective">O4</span>
+              <span class="initiative-okr-tag kr">KR 4.2</span>
+              <span>Increase bottleneck detection rate within 15 minutes of occurrence</span>
+              <span class="initiative-okr-target up">&uarr; +50% detection in 15min</span>
+            </div>
+            <div class="initiative-okr-ref">
+              <span class="initiative-okr-tag objective">O4</span>
+              <span class="initiative-okr-tag kr">KR 4.1</span>
+              <span>Increase pipeline visibility score &mdash; proactive alerts improve confidence</span>
+              <span class="initiative-okr-target up">&uarr; +60% avg score</span>
+            </div>
+            <div class="initiative-okr-ref">
+              <span class="initiative-okr-tag objective">O2</span>
+              <span class="initiative-okr-tag kr">KR 2.1</span>
+              <span>Increase DAU/MAU &mdash; alerts create a reason to check the view daily</span>
+              <span class="initiative-okr-target up">&uarr; +40% DAU/MAU</span>
+            </div>
+          </div>
+
+          <div class="initiative-features-label">Features &amp; Deliverables</div>
+          <div class="initiative-feature">
+            <div class="feature-icon" style="background: rgba(220,38,38,0.1); color: #DC2626;">&#9888;</div>
+            <div class="feature-content">
+              <div class="feature-name">Stall Detection Engine</div>
+              <div class="feature-desc">Backend service that monitors time-in-stage for every feature. Configurable thresholds per stage (e.g. building &gt; 30min, review &gt; 4h). Emits alert events to WebSocket.</div>
+            </div>
+            <span class="feature-tag backend">Backend</span>
+          </div>
+          <div class="initiative-feature">
+            <div class="feature-icon" style="background: rgba(220,38,38,0.1); color: #DC2626;">&#10005;</div>
+            <div class="feature-content">
+              <div class="feature-name">Visual Alert States</div>
+              <div class="feature-desc">Blocked tickets pulse red with a glow effect. Failed deploys flash the affected component on the environment pane. Stalled PRs show a warning indicator orbiting the build artifact.</div>
+            </div>
+            <span class="feature-tag frontend">Frontend</span>
+          </div>
+          <div class="initiative-feature">
+            <div class="feature-icon" style="background: rgba(220,38,38,0.1); color: #DC2626;">&#9835;</div>
+            <div class="feature-content">
+              <div class="feature-name">Spatial Audio Alerts</div>
+              <div class="feature-desc">Optional audio cues for alert events in VR mode. Directional audio positioned at the blocked ticket so the user can hear where the problem is. Configurable per-alert-type.</div>
+            </div>
+            <span class="feature-tag frontend">Frontend</span>
+          </div>
+          <div class="initiative-feature">
+            <div class="feature-icon" style="background: rgba(220,38,38,0.1); color: #DC2626;">&#9993;</div>
+            <div class="feature-content">
+              <div class="feature-name">External Notifications</div>
+              <div class="feature-desc">Push blocked/failed alerts to Slack, email, or webhook. Links back to the 3D view focused on the specific blocked item. Configurable per workspace.</div>
+            </div>
+            <span class="feature-tag integration">Integration</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ============================================================
+         INITIATIVE 4 — IMMERSIVE VR EXPERIENCE
+    ============================================================ -->
+    <div class="guide-section" id="toc-init-vr">
+      <div class="section-header">
+        <div class="section-number">04</div>
+        <h2 class="section-title">Immersive VR Experience</h2>
+      </div>
+
+      <div class="initiative-block">
+        <div class="initiative-header">
+          <div class="initiative-number" style="background: #7C3AED;">I4</div>
+          <div class="initiative-title-group">
+            <div class="initiative-title">Immersive VR Experience</div>
+            <div class="initiative-subtitle">Full WebXR support with hand tracking, room-scale, and spatial interaction</div>
+          </div>
+        </div>
+        <div class="initiative-body">
+          <div class="initiative-desc">
+            Elevate the desktop 3D view into a true immersive VR experience. Hand tracking for natural interaction, room-scale so users can walk through their pipeline, and gaze-based inspection for zero-friction detail views. This is the differentiator that no competitor can replicate in a 2D dashboard.
+          </div>
+
+          <div class="initiative-okrs">
+            <div class="initiative-okrs-label">Targeted Objectives &amp; Key Results</div>
+            <div class="initiative-okr-ref">
+              <span class="initiative-okr-tag objective">O2</span>
+              <span class="initiative-okr-tag kr">KR 2.3</span>
+              <span>Grow VR session adoption rate &mdash; a compelling VR experience justifies the hardware</span>
+              <span class="initiative-okr-target up">&uarr; +15% VR sessions</span>
+            </div>
+            <div class="initiative-okr-ref">
+              <span class="initiative-okr-tag objective">O2</span>
+              <span class="initiative-okr-tag kr">KR 2.2</span>
+              <span>Increase session duration &mdash; immersion extends observation time</span>
+              <span class="initiative-okr-target up">&uarr; +25% avg duration</span>
+            </div>
+            <div class="initiative-okr-ref">
+              <span class="initiative-okr-tag objective">O1</span>
+              <span class="initiative-okr-tag kr">KR 1.3</span>
+              <span>Improve NPS &mdash; VR experience creates strong positive sentiment and word-of-mouth</span>
+              <span class="initiative-okr-target absolute">&ge; NPS 40</span>
+            </div>
+          </div>
+
+          <div class="initiative-features-label">Features &amp; Deliverables</div>
+          <div class="initiative-feature">
+            <div class="feature-icon" style="background: #ede8f8; color: #7C3AED;">&#9758;</div>
+            <div class="feature-content">
+              <div class="feature-name">Hand Tracking &amp; Controller Input</div>
+              <div class="feature-desc">Full hand tracking support for Quest and Vision Pro. Pinch-to-select tickets, grab-to-rotate the scene, point-to-inspect. Fallback to controller input on devices without hand tracking.</div>
+            </div>
+            <span class="feature-tag frontend">Frontend</span>
+          </div>
+          <div class="initiative-feature">
+            <div class="feature-icon" style="background: #ede8f8; color: #7C3AED;">&#8596;</div>
+            <div class="feature-content">
+              <div class="feature-name">Room-Scale Scene Layout</div>
+              <div class="feature-desc">Pipeline zones mapped to physical room space. Walk toward the backlog to see ticket detail. Step into the centre to observe Claude working. Approach environment panes to inspect deployed components.</div>
+            </div>
+            <span class="feature-tag frontend">Frontend</span>
+          </div>
+          <div class="initiative-feature">
+            <div class="feature-icon" style="background: #ede8f8; color: #7C3AED;">&#9737;</div>
+            <div class="feature-content">
+              <div class="feature-name">Gaze-to-Inspect</div>
+              <div class="feature-desc">Look at any ticket or component for 1.5 seconds to open its detail panel. Natural, hands-free interaction for passive monitoring. Visual focus indicator during dwell.</div>
+            </div>
+            <span class="feature-tag frontend">Frontend</span>
+          </div>
+          <div class="initiative-feature">
+            <div class="feature-icon" style="background: #ede8f8; color: #7C3AED;">&#9729;</div>
+            <div class="feature-content">
+              <div class="feature-name">VR UI Panels</div>
+              <div class="feature-desc">Floating UI panels in VR space for settings, workspace switching, and integration status. Positioned ergonomically at wrist level. Follows the user on teleport.</div>
+            </div>
+            <span class="feature-tag design">Design</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ============================================================
+         INITIATIVE 5 — TEAM WORKSPACES
+    ============================================================ -->
+    <div class="guide-section" id="toc-init-teams">
+      <div class="section-header">
+        <div class="section-number">05</div>
+        <h2 class="section-title">Team Workspaces</h2>
+      </div>
+
+      <div class="initiative-block">
+        <div class="initiative-header">
+          <div class="initiative-number" style="background: #0052CC;">I5</div>
+          <div class="initiative-title-group">
+            <div class="initiative-title">Team Workspaces &amp; Shared Spaces</div>
+            <div class="initiative-subtitle">Multi-user observation, team management, and shared pipeline views</div>
+          </div>
+        </div>
+        <div class="initiative-body">
+          <div class="initiative-desc">
+            Enable teams to share a single pipeline view. Multiple users can observe the same workspace simultaneously, see each other's cursors or avatars, and use the shared view in standups and stakeholder demos. This is the feature that drives team-level adoption and the upgrade from free to paid.
+          </div>
+
+          <div class="initiative-okrs">
+            <div class="initiative-okrs-label">Targeted Objectives &amp; Key Results</div>
+            <div class="initiative-okr-ref">
+              <span class="initiative-okr-tag objective">O3</span>
+              <span class="initiative-okr-tag kr">KR 3.2</span>
+              <span>Increase free-to-paid conversion &mdash; shared spaces are the primary paid feature</span>
+              <span class="initiative-okr-target up">&uarr; +8% conversion</span>
+            </div>
+            <div class="initiative-okr-ref">
+              <span class="initiative-okr-tag objective">O3</span>
+              <span class="initiative-okr-tag kr">KR 3.1</span>
+              <span>Grow MRR &mdash; team subscriptions are the primary revenue driver</span>
+              <span class="initiative-okr-target up">&uarr; &pound;5,000 MRR</span>
+            </div>
+            <div class="initiative-okr-ref">
+              <span class="initiative-okr-tag objective">O3</span>
+              <span class="initiative-okr-tag kr">KR 3.3</span>
+              <span>Reduce paid churn &mdash; team adoption creates stickiness</span>
+              <span class="initiative-okr-target down">&darr; &lt;3% paid churn</span>
+            </div>
+            <div class="initiative-okr-ref">
+              <span class="initiative-okr-tag objective">O1</span>
+              <span class="initiative-okr-tag kr">KR 1.2</span>
+              <span>Grow active workspaces &mdash; team features expand from individual to team adoption</span>
+              <span class="initiative-okr-target up">&uarr; +100 workspaces</span>
+            </div>
+          </div>
+
+          <div class="initiative-features-label">Features &amp; Deliverables</div>
+          <div class="initiative-feature">
+            <div class="feature-icon" style="background: #ddeeff; color: #0052CC;">&#9787;</div>
+            <div class="feature-content">
+              <div class="feature-name">Multi-User Presence</div>
+              <div class="feature-desc">See other team members in the shared view. Desktop: coloured cursors with name labels. VR: avatar heads and hand positions. Presence state synced via WebSocket.</div>
+            </div>
+            <span class="feature-tag frontend">Frontend</span>
+          </div>
+          <div class="initiative-feature">
+            <div class="feature-icon" style="background: #ddeeff; color: #0052CC;">&#9881;</div>
+            <div class="feature-content">
+              <div class="feature-name">Workspace Management</div>
+              <div class="feature-desc">Invite team members by email. Role-based access (admin, member, viewer). Workspace settings for alert thresholds, integration config, and architecture layout.</div>
+            </div>
+            <span class="feature-tag backend">Backend</span>
+          </div>
+          <div class="initiative-feature">
+            <div class="feature-icon" style="background: #ddeeff; color: #0052CC;">&#9776;</div>
+            <div class="feature-content">
+              <div class="feature-name">Multi-Repo View</div>
+              <div class="feature-desc">Connect multiple repositories to a single workspace. Each repo's pipeline is spatially separated but visible in the same scene. Zoom into a single repo or observe all at once.</div>
+            </div>
+            <span class="feature-tag frontend">Frontend</span>
+          </div>
+          <div class="initiative-feature">
+            <div class="feature-icon" style="background: #ddeeff; color: #0052CC;">&#9998;</div>
+            <div class="feature-content">
+              <div class="feature-name">Standup Mode</div>
+              <div class="feature-desc">One-click standup view that highlights what shipped yesterday, what's in progress today, and what's blocked. Optimised for screen-sharing and VR group observation.</div>
+            </div>
+            <span class="feature-tag design">Design</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ============================================================
+         INITIATIVE 6 — INTEGRATION ECOSYSTEM
+    ============================================================ -->
+    <div class="guide-section" id="toc-init-integrations">
+      <div class="section-header">
+        <div class="section-number">06</div>
+        <h2 class="section-title">Integration Ecosystem</h2>
+      </div>
+
+      <div class="initiative-block">
+        <div class="initiative-header">
+          <div class="initiative-number" style="background: #059669;">I6</div>
+          <div class="initiative-title-group">
+            <div class="initiative-title">Integration Ecosystem Expansion</div>
+            <div class="initiative-subtitle">Support the full range of tools used by target market teams</div>
+          </div>
+        </div>
+        <div class="initiative-body">
+          <div class="initiative-desc">
+            Expand beyond Jira + GitHub to cover Linear, GitLab, Azure DevOps, ArgoCD, Vercel, and more. Each new connector removes an adoption barrier for teams using non-default stacks. A plugin architecture allows community-contributed connectors.
+          </div>
+
+          <div class="initiative-okrs">
+            <div class="initiative-okrs-label">Targeted Objectives &amp; Key Results</div>
+            <div class="initiative-okr-ref">
+              <span class="initiative-okr-tag objective">O5</span>
+              <span class="initiative-okr-tag kr">KR 5.1</span>
+              <span>Reach 10+ supported integrations covering the top tools in the target market</span>
+              <span class="initiative-okr-target absolute">&ge; 10 integrations</span>
+            </div>
+            <div class="initiative-okr-ref">
+              <span class="initiative-okr-tag objective">O4</span>
+              <span class="initiative-okr-tag kr">KR 4.3</span>
+              <span>Increase avg integrations per workspace &mdash; more connectors means richer views</span>
+              <span class="initiative-okr-target up">&uarr; +3 avg integrations</span>
+            </div>
+            <div class="initiative-okr-ref">
+              <span class="initiative-okr-tag objective">O5</span>
+              <span class="initiative-okr-tag kr">KR 5.2</span>
+              <span>Grow active workspaces QoQ &mdash; broader support opens new market segments</span>
+              <span class="initiative-okr-target up">&uarr; +80% workspaces QoQ</span>
+            </div>
+            <div class="initiative-okr-ref">
+              <span class="initiative-okr-tag objective">O5</span>
+              <span class="initiative-okr-tag kr">KR 5.3</span>
+              <span>Grow registered users QoQ &mdash; integration breadth drives organic discovery</span>
+              <span class="initiative-okr-target up">&uarr; +200% users QoQ</span>
+            </div>
+          </div>
+
+          <div class="initiative-features-label">Features &amp; Deliverables</div>
+          <div class="initiative-feature">
+            <div class="feature-icon" style="background: #d4f0e8; color: #059669;">&#9881;</div>
+            <div class="feature-content">
+              <div class="feature-name">Connector Plugin Architecture</div>
+              <div class="feature-desc">Standard connector interface with normalise(event) &rarr; PipelineEvent contract. New integrations implemented as isolated plugins with their own auth, polling, and webhook handlers.</div>
+            </div>
+            <span class="feature-tag backend">Backend</span>
+          </div>
+          <div class="initiative-feature">
+            <div class="feature-icon" style="background: #d4f0e8; color: #059669;">&#10010;</div>
+            <div class="feature-content">
+              <div class="feature-name">Linear Connector</div>
+              <div class="feature-desc">Full ticket lifecycle from Linear: issues, status transitions, labels, cycles. Maps to backlog boxes with Linear's priority and estimate fields.</div>
+            </div>
+            <span class="feature-tag integration">Integration</span>
+          </div>
+          <div class="initiative-feature">
+            <div class="feature-icon" style="background: #d4f0e8; color: #059669;">&#10010;</div>
+            <div class="feature-content">
+              <div class="feature-name">GitLab CI Connector</div>
+              <div class="feature-desc">Pipeline runs, merge requests, and deployment events from GitLab. Maps to build transitions and environment pane state.</div>
+            </div>
+            <span class="feature-tag integration">Integration</span>
+          </div>
+          <div class="initiative-feature">
+            <div class="feature-icon" style="background: #d4f0e8; color: #059669;">&#10010;</div>
+            <div class="feature-content">
+              <div class="feature-name">Vercel / Netlify Deploy Connector</div>
+              <div class="feature-desc">Deployment status from Vercel and Netlify. Maps preview deploys to test pane and production deploys to production pane.</div>
+            </div>
+            <span class="feature-tag integration">Integration</span>
+          </div>
+          <div class="initiative-feature">
+            <div class="feature-icon" style="background: #d4f0e8; color: #059669;">&#10010;</div>
+            <div class="feature-content">
+              <div class="feature-name">ArgoCD / Kubernetes Connector</div>
+              <div class="feature-desc">Sync status, rollout progress, and health checks from ArgoCD. Maps directly to environment pane components with real-time health indicators.</div>
+            </div>
+            <span class="feature-tag integration">Integration</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ============================================================
+         INITIATIVE 7 — MONETISATION & TIERS
+    ============================================================ -->
+    <div class="guide-section" id="toc-init-monetisation">
+      <div class="section-header">
+        <div class="section-number">07</div>
+        <h2 class="section-title">Monetisation &amp; Tiers</h2>
+      </div>
+
+      <div class="initiative-block">
+        <div class="initiative-header">
+          <div class="initiative-number" style="background: #15803D;">I7</div>
+          <div class="initiative-title-group">
+            <div class="initiative-title">Monetisation &amp; Pricing Tiers</div>
+            <div class="initiative-subtitle">Free individual tier, paid team tier, enterprise custom &mdash; the revenue engine</div>
+          </div>
+        </div>
+        <div class="initiative-body">
+          <div class="initiative-desc">
+            Implement the tiered pricing model that converts free adoption into sustainable revenue. The free tier covers individual use with a single project. The team tier unlocks shared workspaces, multi-repo views, and advanced alerts. Enterprise adds SSO, audit logs, and SLA-backed support.
+          </div>
+
+          <div class="initiative-okrs">
+            <div class="initiative-okrs-label">Targeted Objectives &amp; Key Results</div>
+            <div class="initiative-okr-ref">
+              <span class="initiative-okr-tag objective">O3</span>
+              <span class="initiative-okr-tag kr">KR 3.1</span>
+              <span>Grow MRR to &pound;5,000 &mdash; tier structure is the primary revenue mechanism</span>
+              <span class="initiative-okr-target up">&uarr; &pound;5,000 MRR</span>
+            </div>
+            <div class="initiative-okr-ref">
+              <span class="initiative-okr-tag objective">O3</span>
+              <span class="initiative-okr-tag kr">KR 3.2</span>
+              <span>Increase free-to-paid conversion &mdash; clear value differentiation between tiers</span>
+              <span class="initiative-okr-target up">&uarr; +8% conversion</span>
+            </div>
+            <div class="initiative-okr-ref">
+              <span class="initiative-okr-tag objective">O3</span>
+              <span class="initiative-okr-tag kr">KR 3.3</span>
+              <span>Reduce paid churn &mdash; enterprise features and SLAs create long-term contracts</span>
+              <span class="initiative-okr-target down">&darr; &lt;3% paid churn</span>
+            </div>
+          </div>
+
+          <div class="initiative-features-label">Features &amp; Deliverables</div>
+          <div class="initiative-feature">
+            <div class="feature-icon" style="background: #d4f0e8; color: #15803D;">&#9733;</div>
+            <div class="feature-content">
+              <div class="feature-name">Billing &amp; Subscription Management</div>
+              <div class="feature-desc">Stripe integration for subscription billing. Self-serve upgrade/downgrade. Usage-based billing for enterprise. Invoice generation and payment history.</div>
+            </div>
+            <span class="feature-tag infra">Infra</span>
+          </div>
+          <div class="initiative-feature">
+            <div class="feature-icon" style="background: #d4f0e8; color: #15803D;">&#9741;</div>
+            <div class="feature-content">
+              <div class="feature-name">Feature Gating</div>
+              <div class="feature-desc">Tier-based feature flags: shared workspaces (team+), multi-repo (team+), advanced alerts (team+), SSO (enterprise), audit log (enterprise). Graceful upgrade prompts in-app.</div>
+            </div>
+            <span class="feature-tag backend">Backend</span>
+          </div>
+          <div class="initiative-feature">
+            <div class="feature-icon" style="background: #d4f0e8; color: #15803D;">&#9889;</div>
+            <div class="feature-content">
+              <div class="feature-name">Upgrade Prompts &amp; Trial</div>
+              <div class="feature-desc">Contextual upgrade prompts when users hit free-tier limits. 14-day free trial of team tier. Usage analytics to identify high-value free users for targeted outreach.</div>
+            </div>
+            <span class="feature-tag growth">Growth</span>
+          </div>
+          <div class="initiative-feature">
+            <div class="feature-icon" style="background: #d4f0e8; color: #15803D;">&#9888;</div>
+            <div class="feature-content">
+              <div class="feature-name">Enterprise SSO &amp; Audit</div>
+              <div class="feature-desc">SAML/OIDC SSO for enterprise customers. Full audit log of workspace access, integration changes, and configuration modifications. SOC 2 readiness.</div>
+            </div>
+            <span class="feature-tag infra">Infra</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- FOOTER -->
+    <div class="guide-footer">
+      <div class="footer-brand">VR Pipeline<span> Dashboard</span></div>
+      <div class="footer-meta">Initiatives &middot; March 2026</div>
+    </div>
+
+  </main>
+</div>
+
+</body>
+</html>

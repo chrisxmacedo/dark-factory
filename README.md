@@ -25,11 +25,14 @@ Everything here is a template. Copy what you need into a project workspace, repl
 | `starter-regulations/` | Regulations grouped by sector, tagged with the countries that apply them. Read by the capability team in Phase A. |
 | `starter-standards/` | Non-regulatory standards (WCAG, ISO 27001, SOC 2, ISO 9001 …). Read by both teams. |
 | `capability-meta-model/` | Sector-neutral JSON Schemas for capabilities, journeys, services, events, data stores, NFRs and more. This is the base that sector packs build on. |
-| `idea-template/` | Product and architecture blueprint template (Problem → Vision → Journeys → Capabilities → Initiatives). |
-| `commands/` | Claude Code slash commands for Jira, Confluence and project setup (`/create-project`, `/take-task`, `/prd` …). |
+| `idea-template/` | Product and architecture blueprint: a Markdown template, a single-file HTML blueprint (`blueprint/`), and the design system plus worked example that `/idea` builds its pages from (`design-system/`). |
+| `commands/` | Claude Code slash commands for Jira, Confluence and project setup (`/create-project`, `/take-task`, `/prd` …). `install.sh` symlinks them into `~/.claude/commands/`. |
+| `install.sh` | One-time setup per machine or client. It asks for settings and working preferences, writes `~/.config/pipeline-toolkit/config.env`, and links the commands. |
+| `config/` | `permissions.baseline.json`: shareable Claude Code allow rules for a projects workspace. |
 | `development-pipeline-config/` | Setup guide for the build pipeline: HTML pages, plus `development-pipeline-configuration-guide.md` as a single-file reference. |
 | `capability-pipeline-config/` | Methodology guide for the capability-driven design pipeline (`claude-setup.html`). |
 | `CONTEXT.md` | Template catalogue and technology stack, written for agents. |
+| `CLAUDE.md` | Rules for working on the toolkit itself: no client values in the repo, how placeholders work, and how to test. |
 
 Each starter and team folder has its own `CONTEXT.md`, which explains what the folder is. Code starters also have a `CLAUDE.md` with coding conventions. Agents read both before changing anything.
 
@@ -58,14 +61,28 @@ Each starter and team folder has its own `CONTEXT.md`, which explains what the f
 git clone https://github.com/chrisxmacedo/pipeline-toolkit.git ~/Projects/templates
 ```
 
-The slash commands and some docs assume the toolkit lives at `~/Projects/templates`.
+Any location works. `install.sh` records where the toolkit is, so nothing depends on the path.
 
-### 2. Install the slash commands
+### 2. Run the installer (once per machine or client)
 
 ```bash
-mkdir -p ~/.claude/commands
-cp ~/Projects/templates/commands/*.md ~/.claude/commands/
+~/Projects/templates/install.sh
 ```
+
+The installer:
+- **Checks the prerequisites.**
+- **Asks for this machine's settings:** projects and ideas folders, the client's Atlassian site, your login email, the GitHub org, and the Mission Control board.
+- **Asks your working preferences:**
+  - promote to production with human approval or automatically
+  - start the next ticket automatically, or ask first
+  - whether to also track work as GitHub issues
+- **Writes everything to `~/.config/pipeline-toolkit/config.env`.** It stays outside the repo, so the repo never holds client details.
+- **Symlinks the slash commands** into `~/.claude/commands/`, so edits in the repo take effect immediately. If an installed command has local edits, it's moved to a `.backup-…` folder instead of being overwritten.
+- **Optionally merges `config/permissions.baseline.json`** into your projects workspace's `.claude/settings.json`. That file holds the git, gh, docker compose, infra-script and Atlassian rules, and nothing destructive.
+
+Re-run it to change answers or to switch to a different client; the current answers are offered as defaults. `--defaults` re-applies them without asking. No secrets are stored. Jira API tokens go in each project's `infra/.env.jira`, and for the Mission Control bot token only the *name* of the environment variable that holds it is recorded.
+
+`/create-project` writes your working preferences into each new project's `.claude/context/project.md` ("Working preferences"). You can change them there for an individual project.
 
 | Command | Purpose |
 |---|---|

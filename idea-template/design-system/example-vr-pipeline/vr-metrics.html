@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Metrics &mdash; VR Pipeline Dashboard</title>
+  <link rel="icon" type="image/svg+xml" href="vr-favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="vr-styles.css">
+  <style>
+    /* ================================
+       OKR STYLES
+    ================================ */
+    .okr-block {
+      background: var(--ch-white);
+      border: 1px solid var(--ch-light-grey);
+      border-radius: var(--radius-lg);
+      margin-bottom: 24px;
+      overflow: hidden;
+      transition: border-color 0.15s;
+    }
+    .okr-block:hover {
+      border-color: #C084FC;
+    }
+
+    .okr-objective-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--ch-light-grey);
+      background: var(--ch-offwhite);
+    }
+
+    .okr-objective-number {
+      width: 32px;
+      height: 32px;
+      background: #6C3FA0;
+      color: #fff;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      flex-shrink: 0;
+    }
+
+    .okr-objective-text {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--ch-navy);
+      line-height: 1.4;
+    }
+
+    .okr-objective-timeframe {
+      margin-left: auto;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-family: var(--font-mono);
+      color: var(--ch-mid-grey);
+      white-space: nowrap;
+      padding: 3px 10px;
+      border-radius: 20px;
+      background: var(--ch-light-grey);
+    }
+
+    .okr-key-results {
+      padding: 0;
+      list-style: none;
+    }
+
+    .okr-kr {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--ch-offwhite);
+      transition: background 0.1s;
+    }
+    .okr-kr:last-child {
+      border-bottom: none;
+    }
+    .okr-kr:hover {
+      background: rgba(108,63,160,0.02);
+    }
+
+    .okr-kr-label {
+      font-size: 10px;
+      font-weight: 600;
+      font-family: var(--font-mono);
+      color: var(--ch-mid-grey);
+      padding: 3px 8px;
+      background: var(--ch-offwhite);
+      border-radius: 4px;
+      white-space: nowrap;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .okr-kr-content {
+      flex: 1;
+    }
+
+    .okr-kr-text {
+      font-size: 13.5px;
+      color: var(--ch-slate);
+      line-height: 1.55;
+      margin-bottom: 6px;
+    }
+
+    .okr-kr-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      color: var(--ch-mid-grey);
+      background: var(--ch-offwhite);
+      border: 1px solid var(--ch-light-grey);
+      border-radius: 4px;
+      padding: 3px 10px;
+    }
+
+    .okr-kr-indicator-icon {
+      font-size: 10px;
+    }
+
+    .okr-kr-target {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      border-radius: 4px;
+      padding: 3px 10px;
+      margin-left: 6px;
+    }
+    .okr-kr-target.up {
+      background: rgba(21,128,61,0.08);
+      color: #15803D;
+    }
+    .okr-kr-target.down {
+      background: rgba(220,38,38,0.08);
+      color: #DC2626;
+    }
+    .okr-kr-target.absolute {
+      background: rgba(108,63,160,0.08);
+      color: #6C3FA0;
+    }
+
+    .okr-kr-target-arrow {
+      font-size: 12px;
+    }
+
+    /* Indicator legend */
+    .indicator-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 32px;
+    }
+    .indicator-legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--ch-mid-grey);
+      background: var(--ch-white);
+      border: 1px solid var(--ch-light-grey);
+      border-radius: 6px;
+      padding: 5px 12px;
+    }
+    .indicator-legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    @media (max-width: 700px) {
+      .okr-objective-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+      .okr-objective-timeframe { margin-left: 0; }
+      .okr-kr { flex-direction: column; gap: 8px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="page-wrap">
+
+  <!-- TOP NAV -->
+  <nav class="topnav">
+    <a href="vr-problem.html" class="nav-logo">
+      <div class="nav-logo-dot">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 14 14" fill="none">
+          <rect x="1.5" y="4" width="11" height="6" rx="2.5" stroke="#C084FC" stroke-width="1"/>
+          <circle cx="5" cy="7" r="1.5" stroke="#C084FC" stroke-width="0.8"/>
+          <circle cx="9" cy="7" r="1.5" stroke="#C084FC" stroke-width="0.8"/>
+          <circle cx="3.5" cy="7" r="0.6" fill="#F59E0B"/>
+          <circle cx="7" cy="7" r="0.6" fill="#2AAD6A"/>
+          <circle cx="10.5" cy="7" r="0.6" fill="#60A5FA"/>
+        </svg>
+      </div>
+      VR Pipeline<span> Dashboard</span>
+    </a>
+
+    <div class="nav-links">
+      <a href="vr-problem.html" class="nav-link">Problem</a>
+      <a href="vr-vision.html" class="nav-link">Vision</a>
+      <a href="vr-strategy.html" class="nav-link">Strategy</a>
+      <a href="vr-metrics.html" class="nav-link active">Metrics</a>
+      <a href="vr-initiatives.html" class="nav-link">Initiatives</a>
+    </div>
+
+    <div class="nav-meta">Product Docs &middot; Internal</div>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- TABLE OF CONTENTS -->
+    <div class="toc">
+      <div class="toc-label">Contents</div>
+      <ol class="toc-list">
+        <li><span class="toc-number">01</span><a href="#toc-indicators">Indicators</a></li>
+        <li><span class="toc-number">02</span><a href="#toc-okr-adoption">O1: Market Adoption</a></li>
+        <li><span class="toc-number">03</span><a href="#toc-okr-engagement">O2: User Engagement</a></li>
+        <li><span class="toc-number">04</span><a href="#toc-okr-revenue">O3: Revenue</a></li>
+        <li><span class="toc-number">05</span><a href="#toc-okr-product">O4: Product Effectiveness</a></li>
+        <li><span class="toc-number">06</span><a href="#toc-okr-platform">O5: Platform Expansion</a></li>
+      </ol>
+    </div>
+
+    <!-- HERO -->
+    <div class="hero">
+      <div class="hero-tag">
+        <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><circle cx="4" cy="4" r="4"/></svg>
+        Metrics
+      </div>
+      <h1 class="hero-title">Objectives &amp;<br><em>Key Results</em></h1>
+      <p class="hero-subtitle">Measurable objectives tied to quantifiable indicators. Each key result tracks a specific change in an indicator &mdash; evidencing that the objective has been achieved through deployment to the target market.</p>
+      <div class="hero-meta">
+        <div><strong>Author</strong> Christian Macedo</div>
+        <div><strong>Version</strong> 0.1 &mdash; Draft</div>
+        <div><strong>Updated</strong> March 2026</div>
+      </div>
+    </div>
+
+
+    <!-- SECTION 1 — INDICATORS -->
+    <div class="guide-section" id="toc-indicators">
+      <div class="section-header">
+        <div class="section-number">01</div>
+        <h2 class="section-title">Indicators</h2>
+      </div>
+
+      <p style="font-size: 14px; color: var(--ch-slate-mid); margin-bottom: 24px; line-height: 1.65;">
+        Each key result references a tracked indicator &mdash; a categorical measure that changes over time as the product is deployed to the target market. These indicators are plotted over time to evidence progress toward objectives.
+      </p>
+
+      <div class="indicator-legend">
+        <div class="indicator-legend-item"><div class="indicator-legend-dot" style="background: #6C3FA0;"></div>Registered Users</div>
+        <div class="indicator-legend-item"><div class="indicator-legend-dot" style="background: #0052CC;"></div>Active Workspaces</div>
+        <div class="indicator-legend-item"><div class="indicator-legend-dot" style="background: #D97706;"></div>Daily Active Users</div>
+        <div class="indicator-legend-item"><div class="indicator-legend-dot" style="background: #DC2626;"></div>Session Duration</div>
+        <div class="indicator-legend-item"><div class="indicator-legend-dot" style="background: #15803D;"></div>Monthly Recurring Revenue</div>
+        <div class="indicator-legend-item"><div class="indicator-legend-dot" style="background: #0891B2;"></div>Free-to-Paid Conversion Rate</div>
+        <div class="indicator-legend-item"><div class="indicator-legend-dot" style="background: #7C3AED;"></div>Pipeline Visibility Score</div>
+        <div class="indicator-legend-item"><div class="indicator-legend-dot" style="background: #059669;"></div>Bottleneck Detection Rate</div>
+        <div class="indicator-legend-item"><div class="indicator-legend-dot" style="background: #E11D48;"></div>Monthly Churn Rate</div>
+        <div class="indicator-legend-item"><div class="indicator-legend-dot" style="background: #CA8A04;"></div>Integration Connections</div>
+        <div class="indicator-legend-item"><div class="indicator-legend-dot" style="background: #4F46E5;"></div>Net Promoter Score</div>
+        <div class="indicator-legend-item"><div class="indicator-legend-dot" style="background: #334155;"></div>VR Session Adoption Rate</div>
+      </div>
+
+      <div class="notes-section">
+        <ul>
+          <li>All indicators are measured <strong>continuously</strong> and plotted over time on a separate tracking dashboard</li>
+          <li>Key results state the <strong>target change</strong> (&percnt; increase, &percnt; decrease, or absolute value) in a specific indicator</li>
+          <li>Objectives are timeboxed to <strong>quarters</strong> &mdash; Q1 targets early adoption, Q2&ndash;Q3 growth, Q4 revenue and retention</li>
+          <li>Baseline values are established at product launch; all targets are measured from baseline</li>
+        </ul>
+      </div>
+    </div>
+
+
+    <!-- SECTION 2 — O1: MARKET ADOPTION -->
+    <div class="guide-section" id="toc-okr-adoption">
+      <div class="section-header">
+        <div class="section-number">02</div>
+        <h2 class="section-title">O1: Market Adoption</h2>
+      </div>
+
+      <div class="okr-block">
+        <div class="okr-objective-header">
+          <div class="okr-objective-number">O1</div>
+          <div class="okr-objective-text">Establish the VR Pipeline Dashboard as the default pipeline visualisation tool for AI-augmented development teams</div>
+          <div class="okr-objective-timeframe">Q1 &ndash; Q2</div>
+        </div>
+        <ul class="okr-key-results">
+          <li class="okr-kr">
+            <div class="okr-kr-label">KR 1.1</div>
+            <div class="okr-kr-content">
+              <div class="okr-kr-text">Grow the number of registered users from launch baseline to demonstrate product-market demand within the primary target segment of AI-augmented engineering teams.</div>
+              <span class="okr-kr-indicator"><span class="okr-kr-indicator-icon" style="color: #6C3FA0;">&#9679;</span> Registered Users</span>
+              <span class="okr-kr-target up"><span class="okr-kr-target-arrow">&uarr;</span> +500 users</span>
+            </div>
+          </li>
+          <li class="okr-kr">
+            <div class="okr-kr-label">KR 1.2</div>
+            <div class="okr-kr-content">
+              <div class="okr-kr-text">Increase the number of active workspaces (teams with at least one connected integration running for 7+ days) to validate that adoption extends beyond individual trial to team-level use.</div>
+              <span class="okr-kr-indicator"><span class="okr-kr-indicator-icon" style="color: #0052CC;">&#9679;</span> Active Workspaces</span>
+              <span class="okr-kr-target up"><span class="okr-kr-target-arrow">&uarr;</span> +100 workspaces</span>
+            </div>
+          </li>
+          <li class="okr-kr">
+            <div class="okr-kr-label">KR 1.3</div>
+            <div class="okr-kr-content">
+              <div class="okr-kr-text">Achieve a Net Promoter Score above the threshold that indicates organic growth potential, measured through in-app surveys after 14 days of active use.</div>
+              <span class="okr-kr-indicator"><span class="okr-kr-indicator-icon" style="color: #4F46E5;">&#9679;</span> Net Promoter Score</span>
+              <span class="okr-kr-target absolute"><span class="okr-kr-target-arrow">&ge;</span> NPS 40</span>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+
+    <!-- SECTION 3 — O2: USER ENGAGEMENT -->
+    <div class="guide-section" id="toc-okr-engagement">
+      <div class="section-header">
+        <div class="section-number">03</div>
+        <h2 class="section-title">O2: User Engagement</h2>
+      </div>
+
+      <div class="okr-block">
+        <div class="okr-objective-header">
+          <div class="okr-objective-number">O2</div>
+          <div class="okr-objective-text">Prove that the spatial pipeline view delivers sustained daily value, not novelty &mdash; users return because it is genuinely useful</div>
+          <div class="okr-objective-timeframe">Q2 &ndash; Q3</div>
+        </div>
+        <ul class="okr-key-results">
+          <li class="okr-kr">
+            <div class="okr-kr-label">KR 2.1</div>
+            <div class="okr-kr-content">
+              <div class="okr-kr-text">Increase the ratio of daily active users to registered users, evidencing that the product is part of the daily workflow rather than a one-time demo.</div>
+              <span class="okr-kr-indicator"><span class="okr-kr-indicator-icon" style="color: #D97706;">&#9679;</span> Daily Active Users</span>
+              <span class="okr-kr-target up"><span class="okr-kr-target-arrow">&uarr;</span> +40% DAU/MAU ratio</span>
+            </div>
+          </li>
+          <li class="okr-kr">
+            <div class="okr-kr-label">KR 2.2</div>
+            <div class="okr-kr-content">
+              <div class="okr-kr-text">Increase average session duration, demonstrating that users spend meaningful time observing the pipeline rather than briefly checking and leaving.</div>
+              <span class="okr-kr-indicator"><span class="okr-kr-indicator-icon" style="color: #DC2626;">&#9679;</span> Session Duration</span>
+              <span class="okr-kr-target up"><span class="okr-kr-target-arrow">&uarr;</span> +25% avg duration</span>
+            </div>
+          </li>
+          <li class="okr-kr">
+            <div class="okr-kr-label">KR 2.3</div>
+            <div class="okr-kr-content">
+              <div class="okr-kr-text">Grow the proportion of sessions initiated in VR mode (headset) versus desktop-only, indicating that the immersive experience delivers additional value worth the friction of putting on a headset.</div>
+              <span class="okr-kr-indicator"><span class="okr-kr-indicator-icon" style="color: #334155;">&#9679;</span> VR Session Adoption Rate</span>
+              <span class="okr-kr-target up"><span class="okr-kr-target-arrow">&uarr;</span> +15% VR sessions</span>
+            </div>
+          </li>
+          <li class="okr-kr">
+            <div class="okr-kr-label">KR 2.4</div>
+            <div class="okr-kr-content">
+              <div class="okr-kr-text">Reduce monthly churn rate to demonstrate that once teams adopt the product, they retain it as an ongoing part of their workflow.</div>
+              <span class="okr-kr-indicator"><span class="okr-kr-indicator-icon" style="color: #E11D48;">&#9679;</span> Monthly Churn Rate</span>
+              <span class="okr-kr-target down"><span class="okr-kr-target-arrow">&darr;</span> &lt;5% monthly churn</span>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+
+    <!-- SECTION 4 — O3: REVENUE -->
+    <div class="guide-section" id="toc-okr-revenue">
+      <div class="section-header">
+        <div class="section-number">04</div>
+        <h2 class="section-title">O3: Revenue</h2>
+      </div>
+
+      <div class="okr-block">
+        <div class="okr-objective-header">
+          <div class="okr-objective-number">O3</div>
+          <div class="okr-objective-text">Build a sustainable revenue base that validates willingness to pay for spatial pipeline observability</div>
+          <div class="okr-objective-timeframe">Q3 &ndash; Q4</div>
+        </div>
+        <ul class="okr-key-results">
+          <li class="okr-kr">
+            <div class="okr-kr-label">KR 3.1</div>
+            <div class="okr-kr-content">
+              <div class="okr-kr-text">Grow monthly recurring revenue from paid team and enterprise subscriptions, evidencing that the product delivers enough value to justify a recurring cost.</div>
+              <span class="okr-kr-indicator"><span class="okr-kr-indicator-icon" style="color: #15803D;">&#9679;</span> Monthly Recurring Revenue</span>
+              <span class="okr-kr-target up"><span class="okr-kr-target-arrow">&uarr;</span> &pound;5,000 MRR</span>
+            </div>
+          </li>
+          <li class="okr-kr">
+            <div class="okr-kr-label">KR 3.2</div>
+            <div class="okr-kr-content">
+              <div class="okr-kr-text">Increase the conversion rate from free individual tier to paid team tier, demonstrating that team-level features and shared spaces are compelling enough to drive upgrades.</div>
+              <span class="okr-kr-indicator"><span class="okr-kr-indicator-icon" style="color: #0891B2;">&#9679;</span> Free-to-Paid Conversion Rate</span>
+              <span class="okr-kr-target up"><span class="okr-kr-target-arrow">&uarr;</span> +8% conversion rate</span>
+            </div>
+          </li>
+          <li class="okr-kr">
+            <div class="okr-kr-label">KR 3.3</div>
+            <div class="okr-kr-content">
+              <div class="okr-kr-text">Reduce monthly churn among paying customers to below the threshold that supports compounding revenue growth over time.</div>
+              <span class="okr-kr-indicator"><span class="okr-kr-indicator-icon" style="color: #E11D48;">&#9679;</span> Monthly Churn Rate</span>
+              <span class="okr-kr-target down"><span class="okr-kr-target-arrow">&darr;</span> &lt;3% paid churn</span>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+
+    <!-- SECTION 5 — O4: PRODUCT EFFECTIVENESS -->
+    <div class="guide-section" id="toc-okr-product">
+      <div class="section-header">
+        <div class="section-number">05</div>
+        <h2 class="section-title">O4: Product Effectiveness</h2>
+      </div>
+
+      <div class="okr-block">
+        <div class="okr-objective-header">
+          <div class="okr-objective-number">O4</div>
+          <div class="okr-objective-text">Demonstrate that the spatial view measurably improves pipeline visibility and reduces the time to detect bottlenecks</div>
+          <div class="okr-objective-timeframe">Q2 &ndash; Q4</div>
+        </div>
+        <ul class="okr-key-results">
+          <li class="okr-kr">
+            <div class="okr-kr-label">KR 4.1</div>
+            <div class="okr-kr-content">
+              <div class="okr-kr-text">Increase the self-reported pipeline visibility score (in-app survey: &ldquo;How confident are you that you know the current state of your pipeline?&rdquo; 1&ndash;10), measured before and after adoption.</div>
+              <span class="okr-kr-indicator"><span class="okr-kr-indicator-icon" style="color: #7C3AED;">&#9679;</span> Pipeline Visibility Score</span>
+              <span class="okr-kr-target up"><span class="okr-kr-target-arrow">&uarr;</span> +60% avg score</span>
+            </div>
+          </li>
+          <li class="okr-kr">
+            <div class="okr-kr-label">KR 4.2</div>
+            <div class="okr-kr-content">
+              <div class="okr-kr-text">Increase the rate at which bottlenecks (stuck builds, failed deploys, stalled PRs) are detected within 15 minutes of occurrence, as measured by time-to-first-action after a blockage event.</div>
+              <span class="okr-kr-indicator"><span class="okr-kr-indicator-icon" style="color: #059669;">&#9679;</span> Bottleneck Detection Rate</span>
+              <span class="okr-kr-target up"><span class="okr-kr-target-arrow">&uarr;</span> +50% detection within 15min</span>
+            </div>
+          </li>
+          <li class="okr-kr">
+            <div class="okr-kr-label">KR 4.3</div>
+            <div class="okr-kr-content">
+              <div class="okr-kr-text">Increase the average number of connected integrations per workspace, evidencing that teams derive more value from a unified view spanning multiple data sources.</div>
+              <span class="okr-kr-indicator"><span class="okr-kr-indicator-icon" style="color: #CA8A04;">&#9679;</span> Integration Connections</span>
+              <span class="okr-kr-target up"><span class="okr-kr-target-arrow">&uarr;</span> +3 avg integrations/workspace</span>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+
+    <!-- SECTION 6 — O5: PLATFORM EXPANSION -->
+    <div class="guide-section" id="toc-okr-platform">
+      <div class="section-header">
+        <div class="section-number">06</div>
+        <h2 class="section-title">O5: Platform Expansion</h2>
+      </div>
+
+      <div class="okr-block">
+        <div class="okr-objective-header">
+          <div class="okr-objective-number">O5</div>
+          <div class="okr-objective-text">Expand the integration ecosystem to cover the majority of tools used by target market teams, reducing friction to adoption</div>
+          <div class="okr-objective-timeframe">Q3 &ndash; Q4</div>
+        </div>
+        <ul class="okr-key-results">
+          <li class="okr-kr">
+            <div class="okr-kr-label">KR 5.1</div>
+            <div class="okr-kr-content">
+              <div class="okr-kr-text">Increase the total number of supported integration connectors (project management, CI/CD, deployment, AI agent platforms) to cover the top tools used by the target market.</div>
+              <span class="okr-kr-indicator"><span class="okr-kr-indicator-icon" style="color: #CA8A04;">&#9679;</span> Integration Connections</span>
+              <span class="okr-kr-target absolute"><span class="okr-kr-target-arrow">&ge;</span> 10 supported integrations</span>
+            </div>
+          </li>
+          <li class="okr-kr">
+            <div class="okr-kr-label">KR 5.2</div>
+            <div class="okr-kr-content">
+              <div class="okr-kr-text">Increase the number of active workspaces, driven by reduced friction from broader integration support making the product accessible to teams using non-Jira/GitHub stacks.</div>
+              <span class="okr-kr-indicator"><span class="okr-kr-indicator-icon" style="color: #0052CC;">&#9679;</span> Active Workspaces</span>
+              <span class="okr-kr-target up"><span class="okr-kr-target-arrow">&uarr;</span> +80% workspaces QoQ</span>
+            </div>
+          </li>
+          <li class="okr-kr">
+            <div class="okr-kr-label">KR 5.3</div>
+            <div class="okr-kr-content">
+              <div class="okr-kr-text">Grow registered users through organic adoption driven by word-of-mouth and open-source community engagement.</div>
+              <span class="okr-kr-indicator"><span class="okr-kr-indicator-icon" style="color: #6C3FA0;">&#9679;</span> Registered Users</span>
+              <span class="okr-kr-target up"><span class="okr-kr-target-arrow">&uarr;</span> +200% users QoQ</span>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+
+    <!-- FOOTER -->
+    <div class="guide-footer">
+      <div class="footer-brand">VR Pipeline<span> Dashboard</span></div>
+      <div class="footer-meta">Metrics &middot; March 2026</div>
+    </div>
+
+  </main>
+</div>
+
+</body>
+</html>
