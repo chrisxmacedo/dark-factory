@@ -117,6 +117,32 @@ Artefacts reference each other by path and entity name:
 
 All cross-references must resolve to existing files and fields.
 
+## Stub tracking
+
+Artefacts may be authored as stubs — placeholders where the shape is
+agreed but the detail is still being worked out. To stay honest about
+what is done versus what still needs work, mark stubs explicitly:
+
+```json
+{
+  "x-status": "stub",
+  "x-todo": "What is missing, who owns completing it, and by when"
+}
+```
+
+`scripts/validate-completeness.py` counts these markers and surfaces
+them as warnings. Stubs are acceptable during iteration; silently
+incomplete artefacts are not. When the stub is resolved, delete
+`x-status` and `x-todo` — the warning count drops automatically.
+
+Stubs applied to sequence diagrams **must** come in pairs — a `.mmd`
+and its matching `.json`. Run `scripts/generate-sequence-json-stubs.py`
+after adding any Mermaid stub to ensure the JSON pair is created
+(validate-journey fails on orphan Mermaid files).
+
+See `.claude/context/completeness-validation.md` for the full gate
+rules.
+
 ## Transparency annotations (when applicable)
 
 If the organisation has public accountability obligations, every entity

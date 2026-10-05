@@ -4,6 +4,18 @@ Validate a journey model's internal consistency, format compliance,
 cross-capability communication rules, and central model alignment.
 
 Usage: python3 validate-journey.py <journey-dir-name>
+
+six-field spec
+  inputs         argv[1]=journey-slug; reads artefacts/models/<slug>/** and
+                 artefacts/schemas/*.schema.json and artefacts/central-model/**
+  outputs        stdout verdict with per-check OK/WARN/ERROR; exit 0 pass / 1 fail
+  preconditions  journey directory exists with required artefact files plus
+                 at least one API contract and paired .json/.mmd sequence diagrams
+  postconditions stdout is a reproducible verdict for the current tree;
+                 audit line records exit_code + errors/warnings counts
+  idempotency    idempotent — repeated runs on an unchanged tree yield the same verdict
+  audit events   {script:"validate-journey", args, exit_code, blockers=errors,
+                 warnings, meta:{slug}}
 """
 
 import json
@@ -21,6 +33,9 @@ ARTEFACTS = Path(__file__).parent.parent / "artefacts"
 MODELS = ARTEFACTS / "models"
 CENTRAL = ARTEFACTS / "central-model"
 FOUNDATION = ARTEFACTS / "foundation"
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import audit  # noqa: E402
 
 RED = "\033[91m"
 YELLOW = "\033[93m"
@@ -437,7 +452,10 @@ def main():
         print(f"{GREEN}PASSED{RESET}: All checks clean")
     print(f"{'='*60}\n")
 
-    sys.exit(1 if errors else 0)
+    code = 1 if errors else 0
+    audit.log_event("validate-journey", sys.argv[1:], code, len(errors), len(warnings),
+                    {"slug": name})
+    sys.exit(code)
 
 
 if __name__ == "__main__":

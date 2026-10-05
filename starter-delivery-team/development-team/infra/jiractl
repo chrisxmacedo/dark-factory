@@ -10,9 +10,28 @@
 #
 # Requires: JIRA_EMAIL and JIRA_API_TOKEN in infra/.env.jira
 # Create token at: https://id.atlassian.com/manage-profile/security/api-tokens
+#
+# six-field spec (per .claude/context/process-spec.md)
+#   inputs         subcommand + positional args; reads infra/.env.jira;
+#                  reads JIRA_SITE, CLOUD_ID, PROJECT_KEY from config block
+#   outputs        Jira REST calls; stdout per-subcommand text; exit 0/1
+#   preconditions  infra/.env.jira present; target ticket exists for
+#                  status/transition/comment/components
+#   postconditions for mutating subcommands: remote Jira state updated;
+#                  _audit.jsonl has one line describing the call
+#   idempotency    idempotent when the remote already equals the target state
+#                  (re-transitioning to the same status is a no-op)
+#   audit events   {script:"jiractl <sub>", args, exit_code, meta:{ticket?}}
 
 set -euo pipefail
 INFRA_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# shellcheck source=audit.sh
+source "$INFRA_DIR/audit.sh"
+audit_capture_args "$@"
+_JIRACTL_SUB="${1:-unknown}"
+_JIRACTL_TICKET="${2:-}"
+trap 'code=$?; audit_log "jiractl $_JIRACTL_SUB" "$code" 0 0 "{\"ticket\":\"$_JIRACTL_TICKET\"}"; exit $code' EXIT
 
 # ── Config ──────────────────────────────────────────────────────────────────
 

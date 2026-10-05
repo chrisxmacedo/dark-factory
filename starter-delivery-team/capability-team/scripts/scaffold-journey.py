@@ -5,6 +5,18 @@ Ensures consistent IDs and structure before the modelling agent starts.
 
 Usage: python3 scaffold-journey.py <journey-id> <journey-slug>
 Example: python3 scaffold-journey.py JRN-007 business-loan-origination
+
+six-field spec
+  inputs         argv[1]=journey-id (JRN-NNN); argv[2]=slug; reads artefacts/**
+  outputs        creates artefacts/models/<slug>/ with manifest + template files;
+                 stdout lists next IDs
+  preconditions  journey directory does not yet exist; foundation artefacts loaded
+  postconditions journey directory exists with _manifest.json and six template files;
+                 ID allocations logged to audit meta
+  idempotency    non-idempotent — fails if the journey dir already exists (by design,
+                 so that IDs are assigned exactly once)
+  audit events   {script:"scaffold-journey", args, exit_code, meta:{journey_id, slug,
+                 next_phase, next_entity, next_event}}
 """
 
 import json
@@ -15,6 +27,9 @@ from pathlib import Path
 ARTEFACTS = Path(__file__).parent.parent / "artefacts"
 MODELS = ARTEFACTS / "models"
 CENTRAL = ARTEFACTS / "central-model"
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import audit  # noqa: E402
 
 
 def scan_max_id(pattern, search_dir):
@@ -200,6 +215,14 @@ def main():
     print(f"  Template files: journey-detail, data-model, service-boundaries,")
     print(f"                  event-catalogue, participant-interaction, nfr")
     print(f"\n  Agent MUST read _manifest.json and use template structures.")
+
+    audit.log_event("scaffold-journey", sys.argv[1:], 0, 0, 0, {
+        "journey_id": journey_id,
+        "slug": journey_slug,
+        "next_phase": next_phase,
+        "next_entity": next_entity,
+        "next_event": next_event,
+    })
 
 
 if __name__ == "__main__":

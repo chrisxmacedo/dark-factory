@@ -8,7 +8,18 @@ central service map.
 Replaces the agent's manual central model updates — the most common
 source of silent failures.
 
-Usage: python3 sync-central-model.py <journey-dir-name>
+six-field spec
+  inputs         argv[1]=journey-slug; reads artefacts/models/<slug>/{data-model,
+                 service-boundaries,events/event-catalogue}.json
+  outputs        writes artefacts/central-model/entities/*.json;
+                 updates central-model/event-catalogue.json and service-map.json
+  preconditions  journey artefacts exist and are schema-valid
+  postconditions every entity from the journey is present in central-model/entities/;
+                 events appended with journey_origin attribution; service map updated
+  idempotency    idempotent on entities (merge by id); append-only on events
+                 (duplicates rejected by name match); idempotent on service map
+  audit events   {script:"sync-central-model", args, exit_code, meta:{entities,
+                 events, service_updates}}
 """
 
 import json
@@ -19,6 +30,9 @@ from pathlib import Path
 ARTEFACTS = Path(__file__).parent.parent / "artefacts"
 MODELS = ARTEFACTS / "models"
 CENTRAL = ARTEFACTS / "central-model"
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import audit  # noqa: E402
 
 RED = "\033[91m"
 GREEN = "\033[92m"
@@ -235,6 +249,12 @@ def main():
     print(f"\n{'='*50}")
     print(f"Sync complete: {ent_count} entities, {evt_count} events, {svc_count} service updates")
     print(f"{'='*50}\n")
+
+    audit.log_event("sync-central-model", sys.argv[1:], 0, 0, 0, {
+        "entities": ent_count,
+        "events": evt_count,
+        "service_updates": svc_count,
+    })
 
 
 if __name__ == "__main__":

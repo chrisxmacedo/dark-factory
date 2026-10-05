@@ -10,6 +10,16 @@ Rules:
 
 Usage: python3 validate-sequences.py <journey-dir-name>
        python3 validate-sequences.py --all
+
+six-field spec
+  inputs         argv[1]=slug|--all; reads sequence-diagrams/*.json; reads
+                 architecture/service-dependencies.json (capability map)
+  outputs        stdout per-arrow OK/VIOLATION; exit 0 pass / 1 violations found
+  preconditions  service-dependencies.json exists (capability map source of truth)
+  postconditions stdout is a reproducible verdict; audit line captures total violations
+  idempotency    idempotent
+  audit events   {script:"validate-sequences", args, exit_code, blockers=violations,
+                 meta:{mode}}
 """
 
 import json
@@ -19,6 +29,9 @@ from pathlib import Path
 
 ARTEFACTS = Path(__file__).parent.parent / "artefacts"
 MODELS = ARTEFACTS / "models"
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import audit  # noqa: E402
 
 RED = "\033[91m"
 YELLOW = "\033[93m"
@@ -324,7 +337,11 @@ def main():
         print(f"{GREEN}PASSED{RESET}: No cross-capability violations")
     print(f"{'='*60}\n")
 
-    sys.exit(1 if total_errors else 0)
+    code = 1 if total_errors else 0
+    mode = "all" if "--all" in sys.argv else (sys.argv[1] if len(sys.argv) > 1 else "")
+    audit.log_event("validate-sequences", sys.argv[1:], code, total_errors, 0,
+                    {"mode": mode})
+    sys.exit(code)
 
 
 if __name__ == "__main__":

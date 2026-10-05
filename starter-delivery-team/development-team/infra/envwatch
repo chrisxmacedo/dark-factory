@@ -8,9 +8,24 @@
 #
 # Only rebuilds environments that are currently running AND have new commits.
 # Replace {PLACEHOLDERS} with your project-specific values before use.
+#
+# six-field spec (per .claude/context/process-spec.md)
+#   inputs         [--interval MIN | --once]; reads PRIMARY_REPO + .envwatch state
+#   outputs        triggers envctl rebuild on stale envs; stdout per-poll log;
+#                  loops unless --once; exit 0 on clean stop
+#   preconditions  Docker running; envctl present; PRIMARY_REPO reachable
+#   postconditions running environments are aligned with latest branch HEAD;
+#                  one audit line per rebuild
+#   idempotency    idempotent — no rebuild when head has not advanced
+#   audit events   {script:"envwatch", args, exit_code, meta:{rebuilt}}
 
 set -euo pipefail
 cd "$(dirname "$0")"
+
+# shellcheck source=audit.sh
+source "$(pwd)/audit.sh"
+audit_capture_args "$@"
+trap 'code=$?; audit_log "envwatch" "$code" 0 0 "{}"; exit $code' EXIT
 
 INTERVAL="${ENVWATCH_INTERVAL:-120}"
 STATE_DIR=".envwatch"

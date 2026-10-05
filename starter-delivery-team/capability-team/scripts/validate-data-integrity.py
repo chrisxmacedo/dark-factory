@@ -17,6 +17,16 @@ Checks:
 Usage: python3 validate-data-integrity.py <journey-slug>
        python3 validate-data-integrity.py --all
        python3 validate-data-integrity.py --all --json  (machine-readable output)
+
+six-field spec
+  inputs         argv: slug | --all [--json]; reads all journey artefacts +
+                 central-model + foundation
+  outputs        stdout human verdict or JSON report; exit 0 pass / 1 integrity errors
+  preconditions  central-model + foundation present
+  postconditions reproducible verdict; audit line captures error+warning counts
+  idempotency    idempotent
+  audit events   {script:"validate-data-integrity", args, exit_code,
+                 blockers=errors, warnings, meta:{mode}}
 """
 
 import json
@@ -29,6 +39,9 @@ ARTEFACTS = Path(__file__).parent.parent / "artefacts"
 MODELS = ARTEFACTS / "models"
 CENTRAL = ARTEFACTS / "central-model"
 FOUNDATION = ARTEFACTS / "foundation"
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import audit  # noqa: E402
 
 RED = "\033[91m"
 YELLOW = "\033[93m"
@@ -555,7 +568,11 @@ def main():
             print(f"\n  {GREEN}PASSED{RESET}: All data integrity checks clean")
         print(f"{'='*60}\n")
 
-    sys.exit(1 if total_errors else 0)
+    code = 1 if total_errors else 0
+    mode = "all" if "--all" in sys.argv else (sys.argv[1] if len(sys.argv) > 1 else "")
+    audit.log_event("validate-data-integrity", sys.argv[1:], code, total_errors,
+                    total_warnings, {"mode": mode})
+    sys.exit(code)
 
 
 if __name__ == "__main__":

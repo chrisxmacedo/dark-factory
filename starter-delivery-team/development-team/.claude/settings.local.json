@@ -3,17 +3,23 @@
     "PostToolUse": [
       {
         "matcher": "Bash",
-        "pattern": "git (commit|push|checkout|merge|branch)",
-        "command": "cd $(git rev-parse --toplevel 2>/dev/null || pwd) && echo '📍 Repo: '$(pwd) && echo '🔗 Remote: '$(git remote get-url origin 2>/dev/null || echo 'no remote')",
-        "description": "Show current repo after git operations to prevent wrong-repo mistakes"
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd $(git rev-parse --toplevel 2>/dev/null || pwd) && echo '📍 Repo: '$(pwd) && echo '🔗 Remote: '$(git remote get-url origin 2>/dev/null || echo 'no remote')"
+          }
+        ]
       }
     ],
     "PreToolUse": [
       {
         "matcher": "Bash",
-        "pattern": "git (push|commit)",
-        "command": "cd $(git rev-parse --toplevel 2>/dev/null || pwd) && pwd && git remote get-url origin 2>/dev/null",
-        "description": "Verify repo identity before commits and pushes"
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd $(git rev-parse --toplevel 2>/dev/null || pwd) && pwd && git remote get-url origin 2>/dev/null"
+          }
+        ]
       }
     ]
   }

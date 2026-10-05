@@ -16,9 +16,17 @@ block a gate — cross-journey refinements are scheduled, not blocking
 Usage: python3 validate-central-model-impact.py <journey-slug>
 
 Exit codes:
-    0 — no impact detected
-    0 — impact detected (still 0; this is informational, not a gate)
+    0 — no impact detected (or impact detected — informational, not a gate)
     2 — usage / inputs missing
+
+six-field spec
+  inputs         argv[1]=journey-slug; reads artefacts/models/<slug>/ + prior journeys
+  outputs        stdout list of prior-journey references per entity/event; exit 0 / 2
+  preconditions  journey artefacts present; prior journeys present in models/
+  postconditions reproducible detection report; audit line captures impacts count
+  idempotency    idempotent — read-only
+  audit events   {script:"validate-central-model-impact", args, exit_code,
+                 meta:{slug, priors_affected, entity_hits, event_hits}}
 """
 
 import json
@@ -28,6 +36,9 @@ from pathlib import Path
 ARTEFACTS = Path(__file__).parent.parent / "artefacts"
 MODELS = ARTEFACTS / "models"
 CENTRAL = ARTEFACTS / "central-model"
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import audit  # noqa: E402
 
 
 def load_journey_data_model(slug):
@@ -114,20 +125,33 @@ def main():
 
     if not impacts:
         print(f"[{slug}] No prior-journey references detected. Safe to sync.")
+        audit.log_event("validate-central-model-impact", sys.argv[1:], 0, 0, 0,
+                        {"slug": slug, "priors_affected": 0})
         return
 
     print(f"[{slug}] CROSS-JOURNEY IMPACT — {len(impacts)} prior journey(s) affected:")
     print()
+    entity_hits = 0
+    event_hits = 0
     for prior_slug, hits in impacts:
         print(f"  Prior journey: {prior_slug}")
         for eid, fpath in hits["entities"]:
             print(f"    entity {eid} referenced in {fpath}")
+            entity_hits += 1
         for evid, fpath in hits["events"]:
             print(f"    event  {evid} referenced in {fpath}")
+            event_hits += 1
         print()
     print("Open a refinement in PIPELINE-STATE.md linking the current")
     print("journey to each affected prior journey. This is informational —")
     print("not a Gate 2 blocker.")
+
+    audit.log_event("validate-central-model-impact", sys.argv[1:], 0, 0, 0, {
+        "slug": slug,
+        "priors_affected": len(impacts),
+        "entity_hits": entity_hits,
+        "event_hits": event_hits,
+    })
 
 
 if __name__ == "__main__":

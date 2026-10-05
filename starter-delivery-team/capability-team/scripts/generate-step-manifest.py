@@ -16,6 +16,15 @@ Output: artefacts/models/{journey}/step-manifest.json
 
 Usage: python3 generate-step-manifest.py <journey-slug>
        python3 generate-step-manifest.py --all
+
+six-field spec
+  inputs         argv: slug | --all; reads journey + central-model artefacts
+  outputs        writes artefacts/models/<slug>/step-manifest.json; stdout summary
+  preconditions  journey directory has journey-detail, API contracts, events, data-model
+  postconditions step-manifest.json exists with per-step I/O, events, lineage
+  idempotency    idempotent — overwrites existing manifest with refreshed content
+  audit events   {script:"generate-step-manifest", args, exit_code:0,
+                 meta:{generated}}
 """
 
 import json
@@ -27,6 +36,9 @@ from collections import defaultdict
 ARTEFACTS = Path(__file__).parent.parent / "artefacts"
 MODELS = ARTEFACTS / "models"
 CENTRAL = ARTEFACTS / "central-model"
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import audit  # noqa: E402
 
 GREEN = "\033[92m"
 YELLOW = "\033[93m"
@@ -723,6 +735,12 @@ def main():
     print(f"\n{'='*60}")
     print(f"Generated {generated} step manifests")
     print(f"{'='*60}\n")
+
+    mode = "all" if "--all" in sys.argv else (sys.argv[1] if len(sys.argv) > 1 else "")
+    audit.log_event("generate-step-manifest", sys.argv[1:], 0, 0, 0, {
+        "mode": mode,
+        "generated": generated,
+    })
 
 
 if __name__ == "__main__":

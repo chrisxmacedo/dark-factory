@@ -11,10 +11,23 @@
 # Supports:
 #   - Python / FastAPI services (detected by main.py at repo root)
 #   - Next.js / TypeScript services (detected by src/ + package.json)
+#
+# six-field spec (per .claude/context/process-spec.md)
+#   inputs         argv[1]=repo path | "all"; reads target repo source tree
+#   outputs        writes REPO_MAP.md to target repo; stdout per-repo summary
+#   preconditions  target repo exists and has one of the recognised stacks
+#   postconditions REPO_MAP.md exists and reflects current source tree
+#   idempotency    idempotent — regenerates from scratch each run
+#   audit events   {script:"repomap", args, exit_code, meta:{target}}
 
 set -euo pipefail
 INFRA_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$INFRA_DIR/.." && pwd)"
+
+# shellcheck source=audit.sh
+source "$INFRA_DIR/audit.sh"
+audit_capture_args "$@"
+trap 'code=$?; audit_log "repomap" "$code" 0 0 "{\"target\":\"${1:-}\"}"; exit $code' EXIT
 
 generate_map() {
   local repo_path="$1"

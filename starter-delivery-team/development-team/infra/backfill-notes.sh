@@ -8,9 +8,23 @@
 # Walks main --first-parent to find:
 #   - RC merges (subject: "Merge release-rc-...")
 # Annotates branch-off points (the ci commit BEFORE each merge/back-merge)
+#
+# six-field spec (per .claude/context/process-spec.md)
+#   inputs         no argv; reads every repo under PROJECT_ROOT with a .git
+#   outputs        writes git notes (refs/notes/commits); stdout per-repo summary
+#   preconditions  PROJECT_ROOT holds sibling git repos; ci + main branches exist
+#   postconditions notes are cleared and rebuilt from first-parent history
+#   idempotency    idempotent — clears then rebuilds to the same terminal state
+#   audit events   {script:"backfill-notes", args, exit_code, meta:{total_notes}}
 
 set -euo pipefail
 cd "$(dirname "$0")"
+
+# shellcheck source=audit.sh
+source "$(pwd)/audit.sh"
+audit_capture_args "$@"
+trap 'code=$?; audit_log "backfill-notes" "$code" 0 0 "{\"total_notes\":${total_notes:-0}}"; exit $code' EXIT
+
 PROJECT_ROOT="$(cd .. && pwd)"
 
 REPOS=()

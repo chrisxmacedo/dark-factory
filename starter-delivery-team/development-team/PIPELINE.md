@@ -54,6 +54,18 @@ Signals are delivered by updating `PIPELINE-STATE.md` (the "Signals
 received" section). The Programme Lead polls this file and the DEV
 Jira project.
 
+Every completion signal is accompanied by a `self-critique.md` block
+in the Deliverable's evidence (per `context/process-spec.md` §4) and a
+corresponding set of entries in `_audit.jsonl` produced by `jiractl`
+and `pipelinectl` during the gate runs. No signal without both.
+
+**Named-process-only during gates.** Jira transitions, branch merges,
+RC cuts, and release tags during any gate window go through
+`infra/jiractl` and `infra/pipelinectl` so the audit log captures
+them. Free `git` and free MCP `transitionJiraIssue` are reserved for
+in-flight work inside a feature branch, never for gate transitions.
+See `context/process-spec.md` §3.
+
 ---
 
 ## Startup checks — run on every new session
@@ -232,6 +244,7 @@ all files on every operation.
 | `context/branching.md` | Team Lead, all teams | When creating branches, committing, or merging |
 | `context/pipeline-stages.md` | Team Lead only | When polling, claiming, spawning, or gating |
 | `context/scripts.md` | Team Lead only | When running jiractl, pipelinectl, or envctl |
+| `context/process-spec.md` | Every team | Authoritative — six-field spec, audit log, named-process-only, self-critique |
 | `context/agent-rules.md` | Team Lead only | When spawning agents or responding to human |
 | `context/defect-handling.md` | Team Lead, test teams, diagnostics | When a test fails or a defect is found |
 | `context/decomposition.md` | Team Lead, refinement team | When creating Deliverables or breaking down Initiatives |

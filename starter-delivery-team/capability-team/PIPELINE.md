@@ -128,6 +128,8 @@ startup checks, then repopulate the state file.
 | `context/architecture-specification.md` | All teams | Authoritative architecture spec |
 | `context/defect-handling.md` | All teams | Any time a step blocks or a review finds issues |
 | `context/best-practices/capability-modelling.md` | Discovery + Journey Modelling | Index — read the per-step files it points to |
+| `context/completeness-validation.md` | Capability Lead, Review Team | Any time a Gate is being evaluated |
+| `context/process-spec.md` | Every team | Authoritative — six-field spec, audit log, named-process-only, self-critique |
 | `context/process-improvements.md` | Capability Lead | Orientation — script inventory, generalised learnings |
 | `workflow-improvements.md` | Capability Lead | Append after every Gate pass |
 | `../.claude/context/jira-lifecycle.md` | Capability Lead | When creating FOUND tickets or MODEL epics |
@@ -153,7 +155,12 @@ projects first.
      In review → Approved → Baselined.
 2. Wait for DISCOVERY COMPLETE signal (covers all six steps).
 3. Verify Gate 1: all foundation artefacts baselined, journey inventory
-   prioritised, FOUND tickets all at Baselined.
+   prioritised, FOUND tickets all at Baselined. **Run
+   `python3 scripts/validate-completeness.py`** — every blocker listed
+   under "Foundation" and "Architecture" must be cleared before Gate 1
+   passes. Capture the output in `PIPELINE-STATE.md` under Gate 1
+   evidence. Warnings are acceptable at Gate 1 (runtime/ops artefacts
+   are authored later) but must be listed so they are not forgotten.
 4. **Create MODEL journey epics** — one Epic per row in
    `artefacts/foundation/journey-inventory.json`, in priority order,
    all in Backlog status. Use MCP `createJiraIssue` with issue type
@@ -197,9 +204,12 @@ For each journey in priority order:
 6. **Capability Lead**: On receiving completion signal, SPAWN
    review-team.md with the journey slug
 7. **Review Team**:
-   a. Stage 1: Runs `validate-journey.py {slug}` and
-      `validate-sequences.py {slug}` (deterministic gates) and writes
-      output to `models/{slug}/evidence/`
+   a. Stage 1: Runs `validate-journey.py {slug}`,
+      `validate-sequences.py {slug}`, and
+      `validate-completeness.py` (deterministic gates) and writes
+      output to `models/{slug}/evidence/`. Any new blockers introduced
+      by this journey must be fixed before Gate 2 can pass; warnings
+      (e.g. new stubs) are surfaced for the next iteration.
    b. Stage 2: Reasoning review (architectural, consistency,
       completeness, buildability) with findings written to
       `models/{slug}/evidence/review-stage2.md`
@@ -237,9 +247,18 @@ with:
 |------|-------------|---------|
 | `validate-journey.txt` | Review Team (Stage 1) | Script stdout + exit code |
 | `validate-sequences.txt` | Review Team (Stage 1) | Script stdout + exit code |
+| `validate-completeness.txt` | Review Team (Stage 1) | Script stdout + exit code; blockers must be 0 |
 | `review-stage2.md` | Review Team (Stage 2) | Reasoning findings per dimension |
 | `central-model-impact.txt` | Capability Lead | `validate-central-model-impact.py` output |
 | `sync-summary.txt` | Journey Modelling Team | `sync-central-model.py` stdout |
+| `self-critique.md` | Every team | Completed checklist from `context/process-spec.md` §4 before signalling COMPLETE |
+
+In addition to per-journey evidence, every script invocation appends a
+line to `artefacts/_audit.jsonl`. Gate 2 is not passed until that log
+contains an entry for each required validator run (see
+`context/process-spec.md` §2). Agents do not edit `_audit.jsonl` —
+the scripts write it; integrity is inspected by grep/jq, not by
+inference.
 
 Gate 2 cannot pass until these files are present and their verdicts
 are explicit. This is the audit trail — the development pipeline
@@ -252,8 +271,10 @@ downstream can read these to verify which checks ran.
 | `scaffold-journey.py` | Capability Lead | Before spawning Journey Modelling Team |
 | `cleanup-ids.py` | Journey Modelling Team | After steps 7-13, before signalling complete |
 | `sync-central-model.py` | Journey Modelling Team | After cleanup, before signalling complete |
+| `generate-sequence-json-stubs.py` | Journey Modelling Team | After authoring any new `.mmd` sequence stub — ensures the paired `.json` exists |
 | `validate-journey.py` | Review Team (Stage 1) | First action on receiving journey for review |
 | `validate-sequences.py` | Review Team (Stage 1) | After validate-journey passes |
+| `validate-completeness.py` | Capability Lead (Gate 1, programme closure), Review Team (per-journey Gate 2) | Gate 1 exit, after each Gate 2, programme closure (`--strict`) |
 | `validate-central-model-impact.py` | Capability Lead | After REVIEW COMPLETE (approved), before Gate 2 |
 
 ### Handoff to DEV — delegated to the Programme Lead
@@ -280,6 +301,8 @@ Your job ends at "Stable + evidence bundle present".
 - All foundation artefacts baselined (including C4 workspace with L1 + L2)
 - Journey inventory prioritised
 - First journey selected
+- `validate-completeness.py` run: zero foundation/architecture blockers
+  (warnings for runtime/ops artefacts are expected at this stage)
 - PIPELINE-STATE.md updated
 - workflow-improvements.md retrospective appended
 - Passed once, never revisited
@@ -288,11 +311,25 @@ Your job ends at "Stable + evidence bundle present".
 - Journey's artefacts (steps 7-13) are all committed and "Stable"
 - Central model updated with journey's entities, services, and events
 - C4 workspace updated
-- `evidence/` folder contains validator outputs and Stage 2 review
+- `evidence/` folder contains validator outputs (including
+  `validate-completeness.txt` with **0 blockers**) and Stage 2 review
+- `artefacts/_audit.jsonl` contains a line per validator run for this
+  journey — agents did not edit artefacts directly during evaluation
+  (named-process-only; see `context/process-spec.md` §3)
+- `evidence/self-critique.md` populated per `context/process-spec.md` §4
 - No blocking refinements outstanding
 - ARTEFACT-MAP.md refreshed
 - workflow-improvements.md retrospective appended
 - Passed per journey — each stable journey is immediately deliverable
+
+### Programme closure (after the last journey)
+- Run `python3 scripts/validate-completeness.py --strict` — exit 0
+  required. Every warning (stubs, optional artefacts, runtime/ops
+  gaps) must have been resolved.
+- This is the signal to the Programme Lead that the specification is
+  complete and ready for the development team's final remainder
+  sweep. Without this green, new DEV Deliverables should not be
+  created.
 
 ## Jira configuration
 

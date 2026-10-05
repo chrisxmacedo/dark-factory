@@ -15,10 +15,30 @@
 #
 # Replace {PLACEHOLDERS} with project-specific values.
 # Requires: jiractl configured with .env.jira
+#
+# six-field spec (per .claude/context/process-spec.md)
+#   inputs         subcommand + ticket key; reads infra/.env.jira; reads SERVICE_REPOS
+#   outputs        Jira transitions, git operations, stdout log; exit 0 pass / 1 fail
+#   preconditions  infra/.env.jira present; Docker running for gate commands; target
+#                  repos clean for merge commands
+#   postconditions ticket is in expected target state; _audit.jsonl has one line per
+#                  gate or transition operation
+#   idempotency    idempotent where the target state equals the current state
+#                  (e.g. merge-to-ci on an already-merged branch is a no-op);
+#                  non-idempotent for cut-rc (creates a new RC number each time)
+#   audit events   {script:"pipelinectl <sub>", args, exit_code, blockers, warnings}
 
 set -euo pipefail
 INFRA_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$INFRA_DIR"
+
+# Audit helper — every subcommand outcome writes one JSONL line via EXIT trap.
+# shellcheck source=audit.sh
+source "$INFRA_DIR/audit.sh"
+audit_capture_args "$@"
+_PCTL_SUB="${1:-unknown}"
+_PCTL_KEY="${2:-}"
+trap 'code=$?; audit_log "pipelinectl $_PCTL_SUB" "$code" 0 0 "{\"ticket\":\"$_PCTL_KEY\"}"; exit $code' EXIT
 
 PROJECT_ROOT="$(cd .. && pwd)"
 JIRACTL="$INFRA_DIR/jiractl"
@@ -96,6 +116,7 @@ cmd_ci_gate() {
   else
     "$JIRACTL" comment "$key" "CI FAILED. Run by pipelinectl."
   fi
+  # The EXIT trap records the final exit code; $all_pass determines it.
   $all_pass
 }
 

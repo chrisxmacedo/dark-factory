@@ -13,9 +13,26 @@
 #   ./envctl urls           Show browsable URLs
 #
 # Replace {PLACEHOLDERS} with your project-specific values before use.
+#
+# six-field spec (per .claude/context/process-spec.md)
+#   inputs         subcommand (up/down/rebuild/status/logs/urls/test) + env
+#                  (ci/rc/prod/all); reads SERVICE_REPOS + port config
+#   outputs        docker-compose up/down/build; stdout status; exit 0/1
+#   preconditions  Docker running; SERVICE_REPOS exist; branches checked out
+#   postconditions requested environment is running / stopped / rebuilt;
+#                  _audit.jsonl has one line per state transition
+#   idempotency    idempotent — up on an already-running env is a no-op
+#   audit events   {script:"envctl <sub>", args, exit_code, meta:{env}}
 
 set -euo pipefail
 cd "$(dirname "$0")"
+
+# shellcheck source=audit.sh
+source "$(pwd)/audit.sh"
+audit_capture_args "$@"
+_ENVCTL_SUB="${1:-unknown}"
+_ENVCTL_ENV="${2:-}"
+trap 'code=$?; audit_log "envctl $_ENVCTL_SUB" "$code" 0 0 "{\"env\":\"$_ENVCTL_ENV\"}"; exit $code' EXIT
 
 PROJECT_ROOT="$(cd .. && pwd)"
 

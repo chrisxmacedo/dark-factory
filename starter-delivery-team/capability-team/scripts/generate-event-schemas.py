@@ -8,6 +8,18 @@ schemas, and produces one .avsc file per event organised by topic.
 Output: artefacts/schemas/events/{topic}/{event-name}.avsc
 
 Usage: python3 generate-event-schemas.py
+
+six-field spec
+  inputs         reads artefacts/models/*/events/event-catalogue.json +
+                 artefacts/central-model/event-catalogue.json
+  outputs        writes artefacts/schemas/events/{topic}/{event-name}.avsc;
+                 stdout per-event summary
+  preconditions  at least one event catalogue exists
+  postconditions every event with a payload_schema has a matching .avsc file;
+                 events without payload_schema are skipped (not failed)
+  idempotency    idempotent — overwrites existing .avsc with identical content
+  audit events   {script:"generate-event-schemas", args, exit_code:0,
+                 meta:{generated, skipped, topics}}
 """
 
 import json
@@ -19,6 +31,9 @@ ARTEFACTS = Path(__file__).parent.parent / "artefacts"
 MODELS = ARTEFACTS / "models"
 CENTRAL = ARTEFACTS / "central-model" / "event-catalogue.json"
 OUTPUT = ARTEFACTS / "schemas" / "events"
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import audit  # noqa: E402
 
 GREEN = "\033[92m"
 YELLOW = "\033[93m"
@@ -246,6 +261,12 @@ def main():
 
     print(f"\nOutput: {OUTPUT}/")
     print(f"{'='*60}\n")
+
+    audit.log_event("generate-event-schemas", sys.argv[1:], 0, 0, 0, {
+        "generated": generated,
+        "skipped": skipped,
+        "topics": len(by_topic),
+    })
 
 
 if __name__ == "__main__":

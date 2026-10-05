@@ -4,9 +4,23 @@
 #
 # Usage: ./verify-placeholders.sh
 # Returns: exit 0 if clean, exit 1 if placeholders remain
+#
+# six-field spec (per .claude/context/process-spec.md)
+#   inputs         no argv; scans dev-team root recursively for known patterns
+#   outputs        stdout list of offending files; exit 0 clean / 1 placeholders remain
+#   preconditions  dev-team root has been populated from the starter template
+#   postconditions verdict is reproducible; one audit line per invocation
+#   idempotency    idempotent — read-only
+#   audit events   {script:"verify-placeholders", args, exit_code, blockers=patterns found}
 
 set -euo pipefail
-cd "$(dirname "$0")/.."
+_INFRA_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$_INFRA_DIR/.."
+
+# shellcheck source=audit.sh
+source "$_INFRA_DIR/audit.sh"
+audit_capture_args "$@"
+trap 'code=$?; audit_log "verify-placeholders" "$code" "${found:-0}" 0 "{}"; exit $code' EXIT
 
 echo "Scanning for unreplaced placeholders..."
 
