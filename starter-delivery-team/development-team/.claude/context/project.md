@@ -31,6 +31,19 @@ standalone repo with its own branches, PRs, and CI configuration.
 
 Only Deliverables trigger the team spawning and gating process.
 
+- **Issue** (hierarchy level 1) is the defect type — there is no separate
+  Bug type. Defects found in the pipeline are raised as Issues.
+
+## Working preferences
+
+Set by `/create-project` from `~/.config/pipeline-toolkit/config.env`
+(answers given to the toolkit's `install.sh`). The Team Lead follows these
+wherever `pipeline-stages.md` says "per Working preferences".
+
+- **Promote to production:** {PROMOTE_POLICY}
+- **After a ticket reaches Done:** {NEXT_TICKET_POLICY}
+- **GitHub issues:** {GITHUB_ISSUES_POLICY}
+
 ## Infrastructure changes
 
 PIPELINE.md / CLAUDE.md changes that affect pipeline operations should be

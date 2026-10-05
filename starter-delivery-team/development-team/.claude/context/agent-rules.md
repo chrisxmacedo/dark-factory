@@ -151,9 +151,26 @@ API shapes, or template patterns. Read first, then write.
 - Always run DB migrations before starting API servers after schema changes:
   - Python: `uv run alembic upgrade head`
   - TypeScript: `npx prisma migrate deploy`
+- **Never check out a different branch in a repo whose dev server is
+  running** — the server keeps serving, its build cache (e.g. `.next`) is
+  corrupted, and the human's environment breaks. Check with `lsof` first; if a
+  server is running, ask before switching.
 - If a `.next` cache exists and the branch has changed, the cache may be
-  stale — but NEVER delete it without human permission (see memory:
-  feedback_never_switch_branches)
+  stale — but NEVER delete it without human permission.
+
+## Working rules (learned in practice)
+
+- **One ticket at a time.** Never batch several tickets into one branch or
+  PR — each gets its own branch, commits and PR, so each can be reviewed,
+  tested and reverted on its own.
+- **Re-query Jira before deciding there is no work.** Tickets get moved by
+  humans between polls; a board that was empty earlier may not be now.
+- **Absolute paths in every bash command.** Each command may run in a fresh
+  shell — start with `cd /absolute/path && …` rather than relying on the
+  previous working directory.
+- **Never dismiss a failure as "pre-existing".** A failing build, test or
+  page render at any stage blocks that stage, whoever introduced it. Fix it
+  or raise an Issue and stop — don't advance past it.
 
 ## Execute first, diagnose on failure
 

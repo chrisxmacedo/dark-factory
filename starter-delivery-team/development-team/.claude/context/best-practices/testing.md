@@ -156,6 +156,12 @@ Mapping scenarios to tests:
 - `next build` (or equivalent) is a test — TypeScript errors caught here may not appear in `npm test`
 - Include build verification in the CI gate, not just unit tests
 - A passing test suite with a failing build is not releasable
+- **Web apps: the production build AND a real page render must pass at every
+  stage** (local, integration, E2E impact, regression, release) — not just
+  once. "Render" means loading the key pages in a browser (Playwright) and
+  asserting on visible content, not just an HTTP 200. Many breakages (bad
+  imports in server components, missing env vars, hydration errors) only show
+  up at render time.
 
 ## Cross-service data contracts
 

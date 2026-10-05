@@ -235,15 +235,22 @@ should ideally run in a fresh session.
 
 ### Step 6 — Human gates
 
-Only ONE human gate remains:
+At most ONE human gate remains, set per Working preferences in `project.md`:
 
-- **Promote to Main** — add comment "✅ Regression complete. Awaiting human
-  approval." Do NOT merge until human replies "Approve promote {PROJECT_KEY}-[key]".
+- **Promote to Main — human approval** (default) — add comment "✅ Regression
+  complete. Awaiting human approval." Do NOT merge until human replies
+  "Approve promote {PROJECT_KEY}-[key]".
+- **Promote to Main — automatic** — when the Regression Team's readiness
+  report is green, comment "✅ Regression complete. Promoting automatically
+  (project preference)." and run `pipelinectl merge-rc`. Any regression
+  failure or readiness warning still stops and waits for the human.
 
 ### Step 7 — Auto-advance next ticket
 
-After a ticket reaches **Done**, automatically pick up the next ticket
-from the Backlog:
+After a ticket reaches **Done**, pick up the next ticket from the Backlog
+— automatically, or only after the human confirms, per Working preferences
+in `project.md`. Either way, query Jira again first; never assume the board
+is empty because it was empty earlier:
 
 1. Poll Backlog for the highest-priority Deliverable:
    `project = {PROJECT_KEY} AND issuetype = Deliverable AND status = "Backlog" ORDER BY priority ASC, created ASC`
