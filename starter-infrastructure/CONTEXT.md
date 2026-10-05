@@ -21,7 +21,7 @@ Declarative infrastructure definitions for production deployments:
 | Deploy serverless functions | starter-serverless (uses this for underlying infra) |
 | Application code and business logic | starter-api, starter-web, starter-worker, etc. |
 | Observability stack configuration | starter-observability (uses this for collector/storage infra) |
-| Docker Compose local environments | starter-team (infra/ directory) |
+| Docker Compose local environments | starter-delivery-team/development-team (infra/ directory) |
 
 **Rule of thumb:** if you are defining what cloud resources exist and how
 they are configured, use starter-infrastructure. If you are writing
@@ -31,7 +31,7 @@ starter.
 ## Compatible starters
 
 - **All service starters** -- infrastructure provisions the compute, database, cache, and storage that services run on
-- **starter-team** -- pipeline orchestration deploys to infrastructure managed by this starter
+- **starter-delivery-team** -- pipeline orchestration deploys to infrastructure managed by this starter
 - **starter-observability** -- infrastructure provisions the collector, storage, and dashboards
 - **starter-serverless** -- Lambda/Workers infrastructure defined here, function code in serverless starter
 

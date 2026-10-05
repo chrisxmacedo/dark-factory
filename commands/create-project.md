@@ -32,7 +32,7 @@ for the user to confirm before moving to the next.
 4. **Create Confluence space** → run `/create-confluence-space`
 5. **Migrate idea to Confluence** → run `/migrate-idea`
 6. **Select architecture** → user picks architecture tier
-7. **Set up pipeline templates** → copy starter-team to project
+7. **Set up pipeline templates** → copy the development-team template to project
 8. **Create service repos** → init git repos for each service
 9. **Set up Docker environments** → configure infra/, tests/, workflows
 10. **Create Jira components** → run `/create-jira-components`
@@ -191,10 +191,17 @@ come from it.
 
 ## Stage 7 — Set up pipeline templates
 
-Copy the starter-team pipeline and agent templates into the project:
+Copy the build-pipeline (development-team) templates into the project:
+
+> This installs the **build pipeline only** (one Jira project, Team Lead at
+> `.claude/CLAUDE.md`). If the project also needs the capability-driven
+> design pipeline (Phases A–C, FOUND/MODEL/DEV Jira projects, Programme Lead),
+> copy the whole `templates/starter-delivery-team/` instead and follow its
+> `CONTEXT.md` → "How to kick off a new project". Ask the user which they want
+> before running this stage.
 
 ```bash
-TEMPLATES_DIR=/Users/christianmacedo/Projects/templates/starter-team
+TEMPLATES_DIR=/Users/christianmacedo/Projects/templates/starter-delivery-team/development-team
 
 # Copy pipeline orchestration (becomes .claude/CLAUDE.md)
 mkdir -p "$PROJECTS_DIR/{name}/.claude"
@@ -328,7 +335,7 @@ EOF
 Tell the user:
 
 > "Pipeline templates installed:
-> - CLAUDE.md and 7 agent team files
+> - CLAUDE.md and 8 agent team files
 > - Context docs (agent rules, pipeline stages, best practices, decomposition)
 > - Hooks (repo verification on git operations)
 > - AGENT-CONTEXT.md (minimal project map for first session)
@@ -348,7 +355,7 @@ and its starter template — iterate over all of them.
 Create each service repo:
 
 ```bash
-TEAM_DIR=/Users/christianmacedo/Projects/templates/starter-team
+TEAM_DIR=/Users/christianmacedo/Projects/templates/starter-delivery-team/development-team
 STARTERS_DIR=/Users/christianmacedo/Projects/templates
 
 for service in {service-1} {service-2} ...; do
@@ -496,7 +503,7 @@ Confirm the push succeeded:
 Copy and customize the Docker infrastructure, test skeleton, and CI workflows:
 
 ```bash
-TEMPLATES_DIR=/Users/christianmacedo/Projects/templates/starter-team
+TEMPLATES_DIR=/Users/christianmacedo/Projects/templates/starter-delivery-team/development-team
 
 # Copy infra/
 cp -r "$TEMPLATES_DIR/infra" "$PROJECTS_DIR/{name}/infra"
@@ -812,7 +819,7 @@ Project {name} created
   Idea         : Projects/{name}/idea-{idea}/
   Service repos: {list of repos with main+ci branches}
   Docker envs  : CI, Test, Prod-parity (infra/)
-  Pipeline     : .claude/CLAUDE.md + 6 agent teams
+  Pipeline     : .claude/CLAUDE.md + 8 agent teams
   Jira         : {JIRA_URL}/jira/software/projects/{key}/board
   Confluence   : {CONFLUENCE_URL}/wiki/spaces/{key}
   Architecture : {selected tier}

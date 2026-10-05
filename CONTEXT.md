@@ -5,7 +5,20 @@ Reusable starter kits for bootstrapping new services and clients. These are scaf
 ## Template catalogue
 
 ### Pipeline orchestration (1 per project)
-- **starter-team/** — Agent team pipeline: Team Lead, 6 specialist teams, Docker Compose environments (CI/Test/Prod-parity), token-saving scripts (jiractl, pipelinectl, envctl), test infrastructure (LLM stub, fixture seeder), GitHub Actions workflows, environment dashboard.
+- **starter-delivery-team/** — End-to-end agent pipeline. Programme Lead (`PIPELINE.md`) orchestrating two sub-pipelines:
+  - **capability-team/** — design pipeline. Capability Lead, 4 specialist teams (discovery, refinement, journey modelling, review), Phases A–C producing JSON system specifications, Python validators/generators (stdlib only, audit-logged to `artefacts/_audit.jsonl`).
+  - **development-team/** — build pipeline. Team Lead, 8 specialist teams (refinement, development, local-test, integration-test, e2e-impact, regression, release, diagnostics), Docker Compose environments (CI/Test/Prod-parity), token-saving scripts (jiractl, pipelinectl, envctl), test infrastructure (LLM stub, fixture seeder), GitHub Actions workflows, environment dashboard. Can be used on its own for a build-only project — this is what `/create-project` installs.
+
+### Reference libraries (read by the delivery team, not copied)
+- **starter-regulations/** — sector-indexed regulations with applicable-country tagging (capability team, Phase A).
+- **starter-standards/** — non-regulatory standards: accessibility, information security, SOC, quality management.
+- **capability-meta-model/** — sector-neutral JSON Schemas for capabilities, journeys, services, events, data stores; the substrate for sector packs.
+- **idea-template/** — product & architecture blueprint template that feeds `/idea` and `/create-project`.
+
+### Guides & commands
+- **development-pipeline-config/** — setup guide for the build pipeline (HTML + single-file Markdown).
+- **capability-pipeline-config/** — methodology guide for the design pipeline.
+- **commands/** — Claude Code slash commands; install by copying to `~/.claude/commands/`.
 
 ### Service starters (1 per service repo)
 - **starter-api/** — REST API backend. Python/FastAPI, Alembic migrations, Supabase auth, structured logging, rate limiting, idempotency middleware, versioned models.
@@ -19,7 +32,7 @@ Reusable starter kits for bootstrapping new services and clients. These are scaf
 - **starter-realtime/** — WebSocket/SSE live updates. Room/channel subscriptions, presence detection, Redis pub/sub for horizontal scaling, backpressure handling.
 - **starter-audit/** — Immutable audit log + compliance. Append-only event store, hash chain tamper detection, retention policies, regulatory query/export.
 
-### Infrastructure (1 per project, alongside starter-team)
+### Infrastructure (1 per project, alongside starter-delivery-team)
 - **starter-observability/** — Observability collection, routing, alerting, dashboards. OTel Collector config, Grafana dashboard templates, Prometheus alert rules, synthetic monitoring. Not a service — infrastructure config only.
 
 ### Client starters (auto-generated from API specs)
@@ -131,10 +144,10 @@ Reusable starter kits for bootstrapping new services and clients. These are scaf
 
 - When creating a new product service, copy from the relevant starter template rather than building from scratch.
 - Each starter has a `CLAUDE.md` with coding conventions — read it before modifying.
-- `starter-team/` provides pipeline orchestration — copy once per project workspace.
+- `starter-delivery-team/` provides pipeline orchestration — copy once per project workspace (or just its `development-team/` for a build-only project).
 - Service starters are copied per service repo within a project.
 - All TypeScript starters share the same patterns: Pino logging, ioredis singleton, Prisma client, OTel instrumentation, health endpoint, graceful shutdown.
-- `starter-observability/` is infrastructure config, not a service — it's integrated into `starter-team/`'s Docker Compose environments.
+- `starter-observability/` is infrastructure config, not a service — it's integrated into `starter-delivery-team/development-team/`'s Docker Compose environments.
 
 ## Compatibility matrix
 

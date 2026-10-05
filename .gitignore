@@ -1,2 +1,12 @@
 starter-api/.claude/worktrees/
 */.claude/worktrees/
+
+# Python bytecode from running capability-team scripts
+__pycache__/
+*.pyc
+
+# macOS
+.DS_Store
+
+# Audit logs written by pipeline scripts when a template is run in place
+_audit.jsonl

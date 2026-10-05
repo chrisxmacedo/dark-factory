@@ -30,10 +30,10 @@ Every ticket flows through a progressive confidence pipeline where specialist ag
 
 ### Starter Templates
 
-All configuration files live in `templates/starter-team/`. When setting up a new project, copy these templates and replace the `{PLACEHOLDER}` values.
+All configuration files live in `templates/starter-delivery-team/development-team/` (the build half of the delivery team; the design half is `starter-delivery-team/capability-team/`). When setting up a new project, copy these templates and replace the `{PLACEHOLDER}` values.
 
 ```
-starter-team/
+development-team/
     PIPELINE.md                         — Team Lead orchestration (becomes .claude/CLAUDE.md)
     ARCHITECTURE.md                     — Technical architecture template
     SOLUTION-ARCHITECT-INPUTS.md        — Inputs checklist
@@ -41,7 +41,7 @@ starter-team/
     .githooks/
         pre-push                        — Prevents direct pushes to main
     .claude/
-        agents/                         — 6 specialist team files
+        agents/                         — 8 specialist team files (refinement, development, local-test, integration-test, e2e-impact, regression, release, diagnostics)
         context/
             project.md                  — Project identity, Jira config, repos
             branching.md                — Branch types, merge rules, no worktrees
@@ -297,7 +297,7 @@ Every Deliverable must include:
 ### Copy Starter Templates
 
 ```bash
-cp -r templates/starter-team/* your-project/
+cp -R templates/starter-delivery-team/development-team/. your-project/   # trailing /. copies dotfiles (.claude, .githooks, .github) too
 ```
 
 ### Replace Placeholders
@@ -772,7 +772,7 @@ Software failures come from undetected problems accumulating across layers. This
 
 ## 12. Updates Since Initial Release
 
-The following features were added after the initial pipeline configuration and are not yet integrated into the sections above. They apply to both the starter-team template and live projects.
+The following features were added after the initial pipeline configuration and are not yet integrated into the sections above. They apply to both the development-team template (`starter-delivery-team/development-team/`) and live projects.
 
 ### 12.1 Diagnostics Team
 

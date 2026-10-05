@@ -1,10 +1,10 @@
-# Pipeline Config/
+# development-pipeline-config/
 
 Step-by-step guide for setting up the Jira + Claude Code development pipeline on a new project. Follow the pages in order.
 
 ## Location
 
-`/Users/christianmacedo/Projects/Pipeline Config/`
+`templates/development-pipeline-config/` in the pipeline-toolkit repo. This supersedes the standalone `/Users/christianmacedo/Projects/Pipeline Config/` folder, which is an older copy of these pages.
 
 ## Contents
 
@@ -17,7 +17,7 @@ Step-by-step guide for setting up the Jira + Claude Code development pipeline on
 - **branching.html** -- Four-branch git model (main, ci, feature/*, release-rc-*)
 - **rationale.html** -- Design decisions, roles, testing strategy, and why each stage exists
 - **lessons.html** -- 25 improvements discovered during real-world usage
-- **pipeline-configuration-guide.md** -- Master reference (superset of the HTML pages in Markdown)
+- **development-pipeline-configuration-guide.md** -- Master reference (superset of the HTML pages in Markdown). Where it differs from the HTML it is newer: 12 statuses ("Selected for Development" removed), Diagnostics Team added
 - **workflow-improvements.md** -- Chronological log of failures, process changes, and lessons
 - **style.css** -- Shared stylesheet for all HTML pages
 
@@ -29,6 +29,5 @@ Essays and styleguides have been moved to `writing/`:
 
 ## For agents
 
-- This is reference documentation, not code. The actual templates to copy live in `templates/starter-team/`.
-- The guide references `starter/starter-team/` -- this maps to `templates/starter-team/` in the workspace.
-- `pipeline-configuration-guide.md` is the single-file version of the full guide, useful when you need to search or quote specific sections.
+- This is reference documentation, not code. The templates to copy live in `templates/starter-delivery-team/development-team/` (build pipeline). The design pipeline is its sibling, `starter-delivery-team/capability-team/`, documented in `templates/capability-pipeline-config/`.
+- `development-pipeline-configuration-guide.md` is the single-file version of the full guide, useful when you need to search or quote specific sections.
