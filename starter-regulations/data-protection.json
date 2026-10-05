@@ -1,0 +1,359 @@
+{
+  "sector": "data-protection",
+  "description": "Privacy and personal data protection laws. Applies across sectors wherever personal data is processed.",
+  "last_reviewed": "2026-04-17",
+  "regulatory_bodies": [
+    { "id": "EDPB", "country": "EU", "name": "European Data Protection Board", "website": "https://edpb.europa.eu/" },
+    { "id": "ICO", "country": "UK", "name": "Information Commissioner's Office", "website": "https://ico.org.uk/" },
+    { "id": "CPPA", "country": "US-CA", "name": "California Privacy Protection Agency", "website": "https://cppa.ca.gov/" },
+    { "id": "HHS-OCR", "country": "US", "name": "HHS Office for Civil Rights (HIPAA)", "website": "https://www.hhs.gov/ocr/" },
+    { "id": "FTC", "country": "US", "name": "Federal Trade Commission (GLBA + Section 5)", "website": "https://www.ftc.gov/" },
+    { "id": "OPC", "country": "CA", "name": "Office of the Privacy Commissioner of Canada", "website": "https://www.priv.gc.ca/" },
+    { "id": "CAI", "country": "CA-QC", "name": "Commission d'accès à l'information du Québec", "website": "https://www.cai.gouv.qc.ca/" },
+    { "id": "OAIC", "country": "AU", "name": "Office of the Australian Information Commissioner", "website": "https://www.oaic.gov.au/" },
+    { "id": "PDPC", "country": "SG", "name": "Personal Data Protection Commission (Singapore)", "website": "https://www.pdpc.gov.sg/" },
+    { "id": "FDPIC", "country": "CH", "name": "Swiss Federal Data Protection and Information Commissioner", "website": "https://www.edoeb.admin.ch/" },
+    { "id": "UAE-DATA-OFFICE", "country": "AE", "name": "UAE Data Office", "website": "https://www.u.ae/" },
+    { "id": "DIFC-CDPO", "country": "AE-DIFC", "name": "DIFC Commissioner of Data Protection", "website": "https://www.difc.ae/" },
+    { "id": "ANPD", "country": "BR", "name": "Autoridade Nacional de Proteção de Dados", "website": "https://www.gov.br/anpd/" }
+  ],
+  "regulations": [
+    {
+      "id": "DP-PII-PRINCIPLES",
+      "name": "Personally Identifiable Information — general handling principles",
+      "abbreviation": "PII",
+      "applicable_countries": ["GLOBAL"],
+      "extra_territorial": false,
+      "adopted_via_national_implementation_in": ["UK", "EU", "US", "CA", "AU", "SG", "CH", "AE", "BR"],
+      "category": "principles",
+      "issuing_body": "Conceptual — incorporated into national data protection regimes",
+      "enforcing_bodies": ["Varies by jurisdiction"],
+      "sector_applicability": ["all"],
+      "summary": "Baseline principles for PII handling, codified in jurisdiction-specific laws.",
+      "key_requirements": [
+        "Classify — identify what constitutes PII in context",
+        "Minimise — collect only what is necessary",
+        "Purpose-limit — use only for the purpose collected",
+        "Retain only as long as necessary",
+        "Secure — encryption at rest and in transit; access control; audit logging",
+        "Support access and correction rights for the individual",
+        "Operate breach notification processes"
+      ],
+      "effective_from": null,
+      "reference_url": "https://www.iso.org/standard/71670.html"
+    },
+    {
+      "id": "DP-EU-GDPR",
+      "name": "General Data Protection Regulation",
+      "abbreviation": "GDPR",
+      "applicable_countries": ["EU"],
+      "extra_territorial": true,
+      "extra_territorial_scope": "Any organisation processing personal data of individuals located in the EU/EEA, regardless of organisation location.",
+      "category": "privacy",
+      "issuing_body": "EU",
+      "enforcing_bodies": ["EDPB", "Member State Data Protection Authorities"],
+      "sector_applicability": ["all"],
+      "summary": "Comprehensive data protection regulation. Principles: lawfulness, fairness, transparency, purpose limitation, data minimisation, accuracy, storage limitation, integrity and confidentiality, accountability.",
+      "key_requirements": [
+        "Lawful basis for processing",
+        "Data subject rights (access, rectification, erasure, portability, restriction, objection)",
+        "DPIAs for high-risk processing",
+        "72h breach notification",
+        "DPO where required",
+        "Records of processing activities (RoPA)",
+        "Privacy by design and default",
+        "International transfer safeguards"
+      ],
+      "effective_from": "2018-05-25",
+      "reference_url": "https://eur-lex.europa.eu/eli/reg/2016/679/oj"
+    },
+    {
+      "id": "DP-UK-GDPR-DPA-2018",
+      "name": "UK GDPR / Data Protection Act 2018",
+      "abbreviation": "UK GDPR",
+      "applicable_countries": ["UK"],
+      "extra_territorial": true,
+      "category": "privacy",
+      "issuing_body": "UK Parliament",
+      "enforcing_bodies": ["ICO"],
+      "sector_applicability": ["all"],
+      "summary": "UK data protection regime post-Brexit. Mirrors EU GDPR substantively with UK-specific derogations.",
+      "key_requirements": [
+        "Core data protection principles as EU GDPR",
+        "Data subject rights",
+        "72h breach notification to ICO",
+        "DPIAs for high-risk processing",
+        "UK-specific derogations for journalism, research, law enforcement"
+      ],
+      "effective_from": "2018-05-25",
+      "reference_url": "https://www.legislation.gov.uk/ukpga/2018/12"
+    },
+    {
+      "id": "DP-US-HIPAA",
+      "name": "Health Insurance Portability and Accountability Act",
+      "abbreviation": "HIPAA",
+      "applicable_countries": ["US"],
+      "category": "health-privacy",
+      "issuing_body": "US Congress (1996)",
+      "enforcing_bodies": ["HHS-OCR", "State Attorneys General"],
+      "sector_applicability": ["healthcare", "health-plans", "healthcare-clearinghouses", "business-associates"],
+      "summary": "US law for Protected Health Information (PHI). Three rules: Privacy, Security, Breach Notification.",
+      "key_requirements": [
+        "Privacy Rule — uses and disclosures of PHI; individual rights",
+        "Security Rule — administrative, physical, technical safeguards for ePHI",
+        "Breach Notification Rule — notify individuals, HHS, media for large breaches",
+        "Business Associate Agreements",
+        "Minimum necessary standard"
+      ],
+      "effective_from": "2003-04-14",
+      "reference_url": "https://www.hhs.gov/hipaa/"
+    },
+    {
+      "id": "DP-US-GLBA",
+      "name": "Gramm-Leach-Bliley Act",
+      "abbreviation": "GLBA",
+      "applicable_countries": ["US"],
+      "category": "financial-privacy",
+      "issuing_body": "US Congress (1999)",
+      "enforcing_bodies": ["FTC", "federal banking agencies", "SEC", "state insurance regulators"],
+      "sector_applicability": ["financial-services"],
+      "summary": "US law requiring financial institutions to safeguard non-public personal information and explain information-sharing practices.",
+      "key_requirements": [
+        "Privacy Rule — notices, opt-out rights",
+        "Safeguards Rule — written information security programme (updated 2023)",
+        "Pretexting prohibitions"
+      ],
+      "effective_from": "1999-11-12",
+      "reference_url": "https://www.ftc.gov/business-guidance/privacy-security/gramm-leach-bliley-act"
+    },
+    {
+      "id": "DP-US-CCPA-CPRA",
+      "name": "California Consumer Privacy Act / California Privacy Rights Act",
+      "abbreviation": "CCPA/CPRA",
+      "applicable_countries": ["US-CA"],
+      "extra_territorial": true,
+      "extra_territorial_scope": "Any for-profit business meeting thresholds that serves California residents.",
+      "category": "privacy",
+      "issuing_body": "California (state law)",
+      "enforcing_bodies": ["CPPA", "California Attorney General"],
+      "sector_applicability": ["businesses-meeting-thresholds"],
+      "summary": "California state privacy law. CPRA amendments effective from 2023 expanded rights and created the CPPA.",
+      "key_requirements": [
+        "Consumer rights: access, deletion, correction, opt-out of sale/sharing, limit use of sensitive PI, portability",
+        "Privacy notices at collection",
+        "Contractual requirements on service providers, contractors, third parties",
+        "Sensitive personal information opt-out",
+        "Risk assessments and cybersecurity audits for certain processing"
+      ],
+      "effective_from": "2020-01-01",
+      "reference_url": "https://cppa.ca.gov/regulations/"
+    },
+    {
+      "id": "DP-US-GINA",
+      "name": "Genetic Information Nondiscrimination Act",
+      "abbreviation": "GINA",
+      "applicable_countries": ["US"],
+      "category": "genetic-privacy",
+      "issuing_body": "US Congress (2008)",
+      "enforcing_bodies": ["EEOC (Title II)", "HHS-OCR (Title I)"],
+      "sector_applicability": ["health-insurance", "employment", "biotechnology"],
+      "summary": "Prohibits discrimination on the basis of genetic information in health insurance (Title I) and employment (Title II).",
+      "key_requirements": [
+        "Health insurers must not use genetic information for coverage or premium decisions",
+        "Employers must not use genetic information in employment decisions",
+        "Restrictions on requesting, requiring, or purchasing genetic information",
+        "Confidentiality of genetic information where lawfully held"
+      ],
+      "effective_from": "2009-11-21",
+      "reference_url": "https://www.eeoc.gov/statutes/genetic-information-nondiscrimination-act-2008"
+    },
+    {
+      "id": "DP-CA-PIPEDA",
+      "name": "Personal Information Protection and Electronic Documents Act",
+      "abbreviation": "PIPEDA",
+      "applicable_countries": ["CA"],
+      "category": "privacy",
+      "issuing_body": "Parliament of Canada (2000)",
+      "enforcing_bodies": ["OPC"],
+      "sector_applicability": ["private-sector", "commercial-activities"],
+      "summary": "Federal Canadian private-sector privacy law. Bill C-27 (Consumer Privacy Protection Act) proposed as successor.",
+      "key_requirements": [
+        "10 fair information principles",
+        "Meaningful consent",
+        "Breach of security safeguards notification when real risk of significant harm",
+        "24-month breach records retention",
+        "Cross-border accountability remains with the Canadian organisation"
+      ],
+      "effective_from": "2001-01-01",
+      "reference_url": "https://www.priv.gc.ca/en/privacy-topics/privacy-laws-in-canada/the-personal-information-protection-and-electronic-documents-act-pipeda/"
+    },
+    {
+      "id": "DP-CA-QUEBEC-LAW-25",
+      "name": "Quebec Law 25 — Act respecting the protection of personal information in the private sector",
+      "abbreviation": "Quebec Law 25",
+      "applicable_countries": ["CA-QC"],
+      "category": "privacy",
+      "issuing_body": "National Assembly of Quebec (2021)",
+      "enforcing_bodies": ["CAI"],
+      "sector_applicability": ["private-sector-with-Quebec-nexus"],
+      "summary": "Quebec's modernised private-sector privacy law. Closer to GDPR than PIPEDA.",
+      "key_requirements": [
+        "Mandatory Privacy Officer designation",
+        "Privacy impact assessments",
+        "Express consent for sensitive information",
+        "Data portability (2024)",
+        "Breach reporting to CAI and affected individuals for serious risk of harm",
+        "Cross-border transfer assessments"
+      ],
+      "effective_from": "2022-09-22",
+      "reference_url": "https://www.cai.gouv.qc.ca/english/"
+    },
+    {
+      "id": "DP-AU-PRIVACY-ACT",
+      "name": "Privacy Act 1988",
+      "abbreviation": "Privacy Act AU",
+      "applicable_countries": ["AU"],
+      "category": "privacy",
+      "issuing_body": "Parliament of Australia",
+      "enforcing_bodies": ["OAIC"],
+      "sector_applicability": ["federal-agencies", "private-sector-over-3m-turnover", "health-service-providers"],
+      "summary": "Australian federal privacy law centred on 13 Australian Privacy Principles. Under substantial reform.",
+      "key_requirements": [
+        "13 APPs",
+        "Notifiable Data Breaches scheme to OAIC and individuals",
+        "Cross-border disclosure accountability",
+        "Sensitive information higher consent standard",
+        "Direct marketing opt-out"
+      ],
+      "effective_from": "1988-12-21",
+      "reference_url": "https://www.oaic.gov.au/privacy/privacy-legislation/the-privacy-act"
+    },
+    {
+      "id": "DP-SG-PDPA",
+      "name": "Personal Data Protection Act 2012 (Singapore)",
+      "abbreviation": "PDPA",
+      "applicable_countries": ["SG"],
+      "category": "privacy",
+      "issuing_body": "Parliament of Singapore",
+      "enforcing_bodies": ["PDPC"],
+      "sector_applicability": ["private-sector"],
+      "summary": "Singapore's personal data law. 2020 amendment introduced mandatory breach notification and enhanced penalties.",
+      "key_requirements": [
+        "9 data protection obligations",
+        "Mandatory breach notification when significant harm or ≥500 individuals",
+        "DPO appointment required",
+        "Consent with deemed consent and exceptions",
+        "Do Not Call provisions"
+      ],
+      "effective_from": "2014-07-02",
+      "reference_url": "https://www.pdpc.gov.sg/overview-of-pdpa/the-legislation/personal-data-protection-act"
+    },
+    {
+      "id": "DP-CH-NFADP",
+      "name": "Swiss Federal Act on Data Protection (revised)",
+      "abbreviation": "nFADP",
+      "applicable_countries": ["CH"],
+      "category": "privacy",
+      "issuing_body": "Swiss Federal Assembly",
+      "enforcing_bodies": ["FDPIC"],
+      "sector_applicability": ["all"],
+      "summary": "Revised Swiss law substantially GDPR-aligned. Applies to natural persons only (legal persons removed).",
+      "key_requirements": [
+        "Data protection principles (GDPR-aligned)",
+        "Register of processing activities",
+        "DPIAs for high-risk processing",
+        "Breach notification to FDPIC as soon as possible",
+        "International transfer safeguards with adequacy list",
+        "Criminal sanctions for individuals (CHF 250,000 fines)"
+      ],
+      "effective_from": "2023-09-01",
+      "reference_url": "https://www.fedlex.admin.ch/eli/cc/2022/491/en"
+    },
+    {
+      "id": "DP-AE-PDPL",
+      "name": "UAE Federal Personal Data Protection Law",
+      "abbreviation": "UAE PDPL",
+      "applicable_countries": ["AE"],
+      "category": "privacy",
+      "issuing_body": "UAE Federal Government (Decree-Law No. 45 of 2021)",
+      "enforcing_bodies": ["UAE-DATA-OFFICE"],
+      "sector_applicability": ["all-onshore-UAE"],
+      "summary": "UAE federal data protection law. Does not apply to DIFC or ADGM (which have separate regimes).",
+      "key_requirements": [
+        "Lawful basis for processing",
+        "Data subject rights",
+        "Cross-border transfer with adequacy list",
+        "DPO for high-risk processing",
+        "DPIAs",
+        "Breach notification"
+      ],
+      "effective_from": "2022-01-02",
+      "reference_url": "https://u.ae/en/about-the-uae/digital-uae/data/data-protection-laws"
+    },
+    {
+      "id": "DP-AE-DIFC-DP",
+      "name": "DIFC Data Protection Law",
+      "abbreviation": "DIFC DP Law",
+      "applicable_countries": ["AE-DIFC"],
+      "category": "privacy",
+      "issuing_body": "DIFC (DIFC Law No. 5 of 2020)",
+      "enforcing_bodies": ["DIFC-CDPO"],
+      "sector_applicability": ["entities-operating-in-DIFC"],
+      "summary": "GDPR-aligned data protection law for DIFC. Regulation 10 governs AI and autonomous systems processing personal data.",
+      "key_requirements": [
+        "GDPR-style principles and rights",
+        "DPO where required",
+        "RoPA",
+        "DPIAs",
+        "72h breach notification",
+        "SCCs / BCRs for cross-border transfers",
+        "Regulation 10 — autonomous systems"
+      ],
+      "effective_from": "2020-07-01",
+      "reference_url": "https://www.difc.ae/business/laws-regulations/data-protection/"
+    },
+    {
+      "id": "DP-AE-ADGM-DP",
+      "name": "ADGM Data Protection Regulations 2021",
+      "abbreviation": "ADGM DP Regs",
+      "applicable_countries": ["AE-ADGM"],
+      "category": "privacy",
+      "issuing_body": "ADGM",
+      "enforcing_bodies": ["ADGM Commissioner of Data Protection"],
+      "sector_applicability": ["entities-operating-in-ADGM"],
+      "summary": "GDPR-aligned data protection regulations for ADGM.",
+      "key_requirements": [
+        "GDPR-style principles and rights",
+        "DPO where required",
+        "RoPA",
+        "DPIAs",
+        "Breach notification",
+        "Cross-border transfer mechanisms"
+      ],
+      "effective_from": "2021-02-14",
+      "reference_url": "https://www.adgm.com/operating-in-adgm/office-of-data-protection"
+    },
+    {
+      "id": "DP-BR-LGPD",
+      "name": "Lei Geral de Proteção de Dados Pessoais",
+      "abbreviation": "LGPD",
+      "applicable_countries": ["BR"],
+      "extra_territorial": true,
+      "category": "privacy",
+      "issuing_body": "Brazilian Congress (Law 13,709/2018)",
+      "enforcing_bodies": ["ANPD"],
+      "sector_applicability": ["all"],
+      "summary": "Brazil's comprehensive data protection law. Substantially GDPR-aligned.",
+      "key_requirements": [
+        "10 legal bases for processing",
+        "Data subject rights",
+        "DPO (Encarregado) appointment",
+        "RIPD for high-risk processing",
+        "Breach notification",
+        "International transfer rules"
+      ],
+      "effective_from": "2020-09-18",
+      "reference_url": "https://www.gov.br/anpd/pt-br/assuntos/nao-organizados/2022-07-27-guia-lgpd.pdf"
+    }
+  ]
+}

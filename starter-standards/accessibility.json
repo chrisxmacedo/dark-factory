@@ -1,0 +1,118 @@
+{
+  "category": "accessibility",
+  "description": "Standards for making digital content and products accessible to people with disabilities. Often referenced by public-sector accessibility regulation (EU Web Accessibility Directive, US Section 508, UK Public Sector Bodies Accessibility Regulations).",
+  "last_reviewed": "2026-04-17",
+  "issuing_bodies": [
+    {
+      "id": "W3C-WAI",
+      "name": "W3C Web Accessibility Initiative",
+      "website": "https://www.w3.org/WAI/",
+      "remit": "Develops accessibility standards and techniques for the web."
+    },
+    {
+      "id": "ISO-IEC",
+      "name": "International Organization for Standardization / International Electrotechnical Commission",
+      "website": "https://www.iso.org/",
+      "remit": "International standards body."
+    }
+  ],
+  "standards": [
+    {
+      "id": "STD-WCAG-2-2",
+      "name": "Web Content Accessibility Guidelines 2.2",
+      "abbreviation": "WCAG 2.2",
+      "issuing_body": "W3C-WAI",
+      "applicable_countries": ["GLOBAL"],
+      "scope_applicability": ["web-content", "web-applications", "mobile-web"],
+      "levels": ["A (minimum)", "AA (most commonly targeted)", "AAA (highest)"],
+      "summary": "Technical standard for web content accessibility. Organised under four principles: Perceivable, Operable, Understandable, Robust (POUR). WCAG 2.2 adds nine success criteria over 2.1 including target size, dragging movements, consistent help, accessible authentication.",
+      "key_principles": [
+        "Perceivable — alternatives for non-text content, captions, adaptability, distinguishable",
+        "Operable — keyboard accessible, enough time, no seizure-inducing content, navigable, input modalities",
+        "Understandable — readable, predictable, input assistance",
+        "Robust — compatible with current and future user tools (including assistive tech)"
+      ],
+      "common_target_level": "AA",
+      "referenced_in_regulation": [
+        "EU Web Accessibility Directive 2016/2102",
+        "EU European Accessibility Act (EAA) 2025",
+        "UK Public Sector Bodies Accessibility Regulations 2018",
+        "US Section 508 (WCAG 2.0 AA baseline)"
+      ],
+      "effective_from": "2023-10-05",
+      "reference_url": "https://www.w3.org/TR/WCAG22/"
+    },
+    {
+      "id": "STD-WCAG-3-DRAFT",
+      "name": "Web Content Accessibility Guidelines 3.0 (draft)",
+      "abbreviation": "WCAG 3.0",
+      "issuing_body": "W3C-WAI",
+      "applicable_countries": ["GLOBAL"],
+      "scope_applicability": ["web-content", "web-applications", "non-web-digital"],
+      "levels": ["draft — new scoring model"],
+      "summary": "Working draft; not a recommendation. Will cover a broader scope than WCAG 2.x including non-web content. Introduces a new outcome-based conformance model.",
+      "key_principles": [
+        "Plain-language guidelines",
+        "Outcomes-based scoring (bronze/silver/gold equivalents)",
+        "Wider scope beyond web pages"
+      ],
+      "common_target_level": "— not yet recommended for adoption",
+      "effective_from": null,
+      "reference_url": "https://www.w3.org/TR/wcag-3.0/"
+    },
+    {
+      "id": "STD-ATAG-2-0",
+      "name": "Authoring Tool Accessibility Guidelines 2.0",
+      "abbreviation": "ATAG 2.0",
+      "issuing_body": "W3C-WAI",
+      "applicable_countries": ["GLOBAL"],
+      "scope_applicability": ["content-authoring-tools", "cms", "wysiwyg-editors"],
+      "levels": ["A", "AA", "AAA"],
+      "summary": "Accessibility requirements for tools that produce web content (e.g. CMS, blog editors, design tools). Two parts: A — authoring tool UI is accessible; B — tool supports production of accessible content.",
+      "key_principles": [
+        "Part A — authoring UI is accessible to disabled authors",
+        "Part B — tool supports authors in creating WCAG-conforming content"
+      ],
+      "common_target_level": "AA",
+      "effective_from": "2015-09-24",
+      "reference_url": "https://www.w3.org/TR/ATAG20/"
+    },
+    {
+      "id": "STD-ARIA-1-2",
+      "name": "Accessible Rich Internet Applications 1.2",
+      "abbreviation": "WAI-ARIA 1.2",
+      "issuing_body": "W3C-WAI",
+      "applicable_countries": ["GLOBAL"],
+      "scope_applicability": ["web-applications", "dynamic-web-content"],
+      "levels": ["Technical specification, no levels"],
+      "summary": "Provides a framework for adding semantics to web applications (roles, states, properties) for assistive technologies. Not a replacement for native HTML semantics.",
+      "key_principles": [
+        "Roles describe what a thing is",
+        "States describe what's happening right now",
+        "Properties describe static characteristics",
+        "Use ARIA only when native HTML lacks the semantic",
+        "'No ARIA is better than bad ARIA'"
+      ],
+      "effective_from": "2023-06-06",
+      "reference_url": "https://www.w3.org/TR/wai-aria-1.2/"
+    },
+    {
+      "id": "STD-EN-301-549",
+      "name": "EN 301 549 — Accessibility requirements for ICT products and services",
+      "abbreviation": "EN 301 549",
+      "issuing_body": "ETSI / CEN / CENELEC",
+      "applicable_countries": ["GLOBAL"],
+      "scope_applicability": ["ICT-products-and-services-in-EU"],
+      "levels": ["Detailed requirements per product category"],
+      "summary": "European harmonised accessibility standard covering ICT products and services. Incorporates WCAG requirements for web content and extends to hardware, software, documentation, and support services. Mandatory reference for EU public-sector procurement.",
+      "key_principles": [
+        "Functional performance statements",
+        "Generic requirements for ICT products",
+        "Category-specific requirements (web, non-web software, hardware, documentation, support, two-way voice, video with audio)",
+        "Incorporates WCAG 2.1 AA (moving to 2.2) for web content"
+      ],
+      "effective_from": "2021-04-01",
+      "reference_url": "https://www.etsi.org/deliver/etsi_en/301500_301599/301549/"
+    }
+  ]
+}

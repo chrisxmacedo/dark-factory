@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "security-model.schema.json",
+  "title": "Security Model",
+  "description": "The organisation-wide security posture: zero-trust controls, service-to-service authentication, data classification policy, and network segmentation. System-level artefact, not capability-scoped — all capabilities inherit from it and their services are classified against it.",
+  "type": "object",
+  "required": [
+    "document_version",
+    "status",
+    "security_posture_controls",
+    "service_to_service_auth",
+    "data_classification",
+    "network_segmentation"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "document_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["Draft", "Review", "Approved", "Superseded"]
+    },
+    "security_posture_controls": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["control_id", "name", "description", "implementation"],
+        "additionalProperties": false,
+        "properties": {
+          "control_id": { "type": "string", "minLength": 1 },
+          "name": { "type": "string", "minLength": 1 },
+          "description": { "type": "string", "minLength": 1 },
+          "implementation": { "type": "string", "minLength": 1 },
+          "dashboard_signal": { "type": "string" },
+          "regulatory_references": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    },
+    "service_to_service_auth": {
+      "type": "object",
+      "required": ["primary_mechanism", "workload_identity", "jwt_propagation", "policy_enforcement"],
+      "additionalProperties": false,
+      "properties": {
+        "primary_mechanism": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Primary service-to-service auth mechanism (e.g. mTLS, SPIFFE, mesh sidecar)."
+        },
+        "workload_identity": {
+          "type": "object",
+          "required": ["standard", "issuer", "certificate_ttl"],
+          "additionalProperties": false,
+          "properties": {
+            "standard": { "type": "string", "minLength": 1 },
+            "issuer": { "type": "string", "minLength": 1 },
+            "certificate_ttl": { "type": "string", "minLength": 1 }
+          }
+        },
+        "jwt_propagation": {
+          "type": "object",
+          "required": ["header", "claims_required", "audience_enforcement"],
+          "additionalProperties": false,
+          "properties": {
+            "header": { "type": "string", "minLength": 1 },
+            "claims_required": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "audience_enforcement": { "type": "boolean" }
+          }
+        },
+        "policy_enforcement": {
+          "type": "object",
+          "required": ["engine", "default_policy", "exceptions_require"],
+          "additionalProperties": false,
+          "properties": {
+            "engine": { "type": "string", "minLength": 1 },
+            "default_policy": { "type": "string", "minLength": 1 },
+            "exceptions_require": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
+    "data_classification": {
+      "type": "object",
+      "required": ["levels", "service_classifications"],
+      "additionalProperties": false,
+      "properties": {
+        "levels": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["level_id", "name", "description", "handling_requirements"],
+            "additionalProperties": false,
+            "properties": {
+              "level_id": { "type": "string", "minLength": 1 },
+              "name": { "type": "string", "minLength": 1 },
+              "description": { "type": "string", "minLength": 1 },
+              "handling_requirements": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            }
+          }
+        },
+        "service_classifications": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["service_id", "data_level", "rationale"],
+            "additionalProperties": false,
+            "properties": {
+              "service_id": { "type": "string", "pattern": "^SVC-[0-9]{3}$" },
+              "service_name": { "type": "string" },
+              "data_level": { "type": "string", "minLength": 1 },
+              "rationale": { "type": "string", "minLength": 1 },
+              "regulatory_scope_flags": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "Pack-specific flags indicating which regulatory scopes a service falls within (e.g. PCI-DSS, HIPAA, GDPR-sensitive)."
+              }
+            }
+          }
+        }
+      }
+    },
+    "network_segmentation": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["zone_id", "name", "description", "services_in_zone", "ingress_policy", "egress_policy"],
+        "additionalProperties": false,
+        "properties": {
+          "zone_id": { "type": "string", "minLength": 1 },
+          "name": { "type": "string", "minLength": 1 },
+          "description": { "type": "string", "minLength": 1 },
+          "services_in_zone": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^SVC-[0-9]{3}$" }
+          },
+          "ingress_policy": { "type": "string", "minLength": 1 },
+          "egress_policy": { "type": "string", "minLength": 1 },
+          "regulated_zone_flags": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Pack-specific flags indicating which regulated zone designations this zone holds (e.g. PCI-DSS-CDE, healthcare-PHI)."
+          }
+        }
+      }
+    },
+    "design_decisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "decision", "rationale"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^DD-[0-9]{3}$" },
+          "decision": { "type": "string", "minLength": 1 },
+          "rationale": { "type": "string", "minLength": 1 },
+          "alternatives_considered": { "type": "array", "items": { "type": "string" } },
+          "rejected_because": { "type": "string" }
+        }
+      }
+    }
+  }
+}

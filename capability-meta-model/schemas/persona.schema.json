@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "persona.schema.json",
+  "title": "Persona",
+  "description": "A named type of actor that interacts with the organisation's capabilities. Personas are either internal (employees, role holders) or external (customers, counterparties, regulators, partners, public). Each persona has a description, the capabilities it accesses, and the channels through which it interacts.",
+  "type": "object",
+  "required": ["persona_id", "name", "type", "subtype", "description"],
+  "additionalProperties": false,
+  "properties": {
+    "persona_id": {
+      "type": "string",
+      "pattern": "^PER-[0-9]{3}$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "type": {
+      "type": "string",
+      "enum": ["internal", "external"]
+    },
+    "subtype": {
+      "type": "string",
+      "enum": ["employee", "customer", "counterparty", "regulator", "partner", "public", "other"]
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "capabilities_accessed": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["capability_id", "purpose"],
+        "additionalProperties": false,
+        "properties": {
+          "capability_id": { "type": "string", "pattern": "^CAP-[0-9]{3}$" },
+          "purpose": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "channels": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["channel_id"],
+        "additionalProperties": false,
+        "properties": {
+          "channel_id": { "type": "string", "pattern": "^CHN-[0-9]{3}$" },
+          "access_purpose": { "type": "string" },
+          "auth_model": { "type": "string" },
+          "rate_limit_class": { "type": "string" },
+          "data_projection": { "type": "string" }
+        }
+      }
+    },
+    "legal_basis": {
+      "type": "string",
+      "description": "Legal basis for the persona's interaction with the organisation (e.g. contract, consent, legitimate interest, statutory obligation). Relevant where data protection or access-rights law applies."
+    },
+    "data_classification_granted": {
+      "type": "string",
+      "enum": ["public", "internal", "confidential", "regulated"]
+    }
+  }
+}

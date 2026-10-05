@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "data-model.schema.json",
+  "title": "Data Model (capability-scoped)",
+  "description": "The canonical data model for a capability. Defines all entities owned by the capability's services. Capability-scoped: every entity belongs to exactly one capability via its owning service. Cross-capability data access is forbidden — if another capability needs access to an entity, it subscribes to events published by the owning service on the bus. Journeys reference entities by ID but do not define them.",
+  "type": "object",
+  "required": ["capability_id", "status", "entities"],
+  "additionalProperties": false,
+  "properties": {
+    "capability_id": {
+      "type": "string",
+      "pattern": "^CAP-[0-9]{3}$",
+      "description": "The capability that owns this data model."
+    },
+    "document_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["Draft", "In review", "Stable", "Revised"]
+    },
+    "design_principle": {
+      "type": "string",
+      "description": "Optional statement of the data-model design principle governing this capability's entities (e.g. aggregate boundaries, ownership rules)."
+    },
+    "entities": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "description", "owning_service", "fields"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^ENT-[0-9]{3}$",
+            "description": "Stable unique identifier within the capability's data model."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Entity name, typically PascalCase."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "What this entity represents in the business domain."
+          },
+          "owning_service": {
+            "type": "string",
+            "pattern": "^SVC-[0-9]{3}$",
+            "description": "The service within this capability that owns the entity. Must resolve to a service in the capability's service-boundaries."
+          },
+          "aggregate_root": {
+            "type": "boolean",
+            "description": "True if this entity is an aggregate root in DDD terms — the consistency boundary for a cluster of related entities."
+          },
+          "fields": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["name", "type"],
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "type": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Logical type (e.g. UUID, string, date, enum, object, array<T>). Not tied to any specific database or language."
+                },
+                "required": { "type": "boolean" },
+                "validation_rule": {
+                  "type": "string",
+                  "description": "Natural-language or formal validation rule."
+                },
+                "source": {
+                  "type": "string",
+                  "description": "Phase or event that supplies this field (e.g. PH-XXX or EVT-XXX)."
+                },
+                "governed_by": {
+                  "type": ["string", "null"],
+                  "description": "Governance rule ID (e.g. GOV-XXX) that applies to this field, if any."
+                },
+                "transparency_note": {
+                  "type": "string",
+                  "description": "How this field is or is not exposed to customers or external participants, where relevant to fair-value or transparency obligations."
+                },
+                "computed_from": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "formula": { "type": "string" },
+                        "source_fields": { "type": "array", "items": { "type": "string" } }
+                      }
+                    },
+                    { "type": "string" },
+                    { "type": "null" }
+                  ]
+                }
+              }
+            }
+          },
+          "relationships": {
+            "type": "array",
+            "description": "References to other entities. Relationships to entities in other capabilities are forbidden — cross-capability data flow is via events only. Relationships here are intra-capability."
+          },
+          "design_decisions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "decision", "rationale"],
+              "additionalProperties": false,
+              "properties": {
+                "id": { "type": "string", "pattern": "^DD-[0-9]{3}$" },
+                "decision": { "type": "string", "minLength": 1 },
+                "rationale": { "type": "string", "minLength": 1 },
+                "alternatives_considered": { "type": "array", "items": { "type": "string" } },
+                "rejected_because": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "sector": "crypto-assets",
+  "description": "Regulation of crypto-assets, stablecoins, and virtual asset service providers. Rapidly evolving — check current status of national regimes.",
+  "last_reviewed": "2026-04-17",
+  "regulatory_bodies": [
+    { "id": "ESMA", "country": "EU", "name": "European Securities and Markets Authority", "website": "https://www.esma.europa.eu/" },
+    { "id": "EBA", "country": "EU", "name": "European Banking Authority", "website": "https://www.eba.europa.eu/" },
+    { "id": "VARA", "country": "AE", "name": "Virtual Assets Regulatory Authority (Dubai)", "website": "https://www.vara.ae/" },
+    { "id": "DFSA", "country": "AE-DIFC", "name": "Dubai Financial Services Authority", "website": "https://www.dfsa.ae/" },
+    { "id": "FSRA", "country": "AE-ADGM", "name": "ADGM Financial Services Regulatory Authority", "website": "https://www.adgm.com/" },
+    { "id": "SCA", "country": "AE", "name": "Securities and Commodities Authority (UAE)", "website": "https://www.sca.gov.ae/" },
+    { "id": "FCA", "country": "UK", "name": "Financial Conduct Authority", "website": "https://www.fca.org.uk/" },
+    { "id": "MAS", "country": "SG", "name": "Monetary Authority of Singapore", "website": "https://www.mas.gov.sg/" }
+  ],
+  "regulations": [
+    {
+      "id": "CRYPTO-EU-MICA",
+      "name": "Markets in Crypto-Assets Regulation",
+      "abbreviation": "MiCA",
+      "applicable_countries": ["EU"],
+      "category": "crypto-assets",
+      "issuing_body": "EU (Regulation 2023/1114)",
+      "enforcing_bodies": ["ESMA", "EBA", "National Competent Authorities"],
+      "sector_applicability": ["crypto-assets", "stablecoins", "crypto-asset-service-providers"],
+      "summary": "Comprehensive regulatory framework for crypto-assets in the EU. Three asset categories: asset-referenced tokens (ART), e-money tokens (EMT), other crypto-assets.",
+      "key_requirements": [
+        "Authorisation for crypto-asset service providers (CASPs)",
+        "White paper requirement for public offers",
+        "Reserve and redemption obligations for stablecoins",
+        "Market abuse prohibitions for crypto-assets",
+        "CASP conduct requirements",
+        "Prudential and operational requirements"
+      ],
+      "effective_from": "2024-12-30",
+      "reference_url": "https://eur-lex.europa.eu/eli/reg/2023/1114/oj"
+    },
+    {
+      "id": "CRYPTO-AE-VARA-RULEBOOK",
+      "name": "VARA Virtual Assets Rulebook",
+      "abbreviation": "VARA Rulebook",
+      "applicable_countries": ["AE"],
+      "category": "virtual-assets",
+      "issuing_body": "VARA",
+      "enforcing_bodies": ["VARA"],
+      "sector_applicability": ["virtual-asset-service-providers-in-Dubai"],
+      "summary": "Dubai-specific virtual asset framework. Separate from DIFC (DFSA) and ADGM (FSRA) regimes.",
+      "key_requirements": [
+        "Licensing across seven activity categories (advisory, broker-dealer, custody, exchange, lending, management, VA issuance)",
+        "Compulsory rulebooks covering market conduct, company, compliance, technology, risk",
+        "Prudential and capital requirements",
+        "AML/CFT consistent with FATF Travel Rule"
+      ],
+      "effective_from": "2023-02-07",
+      "reference_url": "https://www.vara.ae/en/regulations/"
+    }
+  ]
+}

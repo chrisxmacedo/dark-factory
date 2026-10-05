@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "governance.schema.json",
+  "title": "Governance rules (capability-scoped)",
+  "description": "The governance rules applicable to a capability. Capability-scoped: each capability has its own governance file listing the rules it must observe. The rule structure is universal; the rule content (which statutes, which regulators, which obligations) is pack-specific. Journeys reference rule IDs at the phase level via journey-detail.governance_rules; the resolution of those IDs lives here.",
+  "type": "object",
+  "required": ["capability_id", "rules"],
+  "additionalProperties": false,
+  "properties": {
+    "capability_id": {
+      "type": "string",
+      "pattern": "^CAP-[0-9]{3}$"
+    },
+    "document_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["Draft", "In review", "Approved", "Baselined", "Revised"]
+    },
+    "rules": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "source", "description"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^GOV-[0-9]{3}(-R[0-9]{2})?$",
+            "description": "Stable identifier. Plain form GOV-XXX or the GOV-XXX-RYY variant where YY is a sub-rule within a rule set."
+          },
+          "name": { "type": "string", "minLength": 1 },
+          "source": {
+            "type": "object",
+            "required": ["type", "reference"],
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["legislation", "regulation", "standard", "policy", "contract", "charter"]
+              },
+              "reference": { "type": "string", "minLength": 1 },
+              "url_or_doc_ref": { "type": "string" },
+              "jurisdiction": {
+                "type": "string",
+                "description": "Jurisdiction in which the source has legal force, where applicable."
+              },
+              "effective_date": { "type": "string" },
+              "review_cadence": { "type": "string" }
+            }
+          },
+          "description": { "type": "string", "minLength": 1 },
+          "scope": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "applies_to_personas": {
+                "type": "array",
+                "items": { "type": "string", "pattern": "^PER-[0-9]{3}$" }
+              },
+              "applies_to_phases": {
+                "type": "array",
+                "items": { "type": "string", "pattern": "^PH-[0-9]{3}$" }
+              },
+              "applies_to_entities": {
+                "type": "array",
+                "items": { "type": "string", "pattern": "^ENT-[0-9]{3}$" }
+              },
+              "applies_to_events": {
+                "type": "array",
+                "items": { "type": "string", "pattern": "^EVT-[0-9]{3}$" }
+              }
+            }
+          },
+          "enforcement_points": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "The specific phases, services, or controls where the rule is enforced."
+          },
+          "data_requirements": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "retention_requirement": { "type": "string" },
+          "audit_requirement": { "type": "string" },
+          "status_effective": {
+            "type": "string",
+            "enum": ["current", "incoming", "under_review", "superseded"]
+          }
+        }
+      }
+    },
+    "incoming_regulation": {
+      "type": "array",
+      "description": "Rules not yet in force but expected to apply within the planning horizon.",
+      "items": {
+        "type": "object",
+        "required": ["id", "regulation"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "regulation": { "type": "string", "minLength": 1 },
+          "jurisdiction": { "type": "string" },
+          "earliest_effective_date": { "type": "string" },
+          "capability_impact": { "type": "string" },
+          "readiness_assessment": { "type": "string" }
+        }
+      }
+    }
+  }
+}

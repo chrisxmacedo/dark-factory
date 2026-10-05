@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "nfr.schema.json",
+  "title": "Non-Functional Requirements (journey-scoped)",
+  "description": "End-to-end non-functional requirements for a single journey. Journey-scoped: describes the behaviour of the journey as experienced by its triggering persona, not the properties of individual services. Per-service SLAs are declared on technical-service.schema.json and compose into these end-to-end journey NFRs.",
+  "type": "object",
+  "required": ["journey_id", "status", "per_phase_nfrs", "cross_cutting_nfrs"],
+  "additionalProperties": false,
+  "properties": {
+    "journey_id": {
+      "type": "string",
+      "pattern": "^JRN-[0-9]{3}$"
+    },
+    "document_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["Draft", "In review", "Stable", "Revised"]
+    },
+    "per_phase_nfrs": {
+      "type": "array",
+      "description": "NFRs attached to individual phases of the journey.",
+      "items": {
+        "type": "object",
+        "required": ["phase_id"],
+        "additionalProperties": false,
+        "properties": {
+          "phase_id": { "type": "string", "pattern": "^PH-[0-9]{3}$" },
+          "latency_target": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "p50_ms": { "type": ["number", "null"] },
+              "p95_ms": { "type": ["number", "null"] },
+              "p99_ms": { "type": ["number", "null"] }
+            }
+          },
+          "throughput_target": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "peak_rps": { "type": ["number", "null"] },
+              "sustained_rps": { "type": ["number", "null"] }
+            }
+          },
+          "availability_target": { "type": "string" },
+          "notes": { "type": "string" }
+        }
+      }
+    },
+    "cross_cutting_nfrs": {
+      "type": "array",
+      "description": "Journey-wide NFRs (security, privacy, observability, auditability) that span all phases.",
+      "items": {
+        "type": "object",
+        "required": ["id", "category", "requirement"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "category": {
+            "type": "string",
+            "enum": ["security", "privacy", "observability", "auditability", "accessibility", "localisation", "resilience", "other"]
+          },
+          "requirement": { "type": "string", "minLength": 1 },
+          "measured_by": { "type": "string" }
+        }
+      }
+    },
+    "regulatory_slas": {
+      "type": "array",
+      "description": "SLAs imposed by regulation or mandate on the end-to-end journey (e.g. 'APP fraud reimbursement within 5 business days'). Pack-specific content; structure is generic.",
+      "items": {
+        "type": "object",
+        "required": ["id", "requirement"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "source": { "type": "string", "description": "The regulation, rule, or mandate imposing the SLA." },
+          "requirement": { "type": "string", "minLength": 1 },
+          "measured_by": { "type": "string" }
+        }
+      }
+    }
+  }
+}

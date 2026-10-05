@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sub-capability.schema.json",
+  "title": "Sub-capability",
+  "description": "A bounded area of responsibility within a single capability. Sub-capabilities belong to exactly one parent capability — no sub-capability may be shared across capabilities. Each sub-capability carries a promotion_test recording whether it should remain a sub-capability or be promoted to a standalone capability, against four boundary criteria.",
+  "type": "object",
+  "required": ["id", "name", "description", "promotion_test"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^SUB-[0-9]{3}$",
+      "description": "Stable unique identifier for the sub-capability. Format: SUB-XXX where XXX is a zero-padded integer. Sub-capabilities exist in their own namespace, distinct from capabilities (CAP-XXX)."
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable name for the sub-capability."
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "description": "One to three sentence explanation of what the sub-capability is responsible for within its parent capability."
+    },
+    "promotion_test": {
+      "type": "object",
+      "description": "The four-criteria test determining whether this sub-capability should be promoted to a standalone capability. Each criterion is a boolean. criteria_met is the count of true values. promoted is the decision; the prima facie rule is promoted=true if criteria_met>=3, but an override is allowed provided the parent capability records a matching design_decision justifying the deviation.",
+      "required": [
+        "distinct_participants",
+        "separate_regulatory_framework",
+        "distinct_lifecycle",
+        "independent_scalability",
+        "criteria_met",
+        "promoted"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "distinct_participants": {
+          "type": "boolean",
+          "description": "True if the sub-capability involves actors, counterparties, or external participants that do not appear in other sub-capabilities of the parent."
+        },
+        "separate_regulatory_framework": {
+          "type": "boolean",
+          "description": "True if the sub-capability is governed by a body of regulation, standards, or rulebooks that is materially distinct from those governing other sub-capabilities of the parent."
+        },
+        "distinct_lifecycle": {
+          "type": "boolean",
+          "description": "True if the sub-capability has phases of operation (origination, approval, settlement, dispute, closure, etc.) that are not present in the parent capability's other sub-capabilities."
+        },
+        "independent_scalability": {
+          "type": "boolean",
+          "description": "True if the sub-capability's demand drivers and throughput requirements vary independently of the parent capability's broader workload."
+        },
+        "criteria_met": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4,
+          "description": "Count of the four boolean criteria set to true. Must equal the actual count; validators should enforce this."
+        },
+        "promoted": {
+          "type": "boolean",
+          "description": "The decision. If criteria_met >= 3, promoted defaults to true. Any deviation (criteria_met >= 3 but promoted=false, or criteria_met < 3 but promoted=true) requires a corresponding entry in the parent capability's design_decisions explaining the override."
+        },
+        "rationale": {
+          "type": "string",
+          "description": "Free-text explanation of the promotion_test outcome, typically summarising the market evidence and why the boolean criteria are set as they are."
+        }
+      }
+    }
+  }
+}

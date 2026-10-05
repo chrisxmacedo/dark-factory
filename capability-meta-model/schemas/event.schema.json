@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "event.schema.json",
+  "title": "Event (catalogue entry)",
+  "description": "Definition of a single event that flows on the shared event bus. Events are how capabilities communicate with each other — no capability reads another's data store, but any capability may subscribe to events another capability publishes. Each event has an owning service within an owning capability, a payload schema, and one or more consumers.",
+  "type": "object",
+  "required": [
+    "event_id",
+    "name",
+    "source_service",
+    "trigger",
+    "payload_schema",
+    "consumers",
+    "ordering_guarantees",
+    "topic",
+    "data_classification",
+    "retention",
+    "cloudevents_type"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "pattern": "^EVT-[0-9]{3}$"
+    },
+    "name": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Za-z0-9]+(ed|en|n)$",
+      "description": "PascalCase, past tense. Events describe things that have happened (e.g. AccountOpened, PaymentSettled, LoanDecided)."
+    },
+    "source_service": {
+      "type": "string",
+      "pattern": "^SVC-[0-9]{3}$",
+      "description": "The service that publishes this event."
+    },
+    "source_capability": {
+      "type": "string",
+      "pattern": "^CAP-[0-9]{3}$",
+      "description": "The capability the publishing service belongs to."
+    },
+    "source_entity": {
+      "type": "string",
+      "pattern": "^ENT-[0-9]{3}$",
+      "description": "The entity whose state change the event reports. Optional for events that do not correspond to a single entity change."
+    },
+    "trigger": {
+      "type": "string",
+      "minLength": 1,
+      "description": "What causes the event to be published."
+    },
+    "payload_schema": {
+      "type": "object",
+      "description": "The structure of the event payload. Can be an inline JSON Schema or a reference to an external schema."
+    },
+    "derived_from": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "description": "Mapping of payload field paths to source-entity field paths, where the event payload is derived from entity state."
+    },
+    "consumers": {
+      "type": "array",
+      "description": "Services that subscribe to this event. May include services in other capabilities — that is the permitted cross-capability communication pattern.",
+      "items": {
+        "type": "object",
+        "required": ["service_id"],
+        "additionalProperties": false,
+        "properties": {
+          "service_id": { "type": "string", "pattern": "^SVC-[0-9]{3}$" },
+          "capability_id": { "type": "string", "pattern": "^CAP-[0-9]{3}$" },
+          "maps_to": {
+            "type": "object",
+            "additionalProperties": { "type": "string" }
+          }
+        }
+      }
+    },
+    "ordering_guarantees": {
+      "type": "string",
+      "description": "Ordering semantics (e.g. 'per-aggregate', 'per-partition', 'best-effort')."
+    },
+    "topic": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The bus topic or subject on which the event is published."
+    },
+    "data_classification": {
+      "type": "string",
+      "enum": ["public", "internal", "confidential", "regulated"]
+    },
+    "worm_audit_pipeline": {
+      "type": "boolean",
+      "description": "Whether this event must be written to a write-once-read-many audit store for compliance purposes."
+    },
+    "retention": {
+      "type": "string",
+      "description": "Retention period for the event and its payload."
+    },
+    "cloudevents_type": {
+      "type": "string",
+      "description": "The CloudEvents-compliant type value for this event (reverse-DNS style, e.g. com.acme.capability.entity.event)."
+    }
+  }
+}

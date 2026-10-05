@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "api-manifest.schema.json",
+  "title": "API Manifest",
+  "description": "Indexes the OpenAPI and AsyncAPI specifications for a capability or a service. Each capability has a capability-scoped manifest listing its channel-facing OpenAPI spec and its bus-facing AsyncAPI spec. Each service has a service-scoped manifest listing its intra-capability OpenAPI spec and its bus-facing AsyncAPI spec. The manifest does not contain the API definitions themselves — those are standard OpenAPI 3.x and AsyncAPI 2.x files referenced by path. This schema enforces that every capability publishes both a channel API (for external consumers) and an event API (for other capabilities), and that every service publishes equivalent contracts.",
+  "type": "object",
+  "required": ["scope", "owner_id", "document_version", "specs"],
+  "additionalProperties": false,
+  "properties": {
+    "scope": {
+      "type": "string",
+      "enum": ["capability", "service"],
+      "description": "Which kind of thing this manifest belongs to. capability = a capability-level manifest indexing the capability's external contract; service = a service-level manifest indexing one service's contracts."
+    },
+    "owner_id": {
+      "type": "string",
+      "description": "The ID of the capability or service that owns the manifest. Pattern depends on scope: CAP-XXX for capability, SVC-XXX for service.",
+      "oneOf": [
+        { "pattern": "^CAP-[0-9]{3}$" },
+        { "pattern": "^SVC-[0-9]{3}$" }
+      ]
+    },
+    "document_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["Draft", "In review", "Stable", "Revised"]
+    },
+    "specs": {
+      "type": "array",
+      "minItems": 2,
+      "description": "The API specs belonging to this owner. Every manifest must contain at least one OpenAPI spec and one AsyncAPI spec. A capability's OpenAPI spec describes the channel-facing external REST surface; its AsyncAPI spec describes the events it publishes on the bus. A service's OpenAPI spec describes the intra-capability REST calls it accepts; its AsyncAPI spec describes events it publishes and consumes.",
+      "items": {
+        "type": "object",
+        "required": ["kind", "title", "version", "path", "role"],
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": ["openapi", "asyncapi"],
+            "description": "openapi = OpenAPI 3.x REST/HTTP spec; asyncapi = AsyncAPI 2.x event-driven spec."
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Human-readable title for the spec."
+          },
+          "version": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Semantic version of the spec itself."
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Relative path to the spec file from the manifest location."
+          },
+          "format": {
+            "type": "string",
+            "enum": ["yaml", "json"],
+            "description": "File format of the spec."
+          },
+          "role": {
+            "type": "string",
+            "enum": ["channel-facing", "bus-facing", "intra-capability", "consumes"],
+            "description": "The role this spec plays. For a capability: channel-facing OpenAPI, bus-facing AsyncAPI. For a service: intra-capability OpenAPI, bus-facing AsyncAPI (what it publishes), consumes AsyncAPI (what it subscribes to)."
+          },
+          "consumers": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Informational list of known consumers of this spec."
+          },
+          "notes": { "type": "string" }
+        }
+      }
+    }
+  }
+}

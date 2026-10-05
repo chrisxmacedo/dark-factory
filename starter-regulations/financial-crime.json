@@ -1,0 +1,211 @@
+{
+  "sector": "financial-crime",
+  "description": "Anti-money laundering, counter-terrorism financing, counter-proliferation financing, sanctions. Spans banking, payments, crypto, real-estate, legal, accounting, gambling, and high-value-dealer sectors.",
+  "last_reviewed": "2026-04-17",
+  "regulatory_bodies": [
+    { "id": "FATF", "country": "GLOBAL", "name": "Financial Action Task Force", "website": "https://www.fatf-gafi.org/" },
+    { "id": "OFAC-BODY", "country": "US", "name": "US Office of Foreign Assets Control", "website": "https://ofac.treasury.gov/" },
+    { "id": "FINCEN", "country": "US", "name": "Financial Crimes Enforcement Network", "website": "https://www.fincen.gov/" },
+    { "id": "HMT", "country": "UK", "name": "HM Treasury (OFSI — sanctions)", "website": "https://www.gov.uk/government/organisations/office-of-financial-sanctions-implementation" },
+    { "id": "NCA-UKFIU", "country": "UK", "name": "UK Financial Intelligence Unit (NCA)", "website": "https://www.nationalcrimeagency.gov.uk/" },
+    { "id": "FINTRAC", "country": "CA", "name": "Financial Transactions and Reports Analysis Centre of Canada", "website": "https://fintrac-canafe.canada.ca/" },
+    { "id": "AUSTRAC", "country": "AU", "name": "Australian Transaction Reports and Analysis Centre", "website": "https://www.austrac.gov.au/" },
+    { "id": "MROS", "country": "CH", "name": "Money Laundering Reporting Office Switzerland", "website": "https://www.fedpol.admin.ch/fedpol/en/home/kriminalitaet/geldwaescherei.html" },
+    { "id": "COAF", "country": "BR", "name": "Conselho de Controle de Atividades Financeiras", "website": "https://www.gov.br/coaf/" }
+  ],
+  "regulations": [
+    {
+      "id": "FC-FATF-RECOMMENDATIONS",
+      "name": "FATF Recommendations on AML/CFT",
+      "abbreviation": "FATF",
+      "applicable_countries": ["GLOBAL"],
+      "extra_territorial": false,
+      "adopted_via_national_implementation_in": ["UK", "EU", "US", "CA", "AU", "SG", "CH", "AE", "BR"],
+      "category": "standard-setter",
+      "issuing_body": "FATF",
+      "enforcing_bodies": ["FINCEN", "NCA-UKFIU", "FINTRAC", "AUSTRAC", "MROS", "COAF"],
+      "sector_applicability": ["banking", "payments", "crypto-assets", "real-estate", "legal", "accounting", "high-value-goods"],
+      "summary": "40 Recommendations setting the global AML/CFT/CPF standard, adopted into national law by FATF members (200+ jurisdictions via FATF-style regional bodies).",
+      "key_requirements": [
+        "Customer due diligence (CDD)",
+        "Enhanced due diligence for higher-risk customers and PEPs",
+        "Ongoing transaction monitoring",
+        "Suspicious activity reporting",
+        "Record-keeping (typically 5 years+)",
+        "Sanctions screening",
+        "Beneficial ownership identification",
+        "Risk-based approach throughout"
+      ],
+      "effective_from": "2012-02-16",
+      "reference_url": "https://www.fatf-gafi.org/en/publications/Fatfrecommendations/Fatf-recommendations.html"
+    },
+    {
+      "id": "FC-OFAC-SANCTIONS",
+      "name": "OFAC Economic Sanctions Programs",
+      "abbreviation": "OFAC",
+      "applicable_countries": ["US"],
+      "extra_territorial": true,
+      "extra_territorial_scope": "US persons globally; non-US persons with US-nexus transactions (USD clearing, US tech, US persons involved). Secondary sanctions reach further.",
+      "category": "sanctions",
+      "issuing_body": "US Department of the Treasury",
+      "enforcing_bodies": ["OFAC-BODY"],
+      "sector_applicability": ["banking", "payments", "trade", "shipping", "all"],
+      "summary": "Sanctions programs with wide extra-territorial reach through USD clearing and US secondary sanctions.",
+      "key_requirements": [
+        "Screen counterparties against the SDN list and sector-specific lists",
+        "Block transactions and property of designated parties",
+        "Report blocked property and rejected transactions",
+        "Maintain a sanctions compliance programme (OFAC Framework for Compliance Commitments)"
+      ],
+      "effective_from": null,
+      "reference_url": "https://ofac.treasury.gov/sanctions-programs-and-country-information"
+    },
+    {
+      "id": "FC-UK-MLR-2017",
+      "name": "Money Laundering, Terrorist Financing and Transfer of Funds Regulations 2017",
+      "abbreviation": "MLR 2017",
+      "applicable_countries": ["UK"],
+      "category": "aml",
+      "issuing_body": "HMT",
+      "enforcing_bodies": ["FCA", "HMRC", "NCA-UKFIU", "Gambling Commission", "Professional Body Supervisors"],
+      "sector_applicability": ["banking", "payments", "crypto-assets", "legal", "accounting", "high-value-dealers", "gambling"],
+      "summary": "UK implementation of FATF standards. Amended 2022 to cover cryptoasset firms.",
+      "key_requirements": [
+        "CDD on identification and verification",
+        "EDD for PEPs and higher-risk relationships",
+        "Ongoing monitoring and transaction review",
+        "SARs to NCA UKFIU",
+        "Written risk assessment and policies/controls/procedures",
+        "Record-keeping for 5 years after relationship ends",
+        "MLRO appointment"
+      ],
+      "effective_from": "2017-06-26",
+      "reference_url": "https://www.legislation.gov.uk/uksi/2017/692"
+    },
+    {
+      "id": "FC-US-BSA",
+      "name": "Bank Secrecy Act / AML regime",
+      "abbreviation": "BSA/AML",
+      "applicable_countries": ["US"],
+      "extra_territorial": true,
+      "category": "aml",
+      "issuing_body": "US Congress (1970); amended by USA PATRIOT Act (2001), AML Act of 2020",
+      "enforcing_bodies": ["FINCEN", "OCC", "FDIC", "FED", "SEC"],
+      "sector_applicability": ["banking", "broker-dealers", "MSBs", "casinos", "real-estate"],
+      "summary": "Principal US AML framework. AML Act 2020 introduced beneficial ownership reporting via Corporate Transparency Act.",
+      "key_requirements": [
+        "AML programme — internal controls, training, independent testing, compliance officer",
+        "CIP and CDD",
+        "Beneficial Ownership reporting (Corporate Transparency Act)",
+        "SARs within 30 days",
+        "CTRs for cash transactions over $10,000",
+        "Sanctions screening (OFAC)"
+      ],
+      "effective_from": "1970-10-26",
+      "reference_url": "https://www.fincen.gov/resources/statutes-and-regulations/bank-secrecy-act"
+    },
+    {
+      "id": "FC-CA-PCMLTFA",
+      "name": "Proceeds of Crime (Money Laundering) and Terrorist Financing Act",
+      "abbreviation": "PCMLTFA",
+      "applicable_countries": ["CA"],
+      "category": "aml",
+      "issuing_body": "Parliament of Canada",
+      "enforcing_bodies": ["FINTRAC"],
+      "sector_applicability": ["banks", "credit-unions", "MSBs", "life-insurers", "securities-dealers", "real-estate", "casinos", "VASPs"],
+      "summary": "Canada's AML/CFT framework. VASPs added 2020.",
+      "key_requirements": [
+        "Registration (MSBs and VASPs)",
+        "Compliance programme — policies, risk assessment, training, independent review",
+        "CDD and verification",
+        "Beneficial ownership for corporations",
+        "STRs, LCTRs, EFTRs",
+        "Record-keeping (5 years typically)"
+      ],
+      "effective_from": "2001-06-14",
+      "reference_url": "https://fintrac-canafe.canada.ca/reporting-declaration/legislation-eng"
+    },
+    {
+      "id": "FC-AU-AML-CTF-ACT",
+      "name": "Anti-Money Laundering and Counter-Terrorism Financing Act 2006",
+      "abbreviation": "AML/CTF Act",
+      "applicable_countries": ["AU"],
+      "category": "aml",
+      "issuing_body": "Parliament of Australia",
+      "enforcing_bodies": ["AUSTRAC"],
+      "sector_applicability": ["reporting-entities"],
+      "summary": "Australia's AML/CTF framework. Tranche 2 extensions to lawyers, accountants, real estate, trust/company service providers effective 2026.",
+      "key_requirements": [
+        "AML/CTF programme — Part A (enterprise-wide) and Part B (CDD)",
+        "Customer identification and verification",
+        "Ongoing due diligence and transaction monitoring",
+        "SMRs",
+        "TTRs for cash ≥ A$10,000",
+        "IFTI reports",
+        "Enrolment and registration with AUSTRAC"
+      ],
+      "effective_from": "2006-12-12",
+      "reference_url": "https://www.austrac.gov.au/business/how-comply-guidance-and-resources"
+    },
+    {
+      "id": "FC-CH-AMLA",
+      "name": "Anti-Money Laundering Act (Switzerland)",
+      "abbreviation": "AMLA",
+      "applicable_countries": ["CH"],
+      "category": "aml",
+      "issuing_body": "Swiss Federal Assembly",
+      "enforcing_bodies": ["FINMA", "MROS"],
+      "sector_applicability": ["banks", "insurers", "securities-firms", "financial-intermediaries"],
+      "summary": "Swiss AML framework. Amended 2023 to strengthen beneficial ownership transparency.",
+      "key_requirements": [
+        "Financial intermediary affiliation with FINMA-supervised body or SRO",
+        "Identification of contracting party and beneficial owner",
+        "Ongoing due diligence and risk-based approach",
+        "Reporting of suspicions to MROS",
+        "Record-keeping (10 years)"
+      ],
+      "effective_from": "1998-04-01",
+      "reference_url": "https://www.finma.ch/en/enforcement/money-laundering/"
+    },
+    {
+      "id": "FC-AE-DFSA-AML",
+      "name": "DFSA Rulebook — Anti-Money Laundering Module (AML)",
+      "abbreviation": "DFSA AML",
+      "applicable_countries": ["AE-DIFC"],
+      "category": "aml",
+      "issuing_body": "DFSA",
+      "enforcing_bodies": ["DFSA"],
+      "sector_applicability": ["authorised-firms-in-DIFC"],
+      "summary": "AML/CFT rules for DIFC authorised firms — FATF-aligned.",
+      "key_requirements": [
+        "CDD and enhanced due diligence",
+        "Suspicious activity reporting to the FIU",
+        "Sanctions compliance",
+        "MLRO appointment",
+        "Risk-based approach"
+      ],
+      "effective_from": "2004-09-01",
+      "reference_url": "https://www.dfsa.ae/rulebook"
+    },
+    {
+      "id": "FC-BR-LAW-9613",
+      "name": "Brazil — Money Laundering Law (Law 9,613/1998)",
+      "abbreviation": "Law 9613",
+      "applicable_countries": ["BR"],
+      "category": "aml",
+      "issuing_body": "Brazilian Congress",
+      "enforcing_bodies": ["COAF", "BACEN", "CVM"],
+      "sector_applicability": ["financial-institutions", "regulated-professions"],
+      "summary": "Core Brazilian AML legislation. Sector-specific rules via BACEN Circular 3,978 and CVM Resolution 50.",
+      "key_requirements": [
+        "Customer identification and beneficial ownership",
+        "Transaction monitoring and STRs to COAF",
+        "Record-keeping (minimum 5 years)",
+        "Risk-based approach",
+        "Internal controls and training"
+      ],
+      "effective_from": "1998-03-03",
+      "reference_url": "https://www.gov.br/coaf/pt-br"
+    }
+  ]
+}

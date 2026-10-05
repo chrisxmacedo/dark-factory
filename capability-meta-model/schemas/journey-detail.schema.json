@@ -1,0 +1,201 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "journey-detail.schema.json",
+  "title": "Journey detail",
+  "description": "The detailed specification of a single journey. Owned by the journey, not by any capability. Phases decompose the journey into ordered steps; paths describe the happy, alternative, and exception flows through those phases. Entities, services, and events are referenced by ID — they are defined canonically in capability-scoped data-model, service-boundaries, and event-catalogue artifacts, not here.",
+  "type": "object",
+  "required": [
+    "journey_id",
+    "name",
+    "status",
+    "triggering_persona",
+    "capabilities_touched",
+    "phases",
+    "paths"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "journey_id": {
+      "type": "string",
+      "pattern": "^JRN-[0-9]{3}$",
+      "description": "Reference to the journey this artefact details. Must match the journey folder it lives in."
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable journey name. Should match the name in the journey inventory."
+    },
+    "description": {
+      "type": "string",
+      "description": "Expanded description of the journey. Optional here; the authoritative short description is in the journey inventory."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["Draft", "In review", "Stable", "Revised"],
+      "description": "Lifecycle status of this detailed specification."
+    },
+    "document_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "description": "Semantic version of this document."
+    },
+    "triggering_persona": {
+      "type": "string",
+      "pattern": "^PER-[0-9]{3}$",
+      "description": "The primary persona who initiates the journey."
+    },
+    "capabilities_touched": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "description": "Capabilities exercised by this journey. Must match the inventory entry.",
+      "items": { "type": "string", "pattern": "^CAP-[0-9]{3}$" }
+    },
+    "sub_capabilities_involved": {
+      "type": "array",
+      "uniqueItems": true,
+      "description": "Sub-capabilities exercised by this journey.",
+      "items": { "type": "string", "pattern": "^SUB-[0-9]{3}$" }
+    },
+    "phases": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Ordered list of phases decomposing the journey. Each phase represents a distinct step with its own entry/exit conditions.",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "description"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^PH-[0-9]{3}$",
+            "description": "Stable unique phase identifier within this journey."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Human-readable phase name."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "What happens in this phase."
+          },
+          "actors": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Personas or roles that participate in this phase."
+          },
+          "channels": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^CHN-[0-9]{3}$" },
+            "description": "Channels through which actors interact with the capability in this phase."
+          },
+          "services": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^SVC-[0-9]{3}$" },
+            "description": "Services involved in executing this phase. Defined canonically in technical-service files."
+          },
+          "governance_rules": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Governance rule IDs (e.g. GOV-XXX) applicable to this phase. Resolution to rule definitions is pack-specific."
+          },
+          "entry_conditions": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Preconditions that must hold before the phase may begin."
+          },
+          "exit_conditions": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Postconditions produced by successful completion of the phase."
+          },
+          "exit_conditions_failure": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Named failure conditions and their handling."
+          }
+        }
+      }
+    },
+    "paths": {
+      "type": "object",
+      "description": "The flows through the phases. Every journey has a happy path with at least one phase. Alternative paths describe valid variants; exception paths describe failure-handling flows.",
+      "required": ["happy_path", "alternative_paths", "exception_paths"],
+      "additionalProperties": false,
+      "properties": {
+        "happy_path": {
+          "type": "object",
+          "required": ["description", "phases"],
+          "additionalProperties": false,
+          "properties": {
+            "description": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Prose description of the happy path."
+            },
+            "phases": {
+              "type": "array",
+              "minItems": 1,
+              "description": "Ordered list of phase IDs making up the happy path.",
+              "items": { "type": "string", "pattern": "^PH-[0-9]{3}$" }
+            }
+          }
+        },
+        "alternative_paths": {
+          "type": "array",
+          "description": "Valid variant flows. Empty array permitted.",
+          "items": {
+            "type": "object",
+            "required": ["id", "name", "description", "phases"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "name": { "type": "string", "minLength": 1 },
+              "description": { "type": "string", "minLength": 1 },
+              "phases": {
+                "type": "array",
+                "items": { "type": "string", "pattern": "^PH-[0-9]{3}$" }
+              }
+            }
+          }
+        },
+        "exception_paths": {
+          "type": "array",
+          "description": "Failure-handling flows.",
+          "items": {
+            "type": "object",
+            "required": ["id", "name", "description"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "name": { "type": "string", "minLength": 1 },
+              "description": { "type": "string", "minLength": 1 },
+              "phases": {
+                "type": "array",
+                "items": { "type": "string", "pattern": "^PH-[0-9]{3}$" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "design_decisions": {
+      "type": "array",
+      "description": "Journey-level design decisions.",
+      "items": {
+        "type": "object",
+        "required": ["id", "decision", "rationale"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^DD-[0-9]{3}$" },
+          "decision": { "type": "string", "minLength": 1 },
+          "rationale": { "type": "string", "minLength": 1 },
+          "alternatives_considered": { "type": "array", "items": { "type": "string" } },
+          "rejected_because": { "type": "string" }
+        }
+      }
+    }
+  }
+}

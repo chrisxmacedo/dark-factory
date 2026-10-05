@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "event-catalogue.schema.json",
+  "title": "Event Catalogue (capability-scoped)",
+  "description": "The canonical catalogue of events published by a capability's services. Capability-scoped: a capability is the source of record for all events its services emit. Consumers of these events may live in other capabilities — that is the permitted cross-capability communication mechanism. Each entry in the catalogue is a full event definition; the schema uses $ref to event.schema.json.",
+  "type": "object",
+  "required": ["capability_id", "document_version", "status", "events"],
+  "additionalProperties": false,
+  "properties": {
+    "capability_id": {
+      "type": "string",
+      "pattern": "^CAP-[0-9]{3}$"
+    },
+    "document_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["Draft", "In review", "Stable", "Revised"]
+    },
+    "events": {
+      "type": "array",
+      "minItems": 1,
+      "description": "All events published by services belonging to this capability. Every event's source_service must belong to this capability.",
+      "items": { "$ref": "event.schema.json" }
+    }
+  }
+}

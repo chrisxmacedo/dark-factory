@@ -1,0 +1,171 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "observability-model.schema.json",
+  "title": "Observability Model",
+  "description": "The organisation-wide observability posture: log routing, PII scrubbing, fan-out stores, per-service instrumentation obligations, logging schema taxonomy by category, and data freshness contracts. System-level artefact, not capability-scoped — all capabilities inherit from it.",
+  "type": "object",
+  "required": [
+    "document_version",
+    "status",
+    "log_routing_architecture",
+    "per_service_instrumentation_checklist",
+    "logging_schema_by_category",
+    "data_freshness"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "document_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["Draft", "Review", "Approved", "Superseded"]
+    },
+    "log_routing_architecture": {
+      "type": "object",
+      "required": ["ingestion_layer", "pii_scrubbing", "fan_out_stores"],
+      "additionalProperties": false,
+      "properties": {
+        "ingestion_layer": {
+          "type": "object",
+          "required": ["component", "protocol", "rationale"],
+          "additionalProperties": false,
+          "properties": {
+            "component": { "type": "string", "minLength": 1 },
+            "protocol": { "type": "string", "minLength": 1 },
+            "rationale": { "type": "string", "minLength": 1 }
+          }
+        },
+        "pii_scrubbing": {
+          "type": "object",
+          "required": ["stage", "mechanism", "fields_scrubbed", "enforcement"],
+          "additionalProperties": false,
+          "properties": {
+            "stage": { "type": "string", "minLength": 1 },
+            "mechanism": { "type": "string", "minLength": 1 },
+            "fields_scrubbed": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "enforcement": { "type": "string", "minLength": 1 }
+          }
+        },
+        "fan_out_stores": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["name", "purpose", "retention", "access_control"],
+            "additionalProperties": false,
+            "properties": {
+              "name": { "type": "string", "minLength": 1 },
+              "purpose": { "type": "string", "minLength": 1 },
+              "retention": { "type": "string", "minLength": 1 },
+              "access_control": { "type": "string", "minLength": 1 },
+              "worm": { "type": "boolean" },
+              "technology_options": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "per_service_instrumentation_checklist": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Instrumentation obligations every service must meet. Validators for services should check against this list.",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "description", "mandatory"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "name": { "type": "string", "minLength": 1 },
+          "description": { "type": "string", "minLength": 1 },
+          "mandatory": { "type": "boolean" },
+          "standards_reference": { "type": "string" }
+        }
+      }
+    },
+    "logging_schema_by_category": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Structured logging field contracts by service category.",
+      "items": {
+        "type": "object",
+        "required": ["category_id", "category_name", "applies_to_services", "required_fields"],
+        "additionalProperties": false,
+        "properties": {
+          "category_id": { "type": "string", "minLength": 1 },
+          "category_name": { "type": "string", "minLength": 1 },
+          "applies_to_services": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "required_fields": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "$ref": "#/$defs/LogField" }
+          },
+          "extension_fields": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/LogField" }
+          },
+          "critical_rules": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    },
+    "data_freshness": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Freshness contracts for signals feeding dashboards, alerts, or regulatory reports.",
+      "items": {
+        "type": "object",
+        "required": ["contract_id", "signal_name", "source", "max_staleness", "alert_threshold", "rationale"],
+        "additionalProperties": false,
+        "properties": {
+          "contract_id": { "type": "string", "minLength": 1 },
+          "signal_name": { "type": "string", "minLength": 1 },
+          "source": { "type": "string", "minLength": 1 },
+          "max_staleness": { "type": "string", "minLength": 1 },
+          "alert_threshold": { "type": "string", "minLength": 1 },
+          "rationale": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "design_decisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "decision", "rationale"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^DD-[0-9]{3}$" },
+          "decision": { "type": "string", "minLength": 1 },
+          "rationale": { "type": "string", "minLength": 1 },
+          "alternatives_considered": { "type": "array", "items": { "type": "string" } },
+          "rejected_because": { "type": "string" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "LogField": {
+      "type": "object",
+      "required": ["field", "type", "description"],
+      "additionalProperties": false,
+      "properties": {
+        "field": { "type": "string", "minLength": 1 },
+        "type": { "type": "string", "minLength": 1 },
+        "description": { "type": "string", "minLength": 1 },
+        "example": {}
+      }
+    }
+  }
+}

@@ -1,0 +1,125 @@
+{
+  "sector": "health-and-clinical-trials",
+  "description": "Clinical trials conduct, pharmaceutical/medical-device regulation, health data, and genetic privacy. Includes both harmonised international standards adopted as law (ICH) and jurisdiction-specific regimes.",
+  "last_reviewed": "2026-04-17",
+  "regulatory_bodies": [
+    { "id": "ICH", "country": "GLOBAL", "name": "International Council for Harmonisation", "website": "https://www.ich.org/" },
+    { "id": "FDA", "country": "US", "name": "Food and Drug Administration", "website": "https://www.fda.gov/" },
+    { "id": "EMA", "country": "EU", "name": "European Medicines Agency", "website": "https://www.ema.europa.eu/" },
+    { "id": "MHRA", "country": "UK", "name": "Medicines and Healthcare products Regulatory Agency", "website": "https://www.gov.uk/government/organisations/medicines-and-healthcare-products-regulatory-agency" },
+    { "id": "HEALTH-CANADA", "country": "CA", "name": "Health Canada", "website": "https://www.canada.ca/en/health-canada.html" },
+    { "id": "PMDA", "country": "JP", "name": "Japan Pharmaceuticals and Medical Devices Agency", "website": "https://www.pmda.go.jp/english/" },
+    { "id": "SWISSMEDIC", "country": "CH", "name": "Swissmedic", "website": "https://www.swissmedic.ch/" },
+    { "id": "HHS-OCR", "country": "US", "name": "HHS Office for Civil Rights (HIPAA)", "website": "https://www.hhs.gov/ocr/" },
+    { "id": "EEOC", "country": "US", "name": "Equal Employment Opportunity Commission", "website": "https://www.eeoc.gov/" }
+  ],
+  "regulations": [
+    {
+      "id": "HEALTH-ICH-E6-R3",
+      "name": "ICH E6(R3) Good Clinical Practice",
+      "abbreviation": "ICH GCP E6(R3)",
+      "applicable_countries": ["GLOBAL"],
+      "extra_territorial": true,
+      "adopted_via_national_implementation_in": ["US", "EU", "UK", "CA", "CH", "JP", "SG", "BR", "KR", "CN"],
+      "category": "clinical-trials",
+      "issuing_body": "ICH",
+      "enforcing_bodies": ["FDA", "EMA", "MHRA", "PMDA", "SWISSMEDIC", "HEALTH-CANADA"],
+      "sector_applicability": ["clinical-trials", "pharmaceuticals", "medical-devices", "biotechnology"],
+      "summary": "International ethical and scientific quality standard for clinical trial design, conduct, recording, and reporting. R3 (2023) emphasises risk-proportionate quality, data integrity, and a principles-based approach.",
+      "key_requirements": [
+        "Ethical conduct per Declaration of Helsinki",
+        "Informed consent of trial subjects",
+        "Scientific validity of trial design",
+        "Data integrity — ALCOA+",
+        "Quality by design and risk-based quality management",
+        "Sponsor and investigator responsibilities",
+        "Audit trails for all regulated records"
+      ],
+      "effective_from": "2023-11-16",
+      "reference_url": "https://www.ich.org/page/efficacy-guidelines"
+    },
+    {
+      "id": "HEALTH-EU-CTR-536-2014",
+      "name": "EU Clinical Trials Regulation",
+      "abbreviation": "EU CTR",
+      "applicable_countries": ["EU"],
+      "category": "clinical-trials",
+      "issuing_body": "EU (Regulation 536/2014)",
+      "enforcing_bodies": ["EMA", "National Competent Authorities"],
+      "sector_applicability": ["clinical-trials", "pharmaceuticals"],
+      "summary": "Harmonised EU framework for clinical trials, centred on the Clinical Trials Information System (CTIS). Mandatory from January 2023 for new trials.",
+      "key_requirements": [
+        "Single CTIS application for all Member States concerned",
+        "Transparency — trial data published in CTIS",
+        "Coordinated assessment with a Reporting Member State",
+        "Informed consent aligned with GCP and Member State law",
+        "Protocol amendments via CTIS",
+        "Centralised safety reporting (SUSARs, Annual Safety Reports)"
+      ],
+      "effective_from": "2022-01-31",
+      "reference_url": "https://eur-lex.europa.eu/eli/reg/2014/536/oj"
+    },
+    {
+      "id": "HEALTH-US-21-CFR-11",
+      "name": "FDA 21 CFR Part 11 — Electronic Records; Electronic Signatures",
+      "abbreviation": "21 CFR Part 11",
+      "applicable_countries": ["US"],
+      "extra_territorial": true,
+      "extra_territorial_scope": "Applies to any organisation submitting to FDA or holding FDA-regulated records, regardless of location.",
+      "category": "data-integrity",
+      "issuing_body": "FDA",
+      "enforcing_bodies": ["FDA"],
+      "sector_applicability": ["clinical-trials", "pharmaceuticals", "medical-devices", "food", "cosmetics"],
+      "summary": "FDA requirements for electronic records and signatures to be equivalent to paper and handwritten signatures.",
+      "key_requirements": [
+        "Validated systems ensuring accuracy, reliability, consistent performance",
+        "Secure, computer-generated, time-stamped audit trails capturing create/modify/delete",
+        "Record retention per predicate rule; retrievable for inspection",
+        "Access controls limited to authorised individuals",
+        "Electronic signatures with identity verification and non-repudiation",
+        "System documentation control"
+      ],
+      "effective_from": "1997-08-20",
+      "reference_url": "https://www.ecfr.gov/current/title-21/chapter-I/subchapter-A/part-11"
+    },
+    {
+      "id": "HEALTH-US-HIPAA",
+      "name": "Health Insurance Portability and Accountability Act",
+      "abbreviation": "HIPAA",
+      "applicable_countries": ["US"],
+      "category": "health-privacy",
+      "issuing_body": "US Congress (1996)",
+      "enforcing_bodies": ["HHS-OCR", "State Attorneys General"],
+      "sector_applicability": ["healthcare", "health-plans", "healthcare-clearinghouses", "business-associates"],
+      "summary": "US law for Protected Health Information. Also appears in data-protection.json as DP-US-HIPAA (same regulation — listed here for clinical/health context).",
+      "key_requirements": [
+        "Privacy Rule — uses and disclosures of PHI; individual rights",
+        "Security Rule — safeguards for ePHI",
+        "Breach Notification Rule",
+        "Business Associate Agreements",
+        "Minimum necessary standard"
+      ],
+      "effective_from": "2003-04-14",
+      "reference_url": "https://www.hhs.gov/hipaa/"
+    },
+    {
+      "id": "HEALTH-US-GINA",
+      "name": "Genetic Information Nondiscrimination Act",
+      "abbreviation": "GINA",
+      "applicable_countries": ["US"],
+      "category": "genetic-privacy",
+      "issuing_body": "US Congress (2008)",
+      "enforcing_bodies": ["EEOC", "HHS-OCR"],
+      "sector_applicability": ["health-insurance", "employment", "biotechnology"],
+      "summary": "Prohibits discrimination on the basis of genetic information in health insurance and employment. Also appears in data-protection.json (DP-US-GINA).",
+      "key_requirements": [
+        "Health insurers must not use genetic information for coverage / premium decisions",
+        "Employers must not use genetic information in employment decisions",
+        "Restrictions on requesting / requiring / purchasing genetic information",
+        "Confidentiality of genetic information where lawfully held"
+      ],
+      "effective_from": "2009-11-21",
+      "reference_url": "https://www.eeoc.gov/statutes/genetic-information-nondiscrimination-act-2008"
+    }
+  ]
+}

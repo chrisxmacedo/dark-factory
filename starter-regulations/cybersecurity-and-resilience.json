@@ -1,0 +1,358 @@
+{
+  "sector": "cybersecurity-and-resilience",
+  "description": "Cybersecurity obligations and operational resilience requirements. Spans financial services, critical infrastructure, and cross-sector essential-service regimes.",
+  "last_reviewed": "2026-04-17",
+  "regulatory_bodies": [
+    { "id": "ENISA", "country": "EU", "name": "European Union Agency for Cybersecurity", "website": "https://www.enisa.europa.eu/" },
+    { "id": "EBA", "country": "EU", "name": "European Banking Authority", "website": "https://www.eba.europa.eu/" },
+    { "id": "ESMA", "country": "EU", "name": "European Securities and Markets Authority", "website": "https://www.esma.europa.eu/" },
+    { "id": "EIOPA", "country": "EU", "name": "European Insurance and Occupational Pensions Authority", "website": "https://www.eiopa.europa.eu/" },
+    { "id": "NCSC-UK", "country": "UK", "name": "UK National Cyber Security Centre", "website": "https://www.ncsc.gov.uk/" },
+    { "id": "FCA", "country": "UK", "name": "Financial Conduct Authority", "website": "https://www.fca.org.uk/" },
+    { "id": "PRA", "country": "UK", "name": "Prudential Regulation Authority", "website": "https://www.bankofengland.co.uk/prudential-regulation" },
+    { "id": "NYDFS", "country": "US-NY", "name": "New York Department of Financial Services", "website": "https://www.dfs.ny.gov/" },
+    { "id": "OSFI", "country": "CA", "name": "Office of the Superintendent of Financial Institutions", "website": "https://www.osfi-bsif.gc.ca/" },
+    { "id": "APRA", "country": "AU", "name": "Australian Prudential Regulation Authority", "website": "https://www.apra.gov.au/" },
+    { "id": "HOME-AFFAIRS-AU", "country": "AU", "name": "Australian Cyber and Infrastructure Security Centre", "website": "https://www.cisc.gov.au/" },
+    { "id": "MAS", "country": "SG", "name": "Monetary Authority of Singapore", "website": "https://www.mas.gov.sg/" },
+    { "id": "CSA-SG", "country": "SG", "name": "Cyber Security Agency of Singapore", "website": "https://www.csa.gov.sg/" },
+    { "id": "FINMA", "country": "CH", "name": "Swiss Financial Market Supervisory Authority", "website": "https://www.finma.ch/" },
+    { "id": "BACEN", "country": "BR", "name": "Banco Central do Brasil", "website": "https://www.bcb.gov.br/" }
+  ],
+  "regulations": [
+    {
+      "id": "CYBER-EU-DORA",
+      "name": "Digital Operational Resilience Act",
+      "abbreviation": "DORA",
+      "applicable_countries": ["EU"],
+      "extra_territorial": false,
+      "category": "operational-resilience",
+      "issuing_body": "EU (Regulation 2022/2554)",
+      "enforcing_bodies": ["EBA", "ESMA", "EIOPA"],
+      "sector_applicability": ["banking", "insurance", "investment-services", "crypto-assets", "cloud-services-for-financial-services"],
+      "summary": "Harmonised ICT risk framework across EU financial services.",
+      "key_requirements": [
+        "ICT risk management framework",
+        "Major ICT incident classification and reporting",
+        "Digital operational resilience testing including TLPT",
+        "Third-party risk management; register of information",
+        "Oversight regime for critical ICT third-party providers",
+        "Information sharing arrangements"
+      ],
+      "effective_from": "2025-01-17",
+      "reference_url": "https://eur-lex.europa.eu/eli/reg/2022/2554/oj"
+    },
+    {
+      "id": "CYBER-EU-NIS2",
+      "name": "NIS 2 Directive",
+      "abbreviation": "NIS 2",
+      "applicable_countries": ["EU"],
+      "category": "cybersecurity",
+      "issuing_body": "EU (Directive 2022/2555)",
+      "enforcing_bodies": ["ENISA", "National Competent Authorities", "CSIRTs"],
+      "sector_applicability": ["essential-entities", "important-entities (18 sectors)"],
+      "summary": "Updated EU cybersecurity directive with tiered obligations for essential and important entities.",
+      "key_requirements": [
+        "Risk management across 10 areas",
+        "Governance — management body approval and oversight",
+        "Incident reporting — 24h early warning, 72h notification, 1 month final report",
+        "On-site inspections for supervision",
+        "Fines up to €10m or 2% turnover for essential entities"
+      ],
+      "effective_from": "2024-10-18",
+      "reference_url": "https://eur-lex.europa.eu/eli/dir/2022/2555/oj"
+    },
+    {
+      "id": "CYBER-UK-NIS-REGULATIONS",
+      "name": "Network and Information Systems Regulations 2018",
+      "abbreviation": "UK NIS Regs",
+      "applicable_countries": ["UK"],
+      "category": "cybersecurity",
+      "issuing_body": "UK Government (retained from EU NIS Directive)",
+      "enforcing_bodies": ["Sector competent authorities"],
+      "sector_applicability": ["critical-infrastructure", "essential-services", "digital-service-providers"],
+      "summary": "UK cybersecurity obligations for operators of essential services and relevant digital service providers. Under review — NIS 2-equivalent UK Cyber Security and Resilience Bill in development.",
+      "key_requirements": [
+        "Identify and manage security risks",
+        "Appropriate technical and organisational security measures",
+        "Notify significant incidents to competent authority",
+        "Cooperation with audits"
+      ],
+      "effective_from": "2018-05-10",
+      "reference_url": "https://www.legislation.gov.uk/uksi/2018/506"
+    },
+    {
+      "id": "CYBER-UK-OPERATIONAL-RESILIENCE",
+      "name": "FCA/PRA Operational Resilience Policy",
+      "abbreviation": "UK Op Res",
+      "applicable_countries": ["UK"],
+      "category": "operational-resilience",
+      "issuing_body": "FCA / PRA / BOE",
+      "enforcing_bodies": ["FCA", "PRA"],
+      "sector_applicability": ["banking", "insurance", "investment-services", "payments-infrastructure"],
+      "summary": "Firms identify important business services (IBS), set impact tolerances, and demonstrate ability to remain within tolerance through severe but plausible disruption.",
+      "key_requirements": [
+        "Identify IBS",
+        "Set impact tolerances per IBS",
+        "Map resources supporting each IBS",
+        "Scenario testing",
+        "Remain within tolerance by March 2025",
+        "Board-level governance and self-assessment"
+      ],
+      "effective_from": "2022-03-31",
+      "reference_url": "https://www.fca.org.uk/firms/operational-resilience"
+    },
+    {
+      "id": "CYBER-US-NYDFS-PART-500",
+      "name": "NYDFS 23 NYCRR Part 500 — Cybersecurity Regulation",
+      "abbreviation": "NYDFS Part 500",
+      "applicable_countries": ["US-NY"],
+      "category": "cybersecurity",
+      "issuing_body": "NYDFS",
+      "enforcing_bodies": ["NYDFS"],
+      "sector_applicability": ["NYDFS-licensed-financial-services"],
+      "summary": "Cybersecurity requirements for NYDFS-regulated entities. Significant 2023 amendments.",
+      "key_requirements": [
+        "Written cybersecurity programme based on risk assessment",
+        "CISO with board reporting",
+        "MFA for privileged access",
+        "Encryption of non-public information",
+        "Incident notification to NYDFS within 72h; extortion payment notification within 24h",
+        "Annual certification or acknowledgement",
+        "Third-party service provider security policy"
+      ],
+      "effective_from": "2017-03-01",
+      "reference_url": "https://www.dfs.ny.gov/industry_guidance/cybersecurity"
+    },
+    {
+      "id": "CYBER-CA-OSFI-B13",
+      "name": "OSFI Guideline B-13 — Technology and Cyber Risk Management",
+      "abbreviation": "OSFI B-13",
+      "applicable_countries": ["CA"],
+      "category": "cybersecurity",
+      "issuing_body": "OSFI",
+      "enforcing_bodies": ["OSFI"],
+      "sector_applicability": ["federally-regulated-financial-institutions"],
+      "summary": "Principles-based expectations for technology and cyber risk at FRFIs.",
+      "key_requirements": [
+        "Governance — accountable senior officer, board oversight",
+        "Technology risk management framework",
+        "Cyber security controls (identity, data, incident response)",
+        "Technology operations and availability management",
+        "Technology resilience including DR testing",
+        "Third-party technology risk (aligned with B-10)"
+      ],
+      "effective_from": "2024-01-01",
+      "reference_url": "https://www.osfi-bsif.gc.ca/en/guidance/guidance-library/technology-cyber-risk-management"
+    },
+    {
+      "id": "CYBER-CA-OSFI-B10",
+      "name": "OSFI Guideline B-10 — Third-Party Risk Management",
+      "abbreviation": "OSFI B-10",
+      "applicable_countries": ["CA"],
+      "category": "third-party-risk",
+      "issuing_body": "OSFI",
+      "enforcing_bodies": ["OSFI"],
+      "sector_applicability": ["federally-regulated-financial-institutions"],
+      "summary": "Expectations for third-party risk management across the lifecycle.",
+      "key_requirements": [
+        "Risk-proportionate TPRM framework",
+        "Due diligence and risk assessment pre-onboarding",
+        "Written arrangements covering data, subcontracting, audit, exit",
+        "Ongoing monitoring and concentration risk management",
+        "Material third-party incident notification to OSFI"
+      ],
+      "effective_from": "2024-05-01",
+      "reference_url": "https://www.osfi-bsif.gc.ca/en/guidance/guidance-library/third-party-risk-management-guideline"
+    },
+    {
+      "id": "CYBER-AU-CPS-234",
+      "name": "APRA Prudential Standard CPS 234 — Information Security",
+      "abbreviation": "CPS 234",
+      "applicable_countries": ["AU"],
+      "category": "cybersecurity",
+      "issuing_body": "APRA",
+      "enforcing_bodies": ["APRA"],
+      "sector_applicability": ["APRA-regulated-entities"],
+      "summary": "Information security requirements with board-level accountability.",
+      "key_requirements": [
+        "Clear roles and responsibilities",
+        "Information security capability commensurate with threats",
+        "Policy framework",
+        "Asset identification and classification",
+        "Controls including access, encryption, logging",
+        "Incident management; notification to APRA within 72h",
+        "Testing effectiveness of controls",
+        "Internal audit review"
+      ],
+      "effective_from": "2019-07-01",
+      "reference_url": "https://www.apra.gov.au/information-security-cps-234"
+    },
+    {
+      "id": "CYBER-AU-CPS-230",
+      "name": "APRA Prudential Standard CPS 230 — Operational Risk Management",
+      "abbreviation": "CPS 230",
+      "applicable_countries": ["AU"],
+      "category": "operational-resilience",
+      "issuing_body": "APRA",
+      "enforcing_bodies": ["APRA"],
+      "sector_applicability": ["APRA-regulated-entities"],
+      "summary": "Operational risk and resilience framework replacing CPS 231, CPS 232.",
+      "key_requirements": [
+        "Critical operations identified; impact tolerances set",
+        "Operational risk management framework",
+        "Business continuity plans tested to impact tolerance",
+        "Material service provider register; ongoing due diligence",
+        "APRA notification for critical operation disruptions and service provider incidents"
+      ],
+      "effective_from": "2025-07-01",
+      "reference_url": "https://www.apra.gov.au/operational-risk-management-cps-230"
+    },
+    {
+      "id": "CYBER-AU-SOCI",
+      "name": "Security of Critical Infrastructure Act",
+      "abbreviation": "SOCI Act",
+      "applicable_countries": ["AU"],
+      "category": "critical-infrastructure",
+      "issuing_body": "Parliament of Australia",
+      "enforcing_bodies": ["HOME-AFFAIRS-AU"],
+      "sector_applicability": ["11-critical-infrastructure-sectors"],
+      "summary": "Framework protecting critical infrastructure across 11 sectors.",
+      "key_requirements": [
+        "Critical infrastructure asset register",
+        "Mandatory cyber incident reporting (12h critical, 72h other)",
+        "Positive Security Obligations — risk management programme",
+        "Government assistance powers",
+        "Systems of National Significance — enhanced obligations"
+      ],
+      "effective_from": "2018-07-11",
+      "reference_url": "https://www.cisc.gov.au/legislation-regulation-and-compliance/soci-act-2018"
+    },
+    {
+      "id": "CYBER-SG-MAS-TRM",
+      "name": "MAS Technology Risk Management Guidelines",
+      "abbreviation": "MAS TRM",
+      "applicable_countries": ["SG"],
+      "category": "technology-risk",
+      "issuing_body": "MAS",
+      "enforcing_bodies": ["MAS"],
+      "sector_applicability": ["MAS-regulated-financial-institutions"],
+      "summary": "Principles for sound technology risk management. 2021 enhancements.",
+      "key_requirements": [
+        "Board and senior management oversight",
+        "Technology risk governance and framework",
+        "IT project management and SDLC",
+        "IT service management",
+        "System reliability, availability, recoverability",
+        "Access, network, data security and cryptography",
+        "Cyber security — intelligence, defence, detection, response",
+        "Payment card security"
+      ],
+      "effective_from": "2021-01-18",
+      "reference_url": "https://www.mas.gov.sg/regulation/guidelines/technology-risk-management-guidelines"
+    },
+    {
+      "id": "CYBER-SG-MAS-NOTICE-655",
+      "name": "MAS Notice 655 — Cyber Hygiene",
+      "abbreviation": "MAS Notice 655",
+      "applicable_countries": ["SG"],
+      "category": "cybersecurity",
+      "issuing_body": "MAS",
+      "enforcing_bodies": ["MAS"],
+      "sector_applicability": ["banks"],
+      "summary": "Mandatory cyber hygiene practices for banks (similar notices apply to other MAS-regulated sectors).",
+      "key_requirements": [
+        "Secure administrative accounts",
+        "Timely security patching",
+        "Security standards from industry",
+        "Network perimeter defence",
+        "Malware protection",
+        "MFA for privileged / critical accounts"
+      ],
+      "effective_from": "2020-08-06",
+      "reference_url": "https://www.mas.gov.sg/regulation/notices/notice-655"
+    },
+    {
+      "id": "CYBER-SG-MAS-OUTSOURCING",
+      "name": "MAS Guidelines on Outsourcing",
+      "abbreviation": "MAS Outsourcing",
+      "applicable_countries": ["SG"],
+      "category": "third-party-risk",
+      "issuing_body": "MAS",
+      "enforcing_bodies": ["MAS"],
+      "sector_applicability": ["MAS-regulated-financial-institutions"],
+      "summary": "Principles for managing outsourcing (including cloud) risks.",
+      "key_requirements": [
+        "Board and senior management responsibility",
+        "Written arrangements covering data, audit rights, BCM, exit, subcontracting",
+        "Risk assessment and ongoing due diligence",
+        "MAS notification for material outsourcing",
+        "Material outsourcing register"
+      ],
+      "effective_from": "2018-10-05",
+      "reference_url": "https://www.mas.gov.sg/regulation/guidelines/guidelines-on-outsourcing"
+    },
+    {
+      "id": "CYBER-SG-CYBERSEC-ACT",
+      "name": "Singapore Cybersecurity Act",
+      "abbreviation": "SG Cybersecurity Act",
+      "applicable_countries": ["SG"],
+      "category": "critical-infrastructure",
+      "issuing_body": "Parliament of Singapore",
+      "enforcing_bodies": ["CSA-SG"],
+      "sector_applicability": ["critical-information-infrastructure"],
+      "summary": "Protects Critical Information Infrastructure across 11 sectors.",
+      "key_requirements": [
+        "CII designation and owner obligations",
+        "Cybersecurity codes of practice",
+        "Incident reporting to Commissioner",
+        "Audits and risk assessments",
+        "Licensing of cybersecurity service providers"
+      ],
+      "effective_from": "2018-08-31",
+      "reference_url": "https://www.csa.gov.sg/legislation/cybersecurity-act"
+    },
+    {
+      "id": "CYBER-CH-FINMA-CIRC-2023-1",
+      "name": "FINMA Circular 2023/1 — Operational Risk and Resilience (banks)",
+      "abbreviation": "FINMA Circ 2023/1",
+      "applicable_countries": ["CH"],
+      "category": "operational-resilience",
+      "issuing_body": "FINMA",
+      "enforcing_bodies": ["FINMA"],
+      "sector_applicability": ["banks", "securities-firms"],
+      "summary": "Principles-based operational risk and resilience requirements.",
+      "key_requirements": [
+        "ICT risk management framework",
+        "Cyber risk management — protect, detect, respond, recover",
+        "Critical data management",
+        "Business continuity management with critical function identification",
+        "Operational resilience — critical function disruption tolerance within 2 years",
+        "Incident reporting to FINMA"
+      ],
+      "effective_from": "2024-01-01",
+      "reference_url": "https://www.finma.ch/en/documentation/circulars/"
+    },
+    {
+      "id": "CYBER-BR-BACEN-4893",
+      "name": "BACEN Resolution 4,893 — Cybersecurity and Cloud Services",
+      "abbreviation": "BACEN Cyber",
+      "applicable_countries": ["BR"],
+      "category": "cybersecurity",
+      "issuing_body": "BACEN / CMN",
+      "enforcing_bodies": ["BACEN"],
+      "sector_applicability": ["financial-institutions", "payment-institutions"],
+      "summary": "Cybersecurity policy and requirements for use of data processing, data storage, and cloud services. Successor to Resolution 4,658.",
+      "key_requirements": [
+        "Cybersecurity policy approved by board",
+        "Controls and incident response plan",
+        "Due diligence on service providers including cloud",
+        "BACEN prior notification for material cloud contracting",
+        "Data location / cross-border rules by criticality",
+        "Periodic testing including penetration testing"
+      ],
+      "effective_from": "2021-05-14",
+      "reference_url": "https://www.bcb.gov.br/"
+    }
+  ]
+}

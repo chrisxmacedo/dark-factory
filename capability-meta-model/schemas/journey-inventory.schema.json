@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "journey-inventory.schema.json",
+  "title": "Journey Inventory",
+  "description": "The registry of all business journeys in the organisation. A journey is a discrete end-to-end scenario in which a persona achieves a goal by exercising one or more capabilities. Journeys are the primary unit of behavioural modelling and the thing against which an organisation delivers. The inventory is a flat list: each entry summarises a journey and references the capabilities and sub-capabilities it exercises.",
+  "type": "object",
+  "required": ["document_version", "status", "journeys"],
+  "additionalProperties": false,
+  "properties": {
+    "document_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "description": "Semantic version of this inventory document."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["Draft", "Review", "Approved", "Superseded"],
+      "description": "Lifecycle status of the inventory."
+    },
+    "recommended_first_journey": {
+      "type": "object",
+      "description": "Optional. The journey an event-storming programme should model first. Usually chosen because it establishes the foundational domain entities the greatest number of other journeys depend on.",
+      "required": ["id", "rationale"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^JRN-[0-9]{3}$",
+          "description": "JRN-XXX reference to a journey in the journeys array."
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Why this journey should be modelled first."
+        }
+      }
+    },
+    "journeys": {
+      "type": "array",
+      "minItems": 1,
+      "description": "All identified business journeys. Ordering is informational; use priority and depends_on_journeys for sequencing decisions.",
+      "items": { "$ref": "#/$defs/Journey" }
+    }
+  },
+  "$defs": {
+    "Journey": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "description",
+        "triggering_persona",
+        "capabilities_touched",
+        "sub_capabilities_involved",
+        "cross_capability",
+        "priority",
+        "priority_rationale",
+        "estimated_complexity",
+        "happy_path_summary",
+        "depends_on_journeys"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^JRN-[0-9]{3}$",
+          "description": "Stable unique identifier. Format: JRN-XXX."
+        },
+        "name": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 100,
+          "description": "Short human-readable name."
+        },
+        "description": {
+          "type": "string",
+          "minLength": 20,
+          "description": "One to three sentence explanation of the journey scope: who, what, and why. Includes the regulatory or commercial driver where material."
+        },
+        "triggering_persona": {
+          "type": "string",
+          "pattern": "^PER-[0-9]{3}$",
+          "description": "The primary persona who initiates the journey. References a persona ID."
+        },
+        "capabilities_touched": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "description": "Top-level capabilities exercised by this journey. At least one required.",
+          "items": { "type": "string", "pattern": "^CAP-[0-9]{3}$" }
+        },
+        "sub_capabilities_involved": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "description": "Sub-capabilities exercised by this journey. Each must belong to one of the capabilities in capabilities_touched.",
+          "items": { "type": "string", "pattern": "^SUB-[0-9]{3}$" }
+        },
+        "cross_capability": {
+          "type": "boolean",
+          "description": "True if the journey exercises sub-capabilities from two or more top-level capabilities. Validators should enforce consistency with capabilities_touched."
+        },
+        "priority": {
+          "type": "string",
+          "enum": ["critical", "high", "medium", "low"],
+          "description": "Delivery priority tier. critical = the organisation cannot legally or operationally function without it; high = significant commercial or regulatory weight; medium = material but not blocking; low = deferrable without consequence."
+        },
+        "priority_rationale": {
+          "type": "string",
+          "minLength": 20,
+          "description": "Explanation of the priority assignment, citing the specific driver."
+        },
+        "estimated_complexity": {
+          "type": "string",
+          "enum": ["simple", "moderate", "complex"],
+          "description": "Indicative complexity for modelling-workshop planning. simple = single capability, linear happy path; moderate = 1-2 capabilities, branching; complex = multi-capability, significant branching, real-time or regulatory constraints."
+        },
+        "happy_path_summary": {
+          "type": "string",
+          "minLength": 30,
+          "description": "A terse numbered-step or prose description of the successful end-to-end flow, sufficient to orient a modelling facilitator."
+        },
+        "depends_on_journeys": {
+          "type": "array",
+          "uniqueItems": true,
+          "description": "Other journeys that must be modelled first because they establish domain entities or aggregate roots this journey references. Empty array means no prerequisites. This is a modelling dependency, not a technical runtime dependency.",
+          "items": { "type": "string", "pattern": "^JRN-[0-9]{3}$" }
+        }
+      }
+    }
+  }
+}

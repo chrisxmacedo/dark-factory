@@ -1,0 +1,159 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "data-store.schema.json",
+  "title": "Data Store (capability-scoped)",
+  "description": "A persistence boundary inside a capability. Every entity owned by the organisation is stored in exactly one data store. Data stores are capability-scoped: they may be shared between services within the same capability, but never across capabilities. Cross-capability data access is via events on the bus, never by reading another capability's store. A data store has its own technology type, data classification, and optional deployment posture; these are physical-layer concerns that a sector pack may tighten.",
+  "type": "object",
+  "required": [
+    "data_store_id",
+    "name",
+    "capability_id",
+    "status",
+    "technology_type",
+    "data_classification",
+    "owning_services",
+    "stored_entities"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "data_store_id": {
+      "type": "string",
+      "pattern": "^DS-[0-9]{3}$",
+      "description": "Stable unique identifier. Format: DS-XXX where XXX is a zero-padded integer."
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable name for the data store."
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional. What the store holds and why it exists as a separate persistence boundary."
+    },
+    "capability_id": {
+      "type": "string",
+      "pattern": "^CAP-[0-9]{3}$",
+      "description": "The capability that owns this data store. A data store belongs to exactly one capability — never shared across capabilities. Every service listed in owning_services must belong to this capability."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["Draft", "In review", "Approved", "Baselined", "Revised"],
+      "description": "Lifecycle status of the data store specification."
+    },
+    "technology_type": {
+      "type": "string",
+      "enum": [
+        "relational",
+        "document",
+        "key-value",
+        "event-log",
+        "graph",
+        "time-series",
+        "object-store"
+      ],
+      "description": "The category of storage technology. relational: SQL/ACID table store. document: JSON/BSON document store. key-value: cache or simple KV. event-log: append-only log (Kafka, Kinesis). graph: graph database. time-series: metrics or time-indexed observations. object-store: blob/file storage. Packs may tighten this enum to specific engines."
+    },
+    "data_classification": {
+      "type": "string",
+      "enum": ["public", "internal", "confidential", "regulated"],
+      "description": "The sensitivity classification of data held in this store. Validators should enforce that this classification is greater than or equal to the classification of every entity stored in it (regulated > confidential > internal > public)."
+    },
+    "owning_services": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "description": "Services within the owning capability that read from and write to this store. At least one required. Every service listed must belong to the same capability as the store (capability_id on technical-service matches this store's capability_id).",
+      "items": {
+        "type": "string",
+        "pattern": "^SVC-[0-9]{3}$"
+      }
+    },
+    "stored_entities": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "description": "The entities (ENT-XXX) persisted in this store. Every entity in the organisation must appear in exactly one data store's stored_entities array. An entity's owning_service (from data-model) must appear in this store's owning_services.",
+      "items": {
+        "type": "string",
+        "pattern": "^ENT-[0-9]{3}$"
+      }
+    },
+    "deployment": {
+      "type": "object",
+      "description": "Optional deployment posture. Physical-layer concerns; a pack may tighten or require these.",
+      "additionalProperties": false,
+      "properties": {
+        "hosting": {
+          "type": "string",
+          "enum": ["managed-cloud", "self-hosted", "saas", "on-premise"],
+          "description": "Where the store runs. managed-cloud: cloud-vendor managed service (e.g. RDS, DynamoDB). self-hosted: operated by the organisation on IaaS. saas: third-party SaaS. on-premise: organisation data centre."
+        },
+        "vendor_or_engine": {
+          "type": "string",
+          "description": "Concrete technology (e.g. 'PostgreSQL 16', 'Amazon DynamoDB', 'Apache Kafka 3.7'). Optional at meta-model level; packs typically tighten."
+        },
+        "region_strategy": {
+          "type": "string",
+          "enum": [
+            "single-region",
+            "multi-region-active-passive",
+            "multi-region-active-active"
+          ],
+          "description": "Geographic deployment posture. Drives RTO/RPO achievability and regulatory data-residency compliance."
+        }
+      }
+    },
+    "backup_policy": {
+      "type": "object",
+      "description": "Optional backup and recovery targets for this store. Values here should compose with the SLAs declared on the services that own the store.",
+      "additionalProperties": false,
+      "properties": {
+        "rto_minutes": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "description": "Recovery time objective in minutes."
+        },
+        "rpo_minutes": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "description": "Recovery point objective in minutes."
+        },
+        "retention_days": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "description": "How long backups are retained. Regulatory retention requirements typically live here."
+        }
+      }
+    },
+    "design_decisions": {
+      "type": "array",
+      "description": "Architectural decisions about the data store itself (choice of technology, sharing scope within the capability, region strategy). Capability-level decisions about data ownership live on the capability, not here.",
+      "items": {
+        "type": "object",
+        "required": ["id", "decision", "rationale"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^DD-[0-9]{3}$"
+          },
+          "decision": {
+            "type": "string",
+            "minLength": 1
+          },
+          "rationale": {
+            "type": "string",
+            "minLength": 1
+          },
+          "alternatives_considered": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "rejected_because": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

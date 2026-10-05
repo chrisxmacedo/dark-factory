@@ -1,0 +1,142 @@
+{
+  "sector": "payments-and-open-finance",
+  "description": "Payment services, instant payments, open banking and open finance, consumer data rights for financial data.",
+  "last_reviewed": "2026-04-17",
+  "regulatory_bodies": [
+    { "id": "EBA", "country": "EU", "name": "European Banking Authority", "website": "https://www.eba.europa.eu/" },
+    { "id": "MAS", "country": "SG", "name": "Monetary Authority of Singapore", "website": "https://www.mas.gov.sg/" },
+    { "id": "BACEN", "country": "BR", "name": "Banco Central do Brasil", "website": "https://www.bcb.gov.br/" },
+    { "id": "ACCC", "country": "AU", "name": "Australian Competition and Consumer Commission", "website": "https://www.accc.gov.au/" },
+    { "id": "OAIC", "country": "AU", "name": "Office of the Australian Information Commissioner", "website": "https://www.oaic.gov.au/" },
+    { "id": "FCA", "country": "UK", "name": "Financial Conduct Authority", "website": "https://www.fca.org.uk/" },
+    { "id": "PCI-SSC", "country": "GLOBAL", "name": "PCI Security Standards Council", "website": "https://www.pcisecuritystandards.org/" }
+  ],
+  "regulations": [
+    {
+      "id": "PAY-PCI-DSS",
+      "name": "Payment Card Industry Data Security Standard",
+      "abbreviation": "PCI-DSS",
+      "applicable_countries": ["GLOBAL"],
+      "extra_territorial": false,
+      "adopted_via_national_implementation_in": ["contractually-enforced-by-card-networks-worldwide"],
+      "category": "payments-security",
+      "issuing_body": "PCI-SSC",
+      "enforcing_bodies": ["Contractually by Visa, Mastercard, Amex, Discover, JCB"],
+      "sector_applicability": ["payments", "retail", "e-commerce", "hospitality", "financial-services"],
+      "summary": "Contractual security standard for any organisation storing, processing, or transmitting cardholder data. Version 4.0 current.",
+      "key_requirements": [
+        "Build and maintain a secure network",
+        "Protect cardholder data (encryption in transit and at rest)",
+        "Vulnerability management programme",
+        "Strong access control measures",
+        "Regularly monitor and test networks",
+        "Information security policy",
+        "Tokenisation / segmentation to reduce scope"
+      ],
+      "effective_from": "2024-04-01",
+      "reference_url": "https://www.pcisecuritystandards.org/"
+    },
+    {
+      "id": "PAY-EU-PSD2",
+      "name": "Payment Services Directive 2",
+      "abbreviation": "PSD2",
+      "applicable_countries": ["EU"],
+      "extra_territorial": false,
+      "category": "payment-services",
+      "issuing_body": "EU (Directive 2015/2366)",
+      "enforcing_bodies": ["EBA"],
+      "sector_applicability": ["payment-services", "banking", "fintech"],
+      "summary": "Framework for payment services in the EU. Introduced Strong Customer Authentication and open banking (AIS, PIS). PSD3 / Payment Services Regulation expected to replace from 2026.",
+      "key_requirements": [
+        "Licensing for Payment Institutions and E-Money Institutions",
+        "Strong Customer Authentication (SCA)",
+        "Open banking — AIS and PIS",
+        "Regulatory Technical Standards on SCA and secure communication",
+        "Limited liability for unauthorised transactions"
+      ],
+      "effective_from": "2018-01-13",
+      "reference_url": "https://eur-lex.europa.eu/eli/dir/2015/2366/oj"
+    },
+    {
+      "id": "PAY-SG-PSA",
+      "name": "Payment Services Act (Singapore)",
+      "abbreviation": "PSA",
+      "applicable_countries": ["SG"],
+      "category": "payment-services",
+      "issuing_body": "MAS",
+      "enforcing_bodies": ["MAS"],
+      "sector_applicability": ["payment-service-providers", "digital-payment-token-service-providers"],
+      "summary": "Activity-based licensing regime for payments, covering account issuance, domestic and cross-border money transfer, merchant acquisition, e-money issuance, digital payment tokens, money-changing.",
+      "key_requirements": [
+        "Licensing — Standard or Major Payment Institution, Money-Changing, DPT",
+        "AML/CFT obligations under PS-N01 / PS-N02",
+        "Safeguarding of customer moneys for e-money and DPT",
+        "Technology risk management",
+        "Consumer protection requirements"
+      ],
+      "effective_from": "2020-01-28",
+      "reference_url": "https://www.mas.gov.sg/regulation/acts/payment-services-act"
+    },
+    {
+      "id": "PAY-BR-PIX",
+      "name": "PIX — Instant Payments Regulations",
+      "abbreviation": "PIX",
+      "applicable_countries": ["BR"],
+      "category": "instant-payments",
+      "issuing_body": "BACEN",
+      "enforcing_bodies": ["BACEN"],
+      "sector_applicability": ["banks", "payment-institutions"],
+      "summary": "Rules for Brazil's instant payments system.",
+      "key_requirements": [
+        "Licensing / participation criteria",
+        "Operating rules including uptime SLOs",
+        "Consumer protection including dispute resolution (MED)",
+        "Fraud prevention obligations",
+        "PIX Keys identification standards"
+      ],
+      "effective_from": "2020-11-16",
+      "reference_url": "https://www.bcb.gov.br/en/financialstability/pix_en"
+    },
+    {
+      "id": "PAY-BR-OPEN-FINANCE",
+      "name": "Open Finance Brazil",
+      "abbreviation": "Open Finance BR",
+      "applicable_countries": ["BR"],
+      "category": "open-finance",
+      "issuing_body": "BACEN / CMN (Joint Resolution 1/2020)",
+      "enforcing_bodies": ["BACEN"],
+      "sector_applicability": ["banks", "payment-institutions"],
+      "summary": "Phased open finance — accounts, credit, investments, insurance, pensions.",
+      "key_requirements": [
+        "APIs following national open finance standard",
+        "Consent management — granular, time-limited",
+        "FAPI-based security profile",
+        "Test environment participation",
+        "Governance via Open Finance Governance Structure"
+      ],
+      "effective_from": "2021-02-01",
+      "reference_url": "https://openfinancebrasil.org.br/"
+    },
+    {
+      "id": "PAY-AU-CDR",
+      "name": "Consumer Data Right (Banking)",
+      "abbreviation": "CDR",
+      "applicable_countries": ["AU"],
+      "category": "open-banking",
+      "issuing_body": "Parliament of Australia (2019)",
+      "enforcing_bodies": ["ACCC", "OAIC"],
+      "sector_applicability": ["banking", "energy", "telecommunications (designated)"],
+      "summary": "Economy-wide data portability right. Open banking was first sector; expansion to other sectors ongoing.",
+      "key_requirements": [
+        "Data holder obligations to share consumer data on request",
+        "Accreditation regime for data recipients",
+        "Granular, time-limited consents",
+        "Data standards (API, FAPI-based security profile)",
+        "Consumer dashboards for consent management",
+        "CDR Privacy Safeguards additional to APPs"
+      ],
+      "effective_from": "2020-07-01",
+      "reference_url": "https://www.cdr.gov.au/"
+    }
+  ]
+}

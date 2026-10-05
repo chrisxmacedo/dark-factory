@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sequence-manifest.schema.json",
+  "title": "Sequence Manifest (journey-phase-scoped)",
+  "description": "Indexes the sequence diagrams owned by a single journey. Sequence diagrams are journey-phase-scoped: a journey may initiate many sequences, each attached to a phase. There are no capability-level or service-level sequence diagrams in this meta-model; if a service choreography needs illustrating, it is done in the context of the journey phase that exercises it. The diagrams themselves are Mermaid files referenced by path; this manifest provides the metadata and cross-references.",
+  "type": "object",
+  "required": ["journey_id", "document_version", "sequences"],
+  "additionalProperties": false,
+  "properties": {
+    "journey_id": {
+      "type": "string",
+      "pattern": "^JRN-[0-9]{3}$"
+    },
+    "document_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["Draft", "In review", "Stable", "Revised"]
+    },
+    "sequences": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "phase_id", "title", "path", "format", "participants"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^SEQ-[0-9]{3}$",
+            "description": "Stable identifier for the sequence within this journey."
+          },
+          "phase_id": {
+            "type": "string",
+            "pattern": "^PH-[0-9]{3}$",
+            "description": "The journey phase this sequence illustrates. Must resolve to a phase in the journey's journey-detail."
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Human-readable title for the sequence."
+          },
+          "description": {
+            "type": "string",
+            "description": "Optional. What the sequence shows."
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Relative path to the diagram file from the manifest location."
+          },
+          "format": {
+            "type": "string",
+            "enum": ["mermaid"],
+            "description": "Diagram format. Mermaid only in this meta-model."
+          },
+          "path_variant": {
+            "type": "string",
+            "enum": ["happy", "alternative", "exception"],
+            "description": "Which path variant the sequence depicts."
+          },
+          "participants": {
+            "type": "array",
+            "minItems": 1,
+            "description": "The actors, channels, and services participating in the sequence. Channel endpoints at the ends of the sequence carry the persona interactions.",
+            "items": {
+              "type": "object",
+              "required": ["kind", "ref"],
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": ["persona", "channel", "service", "external_system"]
+                },
+                "ref": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "ID of the participant (PER-XXX, CHN-XXX, SVC-XXX) or free-text name for external_system."
+                },
+                "role": {
+                  "type": "string",
+                  "description": "Informational role in this sequence (e.g. initiator, responder)."
+                }
+              }
+            }
+          },
+          "events_referenced": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^EVT-[0-9]{3}$" }
+          },
+          "entities_referenced": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^ENT-[0-9]{3}$" }
+          }
+        }
+      }
+    }
+  }
+}

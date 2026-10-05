@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "service-boundaries.schema.json",
+  "title": "Service Boundaries (capability-scoped)",
+  "description": "The service boundary map for a capability. Enumerates the services that compose the capability, what entities each owns, what events each publishes and consumes, and what other services each depends on. Capability-scoped: services live inside exactly one capability. Inter-service communication within the capability may use REST or gRPC; communication to other capabilities is via events on the bus only. Channels reach the capability via the capability API, not directly by calling individual services.",
+  "type": "object",
+  "required": ["capability_id", "status", "services"],
+  "additionalProperties": false,
+  "properties": {
+    "capability_id": {
+      "type": "string",
+      "pattern": "^CAP-[0-9]{3}$"
+    },
+    "document_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["Draft", "In review", "Stable", "Revised"]
+    },
+    "architectural_principles": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Optional statements of the architectural rules this capability's service boundaries observe (e.g. single-ownership, event-driven cross-capability communication, share-contracts-not-implementations)."
+    },
+    "services": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "service_id",
+          "service_name",
+          "owned_entities",
+          "published_events",
+          "consumed_events"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "service_id": {
+            "type": "string",
+            "pattern": "^SVC-[0-9]{3}$"
+          },
+          "service_name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "owned_entities": {
+            "type": "array",
+            "description": "Entities this service owns. Each entity is owned by exactly one service across the entire organisation.",
+            "items": { "type": "string", "pattern": "^ENT-[0-9]{3}$" }
+          },
+          "published_events": {
+            "type": "array",
+            "description": "Events this service publishes on the bus. Event IDs must resolve to entries in an event catalogue.",
+            "items": { "type": "string", "pattern": "^EVT-[0-9]{3}$" }
+          },
+          "consumed_events": {
+            "type": "array",
+            "description": "Events this service consumes from the bus. Consumed events may be published by services in other capabilities — that is how cross-capability data flows.",
+            "items": {
+              "type": "object",
+              "required": ["event_id"],
+              "additionalProperties": false,
+              "properties": {
+                "event_id": {
+                  "type": "string",
+                  "pattern": "^EVT-[0-9]{3}$"
+                },
+                "source_capability": {
+                  "type": "string",
+                  "pattern": "^CAP-[0-9]{3}$",
+                  "description": "The capability whose service publishes this event. Informational."
+                },
+                "maps_to": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "target_entity": {
+                      "type": "string",
+                      "pattern": "^ENT-[0-9]{3}$"
+                    },
+                    "field_mapping": { "type": "object" }
+                  }
+                }
+              }
+            }
+          },
+          "consumed_apis": {
+            "type": "array",
+            "description": "Intra-capability APIs this service consumes. Cross-capability API consumption is forbidden.",
+            "items": {
+              "type": "object",
+              "required": ["provider_service_id", "call_pattern", "dependency_criticality"],
+              "additionalProperties": false,
+              "properties": {
+                "provider_service_id": {
+                  "type": "string",
+                  "pattern": "^SVC-[0-9]{3}$"
+                },
+                "provider_service_name": { "type": "string" },
+                "api_description": { "type": "string" },
+                "call_pattern": {
+                  "type": "string",
+                  "enum": ["synchronous", "asynchronous", "streaming"]
+                },
+                "dependency_criticality": {
+                  "type": "string",
+                  "enum": ["hard", "soft"]
+                },
+                "governance_note": { "type": "string" }
+              }
+            }
+          },
+          "external_system_dependencies": {
+            "type": "array",
+            "description": "Third-party systems or platforms the service depends on, outside the organisation.",
+            "items": {
+              "type": "object",
+              "required": ["system_name", "call_pattern"],
+              "additionalProperties": false,
+              "properties": {
+                "system_name": { "type": "string", "minLength": 1 },
+                "base_url": { "type": "string" },
+                "call_pattern": { "type": "string" },
+                "data_retrieved": { "type": "array", "items": { "type": "string" } },
+                "auth_method": { "type": "string" },
+                "latency_target_ms": { "type": "integer", "minimum": 0 },
+                "async_fallback": { "type": "string" },
+                "notes": { "type": "string" }
+              }
+            }
+          },
+          "design_decisions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "decision", "rationale"],
+              "additionalProperties": false,
+              "properties": {
+                "id": { "type": "string", "pattern": "^DD-[0-9]{3}$" },
+                "decision": { "type": "string", "minLength": 1 },
+                "rationale": { "type": "string", "minLength": 1 },
+                "alternatives_considered": { "type": "array", "items": { "type": "string" } },
+                "rejected_because": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

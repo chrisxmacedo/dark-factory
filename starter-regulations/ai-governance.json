@@ -1,0 +1,77 @@
+{
+  "sector": "ai-governance",
+  "description": "AI-specific regulation. A fast-moving area — the EU AI Act is the first broad horizontal regime; other jurisdictions use sectoral or principles-based approaches. Expect rapid change.",
+  "last_reviewed": "2026-04-17",
+  "regulatory_bodies": [
+    { "id": "AI-OFFICE-EU", "country": "EU", "name": "European Commission AI Office", "website": "https://digital-strategy.ec.europa.eu/en/policies/ai-office" },
+    { "id": "DIFC-CDPO", "country": "AE-DIFC", "name": "DIFC Commissioner of Data Protection (Regulation 10 — autonomous systems)", "website": "https://www.difc.ae/" },
+    { "id": "ICO", "country": "UK", "name": "Information Commissioner's Office (AI and automated decision-making guidance)", "website": "https://ico.org.uk/" },
+    { "id": "CPPA", "country": "US-CA", "name": "California Privacy Protection Agency (automated decisionmaking technology regulations)", "website": "https://cppa.ca.gov/" }
+  ],
+  "regulations": [
+    {
+      "id": "AI-EU-ACT",
+      "name": "Artificial Intelligence Act",
+      "abbreviation": "EU AI Act",
+      "applicable_countries": ["EU"],
+      "extra_territorial": true,
+      "extra_territorial_scope": "Applies to providers and deployers outside the EU whose AI system outputs are used in the EU.",
+      "category": "ai-horizontal",
+      "issuing_body": "EU (Regulation 2024/1689)",
+      "enforcing_bodies": ["AI-OFFICE-EU", "National Competent Authorities", "Market Surveillance Authorities"],
+      "sector_applicability": ["all — wherever AI systems are placed on the market, put into service, or used"],
+      "summary": "Risk-based regulation of AI systems. Tiers: prohibited practices, high-risk systems, limited-risk transparency, and general-purpose AI models (with additional obligations for systemic-risk models).",
+      "key_requirements": [
+        "Prohibition of unacceptable-risk practices (social scoring, real-time biometric ID in public spaces with exceptions, etc.)",
+        "Conformity assessment for high-risk AI (biometric ID, employment, credit scoring, essential services, etc.)",
+        "Transparency obligations for AI systems interacting with natural persons and for synthetic content",
+        "Provider obligations on general-purpose AI models, including systemic-risk models",
+        "Registration in EU database for high-risk AI",
+        "Post-market monitoring and serious incident reporting"
+      ],
+      "effective_from": "2024-08-01",
+      "reference_url": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj"
+    },
+    {
+      "id": "AI-AE-DIFC-REG-10",
+      "name": "DIFC Data Protection Regulation 10 — High-Risk Processing Activities (incl. autonomous systems)",
+      "abbreviation": "DIFC Reg 10",
+      "applicable_countries": ["AE-DIFC"],
+      "category": "ai-and-personal-data",
+      "issuing_body": "DIFC Commissioner of Data Protection",
+      "enforcing_bodies": ["DIFC-CDPO"],
+      "sector_applicability": ["entities-operating-in-DIFC-using-autonomous-systems-for-personal-data"],
+      "summary": "Specific rules for autonomous / AI systems processing personal data in the DIFC.",
+      "key_requirements": [
+        "DPIA required for autonomous systems processing personal data",
+        "Human oversight obligations",
+        "Transparency to data subjects about autonomous processing",
+        "Fairness and non-discrimination testing",
+        "Record-keeping specific to autonomous systems"
+      ],
+      "effective_from": "2023-09-01",
+      "reference_url": "https://www.difc.ae/business/laws-regulations/data-protection/"
+    },
+    {
+      "id": "AI-US-CA-ADMT",
+      "name": "California Automated Decisionmaking Technology regulations (CPRA)",
+      "abbreviation": "CA ADMT",
+      "applicable_countries": ["US-CA"],
+      "extra_territorial": true,
+      "category": "ai-and-personal-data",
+      "issuing_body": "California Privacy Protection Agency",
+      "enforcing_bodies": ["CPPA", "California Attorney General"],
+      "sector_applicability": ["CCPA-covered-businesses-using-ADMT"],
+      "summary": "Rules on automated decisionmaking technology under CCPA/CPRA — consumer rights to access, opt-out, and receive meaningful information about ADMT use.",
+      "key_requirements": [
+        "Pre-use notice about ADMT",
+        "Right to access information about ADMT logic and outcomes",
+        "Right to opt-out of ADMT (with exceptions)",
+        "Risk assessments for significant decisions",
+        "Cybersecurity audits where required"
+      ],
+      "effective_from": "2026-01-01",
+      "reference_url": "https://cppa.ca.gov/regulations/"
+    }
+  ]
+}

@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "service-dependencies.schema.json",
+  "title": "Service Dependencies",
+  "description": "System-wide map of all services across capabilities, their deployment tier, and the dependencies between them. Used for build-order planning, impact analysis, and critical-path identification. This is a system-level artefact, not a capability-scoped one — it spans every capability.",
+  "type": "object",
+  "required": ["document_version", "status", "tier_definitions", "services", "build_order"],
+  "additionalProperties": false,
+  "properties": {
+    "document_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["Draft", "Review", "Approved", "Superseded"]
+    },
+    "description": { "type": "string" },
+    "tier_definitions": {
+      "type": "object",
+      "description": "Canonical definitions for each deployment tier. Tiers are T0 through T4; lower tiers must deploy before higher tiers.",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^T[0-4]$": {
+          "type": "object",
+          "required": ["label", "description", "deployment_order", "availability_floor"],
+          "additionalProperties": false,
+          "properties": {
+            "label": { "type": "string", "minLength": 1 },
+            "description": { "type": "string", "minLength": 1 },
+            "deployment_order": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 5
+            },
+            "availability_floor": {
+              "type": "string",
+              "description": "Minimum availability SLA for services in this tier."
+            },
+            "rationale": {
+              "type": "string",
+              "description": "Why this tier must exist before downstream tiers."
+            }
+          }
+        }
+      }
+    },
+    "services": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "classification", "tier", "dependencies"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^SVC-[0-9]{3}$" },
+          "name": { "type": "string", "minLength": 1 },
+          "classification": {
+            "type": "string",
+            "enum": ["foundation", "domain", "cross_cutting", "observability", "security", "channel"]
+          },
+          "tier": {
+            "type": "string",
+            "enum": ["T0", "T1", "T2", "T3", "T4"]
+          },
+          "capability_id": {
+            "type": "string",
+            "pattern": "^CAP-[0-9]{3}$",
+            "description": "For domain services, the capability they belong to. Omitted for cross-cutting and foundation services."
+          },
+          "dependencies": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["service_id", "criticality"],
+              "additionalProperties": false,
+              "properties": {
+                "service_id": { "type": "string", "pattern": "^SVC-[0-9]{3}$" },
+                "criticality": {
+                  "type": "string",
+                  "enum": ["hard", "soft"]
+                },
+                "rationale": { "type": "string" }
+              }
+            }
+          },
+          "notes": { "type": "string" }
+        }
+      }
+    },
+    "dependency_criticality_matrix": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hard_dependency_pairs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["from_service", "to_service", "criticality"],
+            "additionalProperties": false,
+            "properties": {
+              "from_service": { "type": "string", "pattern": "^SVC-[0-9]{3}$" },
+              "to_service": { "type": "string", "pattern": "^SVC-[0-9]{3}$" },
+              "criticality": { "type": "string", "enum": ["hard", "soft"] }
+            }
+          }
+        },
+        "summary": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "total_hard_dependencies": { "type": "integer", "minimum": 0 },
+            "total_soft_dependencies": { "type": "integer", "minimum": 0 },
+            "highest_fan_in_service": { "type": "string" },
+            "highest_fan_out_service": { "type": "string" }
+          }
+        }
+      }
+    },
+    "build_order": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["phase", "name", "tiers", "services_in_phase", "gate_criteria"],
+        "additionalProperties": false,
+        "properties": {
+          "phase": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "name": { "type": "string", "minLength": 1 },
+          "tiers": {
+            "type": "array",
+            "items": { "type": "string", "enum": ["T0", "T1", "T2", "T3", "T4"] }
+          },
+          "services_in_phase": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^SVC-[0-9]{3}$" }
+          },
+          "rationale": {
+            "type": "string",
+            "description": "Why this phase's services must be delivered in this order."
+          },
+          "gate_criteria": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "estimated_duration_weeks": { "type": "integer", "minimum": 0 }
+        }
+      }
+    }
+  }
+}

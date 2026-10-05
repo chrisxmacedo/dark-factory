@@ -1,0 +1,79 @@
+{
+  "category": "quality-management",
+  "description": "Voluntary quality management system standards. Widely adopted for certification across manufacturing, services, and regulated industries.",
+  "last_reviewed": "2026-04-17",
+  "issuing_bodies": [
+    {
+      "id": "ISO",
+      "name": "International Organization for Standardization",
+      "website": "https://www.iso.org/",
+      "remit": "International standards body."
+    }
+  ],
+  "standards": [
+    {
+      "id": "STD-ISO-9001-2015",
+      "name": "ISO 9001:2015 — Quality Management Systems — Requirements",
+      "abbreviation": "ISO 9001",
+      "applicable_countries": ["GLOBAL"],
+      "issuing_body": "ISO",
+      "scope_applicability": ["any-organisation"],
+      "levels": ["Certification — audited by accredited certification body"],
+      "summary": "Requirements for a quality management system. Most widely adopted management system standard globally.",
+      "key_principles": [
+        "Customer focus",
+        "Leadership",
+        "Engagement of people",
+        "Process approach",
+        "Improvement",
+        "Evidence-based decision making",
+        "Relationship management"
+      ],
+      "effective_from": "2015-09-15",
+      "reference_url": "https://www.iso.org/standard/62085.html"
+    },
+    {
+      "id": "STD-ISO-13485-2016",
+      "name": "ISO 13485:2016 — Medical devices — Quality management systems",
+      "abbreviation": "ISO 13485",
+      "applicable_countries": ["GLOBAL"],
+      "issuing_body": "ISO",
+      "scope_applicability": ["medical-device-manufacturers", "medical-device-service-providers"],
+      "levels": ["Certification"],
+      "summary": "QMS specifically for medical devices. Referenced by EU MDR/IVDR, FDA 21 CFR Part 820, MHRA, TGA, Health Canada.",
+      "key_principles": [
+        "Process approach tailored to medical device lifecycle",
+        "Risk management integrated throughout",
+        "Regulatory requirement integration",
+        "Design and development controls",
+        "Validation of processes",
+        "Post-market surveillance"
+      ],
+      "effective_from": "2016-03-01",
+      "reference_url": "https://www.iso.org/standard/59752.html"
+    },
+    {
+      "id": "STD-ISO-IEC-25010-2023",
+      "name": "ISO/IEC 25010:2023 — Systems and software quality models",
+      "abbreviation": "ISO 25010",
+      "applicable_countries": ["GLOBAL"],
+      "issuing_body": "ISO",
+      "scope_applicability": ["software-engineering"],
+      "levels": ["Reference / guidance"],
+      "summary": "Quality models for software products and quality in use. 2023 revision expands and restructures characteristics.",
+      "key_principles": [
+        "Functional suitability",
+        "Performance efficiency",
+        "Compatibility",
+        "Interaction capability (replaces usability in 2023)",
+        "Reliability",
+        "Security",
+        "Maintainability",
+        "Flexibility (replaces portability in 2023)",
+        "Safety (added in 2023)"
+      ],
+      "effective_from": "2023-11-01",
+      "reference_url": "https://www.iso.org/standard/78176.html"
+    }
+  ]
+}

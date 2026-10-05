@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "technical-service.schema.json",
+  "title": "Technical service",
+  "description": "Canonical definition of a single service. A service belongs to exactly one capability (or is classified as cross-cutting/foundation/observability/security if system-wide). Services own entities, publish and consume events, consume APIs from other services within the same capability, and have their own SLA. This is the authoritative per-service definition; service-boundaries reference it.",
+  "type": "object",
+  "required": ["service_id", "name", "classification", "description", "tier"],
+  "additionalProperties": false,
+  "properties": {
+    "service_id": {
+      "type": "string",
+      "pattern": "^SVC-[0-9]{3}$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "classification": {
+      "type": "string",
+      "enum": ["domain", "cross-cutting", "foundation", "channel", "observability", "security"],
+      "description": "domain = belongs to one capability; cross-cutting = used across capabilities via contracts; foundation = platform-level prerequisite; channel = customer-facing entry point; observability/security = system-level infrastructure."
+    },
+    "capability_id": {
+      "oneOf": [
+        { "type": "string", "pattern": "^CAP-[0-9]{3}$" },
+        { "type": "null" }
+      ],
+      "description": "For domain services, the capability they belong to. Null for cross-cutting, foundation, observability, and security services that do not sit within a single capability."
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "tier": {
+      "type": "string",
+      "enum": ["T0", "T1", "T2", "T3", "T4"],
+      "description": "Deployment tier. T0 is the platform foundation; higher tiers depend on lower tiers."
+    },
+    "deployment_unit": {
+      "type": "string",
+      "enum": ["own-repo", "shared-repo"]
+    },
+    "data_stores": {
+      "type": "array",
+      "uniqueItems": true,
+      "description": "The data stores this service reads from or writes to, referenced by DS-XXX ID. Canonical detail (technology, classification, stored entities, sharing scope) lives in the data-store.schema.json definition for each store. Every referenced store must belong to the same capability as this service, and this service's ID must appear in that store's owning_services.",
+      "items": {
+        "type": "string",
+        "pattern": "^DS-[0-9]{3}$"
+      }
+    },
+    "exposes": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "capability_api_endpoints": {
+          "type": "array",
+          "description": "Endpoints that form part of the capability's external API. Only services at the capability boundary expose these."
+        },
+        "internal_apis": {
+          "type": "array",
+          "description": "Endpoints consumed by other services within the same capability."
+        }
+      }
+    },
+    "produces_events": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^EVT-[0-9]{3}$" }
+    },
+    "consumes_events": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^EVT-[0-9]{3}$" }
+    },
+    "depends_on": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["service_id", "protocol", "criticality"],
+        "additionalProperties": false,
+        "properties": {
+          "service_id": { "type": "string", "pattern": "^SVC-[0-9]{3}$" },
+          "protocol": {
+            "type": "string",
+            "enum": ["rest", "grpc", "event", "direct"]
+          },
+          "criticality": {
+            "type": "string",
+            "enum": ["hard", "soft"]
+          }
+        }
+      }
+    },
+    "sla": {
+      "type": "object",
+      "description": "The service's own non-functional targets. Journey-level NFRs describe end-to-end behaviour and live in journey-level nfr files; these are the per-service targets that compose into those end-to-end numbers.",
+      "additionalProperties": false,
+      "properties": {
+        "availability": {
+          "type": "string",
+          "description": "E.g. '99.95%' or 'tier-1'."
+        },
+        "latency_p99_ms": {
+          "type": ["number", "null"]
+        },
+        "latency_p50_ms": {
+          "type": ["number", "null"]
+        },
+        "throughput_rps": {
+          "type": ["number", "null"]
+        },
+        "rto_minutes": {
+          "type": ["number", "null"],
+          "description": "Recovery time objective in minutes."
+        },
+        "rpo_minutes": {
+          "type": ["number", "null"],
+          "description": "Recovery point objective in minutes."
+        }
+      }
+    },
+    "owner_role": {
+      "type": "string",
+      "description": "The role or team accountable for the service."
+    }
+  }
+}
