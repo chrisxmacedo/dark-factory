@@ -6,7 +6,24 @@ description: Generate a full product idea breakdown — Problem, Vision, Strateg
 
 Generate a complete product idea breakdown as a set of HTML pages following the VR Pipeline Dashboard format. These pages become the source of truth for the idea's definition, strategy, and execution plan.
 
-The output is a folder of HTML pages inside `/Users/christianmacedo/Projects/Ideas/` using the shared design system from `/Users/christianmacedo/Projects/Ideas/VR Pipeline/styles.css`.
+The output is a folder of HTML pages inside `$IDEAS_DIR/` using the shared design system from `$TOOLKIT_DIR/idea-template/design-system/styles.css`.
+
+---
+
+## Config
+
+Machine- and client-specific settings live in `~/.config/pipeline-toolkit/config.env`,
+written by `install.sh` in the pipeline-toolkit repo. Each shell command runs in
+a fresh shell, so start every bash block that uses these values with:
+
+```bash
+source ~/.config/pipeline-toolkit/config.env
+```
+
+If that file doesn't exist, stop and ask the user to run `install.sh` from the
+pipeline-toolkit repo. Values: `$ATLASSIAN_SITE` (Atlassian cloud ID / site),
+`$JIRA_URL`, `$CONFLUENCE_URL`, `$PROJECTS_DIR`, `$IDEAS_DIR`, `$TOOLKIT_DIR`,
+plus working preferences `$PROMOTE_POLICY`, `$NEXT_TICKET_POLICY`, `$GITHUB_ISSUES`.
 
 ---
 
@@ -113,7 +130,7 @@ Wait for approval. Incorporate any corrections.
 
 ## Step 5 — Generate the pages
 
-Once approved, generate the full set of pages. Use the exact same HTML structure, CSS classes, and design patterns as the VR Pipeline Dashboard pages in `/Users/christianmacedo/Projects/Ideas/VR Pipeline/`.
+Once approved, generate the full set of pages. Use the exact same HTML structure, CSS classes, and design patterns as the VR Pipeline Dashboard pages in `$TOOLKIT_DIR/idea-template/design-system/example-vr-pipeline/`.
 
 ### Colour rotation
 
@@ -127,7 +144,7 @@ Each new idea gets a unique brand colour. Do NOT reuse `#6C3FA0` (purple, used b
 - Cyan: `#0891B2` (accent: `#67E8F9`)
 - Rose: `#BE123C` (accent: `#FECDD3`)
 
-Create a `{idea}-styles.css` file that overrides the brand tokens (same structure as `vr-styles.css` but with the new colour). Include the deployment diagram components (`.deploy-diagram`, `.deploy-region`, `.deploy-node`, `.deploy-connector`, `.deploy-externals`, `.deploy-footer`) and the click-to-expand modal components (`.diagram-expandable`, `.diagram-modal-overlay`, `.diagram-modal-content`, `.diagram-modal-close`, `.diagram-modal-body`). Reference `/Users/christianmacedo/Projects/Ideas/Hindsite/hindsite-styles.css` for the full implementation of these components.
+Create a `{idea}-styles.css` file that overrides the brand tokens (same structure as `vr-styles.css` but with the new colour). Include the deployment diagram components (`.deploy-diagram`, `.deploy-region`, `.deploy-node`, `.deploy-connector`, `.deploy-externals`, `.deploy-footer`) and the click-to-expand modal components (`.diagram-expandable`, `.diagram-modal-overlay`, `.diagram-modal-content`, `.diagram-modal-close`, `.diagram-modal-body`). Reference `$IDEAS_DIR/Hindsite/hindsite-styles.css` for the full implementation of these components.
 
 ### Icon
 
@@ -139,9 +156,9 @@ Create a novel SVG favicon for the idea. The icon should:
 
 ### Pages to generate
 
-Create a folder: `/Users/christianmacedo/Projects/Ideas/{Product Name}/`
+Create a folder: `$IDEAS_DIR/{Product Name}/`
 
-Copy `styles.css` from the VR Pipeline folder as the base stylesheet.
+Copy `$TOOLKIT_DIR/idea-template/design-system/styles.css` as the base stylesheet.
 
 Generate these pages:
 
@@ -197,7 +214,7 @@ Generate these pages:
   - Initiative header with number, title, subtitle
   - Description paragraph
   - Targeted OKRs section listing which objectives/KRs it addresses with targets
-  - Features & Deliverables list with tagged items (Frontend, Backend, Integration, Design, Infra, Growth). Each feature must also show architecture impact as `.feature-arch-icon` spans — small coloured icons matching the deployment diagram nodes. Icons use `data-label` attributes for hover tooltips (no visible text). Reference `/Users/christianmacedo/Projects/Ideas/Hindsite/hindsite-initiatives.html` for the full implementation.
+  - Features & Deliverables list with tagged items (Frontend, Backend, Integration, Design, Infra, Growth). Each feature must also show architecture impact as `.feature-arch-icon` spans — small coloured icons matching the deployment diagram nodes. Icons use `data-label` attributes for hover tooltips (no visible text). Reference `$IDEAS_DIR/Hindsite/hindsite-initiatives.html` for the full implementation.
 
 ### Navbar
 
@@ -217,7 +234,7 @@ All pages: `{Product Name}` brand + `{Page name} · {Month Year}`
 ## Step 6 — Commit and push
 
 ```bash
-cd /Users/christianmacedo/Projects/Ideas
+cd $IDEAS_DIR
 git add "{Product Name}/"
 git commit -m "Add {Product Name} product breakdown
 
@@ -261,5 +278,5 @@ Idea generated: {Product Name}
 - Section numbers use `<div class="section-number" style="background:{brand-colour};">`
 - Architecture and deployment diagrams must be click-to-expand (`.diagram-expandable` + modal)
 - The Vision page must include a deployment diagram showing where components physically run, with a cost breakdown table
-- Copy styles.css from VR Pipeline as the base — never modify the original
+- Copy `$TOOLKIT_DIR/idea-template/design-system/styles.css` as the base — never modify the original
 - Commit to the Ideas repo, not github-pages-docs

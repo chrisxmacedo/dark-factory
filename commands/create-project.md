@@ -9,15 +9,20 @@ through each stage collaboratively — never rushing ahead or batching steps.
 
 ---
 
-## Config (never change these)
+## Config
 
+Machine- and client-specific settings live in `~/.config/pipeline-toolkit/config.env`,
+written by `install.sh` in the pipeline-toolkit repo. Each shell command runs in
+a fresh shell, so start every bash block that uses these values with:
+
+```bash
+source ~/.config/pipeline-toolkit/config.env
 ```
-PROJECTS_DIR=/Users/christianmacedo/Projects
-IDEAS_DIR=/Users/christianmacedo/Projects/Ideas
-CLOUD_ID=christianmacedo.atlassian.net
-JIRA_URL=https://christianmacedo.atlassian.net
-CONFLUENCE_URL=https://christianmacedo.atlassian.net/wiki
-```
+
+If that file doesn't exist, stop and ask the user to run `install.sh` from the
+pipeline-toolkit repo. Values: `$ATLASSIAN_SITE` (Atlassian cloud ID / site),
+`$JIRA_URL`, `$CONFLUENCE_URL`, `$PROJECTS_DIR`, `$IDEAS_DIR`, `$TOOLKIT_DIR`,
+plus working preferences `$PROMOTE_POLICY`, `$NEXT_TICKET_POLICY`, `$GITHUB_ISSUES`.
 
 ---
 
@@ -201,7 +206,7 @@ Copy the build-pipeline (development-team) templates into the project:
 > before running this stage.
 
 ```bash
-TEMPLATES_DIR=/Users/christianmacedo/Projects/templates/starter-delivery-team/development-team
+TEMPLATES_DIR=$TOOLKIT_DIR/starter-delivery-team/development-team
 
 # Copy pipeline orchestration (becomes .claude/CLAUDE.md)
 mkdir -p "$PROJECTS_DIR/{name}/.claude"
@@ -238,13 +243,25 @@ Replace ALL placeholders in CLAUDE.md, agent files, and context files:
 |---|---|---|
 | `{PROJECT_KEY}` | Jira project key (e.g. `ACME`) | Stage 3 |
 | `{PROJECT_NAME}` | Project name (e.g. `acme`) | Stage 1 |
-| `{CLOUD_ID}` | `christianmacedo.atlassian.net` | Config |
-| `{JIRA_SITE}` | `christianmacedo.atlassian.net` | Config |
+| `{CLOUD_ID}` | `$ATLASSIAN_SITE` | Config |
+| `{JIRA_SITE}` | `$ATLASSIAN_SITE` | Config |
 | `{SERVICE_REPOS}` | Space-separated service names (e.g. `acme-api acme-web`) | Stage 6 |
 | `{service-1}`, `{service-2}`, etc. | Actual service names (match the Stage 6 list) | Stage 6 |
 
 These placeholders appear in PIPELINE.md (startup checks iterate `{SERVICE_REPOS}`),
 `context/project.md` (describes repo structure), and agent files (branch naming).
+
+**Apply working preferences** from the config (answers given to `install.sh`)
+to `.claude/context/project.md` → "Working preferences":
+
+| Placeholder | Config value → text to write |
+|---|---|
+| `{PROMOTE_POLICY}` | `human` → "Human approval — wait for \"Approve promote {PROJECT_KEY}-N\"". `auto` → "Automatic when the regression readiness report is green; any failure or warning still waits for the human" |
+| `{NEXT_TICKET_POLICY}` | `auto` → "Pick up the next Backlog Deliverable automatically". `ask` → "Stop and ask the human before starting the next ticket" |
+| `{GITHUB_ISSUES_POLICY}` | `yes` → "Create a GitHub issue before starting work, reference it in the PR, close it on merge". `no` → "Not used — Jira is the only tracker" |
+
+Tell the user which preferences were applied and that they can be changed per
+project by editing that section.
 
 **Discover transition IDs** — these change per project and cannot be hardcoded.
 After Stages 11-13 create the first tickets, query Jira for the actual IDs:
@@ -355,8 +372,8 @@ and its starter template — iterate over all of them.
 Create each service repo:
 
 ```bash
-TEAM_DIR=/Users/christianmacedo/Projects/templates/starter-delivery-team/development-team
-STARTERS_DIR=/Users/christianmacedo/Projects/templates
+TEAM_DIR=$TOOLKIT_DIR/starter-delivery-team/development-team
+STARTERS_DIR=$TOOLKIT_DIR
 
 for service in {service-1} {service-2} ...; do
   STARTER_TYPE={matching starter type for this service}
@@ -503,7 +520,7 @@ Confirm the push succeeded:
 Copy and customize the Docker infrastructure, test skeleton, and CI workflows:
 
 ```bash
-TEMPLATES_DIR=/Users/christianmacedo/Projects/templates/starter-delivery-team/development-team
+TEMPLATES_DIR=$TOOLKIT_DIR/starter-delivery-team/development-team
 
 # Copy infra/
 cp -r "$TEMPLATES_DIR/infra" "$PROJECTS_DIR/{name}/infra"
@@ -547,8 +564,8 @@ one must be replaced or the pipeline will not function.**
 
 | Placeholder | Replace with | Found in |
 |---|---|---|
-| `{JIRA_SITE}` | `christianmacedo.atlassian.net` | jiractl config block |
-| `{CLOUD_ID}` | `christianmacedo.atlassian.net` | jiractl config block |
+| `{JIRA_SITE}` | `$ATLASSIAN_SITE` | jiractl config block |
+| `{CLOUD_ID}` | `$ATLASSIAN_SITE` | jiractl config block |
 
 **Service configuration** (in pipelinectl, envctl, envwatch, docker-compose, dashboard):
 

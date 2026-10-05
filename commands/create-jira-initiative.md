@@ -10,9 +10,18 @@ Create an Initiative issue in the current project's Jira.
 
 ## Config
 
+Machine- and client-specific settings live in `~/.config/pipeline-toolkit/config.env`,
+written by `install.sh` in the pipeline-toolkit repo. Each shell command runs in
+a fresh shell, so start every bash block that uses these values with:
+
+```bash
+source ~/.config/pipeline-toolkit/config.env
 ```
-CLOUD_ID=christianmacedo.atlassian.net
-```
+
+If that file doesn't exist, stop and ask the user to run `install.sh` from the
+pipeline-toolkit repo. Values: `$ATLASSIAN_SITE` (Atlassian cloud ID / site),
+`$JIRA_URL`, `$CONFLUENCE_URL`, `$PROJECTS_DIR`, `$IDEAS_DIR`, `$TOOLKIT_DIR`,
+plus working preferences `$PROMOTE_POLICY`, `$NEXT_TICKET_POLICY`, `$GITHUB_ISSUES`.
 
 ---
 
@@ -85,7 +94,7 @@ Initiative created
   Key       : {issue key, e.g. PROJ-42}
   Title     : {title}
   Project   : {project key}
-  URL       : https://christianmacedo.atlassian.net/browse/{issue key}
+  URL       : $JIRA_URL/browse/{issue key}
 
   Next: Create deliverables with /create-jira-deliverable
 ```

@@ -14,10 +14,18 @@ access. This skill walks the user through it.
 
 ## Config
 
+Machine- and client-specific settings live in `~/.config/pipeline-toolkit/config.env`,
+written by `install.sh` in the pipeline-toolkit repo. Each shell command runs in
+a fresh shell, so start every bash block that uses these values with:
+
+```bash
+source ~/.config/pipeline-toolkit/config.env
 ```
-CLOUD_ID=christianmacedo.atlassian.net
-CONFLUENCE_URL=https://christianmacedo.atlassian.net/wiki
-```
+
+If that file doesn't exist, stop and ask the user to run `install.sh` from the
+pipeline-toolkit repo. Values: `$ATLASSIAN_SITE` (Atlassian cloud ID / site),
+`$JIRA_URL`, `$CONFLUENCE_URL`, `$PROJECTS_DIR`, `$IDEAS_DIR`, `$TOOLKIT_DIR`,
+plus working preferences `$PROMOTE_POLICY`, `$NEXT_TICKET_POLICY`, `$GITHUB_ISSUES`.
 
 ---
 
@@ -40,7 +48,7 @@ Tell the user:
 
 > **Create the space in Confluence:**
 >
-> 1. Go to [Create Space](https://christianmacedo.atlassian.net/wiki/create-space)
+> 1. Go to [Create Space]($CONFLUENCE_URL/create-space)
 > 2. Choose **Blank space**
 > 3. Set the name to **{name}**
 > 4. Set the key to **{key}**
@@ -70,7 +78,7 @@ Confluence space ready
   Name     : {name}
   Key      : {key}
   Space ID : {spaceId}
-  URL      : https://christianmacedo.atlassian.net/wiki/spaces/{key}
+  URL      : $CONFLUENCE_URL/spaces/{key}
 
   Next: Migrate idea content with /migrate-idea
 ```

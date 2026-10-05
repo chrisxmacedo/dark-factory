@@ -4,17 +4,25 @@ description: Migrate an idea from the local Ideas folder into a Confluence space
 
 # Migrate Idea: $ARGUMENTS
 
-Read all content from a local idea folder in `/Users/christianmacedo/Projects/Ideas/`
+Read all content from a local idea folder in `$IDEAS_DIR/`
 and create corresponding pages in a Confluence space.
 
 ---
 
 ## Config
 
+Machine- and client-specific settings live in `~/.config/pipeline-toolkit/config.env`,
+written by `install.sh` in the pipeline-toolkit repo. Each shell command runs in
+a fresh shell, so start every bash block that uses these values with:
+
+```bash
+source ~/.config/pipeline-toolkit/config.env
 ```
-CLOUD_ID=christianmacedo.atlassian.net
-IDEAS_DIR=/Users/christianmacedo/Projects/Ideas
-```
+
+If that file doesn't exist, stop and ask the user to run `install.sh` from the
+pipeline-toolkit repo. Values: `$ATLASSIAN_SITE` (Atlassian cloud ID / site),
+`$JIRA_URL`, `$CONFLUENCE_URL`, `$PROJECTS_DIR`, `$IDEAS_DIR`, `$TOOLKIT_DIR`,
+plus working preferences `$PROMOTE_POLICY`, `$NEXT_TICKET_POLICY`, `$GITHUB_ISSUES`.
 
 ---
 
@@ -25,7 +33,7 @@ If `$ARGUMENTS` is non-empty, use it to match an idea folder name.
 Otherwise, list available ideas:
 
 ```bash
-ls /Users/christianmacedo/Projects/Ideas/
+ls $IDEAS_DIR/
 ```
 
 Present the list and ask which idea to migrate.
@@ -101,7 +109,7 @@ Idea migrated to Confluence
   Idea     : {idea name}
   Space    : {space key}
   Pages    : {count} pages created
-  Root     : https://christianmacedo.atlassian.net/wiki/spaces/{key}/pages/{parentId}
+  Root     : $CONFLUENCE_URL/spaces/{key}/pages/{parentId}
 
   Pages created:
     - {title 1} ({url})

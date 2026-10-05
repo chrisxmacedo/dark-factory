@@ -14,17 +14,24 @@ Create a GitHub issue in the current repository and automatically add it to the
 
 ---
 
-## Config (never change these)
+## Config
 
-```
-ORG=ClauseHub
-PROJECT_NUMBER=1
-PROJECT_ID=PVT_kwDOD_6XQs4BRzCV
-GH="GH_TOKEN=$COMPANY_BOT_TOKEN gh"
+Mission Control settings live in `~/.config/pipeline-toolkit/config.env`,
+written by `install.sh` in the pipeline-toolkit repo. Each shell command runs
+in a fresh shell, so start every bash block with:
+
+```bash
+source ~/.config/pipeline-toolkit/config.env
+ORG="$MC_ORG"; PROJECT_NUMBER="$MC_PROJECT_NUMBER"; PROJECT_ID="$MC_PROJECT_ID"
+GH="gh"; [ -n "$MC_TOKEN_VAR" ] && [ -n "${!MC_TOKEN_VAR:-}" ] && GH="GH_TOKEN=${!MC_TOKEN_VAR} gh"
 ```
 
-Use `$GH` instead of `gh` for every command so actions appear as `ClauseHub-bot`.
-If `$COMPANY_BOT_TOKEN` is not set, fall back to plain `gh`.
+If `MC_ORG` is empty, Mission Control isn't set up on this machine — tell the
+user to re-run `install.sh` and stop.
+
+Use `$GH` instead of `gh` for every command so actions appear as the bot
+account whose token is in the variable named by `$MC_TOKEN_VAR`. If that
+variable is empty, fall back to plain `gh`.
 
 ---
 
@@ -75,7 +82,7 @@ REPO_NAME=$(echo "$REPO" | cut -d'/' -f2)
 
 If this fails (not in a git repo), ask the user which repo to use:
 ```bash
-gh repo list ClauseHub --json nameWithOwner -q '.[].nameWithOwner'
+gh repo list "$MC_ORG" --json nameWithOwner -q '.[].nameWithOwner'
 ```
 
 ---
@@ -181,5 +188,5 @@ Ticket created
   Size      : {size}
   Category  : {category}
 
-  Board     : https://github.com/orgs/ClauseHub/projects/1
+  Board     : https://github.com/orgs/$MC_ORG/projects/$MC_PROJECT_NUMBER
 ```

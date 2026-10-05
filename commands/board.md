@@ -16,10 +16,18 @@ Display open tickets on the Mission Control project board.
 
 ## Config
 
+Mission Control settings live in `~/.config/pipeline-toolkit/config.env`,
+written by `install.sh` in the pipeline-toolkit repo. Each shell command runs
+in a fresh shell, so start every bash block with:
+
+```bash
+source ~/.config/pipeline-toolkit/config.env
+ORG="$MC_ORG"; PROJECT_NUMBER="$MC_PROJECT_NUMBER"; PROJECT_ID="$MC_PROJECT_ID"
+GH="gh"; [ -n "$MC_TOKEN_VAR" ] && [ -n "${!MC_TOKEN_VAR:-}" ] && GH="GH_TOKEN=${!MC_TOKEN_VAR} gh"
 ```
-ORG=ClauseHub
-PROJECT_NUMBER=1
-```
+
+If `MC_ORG` is empty, Mission Control isn't set up on this machine — tell the
+user to re-run `install.sh` and stop.
 
 ---
 
@@ -103,7 +111,7 @@ Format:
 
 ```
 📋  Mission Control — {repo_name}
-    https://github.com/orgs/ClauseHub/projects/1
+    https://github.com/orgs/$MC_ORG/projects/$MC_PROJECT_NUMBER
 
 ● IN PROGRESS
   #3  Add /health endpoint  [Feature · S · High]

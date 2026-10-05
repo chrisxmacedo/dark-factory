@@ -14,11 +14,18 @@ access. This skill walks the user through it step by step.
 
 ## Config
 
+Machine- and client-specific settings live in `~/.config/pipeline-toolkit/config.env`,
+written by `install.sh` in the pipeline-toolkit repo. Each shell command runs in
+a fresh shell, so start every bash block that uses these values with:
+
+```bash
+source ~/.config/pipeline-toolkit/config.env
 ```
-CLOUD_ID=christianmacedo.atlassian.net
-JIRA_URL=https://christianmacedo.atlassian.net
-TEMPLATE_PROJECT=TEM
-```
+
+If that file doesn't exist, stop and ask the user to run `install.sh` from the
+pipeline-toolkit repo. Values: `$ATLASSIAN_SITE` (Atlassian cloud ID / site),
+`$JIRA_URL`, `$CONFLUENCE_URL`, `$PROJECTS_DIR`, `$IDEAS_DIR`, `$TOOLKIT_DIR`,
+plus working preferences `$PROMOTE_POLICY`, `$NEXT_TICKET_POLICY`, `$GITHUB_ISSUES`.
 
 ---
 
@@ -43,7 +50,7 @@ Tell the user:
 
 > **Create the project in Jira:**
 >
-> 1. Go to [Jira Project Creation](https://christianmacedo.atlassian.net/jira/projects?showCreateProject=true)
+> 1. Go to [Jira Project Creation]($JIRA_URL/jira/projects?showCreateProject=true)
 > 2. Select **Scrum** or **Kanban** (your preference)
 > 3. Select **Team-managed project**
 > 4. Set the name to **{name}** and key to **{key}**
@@ -82,7 +89,7 @@ Jira project ready
 
   Name    : {name}
   Key     : {key}
-  URL     : https://christianmacedo.atlassian.net/jira/software/projects/{key}/board
+  URL     : $JIRA_URL/jira/software/projects/{key}/board
 
   Issue types:
     Initiative  → Level 2 (strategic)

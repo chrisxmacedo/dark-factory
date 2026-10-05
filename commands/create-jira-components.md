@@ -15,10 +15,18 @@ walks the user through creating them.
 
 ## Config
 
+Machine- and client-specific settings live in `~/.config/pipeline-toolkit/config.env`,
+written by `install.sh` in the pipeline-toolkit repo. Each shell command runs in
+a fresh shell, so start every bash block that uses these values with:
+
+```bash
+source ~/.config/pipeline-toolkit/config.env
 ```
-CLOUD_ID=christianmacedo.atlassian.net
-JIRA_URL=https://christianmacedo.atlassian.net
-```
+
+If that file doesn't exist, stop and ask the user to run `install.sh` from the
+pipeline-toolkit repo. Values: `$ATLASSIAN_SITE` (Atlassian cloud ID / site),
+`$JIRA_URL`, `$CONFLUENCE_URL`, `$PROJECTS_DIR`, `$IDEAS_DIR`, `$TOOLKIT_DIR`,
+plus working preferences `$PROMOTE_POLICY`, `$NEXT_TICKET_POLICY`, `$GITHUB_ISSUES`.
 
 ---
 
@@ -86,7 +94,7 @@ Tell the user:
 
 > **Create components in Jira:**
 >
-> 1. Go to [Project Settings → Components](https://christianmacedo.atlassian.net/jira/software/projects/{KEY}/settings/components)
+> 1. Go to [Project Settings → Components]($JIRA_URL/jira/software/projects/{KEY}/settings/components)
 > 2. For each component below, click **Create component** and enter the name:
 
 Then list each component with its name and a one-line description:
