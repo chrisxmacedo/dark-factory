@@ -16,7 +16,7 @@ Covers: Ready for Integration Test → In Integration Test → Ready for E2E Imp
 - CI Docker environment: `docker-compose.base.yml` + `docker-compose.ci.yml`
 - Images tagged `:ci` — built from ci branch source
 - Ephemeral storage (tmpfs), LLM stub server, no OTel collector
-- Ports: web on `${WEB_PORT}`, sync on `${SYNC_PORT}`, stub on `${LLM_STUB_PORT}`
+- Ports (CI): web on `{WEB_PORT}`, sync on `{SYNC_PORT}`, LLM stub on `11434` (RC = +100, Prod-parity = +200)
 - After every merge to ci: `envctl rebuild ci && envctl test ci` (mandatory)
 
 ## Test gates (24 gates)

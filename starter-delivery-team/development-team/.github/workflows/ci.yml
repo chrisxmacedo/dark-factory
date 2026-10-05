@@ -1,3 +1,14 @@
+# WHERE THIS FILE GOES
+# GitHub only runs workflows from a repository's own .github/workflows/.
+# In the usual layout the project workspace root (which holds infra/ and
+# tests/) is NOT a git repo, so a copy there never triggers. Instead:
+#   1. copy this file into each service repo's .github/workflows/
+#   2. vendor the compose files it uses into that repo's .github/compose/,
+#      rewriting `context: ../{service-1}` to `context: .` for the repo itself
+#   3. change `working-directory: infra` / `-f infra/...` below to .github/compose
+# If the workspace root IS the git repo (monorepo), use this file as-is.
+# (Learned on Hearthstone, HEARTH-7.)
+
 name: CI
 
 on:

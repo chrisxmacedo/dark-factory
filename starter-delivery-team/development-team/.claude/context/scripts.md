@@ -14,14 +14,19 @@ or the first Infrastructure Setup deliverable:
 
 ### `infra/envctl`
 - `SERVICE_REPOS` — list all service repo paths
-- `WEB_PORT_CI` — base port for the first service (others offset from this)
-- `checkout_branch` — verify branch names match your Git workflow
+- `WEB_PORT_CI` — base port for the first service (RC = +100, Prod-parity = +200)
+- `INTEGRATION_TEST_CMD` / `E2E_TEST_CMD` / `SMOKE_TEST_CMD` — test runners for
+  `envctl test` (default: Python suites in `tests/`; `BASE_URL` is exported)
+- Needs Docker Compose >= 2.24.4 (`ports: !override` in docker-compose.test.yml)
 
 ### `infra/pipelinectl`
 - `PROJECT_KEY` — Jira project key (e.g. `SENT`, `HIND`)
 - `SERVICE_REPOS` — same list as envctl
-- `T_BACKLOG`, `T_IN_DEV`, etc. — Jira transition IDs (get from `getTransitionsForJiraIssue`)
-- `{BUILD_COMMAND}` — Docker build verification command
+- `T_BACKLOG`, `T_IN_DEV`, etc. — Jira transition IDs (`./jiractl transitions ISSUE-KEY`
+  lists them live; query a Deliverable and a Task — their workflows differ)
+- `{BUILD_COMMAND}` — production build run before merge to ci
+- `LOCAL_GATE_CMDS` — `(auto)` derives lint/format/typecheck/build/test per repo
+  from `package.json` scripts or `pyproject.toml`; override with `"label|command"` pairs
 
 ### `infra/jiractl` — CONFIGURE FIRST
 - Requires `infra/.env.jira` with `JIRA_EMAIL` and `JIRA_API_TOKEN`
@@ -64,6 +69,25 @@ test -f infra/.env.jira && ./infra/jiractl poll || echo "No .env.jira — use MC
 | Cut release-rc-{n} from ci | `cd infra && ./pipelinectl cut-rc {PROJECT_KEY}-{key}` (always from ci HEAD) |
 | Merge RC into main + tag + back-merge | `cd infra && ./pipelinectl merge-rc {PROJECT_KEY}-{key} {N}` |
 
+## Gates via pipelinectl
+
+| Stage | Command | What it runs |
+|-------|---------|--------------|
+| In Local Test | `./pipelinectl local-gate {PROJECT_KEY}-{key}` | Every repo with the feature branch: `LOCAL_GATE_CMDS`. All gates run; any failure fails the stage |
+| In Integration Test | `./pipelinectl ci-gate {PROJECT_KEY}-{key}` | Builds the rc (Test) stack from `ci` — CI services + fixture seeding — then `envctl test rc integration` |
+
+## Docker environments via envctl
+
+```bash
+cd infra
+./envctl up ci|rc|prod                # start from :env images (builds from the env's branch if missing)
+./envctl rebuild ci|rc|prod           # rebuild :env images from the env's branch, no checkout
+REBUILD_BRANCH=ci ./envctl rebuild rc # build an env from a different branch
+./envctl rebuild-local ci             # build from the working tree (first Deliverable / debugging)
+./envctl test rc integration          # boot, run suite against BASE_URL, tear down
+./envctl down prod                    # keeps prod-parity volumes; add --wipe to delete them
+```
+
 ## Jira operations via jiractl
 
 ```bash
@@ -71,7 +95,10 @@ cd infra
 ./jiractl poll                              # Find actionable tickets
 ./jiractl backlog                           # Show next Deliverable in Backlog
 ./jiractl transition {PROJECT_KEY}-{key} {id}       # Transition ticket
-./jiractl comment {PROJECT_KEY}-{key} "message"     # Add comment
+./jiractl comment {PROJECT_KEY}-{key} "message"     # Add comment (inline text)
+./jiractl comment {PROJECT_KEY}-{key} report.md     # ...or a markdown file (headings, lists, code fences → ADF)
+some-cmd | ./jiractl comment {PROJECT_KEY}-{key} -  # ...or stdin
+./jiractl transitions {PROJECT_KEY}-{key}           # Valid transition IDs from this ticket's status (live)
 ./jiractl components {PROJECT_KEY}-{key} svc1 svc2  # Set components
 ./jiractl status {PROJECT_KEY}-{key}                # Show ticket info
 ```

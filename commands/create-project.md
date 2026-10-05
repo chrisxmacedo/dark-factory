@@ -511,9 +511,15 @@ cp -r "$TEMPLATES_DIR/infra" "$PROJECTS_DIR/{name}/infra"
 # Copy tests/
 cp -r "$TEMPLATES_DIR/tests" "$PROJECTS_DIR/{name}/tests"
 
-# Copy GitHub Actions workflows
-mkdir -p "$PROJECTS_DIR/{name}/.github/workflows"
-cp "$TEMPLATES_DIR/.github/workflows/"*.yml "$PROJECTS_DIR/{name}/.github/workflows/"
+# Copy GitHub Actions workflows INTO EACH SERVICE REPO — the workspace root
+# is not a git repo, so workflows placed there never run (Hearthstone HEARTH-7)
+for service in {service-1} {service-2} ...; do
+  mkdir -p "$PROJECTS_DIR/{name}/$service/.github/workflows" "$PROJECTS_DIR/{name}/$service/.github/compose"
+  cp "$TEMPLATES_DIR/.github/workflows/"*.yml "$PROJECTS_DIR/{name}/$service/.github/workflows/"
+done
+# Then, per repo, follow the "WHERE THIS FILE GOES" header in ci.yml: vendor the
+# compose overrides into .github/compose/ (context: ../$service → context: .)
+# and point the workflow's compose paths at .github/compose.
 
 # Create empty test suite directories
 mkdir -p "$PROJECTS_DIR/{name}/tests/integration"
@@ -541,24 +547,23 @@ one must be replaced or the pipeline will not function.**
 
 | Placeholder | Replace with | Found in |
 |---|---|---|
-| `{JIRA_SITE}` | `christianmacedo.atlassian.net` | jiractl line 19 |
-| `{CLOUD_ID}` | `christianmacedo.atlassian.net` | jiractl line 20 |
+| `{JIRA_SITE}` | `christianmacedo.atlassian.net` | jiractl config block |
+| `{CLOUD_ID}` | `christianmacedo.atlassian.net` | jiractl config block |
 
 **Service configuration** (in pipelinectl, envctl, envwatch, docker-compose, dashboard):
 
 | Placeholder | Replace with | Found in |
 |---|---|---|
-| `{service-1}`, `{service-2}`, etc. | Actual service names from Stage 6 list. Expand the arrays to include ALL services. | pipelinectl line 30, envctl line 24, envwatch line 18, dashboard |
+| `{service-1}`, `{service-2}`, etc. | Actual service names from Stage 6 list. Expand the arrays to include ALL services. The compose `image: {service}:${IMAGE_TAG}` names must match the repo folder names — envctl tags images by folder name. | pipelinectl and envctl `SERVICE_REPOS`, envwatch, dashboard, docker-compose examples |
 | `{SERVICE_WITH_MIGRATIONS}` | Service that owns DB migrations (e.g. `acme-api`) | docker-compose.ci.yml, docker-compose.prod-parity.yml |
-| `{SERVICE_WITH_TESTS}` | Primary service for unit tests | pipelinectl line 46, ci.yml, release.yml |
-| `{PRIMARY_SERVICE}` | Service used for migrate image tag | envctl line 258 |
+| `{SERVICE_WITH_TESTS}` | Primary service for unit tests | ci.yml, release.yml |
 | `{SERVICE_1}` (uppercase, in comments) | First service name — replace or remove the example comments | docker-compose files (4x) |
 
 **Port configuration** (in envctl, dashboard, docker-compose):
 
 | Placeholder | Replace with | Found in |
 |---|---|---|
-| `{WEB_PORT}` | Base web port for CI (e.g. `3000`) | envctl line 26, dashboard line 35, docker-compose.base.yml |
+| `{WEB_PORT}` | Base web port for CI (e.g. `3000`); RC = +100, Prod-parity = +200 | envctl `WEB_PORT_CI`, dashboard, docker-compose comments |
 | `{SYNC_PORT}` | Base sync/API port for CI (e.g. `8000`) | docker-compose.base.yml (comments) |
 | `{PORT}` | Per-service ports in the example service block | docker-compose.base.yml (comments) |
 | `{PORT_1}`, `{PORT_2}` | Per-service ports for dashboard | dashboard.py |
@@ -570,12 +575,27 @@ one must be replaced or the pipeline will not function.**
 | Placeholder | Replace with | Found in |
 |---|---|---|
 | `{MIGRATION_COMMAND}` | e.g. `npx prisma migrate deploy` or `alembic upgrade head` | docker-compose.ci.yml, docker-compose.prod-parity.yml |
-| `{BUILD_COMMAND}` | Docker build verification command | pipelinectl line 123 |
-| `{UNIT_TEST_COMMAND}` | e.g. `npm test` or `pytest tests/unit/` | pipelinectl line 46, ci.yml, release.yml |
+| `{BUILD_COMMAND}` | Production build run before merge to ci (e.g. `npm run build`) | pipelinectl `cmd_merge_to_ci` |
+| `{UNIT_TEST_COMMAND}` | e.g. `npm test` or `pytest tests/unit/` | ci.yml, release.yml |
 | `{INSTALL_TEST_DEPS_COMMAND}` | Test dependency install command | ci.yml, release.yml (3x) |
 | `{INTEGRATION_TEST_COMMAND}` | Integration test runner | ci.yml |
 | `{E2E_TEST_COMMAND}` | E2E test runner | release.yml |
 | `{SMOKE_TEST_COMMAND}` | Smoke test runner | release.yml |
+
+**Gate commands — no placeholders, but check them:**
+
+- `pipelinectl` `LOCAL_GATE_CMDS=(auto)` runs lint / format:check / typecheck /
+  build / test from each repo's `package.json` scripts, or ruff / mypy / pytest
+  for `pyproject.toml` repos. Override with explicit `"label|command"` pairs if
+  the defaults don't fit.
+- `envctl` `INTEGRATION_TEST_CMD` / `E2E_TEST_CMD` / `SMOKE_TEST_CMD` default to
+  the Python suites in `tests/`. For a Node project point them at the service's
+  scripts, e.g. `cd {service-1} && npm run --silent test:integration`.
+  `BASE_URL` is exported for the environment under test.
+- For the very first Deliverable, before `ci` has any code, use
+  `./envctl rebuild-local ci` (builds from the working tree); `envctl rebuild`
+  also falls back to the working tree automatically when a branch has no
+  Dockerfile yet.
 
 **Storage & external services** (in docker-compose):
 
@@ -592,7 +612,7 @@ one must be replaced or the pipeline will not function.**
 
 | Placeholder | Replace with | Found in |
 |---|---|---|
-| `{TBC}` (9 instances, lines 33–41) | Actual Jira transition IDs discovered via `./jiractl transitions` | pipelinectl |
+| `{TBC}` (9 instances, the `T_*=` config block) | Actual Jira transition IDs discovered via `./jiractl transitions ISSUE-KEY` (fetched live) | pipelinectl |
 
 These are the SAME IDs that go into `pipeline-stages.md` as `{T_BACKLOG}`,
 `{T_REFINE}`, etc. — but pipelinectl uses `{TBC}` as its placeholder.

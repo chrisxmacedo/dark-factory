@@ -43,7 +43,7 @@ Each starter and team folder has its own `CONTEXT.md`, which explains what the f
 | Jira Cloud | The free tier works. You also need an API token from https://id.atlassian.com/manage-profile/security/api-tokens |
 | Atlassian MCP | Used for Jira operations when `jiractl` isn't configured |
 | GitHub + `gh` CLI | One GitHub organisation per project. Install the *GitHub for Jira* app on it. |
-| Docker Desktop | Runs the CI, RC and prod-parity environments |
+| Docker Desktop (or OrbStack) | Runs the CI, RC and prod-parity environments. Needs Docker Compose 2.24.4 or later. |
 | Git 2.x | |
 | Node.js 22 | For the TypeScript starters |
 | Python 3.12 + [uv](https://docs.astral.sh/uv/) | For `starter-api`. The capability-team scripts only need Python 3's standard library. |
@@ -173,11 +173,20 @@ These scripts handle the routine pipeline work so it doesn't cost Claude tokens:
 
 ```bash
 cd development-team/infra
-./jiractl poll | status KEY-22 | transition KEY-22 <id> | comment KEY-22 "msg"
+./jiractl poll | status KEY-22 | transition KEY-22 <id>
+./jiractl comment KEY-22 "msg" | report.md | -     # inline, markdown file, or stdin → Jira rich text
+./jiractl transitions KEY-22                       # valid transition IDs, live from Jira
 ./pipelinectl poll | local-gate KEY-22 | ci-gate KEY-22 | merge-to-ci KEY-22 | cut-rc KEY-22 | merge-rc KEY-22 N
-./envctl up|down|rebuild ci|rc|prod|all · ./envctl status · ./envctl logs ci
-./dashboard.py              # environment dashboard on :4400 (--port to change)
+./envctl up|rebuild ci|rc|prod|all                 # images built from each env's branch, no checkout
+./envctl rebuild-local ci                          # build from the working tree (first Deliverable)
+./envctl test rc integration                       # boot, run suite against BASE_URL, tear down
+./envctl down ci|rc|prod [--wipe]                  # prod keeps its volumes unless --wipe
+./dashboard.py                                     # environment dashboard on :4400 (--port to change)
 ```
+
+- **`local-gate`** runs in every repo that has the feature branch. By default it picks lint / format:check / typecheck / build / test from `package.json` scripts, or ruff / mypy / pytest for `pyproject.toml` repos. Set `LOCAL_GATE_CMDS` in `pipelinectl` to override.
+- **`ci-gate`** builds the Test stack (CI services plus fixture seeding) from `ci` and runs the integration suite against it, so integration tests can rely on seeded records. Set the suite commands (`INTEGRATION_TEST_CMD` etc.) in `envctl`.
+- **CI, RC and prod-parity run side by side** on base ports, +100 and +200. Host ports live only in the per-environment Compose overrides, and the RC stack re-binds CI's ports with `ports: !override`.
 
 Capability-team validators run from `capability-team/` and use only the Python standard library:
 
