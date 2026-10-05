@@ -4,7 +4,8 @@
 # Usage:
 #   ./jiractl poll                         Find tickets ready for action
 #   ./jiractl transition {PROJECT_KEY}-22 51       Transition ticket (by ID)
-#   ./jiractl comment {PROJECT_KEY}-22 "message"   Add comment
+#   ./jiractl comment {PROJECT_KEY}-22 "message"   Add comment (or a .md path, or - for stdin)
+#   ./jiractl transitions {PROJECT_KEY}-22         List valid transition IDs (live)
 #   ./jiractl components {PROJECT_KEY}-22 treemail-web treemail-sync
 #   ./jiractl status {PROJECT_KEY}-22              Show ticket status
 #
@@ -38,7 +39,7 @@ trap 'code=$?; audit_log "jiractl $_JIRACTL_SUB" "$code" 0 0 "{\"ticket\":\"$_JI
 JIRA_SITE="{JIRA_SITE}"
 CLOUD_ID="{CLOUD_ID}"
 PROJECT_KEY="{PROJECT_KEY}"
-JIRA_API="https://${JIRA_SITE}/rest/api/3"
+JIRA_API="https://$JIRA_SITE/rest/api/3"  # unbraced on purpose: replacing the placeholder must not touch this line
 
 # Load credentials
 if [ -f "$INFRA_DIR/.env.jira" ]; then
@@ -134,6 +135,89 @@ jira_put() {
   jira_request PUT -d "$2" "$JIRA_API$1"
 }
 
+# Markdown on stdin → Atlassian Document Format JSON on stdout. Shared by
+# create and comment so bodies with quotes, newlines or code survive intact
+# (building JSON by string interpolation broke on both).
+md_to_adf() {
+  python3 -c '
+import json, sys
+
+desc = sys.stdin.read()
+content = []
+in_code, code_lang, code_lines = False, None, []
+GHERKIN = ("Feature:", "Scenario:", "Given ", "When ", "Then ", "And ")
+
+def text(t):
+    return [{"type": "text", "text": t}]
+
+for line in desc.split("\n"):
+    s = line.strip()
+    if s.startswith("```"):
+        if in_code:
+            content.append({"type": "codeBlock", "attrs": {"language": code_lang or None},
+                            "content": text("\n".join(code_lines)) if code_lines else []})
+            in_code, code_lang, code_lines = False, None, []
+        else:
+            in_code, code_lang = True, s[3:].strip()
+        continue
+    if in_code:
+        code_lines.append(line)
+        continue
+    if not s:
+        continue
+    if s.startswith("### "):
+        content.append({"type": "heading", "attrs": {"level": 3}, "content": text(s[4:])})
+    elif s.startswith("## "):
+        content.append({"type": "heading", "attrs": {"level": 2}, "content": text(s[3:])})
+    elif s.startswith("# "):
+        content.append({"type": "heading", "attrs": {"level": 1}, "content": text(s[2:])})
+    elif s.startswith("- ") or s.startswith("* "):
+        if not content or content[-1].get("type") != "bulletList":
+            content.append({"type": "bulletList", "content": []})
+        content[-1]["content"].append({"type": "listItem",
+                                       "content": [{"type": "paragraph", "content": text(s[2:])}]})
+    elif s.startswith(GHERKIN):
+        if not content or content[-1].get("type") != "codeBlock" or content[-1]["attrs"].get("language") != "gherkin":
+            content.append({"type": "codeBlock", "attrs": {"language": "gherkin"}, "content": []})
+        existing = content[-1]["content"]
+        content[-1]["content"] = text((existing[0]["text"] + "\n" + s) if existing else s)
+    else:
+        content.append({"type": "paragraph", "content": text(s)})
+
+if in_code:  # unterminated fence — keep what we have
+    content.append({"type": "codeBlock", "attrs": {"language": code_lang or None},
+                    "content": text("\n".join(code_lines)) if code_lines else []})
+
+print(json.dumps({"type": "doc", "version": 1, "content": content}))
+'
+}
+
+# Read a body argument: "-" = stdin, an existing file path = its contents,
+# anything else = the text itself.
+read_body() {
+  if [ "${1:-}" = "-" ]; then
+    cat
+  elif [ $# -eq 1 ] && [ -f "$1" ]; then
+    cat "$1"
+  else
+    printf '%s' "$*"
+  fi
+}
+
+# Pull a readable message out of a Jira error response.
+jira_error_text() {
+  python3 -c '
+import json, sys
+raw = sys.stdin.read()
+try:
+    d = json.loads(raw)
+    msgs = list(d.get("errorMessages", [])) + [f"{k}: {v}" for k, v in d.get("errors", {}).items()]
+    print("; ".join(msgs) if msgs else raw)
+except Exception:
+    print(raw.strip() or "(empty response)")
+'
+}
+
 jira_search() {
   local jql="$1"
   local fields="${2:-summary,status}"
@@ -196,7 +280,13 @@ cmd_transition() {
   local transition_id="$2"
 
   echo "Transitioning $issue → transition $transition_id..."
-  jira_post "/issue/$issue/transitions" "{\"transition\":{\"id\":\"$transition_id\"}}" > /dev/null
+  local result
+  if ! result=$(jira_post "/issue/$issue/transitions" "{\"transition\":{\"id\":\"$transition_id\"}}"); then
+    echo "Error: transition $transition_id failed on $issue: $(echo "$result" | jira_error_text)" >&2
+    echo "Transitions Jira will accept for $issue right now:" >&2
+    cmd_transitions "$issue" >&2 || true
+    return 1
+  fi
   echo "Done."
 
   # Auto-update PIPELINE-STATE.md if it exists
@@ -229,10 +319,21 @@ EOF
 cmd_comment() {
   local issue="$1"
   shift
-  local body="$*"
+  local body
+  body=$(read_body "$@")
+  if [ -z "${body//[[:space:]]/}" ]; then
+    echo "Error: empty comment. Usage: jiractl comment ISSUE-KEY <text | file.md | ->" >&2
+    return 1
+  fi
+
+  local payload result
+  payload=$(printf '%s' "$body" | md_to_adf | python3 -c 'import json,sys; print(json.dumps({"body": json.load(sys.stdin)}))')
 
   echo "Adding comment to $issue..."
-  jira_post "/issue/$issue/comment" "{\"body\":{\"type\":\"doc\",\"version\":1,\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"$body\"}]}]}}" > /dev/null
+  if ! result=$(jira_post "/issue/$issue/comment" "$payload"); then
+    echo "Error adding comment to $issue: $(echo "$result" | jira_error_text)" >&2
+    return 1
+  fi
   echo "Done."
 }
 
@@ -401,73 +502,26 @@ if empty:
     fi
   fi
 
-  # Convert markdown to Atlassian Document Format via Python
+  # Convert markdown to Atlassian Document Format. Summary/parent travel as
+  # environment variables, not interpolated into Python source, so quotes in
+  # a summary can't break the payload.
   local payload
-  payload=$(python3 -c "
-import json, sys, re
-
-summary = '''$summary'''
-issue_type = '$issue_type'
-project_key = '$PROJECT_KEY'
-desc = sys.stdin.read()
-
-# Simple markdown to ADF conversion
-content = []
-for line in desc.split('\n'):
-    line_stripped = line.strip()
-    if not line_stripped:
-        continue
-    if line_stripped.startswith('## '):
-        content.append({
-            'type': 'heading', 'attrs': {'level': 2},
-            'content': [{'type': 'text', 'text': line_stripped[3:]}]
-        })
-    elif line_stripped.startswith('### '):
-        content.append({
-            'type': 'heading', 'attrs': {'level': 3},
-            'content': [{'type': 'text', 'text': line_stripped[4:]}]
-        })
-    elif line_stripped.startswith('- '):
-        # Collect consecutive list items
-        if not content or content[-1].get('type') != 'bulletList':
-            content.append({'type': 'bulletList', 'content': []})
-        content[-1]['content'].append({
-            'type': 'listItem',
-            'content': [{'type': 'paragraph', 'content': [{'type': 'text', 'text': line_stripped[2:]}]}]
-        })
-    elif line_stripped.startswith('Feature:') or line_stripped.startswith('Scenario:') or line_stripped.startswith('Given ') or line_stripped.startswith('When ') or line_stripped.startswith('Then ') or line_stripped.startswith('And '):
-        # Gherkin lines as code block
-        if not content or content[-1].get('type') != 'codeBlock':
-            content.append({'type': 'codeBlock', 'attrs': {'language': 'gherkin'}, 'content': []})
-        existing = content[-1]['content']
-        text = (existing[0]['text'] + '\n' + line_stripped) if existing else line_stripped
-        content[-1]['content'] = [{'type': 'text', 'text': text}]
-    else:
-        content.append({
-            'type': 'paragraph',
-            'content': [{'type': 'text', 'text': line_stripped}]
-        })
-
-if not content:
-    content = [{'type': 'paragraph', 'content': [{'type': 'text', 'text': 'No description provided.'}]}]
-
+  payload=$(printf '%s' "$description" | md_to_adf | \
+    SUMMARY="$summary" ISSUE_TYPE="$issue_type" PROJECT="$PROJECT_KEY" PARENT="$parent" python3 -c '
+import json, os, sys
+adf = json.load(sys.stdin)
+if not adf["content"]:
+    adf["content"] = [{"type": "paragraph", "content": [{"type": "text", "text": "No description provided."}]}]
 fields = {
-    'project': {'key': project_key},
-    'issuetype': {'name': issue_type},
-    'summary': summary,
-    'description': {
-        'type': 'doc',
-        'version': 1,
-        'content': content
-    }
+    "project": {"key": os.environ["PROJECT"]},
+    "issuetype": {"name": os.environ["ISSUE_TYPE"]},
+    "summary": os.environ["SUMMARY"],
+    "description": adf,
 }
-
-parent_key = '$parent'
-if parent_key:
-    fields['parent'] = {'key': parent_key}
-
-print(json.dumps({'fields': fields}))
-" <<< "$description")
+if os.environ.get("PARENT"):
+    fields["parent"] = {"key": os.environ["PARENT"]}
+print(json.dumps({"fields": fields}))
+')
 
   echo "Creating $issue_type: $summary..."
   local result
@@ -483,7 +537,7 @@ print(json.dumps({'fields': fields}))
   fi
 
   echo "Created: $key"
-  echo "  URL: https://${JIRA_SITE}/browse/$key"
+  echo "  URL: https://$JIRA_SITE/browse/$key"
 
   # Set components if provided
   if [ -n "$components" ]; then
@@ -523,18 +577,35 @@ for i, issue in enumerate(data.get('issues', [])):
   echo ""
 }
 
+# Transition IDs differ per Jira project, so they are fetched live rather
+# than hard-coded. Jira only returns transitions reachable from the issue's
+# current status, and Deliverables and Tasks use different workflows — query
+# one of each when filling in pipelinectl / pipeline-stages.md.
 cmd_transitions() {
-  echo "{PROJECT_KEY} transition IDs:"
-  echo ""
-  echo "  11   Backlog"
-  echo "  51   In Refinement"
-  echo "  61   In Development"
-  echo "  71   In Local Test"
-  echo "  81   In Integration Test"
-  echo "  91   In E2E Impact Test"
-  echo "  101  In Full E2E Regression"
-  echo "  111  Release / Production"
-  echo "  41   Done"
+  local issue="${1:-}"
+  if [ -z "$issue" ]; then
+    issue=$(jira_search "project = $PROJECT_KEY ORDER BY created DESC" "summary" | python3 -c '
+import json, sys
+issues = json.load(sys.stdin).get("issues", [])
+print(issues[0]["key"] if issues else "")' 2>/dev/null) || true
+    if [ -z "$issue" ]; then
+      echo "No issues in $PROJECT_KEY yet. Create one, then run: jiractl transitions ISSUE-KEY" >&2
+      return 1
+    fi
+    echo "(no issue given — using most recent: $issue)"
+  fi
+
+  local result
+  if ! result=$(jira_get "/issue/$issue/transitions"); then
+    echo "Error reading transitions for $issue: $(echo "$result" | jira_error_text)" >&2
+    return 1
+  fi
+  echo "Transitions available on $issue (live from Jira):"
+  echo "$result" | python3 -c '
+import json, sys
+for t in json.load(sys.stdin).get("transitions", []):
+    print("  %5s  %-28s -> %s" % (t["id"], t["name"], t["to"]["name"]))'
+  echo "Only transitions reachable from the current status are listed."
 }
 
 # ── Main ────────────────────────────────────────────────────────────────────
@@ -545,10 +616,11 @@ case "${1:-}" in
   create)      cmd_create "${2:?Usage: jiractl create TYPE SUMMARY [desc.md|-|text] [COMPONENTS] [PARENT]}" "${3:?Missing summary}" "${4:-}" "${5:-}" "${6:-}" ;;
   create-md)   cmd_create "${2:?Usage: jiractl create TYPE SUMMARY [desc.md|-|text] [COMPONENTS] [PARENT]}" "${3:?Missing summary}" "${4:-}" "${5:-}" "${6:-}" ;; # alias
   transition)  cmd_transition "${2:?Usage: jiractl transition ISSUE-KEY TRANSITION_ID}" "${3:?Missing transition ID}" ;;
-  comment)     cmd_comment "${2:?Usage: jiractl comment ISSUE-KEY message}" "${@:3}" ;;
+  comment)     cmd_comment "${2:?Usage: jiractl comment ISSUE-KEY <text | file.md | ->}" "${@:3}" ;;
+  comment-md)  cmd_comment "${2:?Usage: jiractl comment-md ISSUE-KEY <file.md | ->}" "${@:3}" ;; # alias
   components)  cmd_components "${2:?Usage: jiractl components ISSUE-KEY comp1 comp2}" "${@:3}" ;;
   status)      cmd_status "${2:?Usage: jiractl status ISSUE-KEY}" ;;
-  transitions) cmd_transitions ;;
+  transitions) cmd_transitions "${2:-}" ;;
   *)
     echo "Usage: jiractl <command> [args]"
     echo ""
@@ -562,10 +634,10 @@ case "${1:-}" in
     echo "                                               text    — inline string"
     echo "                                               omitted — auto-loads template"
     echo "  transition ISSUE-KEY ID                    Transition ticket"
-    echo "  comment ISSUE-KEY message                  Add comment to ticket"
+    echo "  comment ISSUE-KEY <text|file.md|->         Add comment (markdown → ADF; - reads stdin)"
     echo "  components ISSUE-KEY c1 c2                 Set components on ticket"
     echo "  status ISSUE-KEY                           Show ticket status"
-    echo "  transitions                                List transition IDs"
+    echo "  transitions [ISSUE-KEY]                    List transition IDs live from Jira"
     echo ""
     echo "Issue types: Deliverable, Issue, Task, Initiative"
     echo ""
