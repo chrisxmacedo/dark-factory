@@ -68,18 +68,21 @@ This team runs against the **CI Docker environment** (base.yml + ci.yml).
 The CI Monitor must spin up the environment and run the automated test suite
 as part of its gate validation.
 
-**CRITICAL: Always use `envctl` to manage environments — never raw
-`docker compose`.** `envctl` handles branch checkout, dashboard auto-start,
-and correct compose file composition. Raw `docker compose` bypasses branch
-checkout and will build from whatever branch is currently checked out.
+**CRITICAL: Always use `envctl` / `pipelinectl` to manage environments — never
+raw `docker compose`.** `envctl` builds each environment's images from the
+right branch without checking it out, starts the dashboard, and composes the
+right files. Raw `docker compose` builds from whatever branch is currently
+checked out in the working tree.
 
 ```bash
-# Single command: boots CI, checks out ci branch, runs integration tests, tears down
-cd infra && ./envctl test ci integration
+# Single command: builds the Test stack (CI services + fixture seeding) from
+# the ci branch, runs the integration suite against it, tears down, comments on Jira
+cd infra && ./pipelinectl ci-gate {PROJECT_KEY}-{key}
 ```
 
-This is equivalent to `envctl up ci` + `pytest tests/integration/` + `envctl down ci`
-but saves Claude tokens by running as a single deterministic command.
+This is equivalent to `REBUILD_BRANCH=ci ./envctl rebuild rc` +
+`./envctl test rc integration`. Integration tests run against the
+fixture-seeded Test stack (not bare CI) so they can rely on known records.
 
 **Integration test suite** (`tests/integration/`):
 - Service health endpoints

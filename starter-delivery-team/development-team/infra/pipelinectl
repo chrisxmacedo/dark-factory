@@ -60,10 +60,15 @@ T_IN_REGRESSION={TBC}
 T_RELEASE={TBC}
 T_DONE={TBC}
 
-# Unit test command (run inside Docker container)
-# Node.js: exec -T {service} npm test
-# Python:  exec -T {service} pytest tests/unit/
-UNIT_TEST_CMD="exec -T {SERVICE_WITH_TESTS} {UNIT_TEST_COMMAND}"
+# Local gate commands, run in every service repo that has the feature branch.
+# "auto" picks them per repo from its stack:
+#   package.json   → npm ci (if no node_modules), then each of lint,
+#                    format:check, typecheck, build, test that the repo defines
+#   pyproject.toml → uv sync (if no .venv), ruff check, ruff format --check,
+#                    mypy src (if [tool.mypy]), pytest
+# Or list explicit "label|command" pairs (applied to every repo), e.g.
+#   LOCAL_GATE_CMDS=("lint|npm run lint" "build|npm run build" "test|npm test")
+LOCAL_GATE_CMDS=(auto)
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -76,17 +81,45 @@ get_ticket_status() {
 
 get_feature_branch() {
   local key="$1"
-  (cd "${SERVICE_REPOS[0]}" && git branch -a | grep "feature/${key}/" | head -1 | tr -d ' ' | sed 's|remotes/origin/||') || echo ""
+  # Strip the "* " marker git puts on the currently checked-out branch.
+  (cd "${SERVICE_REPOS[0]}" && git branch -a | grep "feature/${key}/" | head -1 | sed 's|^[* ]*||' | tr -d ' ' | sed 's|remotes/origin/||') || echo ""
 }
 
 next_rc_number() {
   local max=0
   for repo in "${SERVICE_REPOS[@]}"; do
     local n
-    n=$(cd "$repo" && git branch -a | grep -oP 'release-rc-\K\d+' | sort -n | tail -1) || true
+    # sed, not `grep -oP` — macOS (BSD) grep has no -P, and under
+    # `set -euo pipefail` that failure silently returned "" here.
+    n=$( (cd "$repo" && git branch -a 2>/dev/null | sed -nE 's|^.*release-rc-([0-9]+).*$|\1|p' | sort -n | tail -1) || true )
     [ -n "$n" ] && [ "$n" -gt "$max" ] && max=$n
   done
   echo $((max + 1))
+}
+
+# Print "label|command" lines for a repo's local gate (see LOCAL_GATE_CMDS).
+local_gate_cmds() {
+  local repo="$1"
+  if [ "${LOCAL_GATE_CMDS[0]}" != "auto" ]; then
+    printf '%s\n' "${LOCAL_GATE_CMDS[@]}"
+    return
+  fi
+  if [ -f "$repo/package.json" ]; then
+    [ -d "$repo/node_modules" ] || echo "install|npm ci --silent"
+    local script
+    for script in $(python3 -c "import json,sys; print(' '.join(json.load(open(sys.argv[1])).get('scripts', {})))" "$repo/package.json"); do
+      case "$script" in
+        lint|format:check|typecheck|build) echo "$script|npm run --silent $script" ;;
+        test) echo "test|npm test --silent" ;;
+      esac
+    done
+  elif [ -f "$repo/pyproject.toml" ]; then
+    [ -d "$repo/.venv" ] || echo "install|uv sync --quiet"
+    echo "lint|uv run ruff check ."
+    echo "format|uv run ruff format --check ."
+    grep -q '^\[tool\.mypy\]' "$repo/pyproject.toml" && echo "typecheck|uv run mypy src"
+    echo "test|uv run pytest -q"
+  fi
 }
 
 # ── CI Gate ─────────────────────────────────────────────────────────────────
@@ -95,26 +128,26 @@ cmd_ci_gate() {
   local key="$1"
   log "Running CI gates for $key..."
 
-  local all_pass=true results=""
-
-  # Unit tests, lint, format — customize per stack
-  log "Running unit tests + lint + format..."
-  # Replace with your stack's commands
-  # if docker compose ... $UNIT_TEST_CMD; then results+="PASS"; else all_pass=false; fi
-
-  # Docker integration tests
-  log "Running integration tests..."
-  if "$ENVCTL" test ci 2>&1; then
-    results+="  integration tests: PASS\n"
-  else
-    results+="  integration tests: FAIL\n"
+  # Unit tests, lint and format already ran in local-gate and run again in the
+  # GitHub CI workflow; this gate is the Docker integration suite.
+  #
+  # Integration tests run against the rc (Test) stack — CI services plus
+  # fixture seeding — so tests can rely on known records. The images are
+  # built from the ci branch without touching anyone's working tree.
+  local all_pass=true
+  log "[1/2] Building the Test stack from ci..."
+  if ! REBUILD_BRANCH=ci "$ENVCTL" rebuild rc; then
+    err "Test stack failed to build or start from ci."
     all_pass=false
+  else
+    log "[2/2] Running integration tests..."
+    "$ENVCTL" test rc integration || all_pass=false
   fi
 
   if $all_pass; then
-    "$JIRACTL" comment "$key" "CI PASSED. All gates green. Run by pipelinectl."
+    "$JIRACTL" comment "$key" "CI PASSED. Integration suite green against the fixture-seeded Test stack built from ci. Run by pipelinectl."
   else
-    "$JIRACTL" comment "$key" "CI FAILED. Run by pipelinectl."
+    "$JIRACTL" comment "$key" "CI FAILED. See pipelinectl output. Run by pipelinectl."
   fi
   # The EXIT trap records the final exit code; $all_pass determines it.
   $all_pass
@@ -125,9 +158,45 @@ cmd_ci_gate() {
 cmd_local_gate() {
   local key="$1"
   log "Running local test gates for $key..."
-  # Customize: run tests, build, lint on the feature branch
-  # If all pass: return 0. If any fail: return 1.
-  echo "TODO: customize local-gate for your stack"
+  local branch; branch=$(get_feature_branch "$key")
+  [ -z "$branch" ] && { err "No feature branch for $key"; return 1; }
+
+  local all_pass=true summary="" repo
+  for repo in "${SERVICE_REPOS[@]}"; do
+    local name; name=$(basename "$repo")
+    if ! (cd "$repo" && git rev-parse --verify -q "$branch" >/dev/null); then
+      log "  $name: no $branch — skipping"; continue
+    fi
+    (cd "$repo" && git checkout -q "$branch") || { err "$name: cannot check out $branch"; all_pass=false; continue; }
+
+    local gates; gates=$(local_gate_cmds "$repo")
+    if [ -z "$gates" ]; then
+      err "$name: no gate commands — no package.json/pyproject.toml; set LOCAL_GATE_CMDS"
+      all_pass=false; continue
+    fi
+    local label cmd
+    while IFS='|' read -r label cmd; do
+      [ -z "$label" ] && continue
+      log "  $name: $label"
+      # </dev/null so a command reading stdin can't swallow the gate list.
+      if (cd "$repo" && bash -c "$cmd" </dev/null); then
+        summary+="$name $label: pass. "
+      else
+        err "  $name: $label FAILED"
+        summary+="$name $label: FAIL. "
+        all_pass=false
+      fi
+    done <<< "$gates"
+  done
+
+  if $all_pass; then
+    "$JIRACTL" comment "$key" "Local gate PASSED on $branch. $summary"
+    log "Local gate PASS."
+  else
+    "$JIRACTL" comment "$key" "Local gate FAILED on $branch. $summary"
+    err "Local gate FAIL."
+  fi
+  $all_pass
 }
 
 # ── Merge Feature to CI ────────────────────────────────────────────────────
@@ -270,7 +339,8 @@ cmd_merge_rc() {
      git notes append -m "merge: $rc_branch into main — $key" HEAD 2>/dev/null || true)
 
     # Tag
-    local ver; ver=$(cd "$repo" && git tag | grep -oP 'v\d+\.\d+' | sort -V | tail -1)
+    # Portable grep (BSD grep has no -P); `|| true` so "no tags yet" isn't fatal.
+    local ver; ver=$( (cd "$repo" && git tag 2>/dev/null | grep -Eo '^v[0-9]+\.[0-9]+(\.[0-9]+)?$' | sort -V | tail -1) || true )
     [ -z "$ver" ] && ver="v0.0"
     local major minor new_tag
     major=$(echo "$ver" | cut -d. -f1)

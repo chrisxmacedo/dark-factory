@@ -71,8 +71,14 @@ services:
   #   - build context pointing to ../{service-name}
   #   - environment block with DATABASE_URL, REDIS_URL, S3 vars, LLM API vars
   #   - depends_on with health check conditions
+  #   - image: {service-name}:${IMAGE_TAG:-ci} — envctl rebuild builds this tag
+  #     from the environment's branch; `up` then uses it instead of silently
+  #     rebuilding from whatever branch is checked out in the working tree
   #   - healthcheck (GET /healthz or /api/health)
-  #   - ports (expose the primary service port)
+  #   - NO ports — host ports are bound in the ci / test / prod-parity
+  #     overrides. Compose APPENDS port lists across files, so a port declared
+  #     here is published by every environment and CI, RC and Prod-parity can
+  #     no longer run at the same time.
   #
   # LLM API configuration (works with both Anthropic and OpenAI):
   #   {LLM_API_ENV_VAR}: ${LLM_API_KEY:-}
@@ -86,6 +92,7 @@ services:
   #   OTEL_RESOURCE_ATTRIBUTES: deployment.environment=${ENVIRONMENT}
 
   # {SERVICE_1}:
+  #   image: {service-1}:${IMAGE_TAG:-ci}
   #   build:
   #     context: ../{service-1}
   #     dockerfile: Dockerfile
@@ -103,5 +110,4 @@ services:
   #     interval: 10s
   #     timeout: 5s
   #     retries: 10
-  #   ports:
-  #     - "{PORT}:{PORT}"
+  #   # no ports: — see docker-compose.ci.yml / .test.yml / .prod-parity.yml

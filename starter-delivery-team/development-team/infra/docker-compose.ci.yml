@@ -50,10 +50,16 @@ services:
   #   Alembic:  command: ["alembic", "upgrade", "head"]
   #   Django:   command: ["python", "manage.py", "migrate"]
 
+  # Delete this service if the application runs its own migrations on start
+  # (e.g. `prisma migrate deploy && node server.js`). envctl only builds the
+  # migrate image when the Dockerfile has an `AS migrate` stage.
+
   db-migrate:
+    image: {SERVICE_WITH_MIGRATIONS}-migrate:${IMAGE_TAG:-ci}
     build:
       context: ../{SERVICE_WITH_MIGRATIONS}
       dockerfile: Dockerfile
+      target: migrate
     command: ["{MIGRATION_COMMAND}"]
     environment:
       DATABASE_URL: postgresql://{PROJECT_SLUG}:ci-password@postgres:5432/{PROJECT_SLUG}
@@ -67,6 +73,9 @@ services:
   # environment to point at the stub server. Example:
   #
   # {SERVICE_1}:
+  #   ports:
+  #     - "{PORT}:{PORT}"           # CI binds the base port; test.yml and
+  #                                 # prod-parity.yml bind +100 / +200
   #   environment:
   #     {LLM_API_BASE_ENV_VAR}: http://llm-stub:11434   # or /v1 for OpenAI
   #     {LLM_API_KEY_ENV_VAR}: stub-key-not-real
@@ -76,6 +85,11 @@ services:
   #       condition: service_healthy
   #     db-migrate:
   #       condition: service_completed_successfully
+  #
+  # File-backed storage (SQLite, uploads): prefer an anonymous volume
+  #   volumes: ["/data"]
+  # over `tmpfs:` — tmpfs mounts root-owned, so a non-root runtime user can't
+  # write to it. Anonymous volumes are still removed with the container.
 
   # ── No OTel collector in CI — stdout only ─────────────────────────────────
   # All services inherit OTEL_ENDPOINT=stdout from .env.ci

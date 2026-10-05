@@ -1,5 +1,6 @@
 # infra/docker-compose.prod-parity.yml
 # Persisted volumes. Full OTel -> Grafana stack. Real LLM API key.
+# `envctl down prod` keeps these volumes; `envctl down prod --wipe` removes them.
 # Usage: docker compose -f docker-compose.base.yml -f docker-compose.prod-parity.yml up
 # Requires: .env.prod-parity with real API keys and strong passwords
 # WARNING: Uses real LLM API — costs real money. Run against synthetic data only.
@@ -87,6 +88,8 @@ services:
   #   - Optionally add replicas for load-balanced services
   #
   # {SERVICE_1}:
+  #   ports:
+  #     - "<PORT+200>:{PORT}"
   #   deploy:
   #     replicas: 2
   #   environment:
@@ -104,10 +107,14 @@ services:
 
   # ── DB migrations ─────────────────────────────────────────────────────────
 
+  # Delete if the application runs its own migrations on start (see ci.yml).
+
   db-migrate:
+    image: {SERVICE_WITH_MIGRATIONS}-migrate:${IMAGE_TAG:-prod}
     build:
       context: ../{SERVICE_WITH_MIGRATIONS}
       dockerfile: Dockerfile
+      target: migrate
     command: ["{MIGRATION_COMMAND}"]
     environment:
       DATABASE_URL: postgresql://{PROJECT_SLUG}:${POSTGRES_PASSWORD}@postgres:5432/{PROJECT_SLUG}

@@ -177,6 +177,9 @@ always reflect the current state of each branch.
 ```bash
 cd infra && ./envctl rebuild ci && ./envctl test ci
 ```
+`envctl test ci` is a smoke check against bare CI (no fixtures). Tests that
+need seeded records run at the Integration stage via `pipelinectl ci-gate`,
+which uses the fixture-seeded Test stack built from ci.
 
 **After cutting an RC from ci:**
 ```bash

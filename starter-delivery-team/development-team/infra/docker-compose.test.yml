@@ -1,6 +1,14 @@
 # infra/docker-compose.test.yml
 # Ephemeral. Adds synthetic fixture seeding on top of CI stack.
 # Usage: docker compose -f docker-compose.base.yml -f docker-compose.ci.yml -f docker-compose.test.yml up --wait
+#
+# This stack INCLUDES docker-compose.ci.yml, and Compose appends port lists
+# across files. Every host port bound in ci.yml must be re-bound here with
+# `ports: !override` (Docker Compose >= 2.24.4), otherwise the RC stack also
+# publishes the CI ports and cannot run alongside the CI environment.
+#
+# pipelinectl ci-gate runs integration tests against THIS stack (not bare CI)
+# so integration tests can rely on fixture-seeded records.
 
 name: {PROJECT_SLUG}-rc
 
@@ -30,6 +38,12 @@ services:
     volumes:
       - ../tests/fixtures:/fixtures:ro
 
+  # ── Re-bind CI host ports at +100 ──────────────────────────────────────────
+
+  llm-stub:
+    ports: !override
+      - "11534:11434"
+
   # ── Expose Postgres for data integrity assertions from test runner ────────
 
   postgres:
@@ -42,8 +56,23 @@ services:
   # override its environment here.
   #
   # {SERVICE_1}:
+  #   ports: !override
+  #     - "<PORT+100>:{PORT}"
   #   environment:
   #     ENVIRONMENT: test
   #   depends_on:
   #     db-seed:
   #       condition: service_completed_successfully
+  #
+  # File-backed storage (SQLite, uploads): the service and the seeder must
+  # mount the SAME named volume, or the seeder writes to a database the
+  # service never sees ("table does not exist" after migrations ran):
+  #
+  # {SERVICE_1}:
+  #   volumes: !override
+  #     - test-data:/data
+  # db-seed:
+  #   volumes:
+  #     - test-data:/data
+  # volumes:
+  #   test-data:

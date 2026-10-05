@@ -6,12 +6,20 @@
 #   ./envctl up rc          Start RC environment (release-rc-* branch)
 #   ./envctl up prod        Start prod-parity environment (main branch)
 #   ./envctl up all         Start all three
-#   ./envctl down ci|rc|prod|all
-#   ./envctl rebuild ci|rc|prod|all   Pull latest + rebuild
+#   ./envctl down ci|rc|prod|all      (prod keeps its volumes; add --wipe to delete them)
+#   ./envctl rebuild ci|rc|prod|all   Build :env images from the env's branch, then start
+#   ./envctl rebuild-local ci|rc|prod Build from the working tree instead (first Deliverable,
+#                                     before the env's branch has code; or local debugging)
+#   ./envctl test ci|rc|prod [suite]  Boot, run tests, tear down
 #   ./envctl status         Show which environments are running
 #   ./envctl logs ci|rc|prod          Tail logs
 #   ./envctl urls           Show browsable URLs
 #
+# Branch per environment: ci → ci, rc → newest release-rc-*, prod → main.
+# Override with REBUILD_BRANCH=<branch> (pipelinectl ci-gate uses
+# REBUILD_BRANCH=ci to build the fixture-seeded rc stack from ci).
+#
+# Requires Docker Compose >= 2.24.4 (`ports: !override` in docker-compose.test.yml).
 # Replace {PLACEHOLDERS} with your project-specific values before use.
 #
 # six-field spec (per .claude/context/process-spec.md)
@@ -45,6 +53,46 @@ WEB_PORT_RC=$(( WEB_PORT_CI + 100 ))
 WEB_PORT_PROD=$(( WEB_PORT_CI + 200 ))
 DASHBOARD_PORT=4400
 DASHBOARD_PID_FILE="/tmp/envctl-dashboard.pid"
+
+# Test suites for `envctl test`. Run from the project root with BASE_URL
+# exported for the environment under test. Defaults run the Python suites in
+# tests/; replace for other stacks, e.g.
+#   INTEGRATION_TEST_CMD="cd {service-1} && npm run --silent test:integration"
+INTEGRATION_TEST_CMD="python3 -m pytest tests/integration/ -v"
+E2E_TEST_CMD="python3 -m pytest tests/e2e/ -v"
+SMOKE_TEST_CMD="python3 -m pytest tests/smoke/ -v"
+# Installed before the suite runs; skipped when the file doesn't exist.
+TEST_REQUIREMENTS="tests/requirements.txt"
+
+# ── Preconditions ───────────────────────────────────────────────────────────
+
+require_compose() {
+  local v
+  v=$(docker compose version --short 2>/dev/null | sed 's/^v//') || true
+  [ -z "$v" ] && { echo "ERROR: docker compose not found. Install Docker Desktop." >&2; exit 1; }
+  # Compare against 2.24.4 (first release with `!override`).
+  if [ "$(printf '%s\n%s\n' "2.24.4" "$v" | sort -V | head -1)" != "2.24.4" ]; then
+    echo "ERROR: Docker Compose $v is too old — need >= 2.24.4 for 'ports: !override'." >&2
+    exit 1
+  fi
+}
+
+require_env_file() {
+  local env="$1"
+  if [ "$env" = "prod" ] && [ ! -f .env.prod-parity ]; then
+    echo "ERROR: infra/.env.prod-parity is missing." >&2
+    echo "  cp infra/.env.prod-parity.example infra/.env.prod-parity  # then fill in real values" >&2
+    exit 1
+  fi
+}
+
+web_port_for() {
+  case "$1" in
+    ci)   echo "$WEB_PORT_CI" ;;
+    rc)   echo "$WEB_PORT_RC" ;;
+    prod) echo "$WEB_PORT_PROD" ;;
+  esac
+}
 
 # ── Compose commands per environment ────────────────────────────────────────
 
@@ -162,19 +210,42 @@ cmd_up() {
   if [ "$env" = "all" ]; then
     cmd_up ci; cmd_up rc; cmd_up prod; return
   fi
+  require_compose; require_env_file "$env"
   ensure_dashboard
-  echo "Starting $env environment from pre-built :$env images..."
+
+  # Start from the :$env images. If any is missing, build it from the env's
+  # branch first — never let Compose fall back to building from whatever
+  # branch happens to be checked out in the working tree.
+  local repo
+  for repo in "${SERVICE_REPOS[@]}"; do
+    if ! docker image inspect "$(basename "$repo"):${env}" >/dev/null 2>&1; then
+      echo "No $(basename "$repo"):${env} image yet — building from the $env branch."
+      cmd_rebuild "$env"
+      return
+    fi
+  done
+
+  echo "Starting $env environment from :$env images..."
   ${env}_compose up -d --wait --wait-timeout 120
   echo "$env environment is up."
 }
 
 cmd_down() {
-  local env="$1"
+  local env="$1" wipe="${2:-}"
   if [ "$env" = "all" ]; then
-    cmd_down ci; cmd_down rc; cmd_down prod; return
+    cmd_down ci; cmd_down rc; cmd_down prod "$wipe"; return
+  fi
+  if [ "$env" = "prod" ] && [ ! -f .env.prod-parity ]; then
+    echo "prod: no .env.prod-parity — nothing to stop."; return 0
   fi
   echo "Stopping $env environment..."
-  ${env}_compose down -v --remove-orphans
+  if [ "$env" = "prod" ] && [ "$wipe" != "--wipe" ]; then
+    # Prod-parity holds persisted data — keep named volumes unless asked.
+    ${env}_compose down --remove-orphans
+    echo "  (volumes kept — use 'envctl down prod --wipe' to delete them)"
+  else
+    ${env}_compose down -v --remove-orphans
+  fi
 }
 
 # ── Test command ───────────────────────────────────────────────────────────
@@ -191,45 +262,43 @@ cmd_down() {
 cmd_test() {
   local env="$1"
   local suite="${2:-all}"
-  local tests_dir="$PROJECT_ROOT/tests"
   local result=0
+
+  if [ "$suite" = "all" ]; then
+    case "$env" in
+      ci)   suite=integration ;;
+      rc)   suite=e2e ;;
+      prod) suite=smoke ;;
+    esac
+  fi
+  local test_cmd
+  case "$suite" in
+    integration) test_cmd="$INTEGRATION_TEST_CMD" ;;
+    e2e)         test_cmd="$E2E_TEST_CMD" ;;
+    smoke)       test_cmd="$SMOKE_TEST_CMD" ;;
+    *) echo "Unknown suite: $suite. Use: integration, e2e, smoke, or all."; return 1 ;;
+  esac
 
   echo "=== envctl test $env $suite ==="
 
-  # 1. Boot environment (handles branch checkout + dashboard)
+  # 1. Boot environment (builds :$env images from the env's branch if missing)
   echo "[1/4] Booting $env environment..."
   cmd_up "$env" || { echo "FAIL: environment failed to start"; return 1; }
 
-  # 2. Install test dependencies
+  # 2. Install test dependencies (only if the project has a requirements file)
   echo "[2/4] Installing test dependencies..."
-  pip install -q -r "$tests_dir/requirements.txt" 2>/dev/null || {
-    echo "FAIL: could not install test dependencies"; cmd_down "$env"; return 1
-  }
+  if [ -f "$PROJECT_ROOT/$TEST_REQUIREMENTS" ]; then
+    python3 -m pip install -q -r "$PROJECT_ROOT/$TEST_REQUIREMENTS" || {
+      echo "FAIL: could not install test dependencies"; cmd_down "$env"; return 1
+    }
+  else
+    echo "  ($TEST_REQUIREMENTS not found — skipping)"
+  fi
 
-  # 3. Run test suite(s)
-  echo "[3/4] Running $suite tests..."
-  case "$suite" in
-    integration)
-      python -m pytest "$tests_dir/integration/" -v 2>&1 || result=1
-      ;;
-    e2e)
-      python -m pytest "$tests_dir/e2e/" -v 2>&1 || result=1
-      ;;
-    smoke)
-      python -m pytest "$tests_dir/smoke/" -v 2>&1 || result=1
-      ;;
-    all)
-      case "$env" in
-        ci)   python -m pytest "$tests_dir/integration/" -v 2>&1 || result=1 ;;
-        rc)   python -m pytest "$tests_dir/e2e/" -v 2>&1 || result=1 ;;
-        prod) python -m pytest "$tests_dir/smoke/" -v 2>&1 || result=1 ;;
-      esac
-      ;;
-    *)
-      echo "Unknown suite: $suite. Use: integration, e2e, smoke, or all."
-      result=1
-      ;;
-  esac
+  # 3. Run the suite against this environment's web port
+  local base_url="http://localhost:$(web_port_for "$env")"
+  echo "[3/4] Running $suite tests against $base_url..."
+  (cd "$PROJECT_ROOT" && BASE_URL="$base_url" bash -c "$test_cmd") || result=1
 
   # 4. Tear down
   echo "[4/4] Tearing down $env environment..."
@@ -249,16 +318,24 @@ cmd_rebuild() {
     cmd_rebuild ci; cmd_rebuild rc; cmd_rebuild prod; return
   fi
 
-  # Determine which branch to build from (without checking it out)
+  require_compose; require_env_file "$env"
+
+  # Determine which branch to build from (without checking it out).
+  # REBUILD_BRANCH overrides — e.g. pipelinectl ci-gate builds the
+  # fixture-seeded rc stack from ci before any RC has been cut.
   local branch
-  case "$env" in
-    ci)   branch="ci" ;;
-    rc)
-      branch=$(cd "${SERVICE_REPOS[0]}" && git branch -r --sort=-committerdate | grep 'origin/release-rc-' | head -1 | tr -d ' ' | sed 's|origin/||')
-      [ -z "$branch" ] && branch="ci"
-      ;;
-    prod) branch="main" ;;
-  esac
+  if [ -n "${REBUILD_BRANCH:-}" ]; then
+    branch="$REBUILD_BRANCH"
+  else
+    case "$env" in
+      ci)   branch="ci" ;;
+      rc)
+        branch=$( (cd "${SERVICE_REPOS[0]}" && git branch -r --sort=-committerdate 2>/dev/null | grep 'origin/release-rc-' | head -1 | tr -d ' ' | sed 's|origin/||') || true )
+        [ -z "$branch" ] && branch="ci"
+        ;;
+      prod) branch="main" ;;
+    esac
+  fi
 
   # Map env name to build arg values (customize per project)
   local build_env
@@ -272,27 +349,27 @@ cmd_rebuild() {
 
   # Build from git archive — extracts the branch into a temp dir so the
   # working tree is untouched. Dev team can stay on their feature branch.
+  # The images are tagged {repo}:{env}, which is what the compose files'
+  # `image: {service}:${IMAGE_TAG}` lines start.
   for repo in "${SERVICE_REPOS[@]}"; do
     local name; name=$(basename "$repo")
     local tmpdir; tmpdir=$(mktemp -d)
 
-    (cd "$repo" && git archive "origin/$branch" 2>/dev/null || git archive "$branch") | tar -x -C "$tmpdir"
+    export_source "$repo" "$branch" "$tmpdir"
 
     docker build -t "${name}:${env}" \
       --build-arg "NEXT_PUBLIC_ENVIRONMENT=${build_env}" \
       "$tmpdir"
 
+    # Migrate image — only when the Dockerfile defines an `AS migrate`
+    # stage. Apps that migrate on startup don't need one (and should drop
+    # the db-migrate service from the compose files).
+    if grep -qiE '^FROM[[:space:]].*[[:space:]]AS[[:space:]]+migrate[[:space:]]*$' "$tmpdir/Dockerfile" 2>/dev/null; then
+      docker build -t "${name}-migrate:${env}" --target migrate "$tmpdir"
+    fi
+
     rm -rf "$tmpdir"
   done
-
-  # Build migrate image from primary service (if it has migrations)
-  local primary_name; primary_name=$(basename "${SERVICE_REPOS[0]}")
-  local tmpdir; tmpdir=$(mktemp -d)
-  (cd "${SERVICE_REPOS[0]}" && git archive "origin/$branch" 2>/dev/null || git archive "$branch") | tar -x -C "$tmpdir"
-  docker build -t "${primary_name}-migrate:${env}" \
-    --target migrate \
-    "$tmpdir"
-  rm -rf "$tmpdir"
 
   # Prune dangling images and build cache to prevent disk exhaustion.
   # Only removes untagged images and unused build layers — safe to run.
@@ -300,8 +377,37 @@ cmd_rebuild() {
   docker builder prune -f --keep-storage=5GB > /dev/null 2>&1
 
   echo "Starting $env environment with :$env images..."
-  ${env}_compose up -d
+  ${env}_compose up -d --wait --wait-timeout 120
   echo "$env environment started."
+}
+
+# Copy a repo's source for $branch into $dest. Falls back to the working tree
+# when the branch doesn't exist yet or has no Dockerfile — the normal state for
+# the first Deliverable, before anything has been merged to ci.
+export_source() {
+  local repo="$1" branch="$2" dest="$3" ref=""
+  if (cd "$repo" && git rev-parse --verify -q "origin/$branch" >/dev/null); then
+    ref="origin/$branch"
+  elif (cd "$repo" && git rev-parse --verify -q "$branch" >/dev/null); then
+    ref="$branch"
+  fi
+  if [ -n "$ref" ] && (cd "$repo" && git cat-file -e "$ref:Dockerfile" 2>/dev/null); then
+    (cd "$repo" && git archive "$ref") | tar -x -C "$dest"
+  else
+    echo "  WARNING: $(basename "$repo"): '$branch' has no Dockerfile yet — building from the working tree." >&2
+    tar -C "$repo" --exclude=.git --exclude=node_modules --exclude=.next --exclude=.venv -cf - . | tar -x -C "$dest"
+  fi
+}
+
+# Build straight from the working tree (whatever branch is checked out).
+# For the first Deliverable and for local debugging — pipeline stages use
+# `rebuild`, which builds from the environment's branch.
+cmd_rebuild_local() {
+  local env="$1"
+  require_compose; require_env_file "$env"
+  echo "Building $env from the working tree (not the $env branch)..."
+  ${env}_compose up -d --wait --wait-timeout 120 --build
+  echo "$env environment started from working tree."
 }
 
 cmd_status() {
@@ -333,8 +439,9 @@ cmd_urls() {
 
 case "${1:-}" in
   up)        cmd_up "${2:?Usage: envctl up ci|rc|prod|all}" ;;
-  down)      cmd_down "${2:?Usage: envctl down ci|rc|prod|all}" ;;
+  down)      cmd_down "${2:?Usage: envctl down ci|rc|prod|all [--wipe]}" "${3:-}" ;;
   rebuild)   cmd_rebuild "${2:?Usage: envctl rebuild ci|rc|prod|all}" ;;
+  rebuild-local) cmd_rebuild_local "${2:?Usage: envctl rebuild-local ci|rc|prod}" ;;
   test)      cmd_test "${2:?Usage: envctl test ci|rc|prod [integration|e2e|smoke]}" "${3:-all}" ;;
   status)    cmd_status ;;
   logs)      cmd_logs "${2:?Usage: envctl logs ci|rc|prod}" ;;
@@ -345,8 +452,9 @@ case "${1:-}" in
     echo ""
     echo "Commands:"
     echo "  up        ci|rc|prod|all                      Start environment (auto-starts dashboard)"
-    echo "  down      ci|rc|prod|all                      Stop environment"
-    echo "  rebuild   ci|rc|prod|all                      Pull latest + rebuild"
+    echo "  down      ci|rc|prod|all [--wipe]             Stop environment (prod keeps volumes unless --wipe)"
+    echo "  rebuild   ci|rc|prod|all                      Build :env images from the env's branch + start"
+    echo "  rebuild-local ci|rc|prod                      Build from the working tree + start"
     echo "  test      ci|rc|prod [integration|e2e|smoke]  Boot, test, tear down (saves Claude tokens)"
     echo "  status                                        Show running environments"
     echo "  logs      ci|rc|prod                          Tail logs"
