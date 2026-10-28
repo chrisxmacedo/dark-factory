@@ -134,3 +134,13 @@ Before any agent runs:
 No Jira components are needed yet — they are populated at Gate 1 (post
 Phase A/B) when the service catalogue is stable. See
 `.claude/context/jira-lifecycle.md` §2.
+
+## Relationship to the chief of staff
+
+The technical chief of staff is a separate team (`../teams/chief-of-staff/`).
+It may read this team's pull requests, CI, tickets, and delivery metrics
+where those appear in GitHub, Jira, or Linear, and it may raise an issue or
+chase a deadline. It must not change this team's code, transition its
+tickets, or reprioritise its work. Installing this directory does not
+install the chief of staff, and the chief-of-staff export does not copy
+this directory.

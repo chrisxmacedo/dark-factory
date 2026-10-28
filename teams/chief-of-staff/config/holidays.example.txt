@@ -1,0 +1,3 @@
+# One ISO date per line. Copy to config/holidays.txt for your office calendar.
+# Lines starting with # are ignored. Do not commit a real holiday list if it
+# identifies the organisation; keep the real file local.

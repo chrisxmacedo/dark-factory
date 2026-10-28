@@ -4,6 +4,11 @@ Reusable starter kits for bootstrapping new services and clients. These are scaf
 
 ## Template catalogue
 
+### Harness and teams
+- **harness/** — Shared Claude Code runtime (settings, MCP, authority hook, `claude -p`, schedules). Not a product team.
+- **teams/chief-of-staff/** — Technical chief of staff. Own rulebook (`CLAUDE.md`), five specialists, scripts for counts, schedules for each responsibility. Install alone with `harness/export-chief-of-staff.sh`. It may read engineering pull requests, CI, tickets, and metrics, and it may raise issues and chase deadlines. It must not change code or reprioritise the delivery team.
+- **teams/development/** — Documents the delivery team. The template itself remains `starter-delivery-team/` so existing projects keep their paths.
+
 ### Pipeline orchestration (1 per project)
 - **starter-delivery-team/** — End-to-end agent pipeline. Programme Lead (`PIPELINE.md`) orchestrating two sub-pipelines:
   - **capability-team/** — design pipeline. Capability Lead, 4 specialist teams (discovery, refinement, journey modelling, review), Phases A–C producing JSON system specifications, Python validators/generators (stdlib only, audit-logged to `artefacts/_audit.jsonl`).

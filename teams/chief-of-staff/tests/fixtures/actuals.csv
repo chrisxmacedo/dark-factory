@@ -1,0 +1,5 @@
+category,item,amount,committed_on,term_months
+software,Example tracker,1200,2026-10-01,1
+consultant,Example workshop,26000,2026-10-01,4
+headcount,Open role,90000,2026-10-01,12
+cloud,Example platform,8000,2026-10-01,1

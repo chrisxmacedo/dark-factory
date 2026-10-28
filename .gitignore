@@ -13,3 +13,12 @@ _audit.jsonl
 
 # Machine-local Claude permissions never belong in a starter (one leaked a token)
 starter-*/.claude/settings.local.json
+
+# Chief of staff, if the template is exercised in place
+teams/chief-of-staff/config/ara.env
+teams/chief-of-staff/config/positions.md
+teams/chief-of-staff/config/holidays.txt
+teams/chief-of-staff/outputs/**
+!teams/chief-of-staff/outputs/.gitkeep
+teams/chief-of-staff/drafts/**
+!teams/chief-of-staff/drafts/.gitkeep

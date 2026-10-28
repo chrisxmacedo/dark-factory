@@ -1,0 +1,122 @@
+{
+  "jobs": [
+    {
+      "id": "weekly-delivery",
+      "agent": "weekly-delivery",
+      "responsibility": "Weekly delivery status to the CTO and tech leadership by Friday 17:00",
+      "cron": "0 17 * * 5",
+      "gate": "always",
+      "weekdays": ["friday"],
+      "budget_usd": 2.0,
+      "prompt": "schedules/prompts/weekly-delivery.md",
+      "prepare": [
+        ["scripts/pull_delivery.py", "--days", "7"],
+        ["scripts/dora.py"],
+        ["scripts/cycle_time.py"]
+      ]
+    },
+    {
+      "id": "meeting-log",
+      "agent": "meeting-actions",
+      "responsibility": "Decision and action log from each CTO leadership meeting within 24 hours",
+      "cron": "15 * * * 1-5",
+      "gate": "pending_meetings",
+      "weekdays": ["monday", "tuesday", "wednesday", "thursday", "friday"],
+      "hours": 24,
+      "budget_usd": 1.5,
+      "prompt": "schedules/prompts/meeting-log.md",
+      "prepare": [
+        ["scripts/pending_meetings.py"]
+      ]
+    },
+    {
+      "id": "chase-deadlines",
+      "agent": "meeting-actions",
+      "responsibility": "Chase open actions from CTO forums and escalate missed commitments as drafts",
+      "cron": "30 8 * * 1-5",
+      "gate": "open_chase",
+      "weekdays": ["monday", "tuesday", "wednesday", "thursday", "friday"],
+      "budget_usd": 1.0,
+      "prompt": "schedules/prompts/chase-deadlines.md",
+      "prepare": [
+        ["scripts/chase_deadlines.py"]
+      ]
+    },
+    {
+      "id": "quarterly-plan",
+      "agent": "planning",
+      "responsibility": "Quarterly technology plan and OKRs, one week before the quarter starts",
+      "cron": "35 8 * * 1-5",
+      "gate": "days_before_quarter",
+      "weekdays": ["monday", "tuesday", "wednesday", "thursday", "friday"],
+      "lead_days": 7,
+      "budget_usd": 3.0,
+      "prompt": "schedules/prompts/quarterly-plan.md",
+      "prepare": [
+        ["scripts/pull_delivery.py", "--days", "90"],
+        ["scripts/dora.py"],
+        ["scripts/cycle_time.py"]
+      ]
+    },
+    {
+      "id": "board-pack",
+      "agent": "planning",
+      "responsibility": "Technology section of the board pack, 10 working days before each board meeting",
+      "cron": "40 8 * * 1-5",
+      "gate": "working_days_before_board",
+      "weekdays": ["monday", "tuesday", "wednesday", "thursday", "friday"],
+      "working_days": 10,
+      "dates_env": "BOARD_DATES",
+      "budget_usd": 3.0,
+      "prompt": "schedules/prompts/board-pack.md",
+      "prepare": [
+        ["scripts/pull_delivery.py", "--days", "90"],
+        ["scripts/dora.py"],
+        ["scripts/cycle_time.py"],
+        ["scripts/budget_flags.py"]
+      ]
+    },
+    {
+      "id": "budget",
+      "agent": "budget-tracker",
+      "responsibility": "Monthly tech budget tracker by working day 5",
+      "cron": "45 8 * * 1-5",
+      "gate": "working_day",
+      "weekdays": ["monday", "tuesday", "wednesday", "thursday", "friday"],
+      "working_day": 5,
+      "budget_usd": 1.5,
+      "prompt": "schedules/prompts/budget.md",
+      "prepare": [
+        ["scripts/budget_flags.py"]
+      ]
+    },
+    {
+      "id": "monthly-update",
+      "agent": "planning",
+      "responsibility": "Monthly CTO update for the technology organisation, on working day 6",
+      "cron": "50 8 * * 1-5",
+      "gate": "working_day",
+      "weekdays": ["monday", "tuesday", "wednesday", "thursday", "friday"],
+      "working_day": 6,
+      "budget_usd": 2.0,
+      "prompt": "schedules/prompts/monthly-update.md",
+      "prepare": [
+        ["scripts/pull_delivery.py", "--days", "30"],
+        ["scripts/dora.py"],
+        ["scripts/cycle_time.py"],
+        ["scripts/budget_flags.py"]
+      ]
+    },
+    {
+      "id": "initiative",
+      "agent": "initiative",
+      "responsibility": "Brief, plan, and closure for each cross-team initiative, with a RAID log",
+      "cron": "55 8 * * 1-5",
+      "gate": "initiative_milestone",
+      "weekdays": ["monday", "tuesday", "wednesday", "thursday", "friday"],
+      "budget_usd": 2.5,
+      "prompt": "schedules/prompts/initiative.md",
+      "prepare": []
+    }
+  ]
+}
