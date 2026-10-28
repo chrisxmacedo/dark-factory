@@ -2,13 +2,153 @@
 
 Reusable starter templates, agent-team definitions, pipeline scripts and setup guides for running an **AI-native delivery pipeline**: Claude Code agent teams that take a product from capability design through to tested, released services, with Jira as the system of record.
 
-The toolkit has three layers:
+The toolkit has four layers:
 
-1. **Delivery pipeline.** `starter-delivery-team/` holds the agent teams that design the system (capability team) and build it (development team), plus a Programme Lead that moves work between them.
-2. **Service starters.** `starter-*/` are minimal, working skeletons for each kind of service the development team builds: API, web, worker, gateway and more.
-3. **Reference material.** These are the setup guides, the capability meta-model, regulation and standards libraries, an idea template and Claude Code slash commands.
+1. **Harness.** `harness/` is the shared Claude Code runtime: permissions and hooks, the authority hook, MCP server config, headless `claude -p` runs, and schedule installation. Teams sit on this rather than each carrying their own copy.
+2. **Teams.** A team is a rulebook plus specialists, and each one can be installed on its own. The delivery team is `starter-delivery-team/` (design and build). The technical chief of staff is `teams/chief-of-staff/`. See [Harness and teams](#harness-and-teams).
+3. **Service starters.** `starter-*/` are minimal, working skeletons for each kind of service the development team builds: API, web, worker, gateway and more.
+4. **Reference material.** These are the setup guides, the capability meta-model, regulation and standards libraries, an idea template and Claude Code slash commands.
 
 Everything here is a template. Copy what you need into a project workspace, replace the `{PLACEHOLDER}` values and start building. Nothing in this repo runs as a product.
+
+The delivery pipeline was already a Claude Code project (lead prompts, `.claude/agents/`, slash commands, permission baselines). That layout is unchanged, so existing installs keep working. The harness is the shared runtime for teams that should run on Claude Code's own conventions — `CLAUDE.md`, subagents, skills, `.mcp.json`, settings, and headless runs — and the chief of staff is the first team built that way. It sits alongside the delivery team. It does not replace it.
+
+---
+
+## Harness and teams
+
+| Team | Template | What it is allowed to do |
+|---|---|---|
+| Development | `starter-delivery-team/` | Design the system and build it. Install with [Usage step 4](#4-start-a-project-with-the-delivery-pipeline) or `/create-project` for the build pipeline only. |
+| Technical chief of staff | `teams/chief-of-staff/` | Run the technology organisation's operating rhythm for the CTO. Install with the [standalone export](#deploy-chief-of-staff-standalone-at-work). |
+
+The chief of staff may **read** the engineering organisation's pull requests, CI results, tickets, and delivery metrics, and it may **raise issues and chase deadlines**. It reads those systems directly (GitHub, Jira, Linear) through scripts and MCP. It does not need the delivery template on disk.
+
+It must **not** change product code, merge or review pull requests, transition engineering tickets, or reprioritise the delivery team's work. A hook blocks those tool calls. Spend above the configured caps, architecture, people decisions, and any position the CTO has not already written down are drafts for a human.
+
+Enable either team without the other. `/create-project` does not install the chief of staff. The export script does not copy the delivery team.
+
+---
+
+## Deploy Chief of Staff standalone at work
+
+Use this when the chief of staff should run in a work repository on its own, with no delivery team and no other templates from this repo.
+
+From the toolkit:
+
+```bash
+./harness/export-chief-of-staff.sh ~/work/cto-office
+cd ~/work/cto-office
+```
+
+The destination must be missing or empty. It receives the harness (settings, MCP config, authority hook, headless runner, scheduler) and `teams/chief-of-staff` (the ARA rulebook, specialists, skills, scripts, and schedules). Nothing under `starter-delivery-team/` is copied.
+
+### 1. Install Claude Code
+
+```bash
+npm install -g @anthropic-ai/claude-code
+claude
+```
+
+Log in once, then leave the session.
+
+### 2. Configure the office, not the tokens
+
+```bash
+cp config/ara.env.example config/ara.env
+cp config/positions.example.md config/positions.md
+cp config/holidays.example.txt config/holidays.txt
+```
+
+In `config/ara.env` set the timezone, the spend caps your organisation approved, `BOARD_DATES`, and the tracker ids. The numbers in the example file are examples, not an approval. Caps are inclusive. `JIRA_SITE` is the hostname only, with no scheme.
+
+In `config/positions.md` write only positions the CTO has already agreed. Until that file exists, the agent drafts and does not decide.
+
+In `config/holidays.txt` put non-working dates, one ISO date per line. Weekends are already skipped.
+
+Do not put tokens in those files. They are gitignored.
+
+### 3. Export tokens into the environment
+
+At least one of GitHub, Jira, or Linear must be configured, or the delivery pull stops before it calls a model.
+
+| Variable | Purpose |
+|---|---|
+| `GITHUB_TOKEN` | Read pull requests, Actions, and deployments. Create issues if chases should be filed on GitHub. Also sent to the GitHub MCP server. |
+| `GITHUB_REPOS` | Comma-separated `owner/name`. Set in `ara.env`. |
+| `JIRA_API_TOKEN` | Jira Cloud REST. Create it in your Atlassian account security settings. |
+| `JIRA_SITE` | Jira hostname, no scheme. Set in `ara.env`. |
+| `JIRA_EMAIL` | Atlassian login email. Set in `ara.env`. |
+| `JIRA_PROJECTS` | Comma-separated project keys. Set in `ara.env`. |
+| `LINEAR_API_KEY` | Linear GraphQL and the Linear MCP server. |
+| `LINEAR_TEAM_IDS` | Optional team ids, comma-separated. Set in `ara.env`. |
+| `ANTHROPIC_API_KEY` | Only when `claude` is not already logged in. |
+
+Optional, if your organisation hosts its own MCP endpoints: `GITHUB_MCP_URL`, `ATLASSIAN_MCP_URL`, `LINEAR_MCP_URL`.
+
+Scheduled runs call the HTTP APIs from `scripts/pull_delivery.py` so the counts do not spend a model call. `.mcp.json` is how the agent reads a ticket or a pull request when the JSON is not enough. Both are configured only by these variables.
+
+### 4. Check the wiring without calling a model
+
+```bash
+python3 scripts/working_days.py --date 2026-10-07
+python3 scripts/run_due.py --list --at 2026-10-02T17:00:00
+./scripts/claude-headless.sh --dry-run --agent weekly-delivery --prompt-file schedules/prompts/weekly-delivery.md
+./scripts/install-schedule.sh --print
+python3 -m unittest discover -s tests -v
+```
+
+`--list` shows which deadlines are open at that moment. `--dry-run` prints the `claude -p` command and does not start Claude.
+
+### 5. Open the coordinator
+
+```bash
+claude
+```
+
+`CLAUDE.md` is the chief of staff. Specialists are `.claude/agents/` (`weekly-delivery`, `meeting-actions`, `planning`, `budget-tracker`, `initiative`). Procedures are `.claude/skills/`. The exported `.claude/settings.json` turns on project MCP servers so a scheduled run is not left at an approval prompt. Read `.mcp.json` before you rely on that.
+
+### 6. Schedule the deadlines
+
+```bash
+./scripts/install-schedule.sh --install
+```
+
+This replaces the marked block in your user crontab and leaves every other line alone. The timezone is `OFFICE_TZ`. Each line runs `scripts/run-due.sh --job <id>`. That script runs the data scripts first and starts Claude only when the gate is open (for example, working day 5, or a meeting note newer than 24 hours).
+
+| Responsibility | Job | When it actually calls Claude |
+|---|---|---|
+| Weekly delivery status | `weekly-delivery` | Friday 17:00 |
+| Decision and action log | `meeting-log` | Hourly on weekdays, and only when a note in `inbox/meetings/` has no log yet |
+| Deadline chase | `chase-deadlines` | Weekday 08:30, and only when an action is due or late |
+| Quarterly plan and OKRs | `quarterly-plan` | One week before the quarter, or the previous working day if that date is not a working day |
+| Board-pack technology section | `board-pack` | 10 working days before a date in `BOARD_DATES` |
+| Monthly budget tracker | `budget` | Working day 5 |
+| Monthly organisation update | `monthly-update` | Working day 6 |
+| Initiative brief, plan, closure, RAID | `initiative` | Weekdays, when a milestone, a close date, or a missing kickoff brief is due |
+
+Run one by hand:
+
+```bash
+./scripts/run-due.sh --job weekly-delivery
+```
+
+`CLAUDE_MAX_BUDGET_USD` (default 2) is the model-spend ceiling for that run. It is not the office tooling cap.
+
+### 7. Drops from other people
+
+| Drop | Path |
+|---|---|
+| Meeting note, with an `ended_at:` line | `inbox/meetings/<name>.md` |
+| Finance actuals | `inbox/finance/actuals.csv` |
+| Initiative the CTO assigned | `inbox/initiatives/<id>/meta.json` |
+| Director commitments | `inbox/plans/` |
+
+Reports are written under `outputs/`. Anything outside the role is written under `drafts/` and is not sent.
+
+Headless runs use `claude -p` with `--permission-mode dontAsk`, so a prompt that would have asked a person is denied. The authority hook still blocks writes outside `outputs/` and `drafts/`.
+
+---
 
 ---
 
@@ -16,6 +156,9 @@ Everything here is a template. Copy what you need into a project workspace, repl
 
 | Path | What it is |
 |---|---|
+| `harness/` | Shared Claude Code runtime: settings, MCP config, authority hook, headless runs, scheduling. |
+| `teams/chief-of-staff/` | Technical chief of staff. ARA rulebook, five specialists, metric scripts, and deadline schedules. Export it on its own with `harness/export-chief-of-staff.sh`. |
+| `teams/development/` | Pointer to the delivery team. The files stay in `starter-delivery-team/` so existing installs keep their paths. |
 | `starter-delivery-team/` | The end-to-end pipeline. Copy it once per project. Contains the Programme Lead, `capability-team/` and `development-team/`. |
 | `starter-delivery-team/capability-team/` | Design pipeline. Phases A–C produce a machine-readable system specification (capabilities, journeys, APIs, events, data model) as JSON. It has 4 agent teams and Python validators. |
 | `starter-delivery-team/development-team/` | Build pipeline. Refinement → development → local, integration, E2E-impact and regression testing → release. It has 8 agent teams, Docker environments, CI workflows and the `jiractl`/`pipelinectl`/`envctl` tools. |
@@ -244,7 +387,8 @@ All TypeScript starters share the same baseline: Pino logging, an ioredis single
 
 ## Status and known gaps
 
-- **Build-only vs full pipeline.** `/create-project` installs the development team on its own (one Jira project, Team Lead at `.claude/CLAUDE.md`). For the design and build pipeline together, copy the whole `starter-delivery-team/` as described in [Usage step 4](#4-start-a-project-with-the-delivery-pipeline).
+- **Build-only vs full pipeline.** `/create-project` installs the development team on its own (one Jira project, Team Lead at `.claude/CLAUDE.md`). For the design and build pipeline together, copy the whole `starter-delivery-team/` as described in [Usage step 4](#4-start-a-project-with-the-delivery-pipeline). Neither path installs the chief of staff.
+- **Chief of staff.** Install only that team with `./harness/export-chief-of-staff.sh <empty-dir>`. See [Deploy Chief of Staff standalone at work](#deploy-chief-of-staff-standalone-at-work).
 - **HTML guide pages** in `development-pipeline-config/` predate the Diagnostics Team and the 12-status workflow. Where they disagree, `development-pipeline-configuration-guide.md` is the current reference.
 - **Placeholder starters.** The mobile, desktop, CLI, serverless, ML and IaC starters have documented conventions but no code scaffold.
 - **Client starters** reference a specific GitHub org and npm scope (`ClauseHub` / `@clausehub`). Replace them with your own.

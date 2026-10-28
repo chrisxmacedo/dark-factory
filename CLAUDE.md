@@ -3,7 +3,9 @@
 This repo holds templates, not products. These instructions apply when
 editing the toolkit; the rules that agents follow inside a *project* live in
 the templates (`starter-delivery-team/development-team/.claude/context/`), so
-every new project inherits them.
+every new project inherits them. The shared Claude Code runtime is `harness/`.
+The technical chief of staff is `teams/chief-of-staff/` and must stay
+installable without the delivery team (`harness/export-chief-of-staff.sh`).
 
 ## Rules
 
